@@ -126,6 +126,10 @@ Key columns (full definitions in `db/migrations/0001_core.sql`):
 - `audit_events`: `occurred_at`, `actor_type` (SYSTEM|HUMAN), `actor_id`,
   `action`, `from_state`, `to_state`, `reason`, `evidence jsonb`.
 
+Bank transactions carry a status of `UNMATCHED`, `MATCHED`, `EXCEPTION` or
+`RESOLVED`. `RESOLVED` is set when a person closes an exception by hand, in the
+same transaction as the invoice, and never re-enters matching (ADR-036).
+
 Database-enforced invariants:
 
 - `unique (file_sha256) where state <> 'DUPLICATE'`: the same file can exist

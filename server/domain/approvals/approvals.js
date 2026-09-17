@@ -53,6 +53,16 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
       return;
     }
 
+    // Rejection is also the answer to a question nobody ever answered, and the
+    // state machine allows INFO_REQUESTED -> REJECTED. The rules are the same
+    // wherever it comes from: a reason, cancelled steps, one audit event.
+    if (action === "reject" && invoice.state === "INFO_REQUESTED") {
+      const reason = requireComment(comment);
+      await cancelAllSteps(client, invoiceId);
+      await transition(client, { invoiceId, to: "REJECTED", actor, action: "review_rejected", reason });
+      return;
+    }
+
     if (invoice.state !== "REVIEW_REQUIRED") {
       throw new TransitionError(`Rechnung im Status ${invoice.state} steht nicht in der Sichtprüfung`, { state: invoice.state });
     }

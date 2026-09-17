@@ -27,6 +27,12 @@ function corsOptions() {
 export function createApp(deps) {
   const app = express();
   app.disable("x-powered-by");
+  // Content types on this API are declared, never guessed. Without this a
+  // browser may sniff bytes back into a renderable type and run them.
+  app.use((req, res, next) => {
+    res.set("X-Content-Type-Options", "nosniff");
+    next();
+  });
   app.use(cors(corsOptions()));
   app.use(express.json({ limit: "1mb" }));
 

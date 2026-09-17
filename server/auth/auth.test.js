@@ -272,3 +272,35 @@ test("the session reports what the role may do, so the UI need not guess", async
   assert.ok(financeBody.permissions.includes("review:decide"));
   assert.ok(financeBody.permissions.includes("payment:instruct"));
 });
+
+test("parallel wrong passwords cannot outrun the lockout", () => {
+  // The counter used to be computed in Node from a row read a moment earlier,
+  // so simultaneous attempts overwrote one another and eight guesses counted
+  // as one. Two batches, because one batch of four is under the threshold.
+  return (async () => {
+    const guess = () => call("/api/auth/login", { method: "POST", body: { email: CLERK, password: "falsch" } });
+    for (let batch = 0; batch < 2; batch += 1) {
+      const results = await Promise.all([guess(), guess(), guess(), guess()]);
+      for (const res of results) assert.ok([401, 429].includes(res.status), `unexpected ${res.status}`);
+    }
+
+    const { rows } = await deps.pool.query("select failed_attempts, locked_until from finops.users where email = $1", [CLERK]);
+    assert.ok(rows[0].failed_attempts >= 5, `every attempt must count, got ${rows[0].failed_attempts}`);
+    assert.notEqual(rows[0].locked_until, null, "the account is locked");
+
+    const after = await call("/api/auth/login", { method: "POST", body: { email: CLERK, password: DEMO_PASSWORD } });
+    assert.equal(after.status, 429, "guessing in parallel must not stay free");
+  })();
+});
+
+test("a lock already in force is not cleared by a further failure", async () => {
+  for (let i = 0; i < 5; i += 1) {
+    await call("/api/auth/login", { method: "POST", body: { email: MANAGER, password: "falsch" } });
+  }
+  const { rows: [locked] } = await deps.pool.query("select locked_until from finops.users where email = $1", [MANAGER]);
+  await call("/api/auth/login", { method: "POST", body: { email: MANAGER, password: "falsch" } });
+  const { rows: [still] } = await deps.pool.query("select locked_until from finops.users where email = $1", [MANAGER]);
+
+  assert.notEqual(still.locked_until, null, "a further failure must not unlock the account");
+  assert.ok(still.locked_until >= locked.locked_until, "and must not shorten the lock");
+});

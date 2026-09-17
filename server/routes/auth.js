@@ -66,8 +66,21 @@ export function authRouter({ pool }) {
   return router;
 }
 
+/**
+ * Counts one failed attempt. The increment and the lock decision happen in the
+ * database, in one statement: computing `attempts + 1` in Node from a row read
+ * earlier lets parallel attempts overwrite each other's counts, so eight
+ * simultaneous guesses register as one and never reach the threshold.
+ */
 async function registerFailure(pool, user) {
-  const attempts = user.failed_attempts + 1;
-  const lock = attempts >= MAX_ATTEMPTS ? `now() + interval '${LOCK_MINUTES} minutes'` : "null";
-  await pool.query(`update finops.users set failed_attempts = $2, locked_until = ${lock} where id = $1`, [user.id, attempts]);
+  await pool.query(
+    `update finops.users
+       set failed_attempts = failed_attempts + 1,
+           locked_until = case
+             when failed_attempts + 1 >= $2 then now() + ($3 || ' minutes')::interval
+             else locked_until
+           end
+     where id = $1`,
+    [user.id, MAX_ATTEMPTS, String(LOCK_MINUTES)],
+  );
 }

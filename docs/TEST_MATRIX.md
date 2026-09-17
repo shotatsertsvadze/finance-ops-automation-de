@@ -263,6 +263,31 @@ described as working.
 | U12 | Decided approval step shows what it was signed for | document prefix, validation run and amount under the step; prefix matches the intake SHA-256 | MANUAL | Browser, 2026-09-17: `Beleg 8b48b6eb3f2b · Prüflauf 1 · 4.352,73 €` against file hash `8b48b6eb3f2bf49a…` |
 | U13 | Binding line does not overflow at 375 px | scrollWidth equals clientWidth | MANUAL | Browser, 2026-09-17, measured in page |
 
+## Independent review 2026-09-17
+
+Ten findings raised against `ff600ce` in `docs/PROJECT_REVIEW_2026-09-17.md`.
+Each was reproduced independently before being fixed; the reproduction is
+recorded in the evidence column. The report itself is left as written.
+
+| # | Finding | Reproduced | Fix | Status |
+|---|---|---|---|---|
+| F01 | Opening an uploaded XML executes script with the viewer's session | Browser, 2026-09-17: XHTML named `.xml` routed to review, its script ran and read `/api/auth/me` as MANAGER | Served as `text/plain` with nosniff and a sandbox policy; ADR-035 | AUTO `file-serving.test.js` |
+| F02 | Reconciliation ignores currency and counterparty | `matching.test.js` written first: USD and a foreign IBAN both matched | Both are evidence; unverifiable is an exception; ADR-036 | AUTO `matching.test.js`, `reconciliation.test.js` |
+| F03 | Reference matching selects the wrong invoice | Probe against the real matcher: `INV-10` matched `INV-1`; `"INV-A und INV-LONG"` matched the longer one | Token boundaries; the longest-number tie-break removed; ADR-036 | AUTO `matching.test.js` |
+| F04 | The commitment migration forgets existing claims | Disposable database: 0001-0005, an APPROVED invoice for 319,33, then the rest; availability still reported 500,00 | Backfill migration 0009; ADR-037 | AUTO `upgrade.test.js` |
+| F05 | Manual resolution does not consume the bank evidence | `reconciliation.test.js`: resolved transaction returned to the pool and matched a later invoice | `RESOLVED` status, set in the same transaction; ADR-036 | AUTO `reconciliation.test.js` |
+| F06 | Concurrent login failures bypass the lockout | `auth.test.js`: eight parallel guesses, then a correct password still succeeded | Increment and lock decided in one statement | AUTO `auth.test.js` |
+| F07 | Invoice references become spreadsheet formulas in CSV | `csv-export.test.js`: `=1+1` reached the cell unescaped | Formula triggers prefixed, numbers exempt; ADR-038 | AUTO `csv-export.test.js` |
+| F08 | Rejection is offered but refused while information is requested | `approvals.test.js`: 409 from `INFO_REQUESTED` | The declared transition is handled, with the same rules | AUTO `approvals.test.js` |
+| F09 | Review-cycle medians can be negative | `kpi.test.js`: `READY_FOR_APPROVAL -> INFO_REQUESTED -> REVIEW_REQUIRED` gave -1 hours | Each review entry paired with its own exit; open visits excluded | AUTO `kpi.test.js` |
+| F10 | Paid invoices with an open reconciliation count as overdue | `kpi.test.js`: a paid invoice 30 days past due counted as overdue | Overdue means unpaid; `RECONCILIATION_EXCEPTION` excluded | AUTO `kpi.test.js` |
+
+Found while verifying the above, not in the report:
+
+| # | Finding | Reproduced | Fix | Status |
+|---|---|---|---|---|
+| F11 | Every demo invoice's "view original" link answered 500 | Browser, 2026-09-17: the generator wrote originals to a temp directory the API cannot read | `scripts/demo-data.js` uses the same storage as the API | MANUAL Browser, 2026-09-17, source shown after the fix |
+
 ## Display language
 
 | # | Case | Expected | Status | Evidence |

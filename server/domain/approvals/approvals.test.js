@@ -330,3 +330,34 @@ test("an approval given before a correction cannot be inherited after re-validat
   );
   assert.ok(after.approval_steps.every((s) => s.actor_id === null), "no approver carried over");
 });
+
+test("an invoice waiting for an answer can be rejected", async () => {
+  // The transition table allows INFO_REQUESTED -> REJECTED and the UI offers
+  // the button, but the handler required REVIEW_REQUIRED and answered 409.
+  const invoice = await upload("B_iban_changed_2499.xml");
+  await post(`/api/invoices/${invoice.id}/review/request-info`, {
+    actor: clients.clerk, body: { comment: "Bankverbindung schriftlich bestätigen lassen" },
+  });
+  assert.equal((await get(invoice.id)).state, "INFO_REQUESTED");
+
+  const res = await post(`/api/invoices/${invoice.id}/review/reject`, {
+    actor: clients.clerk, body: { comment: "Lieferant antwortet nicht, Rechnung abgelehnt" },
+  });
+  assert.equal(res.status, 200, await res.text());
+
+  const after = await get(invoice.id);
+  assert.equal(after.state, "REJECTED");
+  const last = after.audit_events.at(-1);
+  assert.equal(last.from_state, "INFO_REQUESTED");
+  assert.equal(last.actor_name, "Anna Berger");
+  assert.equal(last.reason, "Lieferant antwortet nicht, Rechnung abgelehnt");
+});
+
+test("rejecting while a question is open still needs a reason", async () => {
+  const invoice = await upload("B_iban_changed_2499.xml");
+  await post(`/api/invoices/${invoice.id}/review/request-info`, { actor: clients.clerk, body: { comment: "Rückfrage" } });
+
+  const res = await post(`/api/invoices/${invoice.id}/review/reject`, { actor: clients.clerk, body: {} });
+  assert.equal(res.status, 400);
+  assert.equal((await get(invoice.id)).state, "INFO_REQUESTED");
+});

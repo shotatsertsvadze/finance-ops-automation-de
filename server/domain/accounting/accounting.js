@@ -101,9 +101,22 @@ const CSV_COLUMNS = [
   "cost_center", "tax_key", "net_amount", "vat_amount", "gross_amount", "currency", "reference",
 ];
 
-const csvCell = (value) => {
+/**
+ * One CSV cell. Quoting keeps a value inside its column; it does not stop a
+ * spreadsheet executing it. A cell opening with `=`, `+`, `-`, `@` or a control
+ * character is a formula in Excel, LibreOffice and Sheets alike, so such a cell
+ * is prefixed with an apostrophe, which those applications read as "this is
+ * text". A well-formed number is left alone: otherwise every credit amount
+ * would be mangled to defend against a leading minus.
+ *
+ * The export's consumer is a bookkeeping import, which should strip a leading
+ * apostrophe. Exported to be read rather than imported, it is inert.
+ */
+export const csvCell = (value) => {
   const text = value === null || value === undefined ? "" : String(value);
-  return /[",;\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+  const executable = /^[=+\-@\t\r]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text);
+  const cell = executable ? `'${text}` : text;
+  return /[",;\n\r\t]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
 };
 
 /** Neutral CSV handoff. A vendor adapter would replace this formatter only. */

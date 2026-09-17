@@ -39,10 +39,10 @@ export async function importStatement({ pool }, { statement }) {
 export async function runReconciliation({ pool }, { actor }) {
   return withTransaction(pool, async (client) => {
     const { rows: transactions } = await client.query(
-      "select * from finops.bank_transactions where status <> 'MATCHED' order by value_date, external_id for update",
+      "select * from finops.bank_transactions where status not in ('MATCHED', 'RESOLVED') order by value_date, external_id for update",
     );
     const { rows: openInvoices } = await client.query(
-      "select id, invoice_number, gross_amount, supplier_iban_raw from finops.invoices where state in ('PAID', 'RECONCILIATION_EXCEPTION')",
+      "select id, invoice_number, gross_amount, currency, supplier_iban_raw from finops.invoices where state in ('PAID', 'RECONCILIATION_EXCEPTION')",
     );
 
     const summary = { matched: 0, exceptions: 0, unmatched: 0 };
@@ -86,7 +86,10 @@ export async function runReconciliation({ pool }, { actor }) {
         continue;
       }
 
-      await client.query("update finops.bank_transactions set status = 'UNMATCHED', match_reason = null where id = $1", [tx.id]);
+      await client.query(
+        "update finops.bank_transactions set status = 'UNMATCHED', matched_invoice_id = null, match_reason = null, matched_at = null where id = $1",
+        [tx.id],
+      );
       summary.unmatched += 1;
     }
 
@@ -105,8 +108,19 @@ export async function resolveReconciliation({ pool }, { invoiceId, actor, commen
     if (invoice.state !== "RECONCILIATION_EXCEPTION") {
       throw new TransitionError(`Rechnung im Status ${invoice.state} hat keine offene Abgleich-Ausnahme`, { state: invoice.state });
     }
+    // Closing the invoice without closing its evidence leaves the transaction
+    // free to attach itself to a later invoice, so both move together.
+    const { rows: consumed } = await client.query(
+      `update finops.bank_transactions
+         set status = 'RESOLVED', matched_at = now()
+       where matched_invoice_id = $1 and status = 'EXCEPTION'
+       returning external_id`,
+      [invoiceId],
+    );
+
     await transition(client, {
       invoiceId, to: "RECONCILED", actor, action: "reconciliation_resolved", reason,
+      evidence: { resolved_transactions: consumed.map((t) => t.external_id) },
     });
   });
 }

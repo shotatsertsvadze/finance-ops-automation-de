@@ -243,6 +243,9 @@ const de = {
     NO_REFERENCE_MATCH: "Zahlungseingang ohne eindeutigen Bezug",
     AMOUNT_MISMATCH: "Zahlbetrag weicht von der Rechnung ab",
     AMBIGUOUS_REFERENCE: "Zahlungseingang mehrdeutig",
+    CURRENCY_MISMATCH: "Währung der Zahlung weicht ab",
+    COUNTERPARTY_MISMATCH: "Zahlung auf ein anderes Konto",
+    PAYMENT_DIRECTION: "Zahlungsrichtung passt nicht",
   },
 
   action: {
@@ -275,6 +278,9 @@ const de = {
     NO_REFERENCE_MATCH: "Betrag passt, aber kein Verwendungszweck nennt eine Rechnung",
     AMOUNT_MISMATCH: "Verwendungszweck nennt die Rechnung, der Betrag weicht ab",
     AMBIGUOUS_REFERENCE: "Verwendungszweck nennt mehrere offene Rechnungen",
+    CURRENCY_MISMATCH: "Verwendungszweck nennt die Rechnung, die Währung weicht ab",
+    COUNTERPARTY_MISMATCH: "Zahlung ging nicht auf das Konto der Rechnung",
+    PAYMENT_DIRECTION: "Geldeingang statt Zahlung an den Lieferanten",
   },
 
   role: {
@@ -517,6 +523,9 @@ const en = {
     NO_REFERENCE_MATCH: "Incoming payment with no clear reference",
     AMOUNT_MISMATCH: "Paid amount differs from the invoice",
     AMBIGUOUS_REFERENCE: "Incoming payment is ambiguous",
+    CURRENCY_MISMATCH: "Payment is in a different currency",
+    COUNTERPARTY_MISMATCH: "Payment went to a different account",
+    PAYMENT_DIRECTION: "Payment direction does not fit",
   },
 
   action: {
@@ -549,6 +558,9 @@ const en = {
     NO_REFERENCE_MATCH: "The amount fits, but no reference names an invoice",
     AMOUNT_MISMATCH: "The reference names the invoice, the amount differs",
     AMBIGUOUS_REFERENCE: "The reference names several open invoices",
+    CURRENCY_MISMATCH: "The reference names the invoice, the currency differs",
+    COUNTERPARTY_MISMATCH: "The payment did not go to the invoice's account",
+    PAYMENT_DIRECTION: "Money arriving, not a payment to the supplier",
   },
 
   role: {

@@ -57,11 +57,23 @@ export function invoicesRouter(deps) {
     }
   });
 
+  /**
+   * The stored original, byte for byte. Served as source text, never as a type
+   * a browser will render: the XML gate decides what we process, not what a
+   * browser executes, and a document refused as an invoice can still be a
+   * working XHTML page. Rendered inline on this origin its script would run
+   * with the session of whoever opened the link.
+   */
   router.get("/:id/file", async (req, res, next) => {
     try {
       const { rows: [row] } = await deps.pool.query("select file_path, original_filename from finops.invoices where id = $1", [req.params.id]);
       if (!row) return res.status(404).json({ error: "Rechnung nicht gefunden" });
-      res.type("application/xml").set("Content-Disposition", `inline; filename="${row.original_filename.replace(/"/g, "")}"`);
+      const filename = row.original_filename.replace(/["\\\r\n]/g, "");
+      res
+        .type("text/plain; charset=utf-8")
+        .set("Content-Disposition", `inline; filename="${filename}"`)
+        .set("Content-Security-Policy", "default-src 'none'; sandbox; frame-ancestors 'none'")
+        .set("Referrer-Policy", "no-referrer");
       res.send(await deps.storage.read(row.file_path));
     } catch (error) {
       next(error);

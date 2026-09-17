@@ -10,9 +10,6 @@
  *
  * Synthetic data for a fictional company. Not a measurement of anything.
  */
-import { mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPool } from "../server/db.js";
 import { createStorage } from "../server/storage/files.js";
@@ -275,9 +272,12 @@ async function backdate(pool, created) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  // The same storage the API reads. Writing demo originals to a temp directory
+  // left every generated invoice with a file_path the running app could not
+  // open, so "Original-XML ansehen" answered 500 for the whole demo set.
   const deps = {
     pool: createPool(),
-    storage: createStorage(await mkdtemp(path.join(tmpdir(), "finops-demo-"))),
+    storage: createStorage(process.env.STORAGE_DIR ?? "./storage"),
     policy: loadPolicy(),
     company: loadCompany(),
   };

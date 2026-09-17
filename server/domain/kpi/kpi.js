@@ -113,13 +113,17 @@ async function queryWorkload(pool) {
             count(*) filter (where state = 'READY_FOR_APPROVAL')::int as awaiting_approval,
             count(*) filter (where state = 'INFO_REQUESTED')::int as awaiting_information,
             count(*) filter (where state = 'RECONCILIATION_EXCEPTION')::int as reconciliation_exceptions,
+            -- Overdue means the supplier has not been paid. Everything from
+            -- PAID onwards is settled, including a reconciliation that is
+            -- still unclear: that is bookkeeping work, counted on its own
+            -- above, not an unpaid bill.
             count(*) filter (
               where due_date is not null and due_date <= current_date + 7
-                and state not in ('PAID','RECONCILED','REJECTED','DUPLICATE')
+                and state not in ('PAID','RECONCILED','RECONCILIATION_EXCEPTION','REJECTED','DUPLICATE')
             )::int as due_within_7_days,
             count(*) filter (
               where due_date is not null and due_date < current_date
-                and state not in ('PAID','RECONCILED','REJECTED','DUPLICATE')
+                and state not in ('PAID','RECONCILED','RECONCILIATION_EXCEPTION','REJECTED','DUPLICATE')
             )::int as overdue
      from finops.invoices`,
   );
@@ -131,12 +135,27 @@ async function queryCycle(pool) {
   // the headline. Null when nothing has reached the stage, because "no data"
   // and "instant" are different answers.
   const { rows: [row] } = await pool.query(
-    `with approved as (
+    `with review_visits as (
+       -- How long an exception sits in the review queue before someone clears
+       -- it. Each entry into review is paired with its own exit: an invoice
+       -- can enter review more than once, and READY_FOR_APPROVAL ->
+       -- INFO_REQUESTED -> REVIEW_REQUIRED puts an earlier approval entry
+       -- before a later review entry, which subtracted blindly is negative.
+       -- A visit still open has no duration yet and is left out.
+       select extract(epoch from (
+                (select min(x.occurred_at) from finops.audit_events x
+                 where x.invoice_id = e.invoice_id
+                   and x.occurred_at > e.occurred_at
+                   and x.to_state <> 'REVIEW_REQUIRED')
+                - e.occurred_at)) / 3600.0 as hours
+       from finops.audit_events e
+       where e.to_state = 'REVIEW_REQUIRED'
+     ),
+     approved as (
        select e.invoice_id,
               min(e.occurred_at) filter (where e.to_state = 'APPROVED') as approved_at,
               min(e.occurred_at) filter (where e.to_state = 'RECEIVED') as received_at,
-              min(e.occurred_at) filter (where e.to_state = 'READY_FOR_APPROVAL') as released_at,
-              min(e.occurred_at) filter (where e.to_state = 'REVIEW_REQUIRED') as review_at
+              min(e.occurred_at) filter (where e.to_state = 'READY_FOR_APPROVAL') as released_at
        from finops.audit_events e group by e.invoice_id
      )
      select count(*) filter (where approved_at is not null)::int as approved_count,
@@ -153,11 +172,7 @@ async function queryCycle(pool) {
             percentile_cont(0.5) within group (
               order by extract(epoch from (approved_at - released_at)) / 3600.0
             ) filter (where approved_at is not null and released_at is not null) as median_approval_hours,
-            -- How long an exception sits in the review queue before someone
-            -- clears it: the number a team lead can actually act on.
-            percentile_cont(0.5) within group (
-              order by extract(epoch from (released_at - review_at)) / 3600.0
-            ) filter (where released_at is not null and review_at is not null) as median_review_hours
+            (select percentile_cont(0.5) within group (order by hours) from review_visits) as median_review_hours
      from approved`,
   );
   const hours = (value) => (value === null || value === undefined ? null : Math.round(Number(value) * 100) / 100);

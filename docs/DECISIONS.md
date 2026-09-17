@@ -480,6 +480,115 @@ audit trail is worse than showing German to an English reader.
 The URL paths stay German (`/sichtpruefung`, `/freigaben`). They are
 identifiers, and changing them would break existing links for no gain.
 
+## ADR-035 A stored original is served as source text, never as a document
+
+Context: `/api/invoices/:id/file` returned the stored bytes as
+`application/xml` with `Content-Disposition: inline`, on the API's own origin,
+with no content policy. The XML gate decides what the system will *process*; it
+does not decide what a browser will *render*. A file refused as an invoice is
+still downloadable, and a document refused as an invoice can be a perfectly
+good XHTML page.
+
+Reproduced on 2026-09-17: a clerk uploaded well-formed XHTML named `.xml`.
+Intake correctly routed it to review as an unsupported format. Opening its
+original-file URL in a browser authenticated as a manager executed its script,
+which called `/api/auth/me` and read back role MANAGER. That is stored XSS: the
+uploader chooses the payload and the victim is whoever opens the link. HttpOnly
+stops a script reading the cookie; it does not stop the script making
+authenticated requests with it.
+
+Decision: the endpoint serves `text/plain; charset=utf-8` with
+`X-Content-Type-Options: nosniff`, `Content-Security-Policy: default-src 'none';
+sandbox; frame-ancestors 'none'` and `Referrer-Policy: no-referrer`. The bytes
+are unchanged: safety comes from how the evidence is served, never from
+rewriting it. `nosniff` is set on every API response, because a declared type
+that the browser is free to second-guess is not a declared type.
+
+Rejected: serving it as an attachment. The reviewer's "view the original" link
+is worth keeping, and plain text with nosniff already removes the execution.
+
+Rejected: filtering the uploaded XML. A filter is a guess about every renderer;
+the content type is a statement to all of them.
+
+## ADR-036 What must agree before a payment closes an invoice
+
+Extends ADR-016, which established that reference and amount must both agree.
+Three defects showed that was not enough, each reproduced on 2026-09-17.
+
+**The reference must name the invoice, not contain its characters.** Matching
+was a substring test with a longest-number tie-break. With only `INV-1` open, a
+reference naming `INV-10` closed `INV-1`; with both `INV-A` and `INV-LONG` open,
+`"INV-A und INV-LONG"` silently closed the longer one instead of being
+ambiguous. An identifier now ends where a non-alphanumeric character begins, so
+`INV-10` does not name `INV-1` while `RG-INV-2026-00421/2026` still names
+`INV-2026-00421`: a hyphen or slash joins identifiers, a digit extends one.
+With real boundaries the tie-break has nothing left to fix and is gone; two
+named invoices are two obligations, which is ambiguous.
+
+**Direction is defined.** This is Nordwerk's own account, so paying a supplier
+moves money out and appears as a negative amount, which is what the demo
+statement already carried. A positive transaction of the same size is money
+arriving and does not settle a payable. Tests previously accepted either sign,
+which is how an incoming credit could close a bill.
+
+**Currency and counterparty are evidence too.** The matcher compared an
+absolute number and ignored both, and the candidate query did not even select
+the invoice currency. A payment in USD, or to a different supplier's account,
+reconciled a EUR invoice. An account that cannot be verified on either side is
+an exception, not a pass: unverifiable is not verified.
+
+Checked in a fixed order — direction, currency, counterparty, amount — so a
+transaction wrong in several ways always reports the same reason.
+
+**Manual resolution consumes the evidence.** Closing an exception changed only
+the invoice; its transaction stayed `EXCEPTION`, was picked up by the next run,
+reset to `UNMATCHED` with its reason cleared but its invoice link intact, and
+was then free to match a later invoice. A resolved transaction now moves to
+`RESOLVED` in the same transaction as the invoice, and `RESOLVED` never
+re-enters matching. A transaction that stops matching loses its invoice link
+instead of keeping a stale one.
+
+## ADR-037 A feature that reads existing rows needs a repair migration
+
+Context: migration 0006 created the purchase-order commitment ledger empty. A
+new installation is correct, because every invoice arrives after the ledger
+exists. An installation that already had invoices in capacity-holding states
+came out of the upgrade with no record of those claims, so every order looked
+untouched and the next invoice could spend the same money again.
+
+Reproduced on 2026-09-17 by applying 0001-0005, inserting an APPROVED invoice
+for 319,33 against a 500,00 order, then applying the rest: availability still
+reported the full 500,00.
+
+Decision: 0009 backfills the missing commitments, append-only and safe to
+re-run. An order that was already overspent before the ledger existed is
+reported with `raise notice` rather than absorbed, because silently swallowing
+it hides the condition the ledger was added to prevent.
+
+The general rule this records: a migration that introduces a table the domain
+treats as complete must populate it from the rows that already exist. Every
+other test in this project starts from an empty schema with all migrations
+applied, so no reset-and-seed test can see this class of defect. Upgrade tests
+build the "before" state deliberately: migrations to a point, data, then the
+rest.
+
+## ADR-038 The accounting CSV defends against formula execution
+
+Context: the export quotes delimiters and quotes, which keeps a value inside
+its column. It does nothing about a spreadsheet executing it. An invoice
+numbered `=1+1` passes intake and reaches the CSV as a live formula.
+
+Decision: a cell opening with `=`, `+`, `-`, `@`, tab or carriage return is
+prefixed with an apostrophe, which Excel, LibreOffice and Sheets all read as
+"this is text". A well-formed number is exempt, otherwise every credit amount
+would be mangled to defend against a leading minus.
+
+The trade-off, stated plainly: the prefix changes the exported value. The
+export's consumer is a bookkeeping import, which should strip a leading
+apostrophe, and the prefix appears only on values that would otherwise be
+executed. Neutralising at export rather than rejecting at intake keeps the
+stored document a faithful record of what the supplier sent.
+
 ## Assumptions and contradictions found in the brief
 
 - The brief lists "totals mathematically consistent" under business validation

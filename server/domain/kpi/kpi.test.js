@@ -178,3 +178,73 @@ test("review dwell time is measured from entering review to release", async () =
   assert.ok(k.cycle.median_review_hours !== null, "a released exception yields a dwell time");
   assert.ok(k.cycle.median_review_hours >= 0);
 });
+
+// --- pairing review visits, and what "overdue" means -----------------------
+
+test("a review visit that follows a returned question does not produce a negative median", async () => {
+  // READY_FOR_APPROVAL -> INFO_REQUESTED -> REVIEW_REQUIRED puts an approval
+  // entry before a review entry. Subtracting the first of each gave -1 hours.
+  const invoice = await upload(fixture("A_clean_1240.xml"), "A_clean_1240.xml");
+  assert.equal(invoice.state, "READY_FOR_APPROVAL");
+
+  await post(`/api/invoices/${invoice.id}/review/request-info`, clients.clerk, { comment: "Rückfrage zur Bestellung" });
+  await post(`/api/invoices/${invoice.id}/info-received`, clients.clerk, { comment: "beantwortet" });
+
+  // Representative times: released two hours ago, the review visit began one
+  // hour ago and is still open.
+  await deps.pool.query(
+    `update finops.audit_events set occurred_at = now() - interval '2 hours'
+     where invoice_id = $1 and to_state = 'READY_FOR_APPROVAL'`, [invoice.id]);
+  await deps.pool.query(
+    `update finops.audit_events set occurred_at = now() - interval '1 hour'
+     where invoice_id = $1 and to_state = 'REVIEW_REQUIRED'`, [invoice.id]);
+
+  const { cycle } = await kpis();
+  assert.ok(cycle.median_review_hours === null || cycle.median_review_hours >= 0,
+    `a duration cannot be negative, got ${cycle.median_review_hours}`);
+});
+
+test("a review visit still open contributes no duration", async () => {
+  const invoice = await upload(fixture("B_iban_changed_2499.xml"), "B_iban_changed_2499.xml");
+  assert.equal(invoice.state, "REVIEW_REQUIRED");
+
+  const { cycle } = await kpis();
+  assert.equal(cycle.median_review_hours, null, "nothing has left review yet");
+});
+
+test("a finished review visit is measured from its own entry", async () => {
+  const invoice = await upload(fixture("B_iban_changed_2499.xml"), "B_iban_changed_2499.xml");
+  await deps.pool.query(
+    `update finops.audit_events set occurred_at = now() - interval '3 hours'
+     where invoice_id = $1 and to_state = 'REVIEW_REQUIRED'`, [invoice.id]);
+  await post(`/api/invoices/${invoice.id}/review/accept`, clients.clerk, { comment: "IBAN bestätigt" });
+
+  const { cycle } = await kpis();
+  assert.ok(cycle.median_review_hours >= 2.9 && cycle.median_review_hours <= 3.1,
+    `about three hours, got ${cycle.median_review_hours}`);
+});
+
+test("an invoice that has been paid is not overdue, even with an unclear reconciliation", async () => {
+  const invoice = await upload(fixture("G_clean_380.xml"), "G_clean_380.xml");
+  assert.equal(invoice.state, "APPROVED");
+  for (const stage of ["accounting-record", "payment", "payment/confirm"]) {
+    const res = await post(`/api/invoices/${invoice.id}/${stage}`, clients.finance, {});
+    assert.equal(res.status, 200, stage);
+  }
+  // Long overdue on paper, and its reconciliation never came out clean.
+  await deps.pool.query("update finops.invoices set due_date = current_date - 30 where id = $1", [invoice.id]);
+  await deps.pool.query("update finops.invoices set state = 'RECONCILIATION_EXCEPTION' where id = $1", [invoice.id]);
+
+  const { workload } = await kpis();
+  assert.equal(workload.overdue, 0, "the supplier has their money; this is bookkeeping work");
+  assert.equal(workload.due_within_7_days, 0);
+  assert.equal(workload.reconciliation_exceptions, 1, "and it is counted where it belongs");
+});
+
+test("an unpaid invoice past its due date is still overdue", async () => {
+  const invoice = await upload(fixture("A_clean_1240.xml"), "A_clean_1240.xml");
+  await deps.pool.query("update finops.invoices set due_date = current_date - 5 where id = $1", [invoice.id]);
+
+  const { workload } = await kpis();
+  assert.equal(workload.overdue, 1, "the control must still fire for money actually owed");
+});

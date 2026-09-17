@@ -74,6 +74,9 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
   blocked between two approval steps is still approved.
 - **A refusal from the server is shown verbatim**, so it stays German even when
   the interface is set to English. The API returns prose, not an error code.
+- **Reconciliation matches one statement line to one invoice.** Part payments,
+  collective payments covering several invoices and credit notes are not
+  modelled; each becomes an exception for a person to resolve.
 - **Recovery after a partial intake is manual.** If processing fails after the
   file is received, re-uploading returns a duplicate and the original waits for
   a manual reprocess.
@@ -85,6 +88,13 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
   declared profile and the structure it needs; it does not certify compliance.
 - Accounting, payment and bank data are simulated.
 - Approval thresholds and savings figures are demo assumptions.
+
+## Stored originals
+
+The uploaded file is kept byte for byte and served back as source text, never
+as a type a browser will render. A document refused as an invoice can still be
+a working web page, and rendering it on the API's own origin would run it with
+the session of whoever opened the link. See ADR-035.
 
 ## Display language
 
