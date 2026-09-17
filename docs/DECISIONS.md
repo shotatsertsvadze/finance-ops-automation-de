@@ -636,6 +636,51 @@ the count at the threshold meant the first wrong password after the wait locked
 the account again immediately, which is a worse experience than the policy
 describes and was never a stated decision.
 
+## ADR-041 Business facts are checked again at the moment of signing
+
+Closes L7, which had been accepted as a limitation since the eligibility work.
+
+Context: validation runs at intake. Master data does not stand still. A
+supplier can be blocked, a bank account retired or a purchase order consumed
+while an invoice waits for a signature, and until now the final gate re-checked
+only `payableBlockers` — missing fields and unreadable structure. Business facts
+were whatever the last run had said. Reproduced on 2026-09-17: an invoice
+released for approval, its supplier then blocked, was approved and became
+payable on the strength of a check run days earlier.
+
+Decision: before an approval is recorded, the business checks run again against
+current master data and the stored parse. The document is an intake fact and
+cannot have changed (ADR-033), so nothing is re-read from the file; only master
+data can move the answer.
+
+**The part that makes this non-trivial.** An invoice released from review still
+carries the check that sent it there: a reviewer looked at that changed IBAN and
+accepted it. Refusing on any failing check would refuse every reviewed
+exception and make review pointless. The gate therefore compares against what
+the previous run recorded and stops only a check that was not failing then and
+is failing now. Severities match the routing rule, HIGH and MEDIUM, so the gate
+stops exactly what intake would have stopped.
+
+**Where the invoice goes.** Back to `REVIEW_REQUIRED`, not stuck in front of a
+confused approver. A business problem belongs in the review queue, which is
+where intake would have sent it, and the state machine gains
+`READY_FOR_APPROVAL -> REVIEW_REQUIRED` for this one purpose. The pending steps
+are cancelled and `review_accepted_by` is cleared, so the four-eyes rule starts
+again rather than inheriting the earlier release.
+
+The re-check is recorded as a complete validation run, so the reviewer opens
+the invoice and sees the current picture. The technical results are carried
+forward from the previous run rather than recomputed: the document cannot have
+changed, so copying them states a fact rather than guessing one.
+
+**The response.** The transition commits and the request is answered 409 with
+the invoice. The signature did not happen and the invoice did move; reporting
+only one of those would leave the screen lying about the other. The client
+reloads after a refusal for the same reason.
+
+Rejection is deliberately unaffected. The gate guards the payable direction:
+refusing to pay a blocked supplier is always allowed.
+
 ## Assumptions and contradictions found in the brief
 
 - The brief lists "totals mathematically consistent" under business validation

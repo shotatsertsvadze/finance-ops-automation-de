@@ -137,7 +137,7 @@ described as working.
 | L3 (R10) | The recognised XML subset is loose: namespaces are stripped and only the local name `Invoice` is required, so a non-UBL namespace is still accepted. Allowances, charges, prepayments and rounding are not modelled. | Replace the UBL root namespace | OPEN |
 | ~~L4 (R11)~~ | ~~Decisions are not bound to a document hash or validation-run identifier~~ | **Fixed 2026-09-17**: each decision records the document, the validation run and the amount, and two gates refuse a mismatch. See ADR-033 and the table below. | CLOSED |
 | L8 | A refusal from the server (a four-eyes violation, a state conflict) is shown verbatim, so it stays German in English mode. The API returns prose, not an error code. | Trigger any 409 in English mode | OPEN |
-| L7 | Business checks are not re-run at the final approval gate. Only `payableBlockers` is re-checked, so a supplier blocked between step 1 and step 2 is still approved. | Set a supplier to BLOCKED between two approval steps | OPEN |
+| ~~L7~~ | ~~Business checks are not re-run at the final approval gate~~ | **Fixed 2026-09-17**: the gate re-checks business facts against current master data and returns the invoice to review when one has newly failed. See ADR-041 and the table below. | CLOSED |
 | ~~L5 (R12)~~ | ~~Unauthenticated actor header, unrestricted CORS, binds all interfaces~~ | **Fixed 2026-09-17**: password login with server-side sessions, CSRF double-submit, a role matrix, same-origin CORS and loopback binding. See ADR-029 and ADR-030. | CLOSED |
 | ~~L6 (R13)~~ | ~~The test helper could drop the development schema~~ | **Fixed 2026-09-17**: `testDeps()` refuses to run when `TEST_DATABASE_URL` equals `DATABASE_URL`. | CLOSED |
 
@@ -287,6 +287,20 @@ Found while verifying the above, not in the report:
 | # | Finding | Reproduced | Fix | Status |
 |---|---|---|---|---|
 | F11 | Every demo invoice's "view original" link answered 500 | Browser, 2026-09-17: the generator wrote originals to a temp directory the API cannot read | `scripts/demo-data.js` uses the same storage as the API | MANUAL Browser, 2026-09-17, source shown after the fix |
+
+## Final approval gate
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| G1 | A supplier blocked while the invoice waited | the approval is refused | AUTO | `final-gate.test.js` |
+| G2 | The invoice returns to review with the new failure recorded | REVIEW_REQUIRED, reason SUPPLIER_ACTIVE, check on the record | AUTO | `final-gate.test.js` |
+| G3 | Pending steps are cancelled, not left open | every step CANCELLED | AUTO | `final-gate.test.js` |
+| G4 | An exception a reviewer already accepted still approves | 200, APPROVED | AUTO | `final-gate.test.js` |
+| G5 | A clean invoice is unaffected | 200, APPROVED | AUTO | `final-gate.test.js` |
+| G6 | A bank account retired while the invoice waited | REVIEW_REQUIRED, reason SUPPLIER_IBAN_MATCH | AUTO | `final-gate.test.js` |
+| G7 | Rejection is not blocked by a new business failure | 200, REJECTED | AUTO | `final-gate.test.js` |
+| G8 | Both halves of the gate are load-bearing | removing it fails 4 tests; treating every failure as new fails G4 | MANUAL | Mutation check, 2026-09-17 |
+| G9 | The refusal is visible to the approver | invoice shown in review with the blocking reason | MANUAL | Browser, 2026-09-17: step CANCELLED, "Lieferant gesperrt", `supplier_active FAILED · HIGH` |
 
 ## Residual items from the same review
 

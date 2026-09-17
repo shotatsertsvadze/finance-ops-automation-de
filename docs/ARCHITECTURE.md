@@ -130,6 +130,11 @@ Bank transactions carry a status of `UNMATCHED`, `MATCHED`, `EXCEPTION` or
 `RESOLVED`. `RESOLVED` is set when a person closes an exception by hand, in the
 same transaction as the invoice, and never re-enters matching (ADR-036).
 
+Before an approval is recorded the business checks run again against current
+master data. A check that was not failing at the last run and is failing now
+sends the invoice back to `REVIEW_REQUIRED` with its steps cancelled; one that
+was already failing was seen by a reviewer and does not (ADR-041).
+
 Database-enforced invariants:
 
 - `unique (file_sha256) where state <> 'DUPLICATE'`: the same file can exist

@@ -69,9 +69,6 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
   notes returning capacity, and order closure are not modelled.
 - **The recognised XML subset is loose.** Namespaces are stripped, and
   allowances, charges, prepayments and rounding are not modelled.
-- **Business checks are not re-run at the final approval gate.** Only the
-  mandatory-field and technical blockers are checked again, so a supplier
-  blocked between two approval steps is still approved.
 - **A refusal from the server is shown verbatim**, so it stays German even when
   the interface is set to English. The API returns prose, not an error code.
 - **Reconciliation matches one statement line to one invoice.** Part payments,
@@ -173,8 +170,9 @@ deliberately imperfect: a short payment, a payment to the wrong account, one
 with no invoice named and a few payments the bank has not reported yet. A month
 of lines that all matched would demonstrate nothing.
 
-The run is reproducible: the same seed produces the same invoices, timings and
-statement. The data is synthetic.
+The same seed produces the same invoices, amounts and relative timings. The
+dates are not fixed: the month ends today, so regenerating on another day
+shifts them and rewrites the committed statement. The data is synthetic.
 
 Every dashboard figure is computed from the invoices and their audit events.
 There is no counter to drift. The savings estimate is a scenario shown together

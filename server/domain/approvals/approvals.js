@@ -3,6 +3,7 @@ import { stepsAfterReview } from "../../config/policy.js";
 import { NotFoundError, TransitionError, recordEvent, transition } from "../workflow/transitions.js";
 import { latestFailedChecks, payableBlockers } from "../workflow/eligibility.js";
 import { bindingDrift, bindingOf, latestRunNo } from "./binding.js";
+import { newBusinessFailures, recordRecheck } from "./final-checks.js";
 import { toCents } from "../money.js";
 
 /** A refusal the caller caused, distinct from a state-machine violation. */
@@ -145,7 +146,7 @@ export async function requestInfoFromApproval({ pool }, { invoiceId, actor, comm
  * still open for approval, the step exists and is undecided, steps run in
  * order, the actor holds the required role, and segregation of duties.
  */
-export async function decideApprovalStep({ pool }, { invoiceId, stepNo, action, actor, user, comment }) {
+export async function decideApprovalStep({ pool, policy, company }, { invoiceId, stepNo, action, actor, user, comment }) {
   return withTransaction(pool, async (client) => {
     const invoice = await lockInvoice(client, invoiceId);
     if (invoice.state !== "READY_FOR_APPROVAL") {
@@ -192,6 +193,31 @@ export async function decideApprovalStep({ pool }, { invoiceId, stepNo, action, 
       const drift = bindingDrift(binding, steps.filter((s) => s.status === "APPROVED"));
       if (drift.length) {
         throw new RuleError(409, "Rechnung hat sich seit der vorherigen Freigabe geändert und muss neu geprüft werden", { drift });
+      }
+
+      // Master data may have moved while the invoice waited. A fact that has
+      // changed for the worse belongs in front of a reviewer, not behind a
+      // signature, so the invoice goes back to review rather than the approver
+      // being told to try again. Committed, then reported as a refusal: the
+      // signature did not happen, and the invoice did move.
+      const recheck = await newBusinessFailures(client, invoice, policy, company);
+      if (recheck?.fresh.length) {
+        const lead = recheck.fresh[0];
+        const reviewReason = lead.check.toUpperCase();
+        await recordRecheck(client, invoiceId, recheck.checks);
+        await cancelAllSteps(client, invoiceId);
+        await client.query("update finops.invoices set review_accepted_by = null where id = $1", [invoiceId]);
+        await transition(client, {
+          invoiceId, to: "REVIEW_REQUIRED", actor, action: "routed_to_review_at_approval",
+          reason: `Bei der Freigabe neu aufgetreten: ${lead.reason}`,
+          reviewReason,
+          evidence: { new_failures: recheck.fresh.map((c) => ({ check: c.check, reason: c.reason })) },
+        });
+        return {
+          outcome: "ROUTED_TO_REVIEW",
+          reviewReason,
+          reasons: recheck.fresh.map((c) => `${c.check}: ${c.reason}`),
+        };
       }
     }
 

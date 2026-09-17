@@ -123,10 +123,20 @@ export function invoicesRouter(deps) {
       if (!["approve", "reject"].includes(action)) return res.status(400).json({ error: "Unbekannte Entscheidung" });
       const stepNo = Number(req.params.stepNo);
       if (!Number.isInteger(stepNo) || stepNo < 1) return res.status(400).json({ error: "Ungültiger Schritt" });
-      await decideApprovalStep(deps, {
+      const result = await decideApprovalStep(deps, {
         invoiceId: req.params.id, stepNo, action, actor: req.actor, user: req.user, comment: req.body?.comment,
       });
-      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+      const detail = await getInvoiceDetail(deps.pool, req.params.id);
+      // The signature did not happen and the invoice moved: a refusal that
+      // still carries the invoice, so the client shows where it went.
+      if (result?.outcome === "ROUTED_TO_REVIEW") {
+        return res.status(409).json({
+          error: "Rechnung wurde nicht freigegeben: die fachliche Prüfung ist seit der Vorlage fehlgeschlagen",
+          details: { reasons: result.reasons, review_reason: result.reviewReason },
+          invoice: detail,
+        });
+      }
+      res.json(detail);
     } catch (error) {
       next(error);
     }

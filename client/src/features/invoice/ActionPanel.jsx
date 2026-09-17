@@ -27,6 +27,10 @@ export default function ActionPanel({ invoice, may, onDone }) {
       onDone();
     } catch (e) {
       setError(e.message);
+      // A refusal can still have moved the invoice: the final approval gate
+      // sends it back to review and answers 409. Reloading either way keeps
+      // the screen showing what the server actually holds.
+      onDone();
     } finally {
       setBusy(false);
     }
