@@ -30,6 +30,16 @@ export const decideStep = (id, stepNo, action, actorId, comment) =>
 
 export const reprocessInvoice = (id, actorId) => actorPost(`/invoices/${id}/reprocess`, actorId);
 
+export const createAccountingRecord = (id, actorId) => actorPost(`/invoices/${id}/accounting-record`, actorId);
+export const instructPayment = (id, actorId) => actorPost(`/invoices/${id}/payment`, actorId);
+export const confirmPayment = (id, actorId) => actorPost(`/invoices/${id}/payment/confirm`, actorId);
+export const resolveReconciliation = (id, actorId, comment) =>
+  actorPost(`/invoices/${id}/reconciliation/resolve`, actorId, { comment });
+
+export const listBankTransactions = () => request("/bank/transactions");
+export const runReconciliation = (actorId) => actorPost("/reconciliation/run", actorId);
+export const importBankStatement = (statement, actorId) => actorPost("/bank/import", actorId, statement);
+
 export function uploadInvoice(file, actorId) {
   const form = new FormData();
   form.append("file", file);

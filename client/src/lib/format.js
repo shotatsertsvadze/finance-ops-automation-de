@@ -29,6 +29,9 @@ export const REVIEW_REASON_LABELS = {
   CURRENCY_EXPECTED: "Unerwartete Währung",
   REQUIRED_FIELDS_COMPLETE: "Pflichtangaben unvollständig",
   AMOUNT_UNKNOWN: "Betrag nicht bestimmbar",
+  NO_REFERENCE_MATCH: "Zahlungseingang ohne eindeutigen Bezug",
+  AMOUNT_MISMATCH: "Zahlbetrag weicht von der Rechnung ab",
+  AMBIGUOUS_REFERENCE: "Zahlungseingang mehrdeutig",
 };
 
 export const ACTION_LABELS = {
@@ -49,6 +52,18 @@ export const ACTION_LABELS = {
   approval_step_approved: "Freigabeschritt erteilt",
   approved: "Freigegeben",
   approval_rejected: "Freigabe verweigert",
+  accounting_record_created: "Buchungssatz erzeugt",
+  payment_instructed: "Zahlung angewiesen",
+  payment_confirmed: "Zahlung bestätigt",
+  reconciled: "Abgeglichen",
+  reconciliation_exception: "Abgleich unklar",
+  reconciliation_resolved: "Abgleich manuell abgeschlossen",
+};
+
+export const MATCH_REASON_LABELS = {
+  NO_REFERENCE_MATCH: "Betrag passt, aber kein Verwendungszweck nennt eine Rechnung",
+  AMOUNT_MISMATCH: "Verwendungszweck nennt die Rechnung, der Betrag weicht ab",
+  AMBIGUOUS_REFERENCE: "Verwendungszweck nennt mehrere offene Rechnungen",
 };
 
 export const ROLE_LABELS = {

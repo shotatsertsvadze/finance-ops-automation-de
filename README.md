@@ -79,3 +79,19 @@ reason. Sending an exception to approval never approves it: it always produces
 at least one approval step, and the person who released it cannot take that
 step. Approval steps run in order, each needs the exact role, and no one may
 decide two steps of the same invoice.
+
+## Money path and reconciliation
+
+An approved invoice is handed to accounting as a booking record, paid through
+a simulated provider, and matched against a synthetic bank statement. Under
+"Zahlungen und Abgleich" you can import the demo statement from
+`fixtures/bank/` and run the match.
+
+A payment is only matched to an invoice when its reference names that invoice
+and the amount agrees. A payment whose amount happens to equal an invoice is
+never matched on that basis alone: it becomes an exception for a person to
+resolve. The demo statement contains one clean match, one amount-only payment,
+one part payment and one payment that matches nothing.
+
+Booking accounts and tax keys in the export are demo assignments, not a
+certified SKR mapping.

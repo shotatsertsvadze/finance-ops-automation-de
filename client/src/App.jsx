@@ -3,12 +3,13 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import { listInvoices } from "./lib/api.js";
 import InboxView from "./features/inbox/InboxView.jsx";
 import InvoiceDetail from "./features/invoice/InvoiceDetail.jsx";
+import PaymentsView from "./features/payments/PaymentsView.jsx";
 import ActorPicker from "./components/ActorPicker.jsx";
 import { useActor } from "./lib/useActor.js";
 
 export default function App() {
   const { users, actorId, setActorId, actor } = useActor();
-  const [counts, setCounts] = useState({ all: 0, REVIEW_REQUIRED: 0, READY_FOR_APPROVAL: 0, APPROVED: 0 });
+  const [counts, setCounts] = useState({ all: 0, REVIEW_REQUIRED: 0, READY_FOR_APPROVAL: 0, APPROVED: 0, openMoney: 0 });
 
   const refresh = useCallback(() => {
     listInvoices()
@@ -18,6 +19,9 @@ export default function App() {
           REVIEW_REQUIRED: rows.filter((r) => r.state === "REVIEW_REQUIRED").length,
           READY_FOR_APPROVAL: rows.filter((r) => r.state === "READY_FOR_APPROVAL").length,
           APPROVED: rows.filter((r) => r.state === "APPROVED").length,
+          openMoney: rows.filter((r) =>
+            ["APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILIATION_EXCEPTION"].includes(r.state),
+          ).length,
         });
       })
       .catch(() => {});
@@ -46,6 +50,10 @@ export default function App() {
           <NavLink to="/freigegeben">
             Freigegeben <span className="nav-count">{counts.APPROVED}</span>
           </NavLink>
+          <div className="nav-group label">Geld</div>
+          <NavLink to="/zahlungen">
+            Zahlungen und Abgleich <span className="nav-count">{counts.openMoney}</span>
+          </NavLink>
         </nav>
         <div className="rail-foot">
           <ActorPicker users={users} actorId={actorId} onChange={setActorId} />
@@ -61,6 +69,7 @@ export default function App() {
           <Route path="/sichtpruefung" element={<InboxView view="review" onChanged={refresh} />} />
           <Route path="/freigaben" element={<InboxView view="approval" onChanged={refresh} />} />
           <Route path="/freigegeben" element={<InboxView view="done" onChanged={refresh} />} />
+          <Route path="/zahlungen" element={<PaymentsView actor={actor} onChanged={refresh} />} />
           <Route path="/rechnung/:id" element={<InvoiceDetail actor={actor} onChanged={refresh} />} />
         </Routes>
       </main>

@@ -23,10 +23,13 @@ export default function StateSpine({ state, reviewReason, pendingRole }) {
   const nodes = [];
   PATH.forEach((stage, i) => {
     const isCurrent = !off && i === reachedIndex;
+    // When the invoice branched off the path, the stage it branched from was
+    // itself completed: an exception after payment still means it was paid.
+    const isDone = off ? i <= reachedIndex : i < reachedIndex;
     nodes.push({
       key: stage,
       name: STATE_LABELS[stage],
-      className: i < reachedIndex ? "done" : isCurrent ? "current" : "",
+      className: isDone ? "done" : isCurrent ? "current" : "",
       note: isCurrent && stage === "READY_FOR_APPROVAL" && pendingRole ? `Wartet auf ${pendingRole}` : null,
     });
     if (off && stage === off.after) {

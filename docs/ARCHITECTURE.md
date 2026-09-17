@@ -238,8 +238,14 @@ invoice above the auto limit.
 | POST | `/api/invoices/:id/review/accept\|reject\|request-info\|confirm-duplicate` | 2 | reviewer actions; `request-info` is also valid from READY_FOR_APPROVAL |
 | POST | `/api/invoices/:id/info-received` | 2 | INFO_REQUESTED back to REVIEW_REQUIRED |
 | POST | `/api/invoices/:id/approvals/:stepNo/approve\|reject` | 2 | approver actions |
-| POST | `/api/invoices/:id/accounting-record` | 3 | produce and export the accounting record |
-| POST | `/api/payments/...`, `/api/reconciliation/run` | 3 | simulated payment and matching |
+| POST | `/api/invoices/:id/accounting-record` | 3 | APPROVED to ACCOUNTING_READY, creates the booking record |
+| POST | `/api/invoices/:id/payment` | 3 | creates the payment instruction, ACCOUNTING_READY to PAYMENT_PENDING |
+| POST | `/api/invoices/:id/payment/confirm` | 3 | simulated provider confirmation, PAYMENT_PENDING to PAID |
+| POST | `/api/invoices/:id/reconciliation/resolve` | 3 | closes a reconciliation exception, reason required |
+| GET | `/api/accounting/export` | 3 | CSV of all booking records |
+| POST | `/api/bank/import` | 3 | imports a synthetic statement, idempotent on `external_id` |
+| GET | `/api/bank/transactions` | 3 | statement lines with match status and reason |
+| POST | `/api/reconciliation/run` | 3 | matches unmatched transactions against paid invoices |
 | GET | `/api/dashboard/kpis` | 4 | operational KPIs |
 
 Actor identity: `X-Actor-Id` header resolved against `users`. Missing or unknown
@@ -255,9 +261,13 @@ actor on a human action → 400. This is an MVP boundary, not authentication
   official EN 16931 / XRechnung validator (e.g. the KoSIT validator). Until it is
   wired, the system reports "profile declared" and "structure checked", never
   "compliant".
-- `domain/accounting/export.js` produces a vendor-neutral record; a DATEV or CSV
-  adapter formats it.
-- `domain/payments/provider.js` is a mock; a bank API adapter replaces it.
+- `domain/accounting/accounting.js` builds a vendor-neutral booking record;
+  `exportAccountingCsv()` is one formatter over it, and a DATEV or SAP adapter
+  would be another. Account numbers and tax keys are demo assignments (ADR-018).
+- `domain/payments/payments.js` holds `mockProvider`; a bank API adapter
+  replaces that object and nothing else.
+- `domain/reconciliation/matching.js` is a pure function, so the matching policy
+  can be changed and tested without touching persistence.
 - `storage/files.js` hides local disk vs. bucket.
 
 ## 9. Security and privacy (MVP)

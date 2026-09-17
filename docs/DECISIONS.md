@@ -150,6 +150,40 @@ Consequences: the audit trail answers "what happened to this invoice", not
 "what did someone try". Recording attempts would need a second connection
 outside the rolled-back transaction. Noted as a limitation, not done.
 
+## ADR-016 Reconciliation never matches on amount alone
+
+Context: the classic reconciliation failure is closing the wrong invoice
+because a payment happened to equal its amount. Two invoices of the same value
+are indistinguishable by amount.
+Decision: `matchTransaction()` reconciles only when the transaction reference
+names exactly one open invoice AND the amount agrees. A reference match with a
+different amount is an exception on that invoice; an amount match with no
+usable reference is an exception attached to no invoice; a reference naming
+several invoices is ambiguous. Where one invoice number is a prefix of
+another, the longest match wins.
+Consequences: more exceptions and more human work, which is the intended
+trade. Closing a wrong payable is worse than asking a person.
+
+## ADR-017 Idempotency is enforced by database constraints, not by checks
+
+Context: retries, replayed webhooks and re-imported statements must not create
+duplicates, and a pre-flight "does it already exist" check is a race.
+Decision: unique constraints carry it. `accounting_records.invoice_id` is
+unique, `payment_instructions.idempotency_key` is unique and derived from the
+invoice, `bank_transactions.external_id` is unique, and a partial unique index
+allows only one MATCHED transaction per invoice. Inserts use
+`on conflict do nothing` and treat "no row inserted" as "already done". The
+state machine independently blocks a repeated transition.
+Consequences: correct under concurrency, not only under polite callers.
+
+## ADR-018 Account numbers and tax keys are demo assignments
+
+Decision: the accounting record carries creditor account, expense account and
+tax key derived from small lookup tables. These are illustrative values, not a
+certified SKR03/SKR04 mapping, and are labelled as such in the UI, the table
+comment and the export documentation. A real installation maps its own chart
+of accounts behind the same record shape.
+
 ## Assumptions and contradictions found in the brief
 
 - The brief lists "totals mathematically consistent" under business validation

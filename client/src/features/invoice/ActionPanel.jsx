@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { decideReview, decideStep, reportInfoReceived, reprocessInvoice } from "../../lib/api.js";
+import {
+  confirmPayment, createAccountingRecord, decideReview, decideStep,
+  instructPayment, reportInfoReceived, reprocessInvoice, resolveReconciliation,
+} from "../../lib/api.js";
 import { ROLE_LABELS } from "../../lib/format.js";
 
 /**
@@ -48,6 +51,18 @@ export default function ActionPanel({ invoice, actor, onDone }) {
       { key: "step-reject", label: "Ablehnen", tone: "high", needsComment: true, run: () => decideStep(id, step.step_no, "reject", actor?.id, comment) },
       { key: "request-info", label: "Rückfrage stellen", tone: "", needsComment: true, run: () => decideReview(id, "request-info", actor?.id, comment) },
     );
+  } else if (invoice.state === "APPROVED") {
+    prompt = "Freigegeben. Der Buchungssatz kann an die Buchhaltung übergeben werden.";
+    actions.push({ key: "accounting", label: "Buchungssatz erzeugen", tone: "ok", run: () => createAccountingRecord(id, actor?.id) });
+  } else if (invoice.state === "ACCOUNTING_READY") {
+    prompt = `Buchungssatz ${invoice.accounting_record?.document_no ?? ""} liegt vor. Zahlung anweisen?`;
+    actions.push({ key: "pay", label: "Zahlung anweisen", tone: "ok", run: () => instructPayment(id, actor?.id) });
+  } else if (invoice.state === "PAYMENT_PENDING") {
+    prompt = "Zahlung ist angewiesen. Die Bestätigung käme in einem echten System vom Zahlungsdienstleister.";
+    actions.push({ key: "confirm", label: "Zahlung bestätigen (Simulation)", tone: "ok", run: () => confirmPayment(id, actor?.id) });
+  } else if (invoice.state === "RECONCILIATION_EXCEPTION") {
+    prompt = "Der Zahlungsabgleich ist nicht eindeutig. Prüfen Sie den Zahlungseingang und schließen Sie den Fall mit Begründung ab.";
+    actions.push({ key: "resolve", label: "Abgleich abschließen", tone: "ok", needsComment: true, run: () => resolveReconciliation(id, actor?.id, comment) });
   } else if (invoice.state === "INFO_REQUESTED") {
     prompt = "Die Rechnung wartet auf eine Rückmeldung. Sobald sie vorliegt, geht sie zurück in die Sichtprüfung.";
     actions.push(
@@ -76,7 +91,7 @@ export default function ActionPanel({ invoice, actor, onDone }) {
               rows={2}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Pflicht bei Ablehnung, Rückfrage und Duplikat"
+              placeholder="Grund angeben"
             />
           </label>
         )}

@@ -8,7 +8,7 @@ Legend:
 - **CODE** inferred from reading the code only, never executed
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (76 tests, all passing as of 2026-09-17). Database tests need
+Run: `npm test` (105 tests, all passing as of 2026-09-17). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
 
 ## High-priority business risks
@@ -28,8 +28,8 @@ Run: `npm test` (76 tests, all passing as of 2026-09-17). Database tests need
 | R11 | Finalised invoice cannot be processed again | 409, nothing changes | AUTO | `intake.test.js` "reprocess ... refused from APPROVED"; `app.test.js` returns 409 |
 | R12 | Undeclared transition is impossible | throws, nothing written | AUTO | `intake.test.js` "an undeclared transition throws and writes nothing" |
 | R13 | Every state change has an audit event | last event's to_state equals current state for every invoice; no orphan from_state | AUTO | `intake.test.js` "every state change has exactly one audit event" |
-| R14 | Reconciliation cannot match the wrong invoice on amount alone | exception, not RECONCILED | OPEN | Phase 3 |
-| R15 | Repeated payment/webhook call is idempotent | one record | OPEN | Phase 3 |
+| R14 | Reconciliation cannot match the wrong invoice on amount alone | exception, no invoice attached | AUTO | `matching.test.js` "an amount that matches an invoice without a reference is never reconciled"; `moneypath.test.js` "an invoice is not reconciled just because a payment has the same amount". Mutation-checked: making the matcher accept amount-only breaks 6 tests |
+| R15 | Repeated payment/webhook call is idempotent | one record | AUTO | `moneypath.test.js` replay cases for handoff, payment, confirmation, statement import and reconciliation run |
 | R16 | A human action without an actor is refused | throws before any write | AUTO | `intake.test.js` "a human action without actor id is refused"; `app.test.js` unknown actor returns 400 |
 | R17 | Fixing master data clears the exception on re-validation | REVIEW_REQUIRED becomes READY_FOR_APPROVAL | AUTO | `intake.test.js` "after the IBAN is approved in master data" |
 | R18 | Intake facts are not derived from document content | filename and channel survive processing | AUTO | `intake.test.js` "receiveInvoice writes intake facts" |
@@ -79,6 +79,30 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | B6 | Unknown PO reference | `po_exists` HIGH | AUTO | `business-checks.test.js` |
 | B7 | Missing PO above the policy threshold | MEDIUM | AUTO | `business-checks.test.js` |
 
+## Money path: accounting, payment, reconciliation
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| M1 | Approved invoice produces one booking record | ACCOUNTING_READY, document number, net/VAT/gross | AUTO | `moneypath.test.js` |
+| M2 | Repeated accounting handoff | 409, still one record | AUTO | `moneypath.test.js` |
+| M3 | Handoff from a non-approved invoice | 409, state unchanged | AUTO | `moneypath.test.js` |
+| M4 | Accounting export | CSV with header and one row per record | AUTO | `moneypath.test.js` |
+| M5 | Payment instruction created with an idempotency key | PAYMENT_PENDING, one instruction | AUTO | `moneypath.test.js` |
+| M6 | Replayed payment instruction | 409, still one instruction | AUTO | `moneypath.test.js` |
+| M7 | Payment confirmation | PAID, instruction EXECUTED with provider reference | AUTO | `moneypath.test.js` |
+| M8 | Repeated confirmation | 409, state unchanged | AUTO | `moneypath.test.js` |
+| M9 | Payment cannot skip the accounting handoff | 409 | AUTO | `moneypath.test.js` |
+| M10 | Statement imported twice | each transaction once | AUTO | `moneypath.test.js` |
+| M11 | Reference and amount agree | RECONCILED, transaction MATCHED | AUTO | `moneypath.test.js` |
+| M12 | Reference names the invoice, amount differs | exception on that invoice, AMOUNT_MISMATCH | AUTO | `moneypath.test.js` |
+| M13 | Transaction matching nothing | stays UNMATCHED, no invoice touched | AUTO | `moneypath.test.js` |
+| M14 | Reconciliation run twice | no second reconciliation event | AUTO | `moneypath.test.js` |
+| M15 | Exception resolved by hand | RECONCILED, actor and reason recorded | AUTO | `moneypath.test.js` |
+| M16 | Resolving without a reason | 400, state unchanged | AUTO | `moneypath.test.js` |
+| M17 | Full money path audit chain | eight events, no gap between from and to | AUTO | `moneypath.test.js` |
+| M18 | Invoice number that prefixes another | longest match wins | AUTO | `matching.test.js` |
+| M19 | Ambiguous reference naming two invoices | AMBIGUOUS_REFERENCE | AUTO | `matching.test.js` |
+
 ## Review and approval workflow
 
 | # | Case | Expected | Status | Evidence |
@@ -117,3 +141,6 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | U6 | Four-eyes refusal is visible to the user | server message shown, invoice unchanged | MANUAL | Browser, 2026-09-17: same manager accepted then tried to approve, refusal rendered, step stayed open |
 | U7 | Full review-to-approval round trip in the UI | two different people, audit shows both | MANUAL | Browser, 2026-09-17: Tim Kessler released, Lea Sommer approved |
 | U8 | Decision panel comes first on a phone | actions above the spine, no page overflow | MANUAL | Browser, 2026-09-17 at 375 px |
+| U9 | Money path driven through the UI | approved invoice booked, paid, reconciled | MANUAL | Browser, 2026-09-17 |
+| U10 | Reconciliation reasons visible per transaction | each unmatched line states why | MANUAL | Browser, 2026-09-17: amount-only and amount-mismatch cases shown |
+| U11 | Spine marks the stage an exception branched from as reached | "Bezahlt" filled while the exception is current | MANUAL | Browser, 2026-09-17, fixed after being spotted |

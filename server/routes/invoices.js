@@ -6,6 +6,9 @@ import { MAX_XML_BYTES } from "../domain/invoice/xml-safety.js";
 import { STATES } from "../domain/workflow/states.js";
 import { decideApprovalStep, decideReview, requestInfoFromApproval } from "../domain/approvals/approvals.js";
 import { requireHuman } from "./actor.js";
+import { createAccountingRecord } from "../domain/accounting/accounting.js";
+import { confirmPayment, createPaymentInstruction } from "../domain/payments/payments.js";
+import { resolveReconciliation } from "../domain/reconciliation/reconciliation.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -107,6 +110,42 @@ export function invoicesRouter(deps) {
       await decideApprovalStep(deps, {
         invoiceId: req.params.id, stepNo, action, actor: req.actor, user: req.user, comment: req.body?.comment,
       });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/accounting-record", requireHuman, async (req, res, next) => {
+    try {
+      await createAccountingRecord(deps, { invoiceId: req.params.id, actor: req.actor });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/payment", requireHuman, async (req, res, next) => {
+    try {
+      await createPaymentInstruction(deps, { invoiceId: req.params.id, actor: req.actor });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/payment/confirm", requireHuman, async (req, res, next) => {
+    try {
+      await confirmPayment(deps, { invoiceId: req.params.id, actor: req.actor, providerRef: req.body?.provider_ref });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/reconciliation/resolve", requireHuman, async (req, res, next) => {
+    try {
+      await resolveReconciliation(deps, { invoiceId: req.params.id, actor: req.actor, comment: req.body?.comment });
       res.json(await getInvoiceDetail(deps.pool, req.params.id));
     } catch (error) {
       next(error);

@@ -121,6 +121,50 @@ export default function InvoiceDetail({ actor, onChanged }) {
             </section>
           )}
 
+          {(invoice.accounting_record || invoice.payment) && (
+            <section className="panel">
+              <div className="panel-head"><span className="label">Buchung und Zahlung</span></div>
+              <div className="panel-body">
+                <div className="facts facts-split">
+                  {invoice.accounting_record && (
+                    <>
+                      <Fact label="Belegnummer" value={invoice.accounting_record.document_no} mono />
+                      <Fact label="Buchungsdatum" value={formatDate(invoice.accounting_record.booking_date)} mono />
+                      <Fact label="Kreditorenkonto" value={invoice.accounting_record.creditor_account} mono />
+                      <Fact label="Aufwandskonto" value={invoice.accounting_record.expense_account} mono />
+                      <Fact label="Kostenstelle" value={invoice.accounting_record.cost_center ?? "—"} mono />
+                      <Fact label="Steuerschlüssel" value={invoice.accounting_record.tax_key} mono />
+                    </>
+                  )}
+                  {invoice.payment && (
+                    <>
+                      <Fact label="Zahlstatus" value={invoice.payment.status} mono />
+                      <Fact label="Referenz" value={invoice.payment.provider_ref ?? "—"} mono />
+                    </>
+                  )}
+                </div>
+                {invoice.accounting_record && (
+                  <p className="hint" style={{ marginBottom: 0, marginTop: 10 }}>
+                    Kontonummern und Steuerschlüssel sind Demo-Zuordnungen, keine geprüfte SKR-Zuordnung.
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
+
+          {invoice.bank_transactions?.length > 0 && (
+            <section className="panel">
+              <div className="panel-head"><span className="label">Zahlungseingang</span></div>
+              <div className="panel-body">
+                {invoice.bank_transactions.map((tx) => (
+                  <div key={tx.id} className="facts" style={{ marginBottom: 6 }}>
+                    <Fact label={tx.external_id} value={`${formatMoney(tx.amount)} · ${tx.reference ?? "ohne Verwendungszweck"}`} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+
           {invoice.approval_steps.length > 0 && (
             <section className="panel">
               <div className="panel-head"><span className="label">Freigabestufen</span></div>
@@ -178,7 +222,7 @@ export default function InvoiceDetail({ actor, onChanged }) {
                           {event.actor_type === "SYSTEM" ? "System" : event.actor_name ?? "Person"}
                         </span>{" "}
                         {event.from_state ? `${event.from_state} → ${event.to_state}` : event.to_state}
-                        {event.reason ? ` · ${event.reason}` : ""}
+                        {event.reason ? ` · ${REVIEW_REASON_LABELS[event.reason] ?? event.reason}` : ""}
                       </div>
                     </div>
                   </li>

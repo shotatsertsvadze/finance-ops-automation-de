@@ -35,11 +35,16 @@ UI. 20 new tests in `server/domain/approvals/approvals.test.js`.
 Deliberately not done: refused attempts are not audited (ADR-015), and there
 is no delegation or substitution when an approver is absent.
 
-## Phase 3 - Accounting and payment simulation
+## Phase 3 - Accounting and payment simulation (done 2026-09-17)
 
-Accounting record + CSV export, mock payment provider, synthetic bank
-transactions, reconciliation with an exact match and an ambiguous case,
-idempotency keys.
+Booking record per approved invoice with a vendor-neutral shape and a CSV
+formatter, a mock payment provider behind a one-object seam, synthetic bank
+statement import, and reconciliation that refuses to match on amount alone.
+Idempotency is carried by unique constraints rather than pre-flight checks
+(ADR-017). 29 new tests.
+
+Deliberately not done: no real bank or accounting connection, no partial
+payment handling beyond raising an exception, no credit notes.
 
 ## Phase 4 - Operational BI
 

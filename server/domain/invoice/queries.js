@@ -31,7 +31,7 @@ export async function getInvoiceDetail(pool, id) {
     [id],
   );
   if (!invoice) return null;
-  const [lines, results, decision, steps, events] = await Promise.all([
+  const [lines, results, decision, steps, events, accounting, payment, bankTx] = await Promise.all([
     pool.query("select * from finops.invoice_lines where invoice_id = $1 order by line_no", [id]),
     pool.query(
       `select * from finops.validation_results where invoice_id = $1
@@ -47,6 +47,9 @@ export async function getInvoiceDetail(pool, id) {
       `select e.*, u.name as actor_name from finops.audit_events e left join finops.users u on u.id = e.actor_id
        where e.invoice_id = $1 order by e.occurred_at, e.id`, [id],
     ),
+    pool.query("select * from finops.accounting_records where invoice_id = $1", [id]),
+    pool.query("select * from finops.payment_instructions where invoice_id = $1", [id]),
+    pool.query("select * from finops.bank_transactions where matched_invoice_id = $1 order by value_date", [id]),
   ]);
   const { file_path, parsed, ...rest } = invoice;
   return {
@@ -57,5 +60,8 @@ export async function getInvoiceDetail(pool, id) {
     routing: decision.rows[0] ?? null,
     approval_steps: steps.rows,
     audit_events: events.rows,
+    accounting_record: accounting.rows[0] ?? null,
+    payment: payment.rows[0] ?? null,
+    bank_transactions: bankTx.rows,
   };
 }

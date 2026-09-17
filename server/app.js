@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { invoicesRouter } from "./routes/invoices.js";
 import { masterDataRouter, usersRouter } from "./routes/master-data.js";
+import { accountingRouter, bankRouter, reconciliationRouter } from "./routes/money.js";
 import { actorMiddleware } from "./routes/actor.js";
 import { STATE_LABELS, TRANSITIONS } from "./domain/workflow/states.js";
 
@@ -16,6 +17,9 @@ export function createApp(deps) {
   app.use("/api/invoices", invoicesRouter(deps));
   app.use("/api/master-data", masterDataRouter(deps));
   app.use("/api/users", usersRouter(deps));
+  app.use("/api/accounting", accountingRouter(deps));
+  app.use("/api/bank", bankRouter(deps));
+  app.use("/api/reconciliation", reconciliationRouter(deps));
   app.use((error, req, res, next) => {
     if (error.status) return res.status(error.status).json({ error: error.message, details: error.details ?? null });
     if (error.name === "MulterError" || /XML-Dateien/.test(error.message)) return res.status(400).json({ error: error.message });

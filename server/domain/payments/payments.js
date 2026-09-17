@@ -1,0 +1,77 @@
+import { withTransaction } from "../../db.js";
+import { NotFoundError, TransitionError, transition } from "../workflow/transitions.js";
+import { RuleError } from "../approvals/approvals.js";
+
+/**
+ * Simulated payment. No money moves: this records the instruction a bank
+ * adapter would send and the confirmation it would return. The provider call
+ * is the seam a real bank API replaces.
+ */
+export const mockProvider = {
+  submit: ({ idempotencyKey }) => ({ providerRef: `MOCK-${idempotencyKey.slice(0, 12)}`, accepted: true }),
+};
+
+/** The instruction is keyed by invoice, so a replay cannot pay twice. */
+const idempotencyKey = (invoice) => `pay:${invoice.id}`;
+
+export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
+  return withTransaction(pool, async (client) => {
+    // See accounting.js: the row lock is taken separately from the join.
+    const locked = await client.query("select 1 from finops.invoices where id = $1 for update", [invoiceId]);
+    if (locked.rowCount === 0) throw new NotFoundError("Rechnung nicht gefunden");
+    const { rows: [invoice] } = await client.query(
+      `select i.*, s.legal_name as supplier_name from finops.invoices i
+       left join finops.suppliers s on s.id = i.supplier_id
+       where i.id = $1`,
+      [invoiceId],
+    );
+    if (invoice.state !== "ACCOUNTING_READY") {
+      throw new TransitionError(`Rechnung im Status ${invoice.state} kann nicht zur Zahlung gegeben werden`, { state: invoice.state });
+    }
+    if (!invoice.supplier_iban_raw) throw new RuleError(422, "Ohne IBAN kann keine Zahlung angewiesen werden");
+
+    const key = idempotencyKey(invoice);
+    const inserted = await client.query(
+      `insert into finops.payment_instructions
+         (invoice_id, idempotency_key, amount, currency, creditor_iban, creditor_name, reference)
+       values ($1,$2,$3,$4,$5,$6,$7)
+       on conflict (idempotency_key) do nothing`,
+      [invoiceId, key, invoice.gross_amount, invoice.currency ?? "EUR", invoice.supplier_iban_raw,
+        invoice.supplier_name ?? invoice.supplier_name_raw ?? "", invoice.invoice_number ?? ""],
+    );
+    if (inserted.rowCount === 0) throw new RuleError(409, "Für diese Rechnung besteht bereits eine Zahlungsanweisung");
+
+    await transition(client, {
+      invoiceId, to: "PAYMENT_PENDING", actor, action: "payment_instructed",
+      reason: `Zahlung ${invoice.gross_amount} ${invoice.currency ?? "EUR"} angewiesen`,
+      evidence: { idempotency_key: key, creditor_iban: invoice.supplier_iban_raw },
+    });
+  });
+}
+
+/** What a provider webhook would call. Safe to replay: the state machine refuses a second confirmation. */
+export async function confirmPayment({ pool }, { invoiceId, actor, providerRef }) {
+  return withTransaction(pool, async (client) => {
+    const { rows: [invoice] } = await client.query("select * from finops.invoices where id = $1 for update", [invoiceId]);
+    if (!invoice) throw new NotFoundError("Rechnung nicht gefunden");
+    if (invoice.state !== "PAYMENT_PENDING") {
+      throw new TransitionError(`Rechnung im Status ${invoice.state} wartet nicht auf eine Zahlungsbestätigung`, { state: invoice.state });
+    }
+
+    const { rows: [instruction] } = await client.query(
+      "select * from finops.payment_instructions where invoice_id = $1 for update", [invoiceId],
+    );
+    if (!instruction) throw new NotFoundError("Keine Zahlungsanweisung vorhanden");
+
+    const ref = providerRef ?? mockProvider.submit({ idempotencyKey: instruction.idempotency_key }).providerRef;
+    await client.query(
+      "update finops.payment_instructions set status = 'EXECUTED', provider_ref = $2, executed_at = now() where id = $1",
+      [instruction.id, ref],
+    );
+    await transition(client, {
+      invoiceId, to: "PAID", actor, action: "payment_confirmed",
+      reason: `Zahlung bestätigt (${ref})`,
+      evidence: { provider_ref: ref, amount: instruction.amount },
+    });
+  });
+}
