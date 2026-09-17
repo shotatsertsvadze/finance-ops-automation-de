@@ -1,6 +1,7 @@
 import { withTransaction } from "../../db.js";
 import { NotFoundError, TransitionError, transition } from "../workflow/transitions.js";
 import { RuleError } from "../approvals/approvals.js";
+import { bindingDrift, bindingOf, latestRunNo } from "../approvals/binding.js";
 import { centsToDecimal, toCents } from "../money.js";
 
 /**
@@ -60,6 +61,16 @@ export async function createAccountingRecord({ pool }, { invoiceId, actor }) {
     );
     if (invoice.state !== "APPROVED") {
       throw new TransitionError(`Rechnung im Status ${invoice.state} ist nicht buchungsreif`, { state: invoice.state });
+    }
+
+    // The booking must be of the invoice that was approved, not of whatever
+    // the row says now.
+    const { rows: approved } = await client.query(
+      "select * from finops.approval_steps where invoice_id = $1 and status = 'APPROVED'", [invoiceId],
+    );
+    const drift = bindingDrift(bindingOf(invoice, await latestRunNo(client, invoiceId)), approved);
+    if (drift.length) {
+      throw new RuleError(409, "Rechnung hat sich seit der Freigabe geändert und kann nicht gebucht werden", { drift });
     }
 
     const { rows: [seq] } = await client.query("select nextval('finops.accounting_document_seq') as n");

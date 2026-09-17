@@ -172,12 +172,20 @@ export default function InvoiceDetail({ may, onChanged }) {
                 <ol className="steps">
                   {invoice.approval_steps.map((step) => (
                     <li key={step.step_no}>
-                      <span className="step-no">{step.step_no}</span>
-                      <span>{step.required_role}</span>
-                      <span className={`chip ${step.status === "PENDING" ? "chip-wait" : "chip-ok"}`}>
-                        {step.status === "PENDING" ? "offen" : step.status}
-                      </span>
-                      {step.actor_name && <span className="hint">{step.actor_name}</span>}
+                      <div className="step-line">
+                        <span className="step-no">{step.step_no}</span>
+                        <span>{step.required_role}</span>
+                        <span className={`chip ${step.status === "PENDING" ? "chip-wait" : "chip-ok"}`}>
+                          {step.status === "PENDING" ? "offen" : step.status}
+                        </span>
+                        {step.actor_name && <span className="hint">{step.actor_name}</span>}
+                      </div>
+                      {step.document_sha256 && (
+                        <div className="step-binding hint mono">
+                          Beleg {step.document_sha256.slice(0, 12)} · Prüflauf {step.validation_run_no}
+                          {step.decided_gross ? ` · ${formatMoney(step.decided_gross)}` : ""}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ol>

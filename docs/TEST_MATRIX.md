@@ -135,7 +135,8 @@ described as working.
 | ~~L1 (R07)~~ | ~~Cumulative PO overrun is not prevented~~ | **Fixed 2026-09-17**: capacity is a commitment ledger; the original reproduction now stops the second invoice. See ADR-032 and the table below. | CLOSED |
 | L2 (R08) | Intake and processing are separate transactions. If processing fails after receipt, re-uploading the same file returns DUPLICATE while the original stays in RECEIVED; recovery is a manual reprocess. | Inject a storage read failure after intake commits | OPEN |
 | L3 (R10) | The recognised XML subset is loose: namespaces are stripped and only the local name `Invoice` is required, so a non-UBL namespace is still accepted. Allowances, charges, prepayments and rounding are not modelled. | Replace the UBL root namespace | OPEN |
-| L4 (R11) | Decisions are not bound to a document hash or validation-run identifier, and approval rows are recreated without a cycle identifier. | Source review | OPEN |
+| ~~L4 (R11)~~ | ~~Decisions are not bound to a document hash or validation-run identifier~~ | **Fixed 2026-09-17**: each decision records the document, the validation run and the amount, and two gates refuse a mismatch. See ADR-033 and the table below. | CLOSED |
+| L7 | Business checks are not re-run at the final approval gate. Only `payableBlockers` is re-checked, so a supplier blocked between step 1 and step 2 is still approved. | Set a supplier to BLOCKED between two approval steps | OPEN |
 | ~~L5 (R12)~~ | ~~Unauthenticated actor header, unrestricted CORS, binds all interfaces~~ | **Fixed 2026-09-17**: password login with server-side sessions, CSRF double-submit, a role matrix, same-origin CORS and loopback binding. See ADR-029 and ADR-030. | CLOSED |
 | ~~L6 (R13)~~ | ~~The test helper could drop the development schema~~ | **Fixed 2026-09-17**: `testDeps()` refuses to run when `TEST_DATABASE_URL` equals `DATABASE_URL`. | CLOSED |
 
@@ -225,6 +226,12 @@ described as working.
 | W8 | Three-step approval | APPROVED only after the last step | AUTO | `approvals.test.js` |
 | W9 | Step rejection | REJECTED, remaining steps CANCELLED | AUTO | `approvals.test.js` |
 | W10 | Unknown step number | 404 from the handler | AUTO | `approvals.test.js` |
+| W11 | A decision records the document, the validation run and the amount | step carries `document_sha256`, `validation_run_no`, `decided_gross` | AUTO | `binding.test.js` |
+| W12 | A later step on a changed invoice is refused | 409, invoice stays READY_FOR_APPROVAL | AUTO | `binding.test.js` |
+| W13 | Accounting handoff on a changed approved invoice is refused | 409, invoice stays APPROVED | AUTO | `binding.test.js` |
+| W14 | An unchanged invoice runs the whole path unaffected | PAID | AUTO | `binding.test.js` |
+| W15 | The binding is readable from the API detail | hash and run number present on the step | AUTO | `binding.test.js` |
+| W16 | Neutering the drift check breaks the gates | W12 and W13 fail | MANUAL | Mutation check, 2026-09-17: `bindingDrift` returned early, both refusal tests failed |
 
 ## API
 
@@ -252,3 +259,5 @@ described as working.
 | U9 | Money path driven through the UI | approved invoice booked, paid, reconciled | MANUAL | Browser, 2026-09-17 |
 | U10 | Reconciliation reasons visible per transaction | each unmatched line states why | MANUAL | Browser, 2026-09-17: amount-only and amount-mismatch cases shown |
 | U11 | Spine marks the stage an exception branched from as reached | "Bezahlt" filled while the exception is current | MANUAL | Browser, 2026-09-17, fixed after being spotted |
+| U12 | Decided approval step shows what it was signed for | document prefix, validation run and amount under the step; prefix matches the intake SHA-256 | MANUAL | Browser, 2026-09-17: `Beleg 8b48b6eb3f2b · Prüflauf 1 · 4.352,73 €` against file hash `8b48b6eb3f2bf49a…` |
+| U13 | Binding line does not overflow at 375 px | scrollWidth equals clientWidth | MANUAL | Browser, 2026-09-17, measured in page |

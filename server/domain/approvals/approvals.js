@@ -2,6 +2,7 @@ import { withTransaction } from "../../db.js";
 import { stepsAfterReview } from "../../config/policy.js";
 import { NotFoundError, TransitionError, recordEvent, transition } from "../workflow/transitions.js";
 import { latestFailedChecks, payableBlockers } from "../workflow/eligibility.js";
+import { bindingDrift, bindingOf, latestRunNo } from "./binding.js";
 import { toCents } from "../money.js";
 
 /** A refusal the caller caused, distinct from a state-machine violation. */
@@ -169,18 +170,30 @@ export async function decideApprovalStep({ pool }, { invoiceId, stepNo, action, 
 
     // Checked again at the last gate: master data or a re-validation may have
     // changed since the release from review.
+    const binding = bindingOf(invoice, await latestRunNo(client, invoiceId));
     if (action === "approve") {
       const blockers = payableBlockers(invoice, await latestFailedChecks(client, invoiceId));
       if (blockers.length) {
         throw new RuleError(422, "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben", { blockers });
+      }
+      // A signature is given for one version of one document. If the invoice
+      // no longer matches what an earlier step signed, the remaining steps
+      // cannot inherit that signature.
+      const drift = bindingDrift(binding, steps.filter((s) => s.status === "APPROVED"));
+      if (drift.length) {
+        throw new RuleError(409, "Rechnung hat sich seit der vorherigen Freigabe geändert und muss neu geprüft werden", { drift });
       }
     }
 
     const decided = action === "approve" ? "APPROVED" : "REJECTED";
     const reason = action === "reject" ? requireComment(comment) : (comment ?? "").trim() || null;
     await client.query(
-      "update finops.approval_steps set status = $3, actor_id = $4, decided_at = now(), comment = $5 where invoice_id = $1 and step_no = $2",
-      [invoiceId, stepNo, decided, actor.id, reason],
+      `update finops.approval_steps
+         set status = $3, actor_id = $4, decided_at = now(), comment = $5,
+             document_sha256 = $6, validation_run_no = $7, decided_gross = $8
+       where invoice_id = $1 and step_no = $2`,
+      [invoiceId, stepNo, decided, actor.id, reason,
+        binding.document_sha256, binding.validation_run_no, binding.decided_gross],
     );
 
     if (action === "reject") {

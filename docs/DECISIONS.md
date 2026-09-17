@@ -412,6 +412,40 @@ small seeded orders turns almost every invoice into a PO exception.
 Still not modelled: partial deliveries, credit notes returning capacity, and
 order closure. An order is a single balance, not a line-by-line receipt.
 
+## ADR-033 An approval names the document it was given for
+
+Context: an `approval_steps` row recorded who decided, when, and with what
+comment, but not what was decided about. To answer "what did this approver
+sign for?" you had to read the invoice's current columns and assume nothing
+had moved since.
+
+Nothing had. Extracted fields are written only by `saveExtractedFields` inside
+`processInvoice`, which is gated on `REPROCESSABLE_STATES` (RECEIVED,
+VALIDATING, REVIEW_REQUIRED), and master data is read-only through the API. So
+an invoice is frozen from the moment it leaves review. That is an accident of
+a list, not a rule, and it will not survive corrections, credit notes or
+partial deliveries.
+
+Decision: each decision writes `document_sha256`, `validation_run_no` and
+`decided_gross` onto its own step. Two gates then compare the invoice as it
+stands against every step already decided: the next approval step, and the
+accounting handoff. A mismatch is a 409, never an inherited signature.
+
+A literal document-hash comparison alone would be a control that can never
+fire, because the file bytes are an intake fact. The validation run and the
+decided amount are what make the binding load-bearing: they are the things a
+future correction path would move.
+
+Steps decided before this column existed carry no binding and are skipped. An
+absent record is not evidence of a change, and inventing a refusal from missing
+data would be the opposite of fail-closed: it would strand invoices that are
+fine.
+
+Not included: re-running business checks at the final gate. A supplier blocked
+between step 1 and step 2 is still approved today, because only
+`payableBlockers` is re-checked. That is a separate control with its own
+semantics, recorded as an open limitation rather than smuggled in here.
+
 ## Assumptions and contradictions found in the brief
 
 - The brief lists "totals mathematically consistent" under business validation

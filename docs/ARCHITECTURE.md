@@ -116,7 +116,11 @@ Key columns (full definitions in `db/migrations/0001_core.sql`):
 - `routing_decisions`: the decision, the reasons and the required approval
   steps as computed by the policy, with the policy snapshot.
 - `approval_steps`: `step_no`, `required_role`, `status`, `actor_id`,
-  `decided_at`, `comment`.
+  `decided_at`, `comment`, and what the decision was given for:
+  `document_sha256`, `validation_run_no`, `decided_gross` (migration
+  `0007_approval_binding.sql`). The next approval step and the accounting
+  handoff both refuse with 409 when the invoice no longer matches a step
+  already decided (ADR-033).
 - `invoices.review_accepted_by`: who released the invoice from review, so that
   person can be excluded from approving it (migration `0002_review_actor.sql`).
 - `audit_events`: `occurred_at`, `actor_type` (SYSTEM|HUMAN), `actor_id`,
