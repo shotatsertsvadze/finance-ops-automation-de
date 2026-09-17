@@ -19,13 +19,23 @@ computed figures.
 
 ## Model (structured invoices only, 1 200 per month)
 
+Corrected 2026-09-17: an earlier version of this table kept the clean
+population at 960 in both columns. If the exception share falls from 20 % to
+12 %, the clean population rises to 1 056, because the invoices that stop being
+exceptions become clean ones.
+
 | | Today | With system |
 |---|---|---|
-| Clean invoices | 960 × 6 min = 96 h | STP: ~0 min touch; approval click ~1 min → 16 h |
-| Exceptions | 240 × 25 min = 100 h | 144 × 8 min = 19 h |
-| Total | 196 h | 35 h |
-| Cost | 8 820 EUR | 1 575 EUR |
-| Estimated saving | | ~7 200 EUR / month, ~160 h |
+| Clean invoices | 960 × 6 min = 96 h | 1 056 × 1 min approval click = 17.6 h |
+| Exceptions | 240 × 25 min = 100 h | 144 × 8 min = 19.2 h |
+| Total touch time | 196 h | 36.8 h |
+| Cost at 45 EUR/h | 8 820 EUR | 1 656 EUR |
+| Estimated saving | | ~7 164 EUR / month, ~159 h |
+
+The one-minute figure assumes every clean invoice still gets an approval click.
+Invoices below the auto-approve limit take no click at all, so this is the
+conservative end. The split between straight-through and human-approved volume
+is itself an assumption and is not measured here.
 
 The model ignores the 40 % PDF invoices, one-time setup, and licence costs. It
 also ignores the harder-to-quantify effects: avoided duplicate payments,

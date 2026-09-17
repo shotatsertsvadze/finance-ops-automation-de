@@ -7,23 +7,46 @@ import { approvalTierLabel } from "../../config/policy.js";
  * parsed invoice and already-loaded master data:
  *   master = { supplier, bankAccounts, purchaseOrder, existingSameNumber }
  */
-export function runBusinessChecks(parsed, master, policy) {
+export function runBusinessChecks(parsed, master, policy, company) {
   const checks = [];
-  const { supplier, bankAccounts = [], purchaseOrder, existingSameNumber = [] } = master;
+  const { supplier, matchedBy = null, bankAccounts = [], purchaseOrder, existingSameNumber = [] } = master;
   const netCents = toCents(parsed.totals.taxExclusive);
   const vatCents = toCents(parsed.totals.taxAmount);
   const grossCents = toCents(parsed.totals.payable);
 
   if (supplier) {
-    checks.push(passed("supplier_known", SEVERITY.HIGH, { expected: "Lieferant im Stammdatenbestand", actual: `${supplier.supplier_no} ${supplier.legal_name}`, reason: `Lieferant über ${parsed.supplier.vatId ? "USt-IdNr." : "Namen"} zugeordnet` }));
+    const how = matchedBy === "VAT_ID" ? "USt-IdNr." : "Namen";
+    checks.push(passed("supplier_known", SEVERITY.HIGH, { expected: "Lieferant im Stammdatenbestand", actual: `${supplier.supplier_no} ${supplier.legal_name}`, reason: `Lieferant über ${how} zugeordnet` }));
     if (supplier.status === "ACTIVE") {
       checks.push(passed("supplier_active", SEVERITY.HIGH, { expected: "ACTIVE", actual: supplier.status, reason: "Lieferant ist aktiv" }));
     } else {
       checks.push(failed("supplier_active", SEVERITY.HIGH, { expected: "ACTIVE", actual: supplier.status, reason: `Lieferant ist ${supplier.status}` }));
     }
   } else {
-    checks.push(failed("supplier_known", SEVERITY.HIGH, { expected: "bekannte USt-IdNr. oder Firmenname", actual: `${parsed.supplier.vatId ?? "(keine USt-IdNr.)"} / ${parsed.supplier.name ?? "(kein Name)"}`, reason: "Lieferant nicht im Stammdatenbestand" }));
+    const reason = {
+      VAT_ID_UNKNOWN: "USt-IdNr. der Rechnung ist keinem Lieferanten zugeordnet; eine Zuordnung über den Namen wäre eine Vermutung",
+      NAME_AMBIGUOUS: "Firmenname trifft auf mehrere Lieferanten zu",
+    }[matchedBy] ?? "Lieferant nicht im Stammdatenbestand";
+    checks.push(failed("supplier_known", SEVERITY.HIGH, { expected: "bekannte USt-IdNr. oder eindeutiger Firmenname", actual: `${parsed.supplier.vatId ?? "(keine USt-IdNr.)"} / ${parsed.supplier.name ?? "(kein Name)"}`, reason }));
     checks.push(skipped("supplier_active", { reason: "Lieferant unbekannt" }));
+  }
+
+  // Whose debt is this? An invoice made out to another company is not ours to
+  // pay, however well it validates otherwise.
+  // Every identifier the document carries must agree. One matching field does
+  // not excuse another that names a different company.
+  const normalise = (value) => (value ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const buyerVat = (parsed.buyer.vatId ?? "").toUpperCase();
+  const buyerName = parsed.buyer.name ?? "";
+  const mismatches = [];
+  if (buyerVat && buyerVat !== company.vatId) mismatches.push(`USt-IdNr. ${buyerVat}`);
+  if (buyerName && normalise(buyerName) !== normalise(company.legalName)) mismatches.push(`Name "${buyerName}"`);
+  if (!buyerVat && !buyerName) mismatches.push("kein Rechnungsempfänger angegeben");
+  const buyerMatches = mismatches.length === 0;
+  if (buyerMatches) {
+    checks.push(passed("buyer_is_us", SEVERITY.HIGH, { expected: `${company.legalName} / ${company.vatId}`, actual: `${parsed.buyer.name ?? "-"} / ${parsed.buyer.vatId ?? "-"}`, reason: "Rechnung ist an das eigene Unternehmen adressiert" }));
+  } else {
+    checks.push(failed("buyer_is_us", SEVERITY.HIGH, { expected: `${company.legalName} / ${company.vatId}`, actual: mismatches.join(", "), reason: "Rechnungsempfänger stimmt nicht mit dem eigenen Unternehmen überein" }));
   }
 
   const activeIbans = bankAccounts.filter((a) => a.status === "ACTIVE").map((a) => a.iban.replace(/\s+/g, "").toUpperCase());
@@ -82,12 +105,25 @@ export function runBusinessChecks(parsed, master, policy) {
   }
 
   const lineSum = parsed.lines.reduce((sum, l) => (sum === null ? null : (toCents(l.lineNet) === null ? null : sum + toCents(l.lineNet))), 0);
-  const lineNetCents = toCents(parsed.totals.lineExtension) ?? netCents;
+  const lineExtensionCents = toCents(parsed.totals.lineExtension);
+  const taxInclusiveCents = toCents(parsed.totals.taxInclusive);
   const inconsistencies = [];
   if (netCents === null || vatCents === null || grossCents === null || lineSum === null) inconsistencies.push("Beträge nicht lesbar");
   else {
-    if (Math.abs(lineSum - lineNetCents) > policy.totalsToleranceCents) inconsistencies.push(`Positionen ${centsToDecimal(lineSum)} != Netto ${centsToDecimal(lineNetCents)}`);
-    if (Math.abs(netCents + vatCents - grossCents) > policy.totalsToleranceCents) inconsistencies.push(`Netto ${centsToDecimal(netCents)} + Steuer ${centsToDecimal(vatCents)} != Brutto ${centsToDecimal(grossCents)}`);
+    // Every declared total is chained to the next. Checking only neighbouring
+    // pairs let a document declare a consistent header over unrelated lines.
+    if (lineExtensionCents !== null && Math.abs(lineSum - lineExtensionCents) > policy.totalsToleranceCents) {
+      inconsistencies.push(`Positionen ${centsToDecimal(lineSum)} != Summe Positionen ${centsToDecimal(lineExtensionCents)}`);
+    }
+    if (Math.abs(lineSum - netCents) > policy.totalsToleranceCents) {
+      inconsistencies.push(`Positionen ${centsToDecimal(lineSum)} != Netto ${centsToDecimal(netCents)}`);
+    }
+    if (Math.abs(netCents + vatCents - grossCents) > policy.totalsToleranceCents) {
+      inconsistencies.push(`Netto ${centsToDecimal(netCents)} + Steuer ${centsToDecimal(vatCents)} != Brutto ${centsToDecimal(grossCents)}`);
+    }
+    if (taxInclusiveCents !== null && Math.abs(taxInclusiveCents - grossCents) > policy.totalsToleranceCents) {
+      inconsistencies.push(`Bruttobetrag ${centsToDecimal(taxInclusiveCents)} != Zahlbetrag ${centsToDecimal(grossCents)}`);
+    }
   }
   if (inconsistencies.length) {
     checks.push(failed("totals_consistent", SEVERITY.HIGH, { expected: "Positionen = Netto; Netto + Steuer = Brutto", actual: inconsistencies.join("; "), reason: "Summen sind rechnerisch nicht konsistent" }));

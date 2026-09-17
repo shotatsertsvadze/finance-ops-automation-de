@@ -8,7 +8,7 @@ Legend:
 - **CODE** inferred from reading the code only, never executed
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (105 tests, all passing as of 2026-09-17). Database tests need
+Run: `npm test` (120 tests, all passing as of 2026-09-17). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
 
 ## High-priority business risks
@@ -78,6 +78,44 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | B5 | Inconsistent totals | `totals_consistent` HIGH | AUTO | `business-checks.test.js` |
 | B6 | Unknown PO reference | `po_exists` HIGH | AUTO | `business-checks.test.js` |
 | B7 | Missing PO above the policy threshold | MEDIUM | AUTO | `business-checks.test.js` |
+
+## Controls found by independent review
+
+An independent review of Phases 0-2 found control defects that the passing
+suite did not catch. Each was reproduced before being fixed, and each fix was
+re-verified by re-running the original reproduction, not only the new test.
+Tests live in `server/domain/workflow/controls.test.js`.
+
+| # | Defect as found | Behaviour now | Status | Evidence |
+|---|---|---|---|---|
+| C1 (R01) | A malformed invoice could be released from review and approved, becoming payable with a null amount | Release and final approval both refuse, 422, naming the blockers | AUTO | "a technically invalid invoice cannot be released" |
+| C2 (R01) | — | A changed IBAN is still overridable by a reviewer | AUTO | "a business exception such as a changed IBAN stays overridable" |
+| C3 (R06) | An exception whose master data was corrected auto-approved with no human | Always at least one approval step; `auto_approved` never fires | AUTO | "an invoice that was ever an exception cannot be auto-approved" |
+| C4 (R06) | — | An invoice that was never an exception still goes straight through | AUTO | same file |
+| C5 (R02) | `RECONCILIATION_EXCEPTION` was outside the payable unique index | Index covers every post-approval state | AUTO | "duplicate protection survives a reconciliation exception" |
+| C6 (R05) | `2026-02-30` returned HTTP 500 and stranded the invoice in RECEIVED | 201, `dates_valid` fails, invoice sits in review | AUTO | "an impossible calendar date fails closed" |
+| C7 (R05) | An unparseable date was dropped to null and the invoice approved | Routed to review | AUTO | "an unparseable date is not silently dropped" |
+| C8 (R03) | A self-consistent header over contradicting lines passed | Totals are chained line sum to net to gross to payable | AUTO | "line totals that contradict the net amount are caught" |
+| C9 (R03) | An unreadable unit price was silently nulled and approved | `amounts_numeric` fails | AUTO | "an unreadable unit price is not approved" |
+| C10 (R04) | An invoice addressed to another company was approved | `buyer_is_us` fails | AUTO | "an invoice addressed to another company is not approved" |
+| C11 (R04) | A matching tax id excused a contradicting buyer name | Every present identifier must agree | AUTO | "a buyer name that contradicts a matching tax id" |
+| C12 (R04) | An unknown tax id fell back to name matching and reported a tax-id match | Contradiction fails `supplier_known` with the real reason | AUTO | "a VAT id that matches no supplier" |
+| C13 (R09) | Non-numeric tier limits became NaN and dropped a 30.000-EUR invoice to one approver | `loadPolicy()` throws | AUTO | "invalid policy configuration is rejected" |
+| C14 (R09) | Out-of-order tiers were accepted | `loadPolicy()` throws | AUTO | "thresholds that are out of order are rejected" |
+
+## Known limitations, confirmed by reproduction
+
+These are reproduced and accepted for the PoC, not fixed. They must not be
+described as working.
+
+| # | Limitation | Reproduction | Status |
+|---|---|---|---|
+| L1 (R07) | Cumulative PO overrun is not prevented. Two invoices of 319.33 net each both approve against a PO with 500.00 remaining, because `remaining_amount` is never consumed. | Upload two variants of fixture G with different invoice numbers | OPEN, see ADR-024 |
+| L2 (R08) | Intake and processing are separate transactions. If processing fails after receipt, re-uploading the same file returns DUPLICATE while the original stays in RECEIVED; recovery is a manual reprocess. | Inject a storage read failure after intake commits | OPEN |
+| L3 (R10) | The recognised XML subset is loose: namespaces are stripped and only the local name `Invoice` is required, so a non-UBL namespace is still accepted. Allowances, charges, prepayments and rounding are not modelled. | Replace the UBL root namespace | OPEN |
+| L4 (R11) | Decisions are not bound to a document hash or validation-run identifier, and approval rows are recreated without a cycle identifier. | Source review | OPEN |
+| L5 (R12) | `X-Actor-Id` is unauthenticated and review actions accept any seeded role, so this demonstrates identity-based rules, not authenticated segregation of duties. CORS is unrestricted and the server binds all interfaces. | Source review | OPEN, deliberate for a local demo |
+| L6 (R13) | The test helper drops schema `finops` in whatever `TEST_DATABASE_URL` names, without checking it differs from the application database. | Source review | OPEN |
 
 ## Money path: accounting, payment, reconciliation
 

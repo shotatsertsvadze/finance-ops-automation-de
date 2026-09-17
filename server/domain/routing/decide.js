@@ -6,7 +6,7 @@ import { requiredApprovalSteps } from "../../config/policy.js";
  * performs the transition. Order matters: technical failures first, then
  * business failures, then the amount policy. Unknown amount fails closed.
  */
-export function decide({ technicalChecks, businessChecks, grossCents, policy }) {
+export function decide({ technicalChecks, businessChecks, grossCents, policy, hadException = false }) {
   const techFailed = failedWith(technicalChecks, [SEVERITY.HIGH, SEVERITY.MEDIUM, SEVERITY.LOW]);
   if (techFailed.length) {
     return review("TECHNICAL_VALIDATION_FAILED", techFailed);
@@ -21,6 +21,15 @@ export function decide({ technicalChecks, businessChecks, grossCents, policy }) 
     return review("AMOUNT_UNKNOWN", [{ check: "gross_amount", reason: "Bruttobetrag nicht bestimmbar" }]);
   }
   const requiredSteps = requiredApprovalSteps(policy, grossCents);
+  // A document that was ever an exception does not become straight-through
+  // just because the master data behind it was corrected (ADR-019).
+  if (hadException && requiredSteps.length === 0) {
+    return {
+      decision: "APPROVAL", targetState: "READY_FOR_APPROVAL", reviewReason: null,
+      requiredSteps: [{ step_no: 1, required_role: "MANAGER" }],
+      reasons: ["Rechnung war zuvor ein Ausnahmefall: Freigabe durch einen Menschen erforderlich"],
+    };
+  }
   if (requiredSteps.length === 0) {
     return { decision: "AUTO_APPROVE", targetState: "APPROVED", reviewReason: null, requiredSteps, reasons: [`Bruttobetrag innerhalb der Auto-Grenze (${policy.autoApproveLimitCents / 100} EUR), alle Prüfungen bestanden`] };
   }

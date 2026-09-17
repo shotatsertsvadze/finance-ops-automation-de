@@ -7,6 +7,7 @@ import { decide } from "../routing/decide.js";
 import { SYSTEM, TransitionError, NotFoundError, recordEvent, transition, writeEvent } from "../workflow/transitions.js";
 import { REPROCESSABLE_STATES } from "../workflow/states.js";
 import { toCents, centsToDecimal } from "../money.js";
+import { parseIsoDate } from "../dates.js";
 
 const sha256 = (buffer) => createHash("sha256").update(buffer).digest("hex");
 
@@ -52,7 +53,7 @@ export async function receiveInvoice({ pool, storage }, { buffer, originalFilena
  * in a single transaction. Allowed from RECEIVED, VALIDATING and
  * REVIEW_REQUIRED (re-validation). Everything else is a 409.
  */
-export async function processInvoice({ pool, storage, policy }, invoiceId, actor = SYSTEM) {
+export async function processInvoice({ pool, storage, policy, company }, invoiceId, actor = SYSTEM) {
   return withTransaction(pool, async (client) => {
     const { rows: [invoice] } = await client.query("select * from finops.invoices where id = $1 for update", [invoiceId]);
     if (!invoice) throw new NotFoundError(`Rechnung ${invoiceId} nicht gefunden`);
@@ -72,24 +73,29 @@ export async function processInvoice({ pool, storage, policy }, invoiceId, actor
     if (technical.parsed) await saveExtractedFields(client, invoiceId, technical.parsed);
 
     if (!technical.passed) {
-      const decision = decide({ technicalChecks: technical.checks, businessChecks: [], grossCents: null, policy });
+      const decision = decide({ technicalChecks: technical.checks, businessChecks: [], grossCents: null, policy, hadException: invoice.had_exception });
       await saveDecision(client, invoiceId, runNo, decision, policy);
+      await markException(client, invoiceId, decision.targetState);
       await transition(client, { invoiceId, to: decision.targetState, actor: SYSTEM, action: "technical_validation_failed", reason: decision.reviewReason, reviewReason: decision.reviewReason, evidence: { run_no: runNo, reasons: decision.reasons } });
       return finalState(client, invoiceId);
     }
 
     const master = await loadMasterData(client, technical.parsed, { excludeInvoiceId: invoiceId });
-    const business = runBusinessChecks(technical.parsed, master, policy);
+    const business = runBusinessChecks(technical.parsed, master, policy, company);
     await saveChecks(client, invoiceId, runNo, "BUSINESS", business.checks);
     await client.query("update finops.invoices set supplier_id = $2, purchase_order_id = $3 where id = $1", [invoiceId, business.supplierId, business.purchaseOrderId]);
 
-    const decision = decide({ technicalChecks: technical.checks, businessChecks: business.checks, grossCents: business.grossCents, policy });
+    const decision = decide({
+      technicalChecks: technical.checks, businessChecks: business.checks,
+      grossCents: business.grossCents, policy, hadException: invoice.had_exception,
+    });
     await saveDecision(client, invoiceId, runNo, decision, policy);
     await client.query("update finops.approval_steps set status = 'CANCELLED' where invoice_id = $1 and status = 'PENDING'", [invoiceId]);
     await client.query("delete from finops.approval_steps where invoice_id = $1 and status = 'CANCELLED'", [invoiceId]);
     for (const step of decision.requiredSteps) {
       await client.query("insert into finops.approval_steps (invoice_id, step_no, required_role) values ($1, $2, $3)", [invoiceId, step.step_no, step.required_role]);
     }
+    await markException(client, invoiceId, decision.targetState);
     const action = { REVIEW: "routed_to_review", APPROVAL: "routed_to_approval", AUTO_APPROVE: "auto_approved" }[decision.decision];
     await transition(client, {
       invoiceId, to: decision.targetState, actor: SYSTEM, action,
@@ -109,6 +115,12 @@ export async function handleUpload(deps, input) {
   return received;
 }
 
+/** Once an invoice has been an exception it stays flagged, for good. */
+async function markException(client, invoiceId, targetState) {
+  if (targetState !== "REVIEW_REQUIRED") return;
+  await client.query("update finops.invoices set had_exception = true where id = $1", [invoiceId]);
+}
+
 async function saveChecks(client, invoiceId, runNo, phase, checks) {
   for (const c of checks) {
     await client.query(
@@ -121,7 +133,9 @@ async function saveChecks(client, invoiceId, runNo, phase, checks) {
 
 async function saveExtractedFields(client, invoiceId, parsed) {
   const amount = (value) => (toCents(value) === null ? null : centsToDecimal(toCents(value)));
-  const date = (value) => (/^\d{4}-\d{2}-\d{2}$/.test(value ?? "") ? value : null);
+  // parseIsoDate, not a shape regex: an impossible date must become null here
+  // rather than throwing inside the transaction and rolling back the checks.
+  const date = (value) => parseIsoDate(value);
   await client.query(
     `update finops.invoices set format = $2, invoice_number = $3, issue_date = $4, due_date = $5, supplier_name_raw = $6,
        supplier_vat_id_raw = $7, supplier_iban_raw = $8, buyer_name_raw = $9, buyer_reference = $10, po_reference_raw = $11,

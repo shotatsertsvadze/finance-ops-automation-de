@@ -1,11 +1,24 @@
 /** Loads the master data a business validation needs. Read-only. */
 export async function loadMasterData(client, parsed, { excludeInvoiceId = null } = {}) {
+  // How the supplier was identified is part of the evidence, so it is reported
+  // rather than inferred from whether the document happened to carry a VAT id.
   let supplier = null;
+  let matchedBy = null;
   if (parsed.supplier.vatId) {
     ({ rows: [supplier = null] } = await client.query("select * from finops.suppliers where upper(vat_id) = upper($1)", [parsed.supplier.vatId]));
+    if (supplier) matchedBy = "VAT_ID";
+    // A tax id that matches nothing is a contradiction, not a missing field:
+    // falling back to the name would quietly accept the mismatch.
+    else matchedBy = "VAT_ID_UNKNOWN";
   }
-  if (!supplier && parsed.supplier.name) {
-    ({ rows: [supplier = null] } = await client.query("select * from finops.suppliers where lower(legal_name) = lower($1)", [parsed.supplier.name]));
+  if (!supplier && !parsed.supplier.vatId && parsed.supplier.name) {
+    const { rows } = await client.query("select * from finops.suppliers where lower(legal_name) = lower($1)", [parsed.supplier.name]);
+    if (rows.length === 1) {
+      supplier = rows[0];
+      matchedBy = "LEGAL_NAME";
+    } else if (rows.length > 1) {
+      matchedBy = "NAME_AMBIGUOUS";
+    }
   }
   const bankAccounts = supplier
     ? (await client.query("select iban, bic, status from finops.supplier_bank_accounts where supplier_id = $1", [supplier.id])).rows
@@ -20,5 +33,5 @@ export async function loadMasterData(client, parsed, { excludeInvoiceId = null }
         [supplier.id, parsed.invoiceNumber, excludeInvoiceId ?? "00000000-0000-0000-0000-000000000000"],
       )).rows
     : [];
-  return { supplier, bankAccounts, purchaseOrder, existingSameNumber };
+  return { supplier, matchedBy, bankAccounts, purchaseOrder, existingSameNumber };
 }

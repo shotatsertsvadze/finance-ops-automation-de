@@ -4,6 +4,7 @@ import path from "node:path";
 import { createPool } from "../db.js";
 import { createStorage } from "../storage/files.js";
 import { loadPolicy } from "../config/policy.js";
+import { loadCompany } from "../config/company.js";
 import { reset } from "../../scripts/reset.js";
 
 /**
@@ -16,7 +17,7 @@ export async function testDeps() {
   const pool = createPool(url);
   await reset(pool);
   const storage = createStorage(await mkdtemp(path.join(tmpdir(), "finops-test-")));
-  return { pool, storage, policy: loadPolicy({}) };
+  return { pool, storage, policy: loadPolicy({}), company: loadCompany({}) };
 }
 
 export const USERS = {

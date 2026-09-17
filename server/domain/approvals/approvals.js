@@ -1,6 +1,7 @@
 import { withTransaction } from "../../db.js";
 import { stepsAfterReview } from "../../config/policy.js";
 import { NotFoundError, TransitionError, recordEvent, transition } from "../workflow/transitions.js";
+import { latestFailedChecks, payableBlockers } from "../workflow/eligibility.js";
 import { toCents } from "../money.js";
 
 /** A refusal the caller caused, distinct from a state-machine violation. */
@@ -56,6 +57,12 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
     }
 
     if (action === "accept") {
+      // Releasing into approval is the start of the payable path, so the
+      // evidence must be eligible before anyone can sign for it.
+      const blockers = payableBlockers(invoice, await latestFailedChecks(client, invoiceId));
+      if (blockers.length) {
+        throw new RuleError(422, "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben", { blockers });
+      }
       const steps = stepsAfterReview(policy, toCents(invoice.gross_amount));
       await client.query("delete from finops.approval_steps where invoice_id = $1", [invoiceId]);
       for (const step of steps) {
@@ -158,6 +165,15 @@ export async function decideApprovalStep({ pool }, { invoiceId, stepNo, action, 
     }
     if (invoice.review_accepted_by === actor.id) {
       throw new RuleError(409, "Wer die Rechnung aus der Sichtprüfung freigegeben hat, darf sie nicht auch fachlich freigeben");
+    }
+
+    // Checked again at the last gate: master data or a re-validation may have
+    // changed since the release from review.
+    if (action === "approve") {
+      const blockers = payableBlockers(invoice, await latestFailedChecks(client, invoiceId));
+      if (blockers.length) {
+        throw new RuleError(422, "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben", { blockers });
+      }
     }
 
     const decided = action === "approve" ? "APPROVED" : "REJECTED";

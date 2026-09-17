@@ -8,7 +8,8 @@ cases go to humans; nothing is approved by default.
 
 Demo company: Nordwerk GmbH (fictional). All data is synthetic.
 
-Status: Phase 1 (walking skeleton) in progress. See `docs/IMPLEMENTATION_PLAN.md`.
+Status: Phases 1-3 built; control review completed and remediated. See
+`docs/IMPLEMENTATION_PLAN.md` and `docs/PHASE_0_INDEPENDENT_REVIEW.md`.
 
 ## Setup
 
@@ -60,8 +61,22 @@ curl -F file=@fixtures/xrechnung/A_clean_1240.xml http://localhost:4400/api/invo
 
 ## Known limits
 
+These are reproduced and accepted, not hidden. Full list with reproductions in
+`docs/TEST_MATRIX.md` under "Known limitations".
+
+- **Cumulative purchase-order overruns are not prevented.** The PO check
+  compares one invoice against the remaining amount at that moment; the amount
+  is never consumed, so two invoices that each fit can together exceed it.
+- **The recognised XML subset is loose.** Namespaces are stripped, and
+  allowances, charges, prepayments and rounding are not modelled.
+- **Decisions are not bound to a document hash or validation run**, so an
+  approval records who and when, but not "of exactly this version".
+- **Recovery after a partial intake is manual.** If processing fails after the
+  file is received, re-uploading returns a duplicate and the original waits for
+  a manual reprocess.
 - No authentication. Actors are seeded users passed as `X-Actor-Id`; roles and
-  segregation of duties are enforced server-side on that identity.
+  segregation of duties are enforced server-side on that identity, which
+  demonstrates identity-based rules rather than authenticated ones.
 - Only XRechnung in UBL syntax is parsed. CII and ZUGFeRD are adapter boundaries.
 - No official EN 16931 / XRechnung validator is wired in. The system checks the
   declared profile and the structure it needs; it does not certify compliance.

@@ -65,3 +65,24 @@ invoice detail with evidence and timeline).
 
 Not done in Phase 1, by design: review and approval endpoints, which Phase 2
 added.
+
+## Control remediation (2026-09-17)
+
+An independent review of Phases 0-2 (`docs/PHASE_0_INDEPENDENT_REVIEW.md`)
+found nine P1 control defects that the then-passing 105-test suite did not
+catch. Every claim was reproduced before any code changed.
+
+Fixed, each with a regression test and a re-run of the original reproduction:
+eligibility separated from the transition table (ADR-019), prior exceptions
+always requiring a human (ADR-020), identifier agreement for supplier and buyer
+(ADR-021), chained totals and unit-price validation (ADR-022), configuration
+validation (ADR-023), calendar-date validation, and duplicate protection
+extended to reconciliation exceptions.
+
+Accepted as documented limitations, not fixed: cumulative PO overruns
+(ADR-024), intake recovery, XML subset looseness, decision-to-version binding,
+and the unauthenticated actor header.
+
+The lesson recorded for later phases: a passing suite proved the paths it
+exercised, not the absence of a bypass. Tests that only demonstrate intended
+routing do not challenge a control.

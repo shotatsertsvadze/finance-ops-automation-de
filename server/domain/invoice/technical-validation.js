@@ -1,5 +1,6 @@
 import { SEVERITY, failed, passed, warning } from "../checks.js";
 import { toCents } from "../money.js";
+import { isValidIsoDate } from "../dates.js";
 import { checkXmlSafety } from "./xml-safety.js";
 import { InvoiceParseError, parseInvoiceXml } from "./parse-xrechnung.js";
 
@@ -56,14 +57,33 @@ export function runTechnicalValidation(buffer) {
     payable: parsed.totals.payable,
     taxExclusive: parsed.totals.taxExclusive,
     taxAmount: parsed.totals.taxAmount,
+    lineExtension: parsed.totals.lineExtension,
     ...Object.fromEntries(parsed.lines.map((l) => [`line ${l.lineNo} net`, l.lineNet])),
     ...Object.fromEntries(parsed.lines.map((l) => [`line ${l.lineNo} quantity`, l.quantity])),
+    // A price we cannot read is a line we cannot verify, so it belongs here.
+    ...Object.fromEntries(parsed.lines.map((l) => [`line ${l.lineNo} unit price`, l.unitPrice])),
   };
   const badAmounts = Object.entries(amounts).filter(([, v]) => v !== null && v !== undefined && toCents(v) === null && !/^-?\d+(\.\d+)?$/.test(String(v)));
   if (badAmounts.length) {
     checks.push(failed("amounts_numeric", SEVERITY.HIGH, { expected: "Dezimalzahlen mit Punkt", actual: badAmounts.map(([k, v]) => `${k}=${v}`).join(", "), reason: "Beträge oder Mengen sind nicht numerisch" }));
   } else {
     checks.push(passed("amounts_numeric", SEVERITY.HIGH, { expected: "Dezimalzahlen", actual: "ok", reason: "Alle Beträge sind numerisch" }));
+  }
+
+  // A date must be a real calendar date, not merely the right shape: 2026-02-30
+  // passes a regex and then breaks the database insert.
+  const dateFields = { "Rechnungsdatum": parsed.issueDate, "Fälligkeitsdatum": parsed.dueDate };
+  const badDates = Object.entries(dateFields).filter(([, v]) => v !== null && v !== undefined && !isValidIsoDate(v));
+  if (badDates.length) {
+    checks.push(failed("dates_valid", SEVERITY.HIGH, {
+      expected: "JJJJ-MM-TT, gültiges Kalenderdatum",
+      actual: badDates.map(([k, v]) => `${k}=${v}`).join(", "),
+      reason: "Datumsangabe ist kein gültiges Kalenderdatum",
+    }));
+  } else {
+    checks.push(passed("dates_valid", SEVERITY.HIGH, {
+      expected: "gültige Kalenderdaten", actual: "ok", reason: "Datumsangaben sind gültige Kalenderdaten",
+    }));
   }
 
   if (parsed.typeCode && parsed.typeCode !== "380") {

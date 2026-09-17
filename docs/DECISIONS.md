@@ -184,6 +184,84 @@ certified SKR03/SKR04 mapping, and are labelled as such in the UI, the table
 comment and the export documentation. A real installation maps its own chart
 of accounts behind the same record shape.
 
+## ADR-019 Eligibility is separate from the transition table
+
+Supersedes nothing; corrects an omission in ADR-002 and ADR-010.
+
+Context: an independent review of Phases 0-2 showed that a legal state edge was
+being treated as sufficient authority to advance. A malformed invoice with no
+readable amount and no resolved supplier could be released from review and
+approved, becoming payable with `gross_amount = null`.
+Decision: two separate questions. `states.js` answers "is this transition
+allowed"; `eligibility.js` answers "is this evidence good enough to become
+payable". `payableBlockers()` requires an invoice number, a readable gross
+amount, a resolved supplier, a valid issue date, a currency, and no failed
+check in `NON_OVERRIDABLE_CHECKS` (well-formedness, recognised format, required
+fields, numeric amounts, valid dates, consistent totals). It is enforced when
+review releases an invoice and again at final approval.
+A reviewer judges business facts: a changed IBAN, a PO overrun, a suspected
+duplicate. A reviewer cannot supply facts the document never carried. Two
+people clicking does not establish a missing amount.
+Consequences: technical failures are no longer overridable; business
+exceptions still are, which is what review is for.
+
+## ADR-020 A document that was ever an exception always needs a human
+
+Context: an invoice in review whose master data was then corrected would, on
+re-validation, take the ordinary auto-approval path and reach APPROVED with no
+human involved. That contradicted ADR-010's stated outcome.
+Decision: `invoices.had_exception` is set on entry to REVIEW_REQUIRED and never
+cleared. Routing refuses to auto-approve such a document, producing at least one
+approval step regardless of amount.
+Consequences: correcting master data resolves the exception but does not erase
+the fact that there was one.
+
+## ADR-021 Identifiers must agree, not merely be present
+
+Context: an invoice carrying a tax id that matched no supplier was quietly
+resolved by company name instead, and the resulting evidence claimed the match
+was made by tax id. An invoice addressed to a different company was approved.
+Decision: a supplier tax id that matches nothing is a contradiction and fails
+`supplier_known`; name matching is used only when no tax id is present, and an
+ambiguous name fails. The new `buyer_is_us` check requires every buyer
+identifier present in the document to agree with the configured company
+(`server/config/company.js`). The lookup reports how the match was made, and
+the check text states that method rather than inferring it.
+
+## ADR-022 Declared totals are chained, not compared pairwise
+
+Context: a document could declare a self-consistent header (net 100 + VAT 19 =
+119) over lines that summed to 319.33, and pass, because the line sum was only
+ever compared to the declared line-extension total.
+Decision: `totals_consistent` chains line sum to line-extension total to
+tax-exclusive amount to gross to payable amount. Unit prices join the
+`amounts_numeric` check, so an unreadable price is a failure rather than a
+silent null.
+Consequences: this is a defined subset, not full EN 16931 arithmetic.
+Allowances, charges, prepayments and rounding are not modelled; see the known
+limitations in `docs/TEST_MATRIX.md`.
+
+## ADR-023 Invalid configuration stops the process
+
+Context: setting a tier limit to a non-numeric value produced NaN thresholds,
+and a 30.000-EUR invoice then required only one approver instead of three.
+Decision: `loadPolicy()` rejects non-finite or negative amounts and requires
+the tiers to ascend. A misconfiguration is a startup failure, never a silently
+weaker control.
+
+## ADR-024 PO matching is a snapshot comparison, not a spending control
+
+Context: two invoices, each within the PO's remaining amount, both approve even
+though together they exceed it. There is no reservation, consumption or release
+lifecycle; `purchase_orders.remaining_amount` is never decremented.
+Decision: for this PoC the PO check stays a per-invoice snapshot comparison.
+This is a stated limitation, not a claim. The system does not prevent cumulative
+PO overruns, and no document may claim that it does.
+A reservation lifecycle needs decisions this brief does not settle: when an
+invoice reserves capacity, how a rejection releases it, whether tolerance
+applies per invoice or cumulatively, and how concurrent invoices share a
+balance. That is scoped work, not a patch.
+
 ## Assumptions and contradictions found in the brief
 
 - The brief lists "totals mathematically consistent" under business validation

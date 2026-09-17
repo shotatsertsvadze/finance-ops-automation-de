@@ -2,22 +2,41 @@
  * Routing and approval policy. Demo assumptions for Nordwerk GmbH, not legal
  * requirements. Amounts in cents. Every value can be overridden by env.
  */
-const num = (value, fallback) => (value === undefined || value === "" ? fallback : Number(value));
+/** A misconfigured threshold must stop the process, not silently become NaN
+ *  and drop a 30.000-EUR invoice to a single approver. */
+const num = (name, value, fallback) => {
+  if (value === undefined || value === "") return fallback;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${name} ist keine gültige Betragsgrenze: "${value}"`);
+  }
+  return parsed;
+};
 const bool = (value, fallback) => (value === undefined || value === "" ? fallback : value === "true");
 
 export function loadPolicy(env = process.env) {
-  return {
+  const policy = {
     version: "demo-2026-09",
-    autoApproveLimitCents: num(env.POLICY_AUTO_APPROVE_LIMIT, 500) * 100,
-    tier1LimitCents: num(env.POLICY_TIER_1_LIMIT, 5000) * 100,
-    tier2LimitCents: num(env.POLICY_TIER_2_LIMIT, 25000) * 100,
-    poTolerancePct: num(env.POLICY_PO_TOLERANCE_PCT, 2),
-    poToleranceMinCents: num(env.POLICY_PO_TOLERANCE_MIN, 10) * 100,
-    poRequiredAboveCents: num(env.POLICY_PO_REQUIRED_ABOVE, 500) * 100,
+    autoApproveLimitCents: num("POLICY_AUTO_APPROVE_LIMIT", env.POLICY_AUTO_APPROVE_LIMIT, 500) * 100,
+    tier1LimitCents: num("POLICY_TIER_1_LIMIT", env.POLICY_TIER_1_LIMIT, 5000) * 100,
+    tier2LimitCents: num("POLICY_TIER_2_LIMIT", env.POLICY_TIER_2_LIMIT, 25000) * 100,
+    poTolerancePct: num("POLICY_PO_TOLERANCE_PCT", env.POLICY_PO_TOLERANCE_PCT, 2),
+    poToleranceMinCents: num("POLICY_PO_TOLERANCE_MIN", env.POLICY_PO_TOLERANCE_MIN, 10) * 100,
+    poRequiredAboveCents: num("POLICY_PO_REQUIRED_ABOVE", env.POLICY_PO_REQUIRED_ABOVE, 500) * 100,
     fourEyesAfterReview: bool(env.POLICY_FOUR_EYES_AFTER_REVIEW, true),
     allowedCurrencies: ["EUR"],
     totalsToleranceCents: 1,
   };
+
+  // Tiers must climb. Out-of-order limits would place a large invoice in a
+  // lower tier than a small one.
+  if (!(policy.autoApproveLimitCents <= policy.tier1LimitCents && policy.tier1LimitCents <= policy.tier2LimitCents)) {
+    throw new Error(
+      "Freigabegrenzen sind nicht in aufsteigender Reihenfolge (auto <= Stufe 1 <= Stufe 2): " +
+        `${policy.autoApproveLimitCents / 100} / ${policy.tier1LimitCents / 100} / ${policy.tier2LimitCents / 100}`,
+    );
+  }
+  return policy;
 }
 
 /** Approval steps required for a gross amount. Empty list means straight-through. */
