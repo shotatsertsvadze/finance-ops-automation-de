@@ -271,7 +271,7 @@ recorded in the evidence column. The report itself is left as written.
 
 | # | Finding | Reproduced | Fix | Status |
 |---|---|---|---|---|
-| F01 | Opening an uploaded XML executes script with the viewer's session | Browser, 2026-09-17: XHTML named `.xml` routed to review, its script ran and read `/api/auth/me` as MANAGER | Served as `text/plain` with nosniff and a sandbox policy; ADR-035 | AUTO `file-serving.test.js` |
+| F01 | Opening an uploaded XML executes script with the viewer's session | Browser, 2026-09-17: XHTML named `.xml` routed to review, its script ran and read `/api/auth/me` as MANAGER | Served as `text/plain` with nosniff and a sandbox policy; ADR-035 | AUTO `file-serving.test.js` for the response contract; MANUAL for execution (see L9) |
 | F02 | Reconciliation ignores currency and counterparty | `matching.test.js` written first: USD and a foreign IBAN both matched | Both are evidence; unverifiable is an exception; ADR-036 | AUTO `matching.test.js`, `reconciliation.test.js` |
 | F03 | Reference matching selects the wrong invoice | Probe against the real matcher: `INV-10` matched `INV-1`; `"INV-A und INV-LONG"` matched the longer one | Token boundaries; the longest-number tie-break removed; ADR-036 | AUTO `matching.test.js` |
 | F04 | The commitment migration forgets existing claims | Disposable database: 0001-0005, an APPROVED invoice for 319,33, then the rest; availability still reported 500,00 | Backfill migration 0009; ADR-037 | AUTO `upgrade.test.js` |
@@ -287,6 +287,25 @@ Found while verifying the above, not in the report:
 | # | Finding | Reproduced | Fix | Status |
 |---|---|---|---|---|
 | F11 | Every demo invoice's "view original" link answered 500 | Browser, 2026-09-17: the generator wrote originals to a temp directory the API cannot read | `scripts/demo-data.js` uses the same storage as the API | MANUAL Browser, 2026-09-17, source shown after the fix |
+
+## Residual items from the same review
+
+The report asked for more than the ten findings. These were addressed after the
+findings themselves.
+
+| # | Item | Expected | Status | Evidence |
+|---|---|---|---|---|
+| R1 | Reconcile against the payment instruction, not the invoice | the bank line is compared with what was sent to the bank | AUTO | `matching.test.js`, `reconciliation.test.js`; inner join on `payment_instructions` |
+| R2 | Login timing must not reveal whether an account exists | comparable time for known and unknown addresses | AUTO | `auth.test.js`; measured 1.1 ms vs 40.4 ms before, 36.3 vs 37.7 after |
+| R3 | Defined behaviour for an expired lock | the attempt count starts again | AUTO | `auth.test.js` |
+| R4 | The test-database guard must not be defeated by an equivalent URL | identity, not string equality | MANUAL | 2026-09-17: `postgresql://127.0.0.1:5432/finops` against `postgresql://localhost/finops` refused before `reset()`; dev database intact |
+| R5 | KPI definition changes recorded as decisions | an ADR per changed definition | DOC | ADR-039 |
+| R6 | The README's no-enumeration claim matched to the evidence | wording and timing both covered | DOC | README, ADR-040 |
+
+| # | Limitation | Why it stays open | Status |
+|---|---|---|---|
+| L9 | No automated real-browser regression proves the served original cannot execute. The automated tests assert the response contract: type, nosniff, sandbox policy. Browser execution was verified by hand. | A headless-browser runner is a dependency this PoC does not carry. | OPEN |
+| L10 | The CSV export prefixes a formula-triggering cell, which alters the value a machine importer reads. | The consumer is a bookkeeping import that should strip a leading apostrophe; the alternative is leaving live formulas in a file people open. Recorded in ADR-038 rather than resolved. | OPEN |
 
 ## Display language
 

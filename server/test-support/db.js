@@ -17,15 +17,39 @@ export { DEMO_PASSWORD };
 export async function testDeps() {
   const url = process.env.TEST_DATABASE_URL;
   if (!url) throw new Error("TEST_DATABASE_URL is not set");
-  // reset() drops the schema. Refusing to run against the development
-  // database turns a catastrophic typo into an error message.
-  if (process.env.DATABASE_URL && url === process.env.DATABASE_URL) {
-    throw new Error("TEST_DATABASE_URL darf nicht auf dieselbe Datenbank zeigen wie DATABASE_URL: die Tests löschen das Schema");
-  }
   const pool = createPool(url);
+  // reset() drops the schema, so this asks both connections which database
+  // they actually reached rather than comparing the two URL strings. Two
+  // spellings of one database ("localhost" and "127.0.0.1", a trailing
+  // parameter, the default port written out) compare as different text and
+  // name the same rows.
+  await refuseSharedDatabase(pool);
   await reset(pool);
   const storage = createStorage(await mkdtemp(path.join(tmpdir(), "finops-test-")));
   return { pool, storage, policy: loadPolicy({}), company: loadCompany({}) };
+}
+
+/** The server and database a connection actually reached. */
+async function identity(pool) {
+  const { rows: [row] } = await pool.query(
+    "select current_database() as db, current_setting('data_directory', true) as dir",
+  );
+  return `${row.dir ?? "?"}::${row.db}`;
+}
+
+async function refuseSharedDatabase(testPool) {
+  if (!process.env.DATABASE_URL) return;
+  const devPool = createPool(process.env.DATABASE_URL);
+  try {
+    const [test, dev] = await Promise.all([identity(testPool), identity(devPool)]);
+    if (test === dev) {
+      throw new Error(
+        `TEST_DATABASE_URL und DATABASE_URL zeigen auf dieselbe Datenbank (${test}): die Tests löschen das Schema`,
+      );
+    }
+  } finally {
+    await devPool.end();
+  }
 }
 
 export const USERS = {

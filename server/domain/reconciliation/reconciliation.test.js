@@ -181,3 +181,31 @@ test("money arriving does not reconcile a payable", async () => {
   assert.equal((await get(invoice.id)).state, "RECONCILIATION_EXCEPTION");
   assert.equal((await txRow("TX-INCOMING")).match_reason, "PAYMENT_DIRECTION");
 });
+
+test("the bank line is compared with what was instructed, not with the invoice", async () => {
+  // The two agree today, so nothing else in this file can tell which one is
+  // read. Moving the invoice out from under its instruction separates them:
+  // the bank acted on the instruction, so that is what must be reconciled.
+  const invoice = await paidInvoice(10000);
+  await deps.pool.query(
+    "update finops.invoices set supplier_iban_raw = $2, gross_amount = $3 where id = $1",
+    [invoice.id, "DE02120300000000202051", "999.99"],
+  );
+
+  await importTx({ external_id: "TX-INSTRUCTED", amount: `-${invoice.gross}`, reference: `Rechnung ${invoice.number}` });
+  await run();
+
+  assert.equal((await get(invoice.id)).state, "RECONCILED",
+    "matching the instruction still succeeds although the invoice row now disagrees");
+  assert.equal((await txRow("TX-INSTRUCTED")).status, "MATCHED");
+});
+
+test("an invoice that was never instructed cannot be reconciled", async () => {
+  const invoice = await paidInvoice(10000);
+  await deps.pool.query("delete from finops.payment_instructions where invoice_id = $1", [invoice.id]);
+  await importTx({ external_id: "TX-NO-INSTRUCTION", amount: `-${invoice.gross}`, reference: `Rechnung ${invoice.number}` });
+
+  await run();
+  assert.equal((await txRow("TX-NO-INSTRUCTION")).status, "UNMATCHED");
+  assert.equal((await get(invoice.id)).state, "PAID", "no instruction, nothing to reconcile against");
+});

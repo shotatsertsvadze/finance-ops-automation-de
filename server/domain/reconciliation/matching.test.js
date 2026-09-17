@@ -10,12 +10,13 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { matchTransaction } from "./matching.js";
 
-const invoice = (invoice_number, gross_amount, extra = {}) => ({
-  id: `id-${invoice_number}`,
-  invoice_number,
-  gross_amount,
+/** One payment instruction awaiting its bank confirmation. */
+const payment = (reference, amount, extra = {}) => ({
+  invoice_id: `id-${reference}`,
+  reference,
+  amount,
   currency: "EUR",
-  supplier_iban_raw: "DE89370400440532013000",
+  creditor_iban: "DE89370400440532013000",
   ...extra,
 });
 
@@ -29,7 +30,7 @@ const tx = (reference, amount, extra = {}) => ({
   ...extra,
 });
 
-const OPEN = [invoice("INV-2026-00421", "1240.00"), invoice("INV-2026-00433", "380.00")];
+const OPEN = [payment("INV-2026-00421", "1240.00"), payment("INV-2026-00433", "380.00")];
 
 test("reference and amount agreeing is a match", () => {
   const result = matchTransaction(tx("Rechnung INV-2026-00421 Nordwerk", "-1240.00"), OPEN);
@@ -57,7 +58,7 @@ test("a reference match with a different amount is an exception, not a match", (
 });
 
 test("a reference naming two open invoices is ambiguous", () => {
-  const twins = [invoice("INV-1", "100.00"), invoice("INV-2", "100.00")];
+  const twins = [payment("INV-1", "100.00"), payment("INV-2", "100.00")];
   const result = matchTransaction(tx("Zahlung INV-1 und INV-2", "-100.00"), twins);
   assert.equal(result.outcome, "EXCEPTION");
   assert.equal(result.reason, "AMBIGUOUS_REFERENCE");
@@ -75,7 +76,7 @@ test("an invoice number embedded without spaces is still found", () => {
 });
 
 test("a longer invoice number is not matched by a shorter one that prefixes it", () => {
-  const open = [invoice("INV-1", "100.00"), invoice("INV-10", "200.00")];
+  const open = [payment("INV-1", "100.00"), payment("INV-10", "200.00")];
   const result = matchTransaction(tx("Zahlung zu INV-10", "-200.00"), open);
   assert.equal(result.outcome, "MATCHED", "INV-1 must not swallow INV-10");
   assert.equal(result.invoiceId, "id-INV-10");
@@ -139,7 +140,7 @@ test("spacing in an IBAN does not make two identical accounts differ", () => {
 
 test("a reference naming two invoices is ambiguous even when one number is longer", () => {
   // The old tie-break preferred the longest number and silently matched it.
-  const open = [invoice("INV-A", "100.00"), invoice("INV-LONG", "100.00")];
+  const open = [payment("INV-A", "100.00"), payment("INV-LONG", "100.00")];
   const result = matchTransaction(tx("INV-A und INV-LONG", "-100.00"), open);
   assert.equal(result.outcome, "EXCEPTION");
   assert.equal(result.reason, "AMBIGUOUS_REFERENCE");
@@ -148,7 +149,7 @@ test("a reference naming two invoices is ambiguous even when one number is longe
 
 test("a longer number in the reference does not match a shorter open invoice", () => {
   // Only INV-1 is open; the reference names INV-10, which is a different invoice.
-  const result = matchTransaction(tx("Rechnung INV-10", "-100.00"), [invoice("INV-1", "100.00")]);
+  const result = matchTransaction(tx("Rechnung INV-10", "-100.00"), [payment("INV-1", "100.00")]);
   assert.notEqual(result.outcome, "MATCHED", "INV-10 is not INV-1");
   assert.equal(result.invoiceId, null);
 });

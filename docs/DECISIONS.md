@@ -589,6 +589,53 @@ apostrophe, and the prefix appears only on values that would otherwise be
 executed. Neutralising at export rather than rejecting at intake keeps the
 stored document a faithful record of what the supplier sent.
 
+## ADR-039 A KPI answers one question, and says which
+
+Two figures on the dashboard were measuring something other than their label.
+
+**"Time waiting in review" paired the wrong events.** It subtracted the first
+entry into review from the first entry into the approval queue, across an
+invoice's whole history. For the ordinary path
+`READY_FOR_APPROVAL -> INFO_REQUESTED -> REVIEW_REQUIRED`, the approval entry
+comes first and the figure went negative. Each entry into review is now paired
+with its own exit, so an invoice that visits review three times contributes
+three durations, and a visit that has not ended contributes none: an unfinished
+wait has no duration yet, and counting it as zero would flatter the number.
+
+**"Overdue" counted invoices that were already paid.** The filter excluded
+`PAID` and `RECONCILED` but not `RECONCILIATION_EXCEPTION`, which is only
+reachable after payment. A paid invoice whose bank match was unclear appeared
+as an unpaid overdue bill. Overdue means the supplier does not have their
+money; an unclear reconciliation is bookkeeping work, already counted on its
+own line.
+
+The rule behind both: a KPI is defined by the question it answers, and a state
+added to the machine has to be placed in every figure that filters on state.
+
+## ADR-040 Refusing a login costs the same whether or not the account exists
+
+Context: the login returns one wording for every failure, which the README
+described as giving nothing away. The work behind it differed: an unknown
+address returned without touching scrypt, a known one paid the full cost.
+Measured on 2026-09-17 against the running API: a median of 1.1 ms for an
+address that does not exist against 40.4 ms for one that does, a factor of
+thirty-seven. Identical wording delivered in a fortieth of the time is not
+identical; the login form enumerated the staff list.
+
+Decision: when no user matches, the request verifies the password against a
+decoy hash generated at startup. Both paths run scrypt exactly once. Measured
+after the change: 36.3 ms against 37.7 ms, a factor of 1.04.
+
+The regression asserts a ratio rather than a duration, because absolute timings
+belong to the machine, and it allows a generous threefold margin, because the
+defect it guards against was fortyfold. A test that demanded tighter equality
+would fail on a busy laptop and teach people to ignore it.
+
+Also settled here: a lock that has expired resets the attempt count. Leaving
+the count at the threshold meant the first wrong password after the wait locked
+the account again immediately, which is a worse experience than the policy
+describes and was never a stated decision.
+
 ## Assumptions and contradictions found in the brief
 
 - The brief lists "totals mathematically consistent" under business validation

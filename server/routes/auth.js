@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { verifyPassword } from "../auth/passwords.js";
+import { verifyNobody, verifyPassword } from "../auth/passwords.js";
 import { createSession, csrfCookieOptions, revokeSession, sessionCookieOptions, SESSION_COOKIE, CSRF_COOKIE } from "../auth/sessions.js";
 import { permissionsFor } from "../auth/authorize.js";
 
@@ -28,7 +28,16 @@ export function authRouter({ pool }) {
         return res.status(429).json({ error: "Konto ist vorübergehend gesperrt. Bitte später erneut versuchen." });
       }
 
-      const ok = user && verifyPassword(password, user.password_hash, user.password_salt);
+      // A lock that has run out starts the count again, rather than leaving the
+      // account one wrong attempt away from being locked for another quarter hour.
+      if (user?.locked_until) {
+        await pool.query("update finops.users set failed_attempts = 0, locked_until = null where id = $1", [user.id]);
+        user.failed_attempts = 0;
+      }
+
+      // An unknown address spends the same work as a known one, so the answer
+      // cannot be told apart by how long it took.
+      const ok = user ? verifyPassword(password, user.password_hash, user.password_salt) : verifyNobody(password);
       if (!ok) {
         if (user) await registerFailure(pool, user);
         return res.status(401).json(REFUSED);

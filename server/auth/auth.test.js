@@ -9,7 +9,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createApp } from "../app.js";
 import { testDeps, DEMO_PASSWORD } from "../test-support/db.js";
-import { hashPassword, verifyPassword } from "./passwords.js";
+import { hashPassword, verifyNobody, verifyPassword } from "./passwords.js";
 
 let deps, server, base;
 
@@ -303,4 +303,68 @@ test("a lock already in force is not cleared by a further failure", async () => 
 
   assert.notEqual(still.locked_until, null, "a further failure must not unlock the account");
   assert.ok(still.locked_until >= locked.locked_until, "and must not shorten the lock");
+});
+
+// ------------------------------------------------------- user enumeration ---
+
+test("verifying nobody costs the same work as verifying somebody", () => {
+  // The unit-level guarantee behind the timing test below: both paths run
+  // scrypt once. Compared as a ratio, because absolute timings depend on the
+  // machine, and with a generous bound, because the difference this guards
+  // against was roughly forty-fold.
+  const { hash, salt } = hashPassword("ein-passwort");
+  const measure = (fn) => {
+    const runs = [];
+    for (let i = 0; i < 5; i += 1) {
+      const t0 = process.hrtime.bigint();
+      fn();
+      runs.push(Number(process.hrtime.bigint() - t0) / 1e6);
+    }
+    return runs.sort((a, b) => a - b)[2];
+  };
+
+  const real = measure(() => verifyPassword("falsch", hash, salt));
+  const nobody = measure(() => verifyNobody("falsch"));
+  assert.equal(verifyNobody("falsch"), false, "it never succeeds");
+  assert.ok(nobody > real / 3, `an unknown address must not be cheap: ${nobody.toFixed(1)}ms vs ${real.toFixed(1)}ms`);
+});
+
+test("a wrong password and an unknown address take comparable time", async () => {
+  // Identical wording is not enough: answering an unknown address in a
+  // millisecond and a known one in forty enumerates the staff list.
+  const attempt = async (email) => {
+    await deps.pool.query("update finops.users set failed_attempts = 0, locked_until = null");
+    const t0 = process.hrtime.bigint();
+    const res = await call("/api/auth/login", { method: "POST", body: { email, password: "definitiv-falsch" } });
+    await res.text();
+    return { ms: Number(process.hrtime.bigint() - t0) / 1e6, status: res.status };
+  };
+
+  const known = [], unknown = [];
+  for (let i = 0; i < 7; i += 1) {
+    const u = await attempt("niemand.gibtesnicht@nordwerk.example");
+    const k = await attempt(CLERK);
+    assert.equal(u.status, 401);
+    assert.equal(k.status, 401);
+    unknown.push(u.ms);
+    known.push(k.ms);
+  }
+  const median = (xs) => [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)];
+  const ratio = median(known) / median(unknown);
+  assert.ok(ratio < 3, `timing must not reveal whether the account exists: ${ratio.toFixed(2)}x`);
+});
+
+test("a lock that has expired starts the count again", async () => {
+  for (let i = 0; i < 5; i += 1) {
+    await call("/api/auth/login", { method: "POST", body: { email: FINANCE, password: "falsch" } });
+  }
+  // Move the lock into the past, as time would.
+  await deps.pool.query("update finops.users set locked_until = now() - interval '1 minute' where email = $1", [FINANCE]);
+
+  const one = await call("/api/auth/login", { method: "POST", body: { email: FINANCE, password: "falsch" } });
+  assert.equal(one.status, 401, "the account is usable again");
+
+  const { rows: [user] } = await deps.pool.query("select failed_attempts, locked_until from finops.users where email = $1", [FINANCE]);
+  assert.equal(user.failed_attempts, 1, "the expired attempts are not still counted");
+  assert.equal(user.locked_until, null, "and one wrong attempt does not re-lock immediately");
 });

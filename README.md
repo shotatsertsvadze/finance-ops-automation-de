@@ -123,8 +123,9 @@ Passwords are hashed with scrypt and a per-user salt. The session is a random
 token in an HttpOnly, SameSite=Strict cookie; only its hash is stored, so a
 database dump yields no usable session. Signing out revokes it server-side.
 State-changing requests carry a CSRF token. Repeated failed logins lock an
-account temporarily, and a wrong password and an unknown address get the same
-answer.
+account temporarily; an expired lock starts the count again. A wrong password
+and an unknown address get the same answer and cost the same work, so neither
+the wording nor the response time says whether the account exists.
 
 Finance is deliberately the one role that may both review and approve. That is
 what makes the four-eyes rule after a review meaningful rather than theoretical.

@@ -41,14 +41,20 @@ export async function runReconciliation({ pool }, { actor }) {
     const { rows: transactions } = await client.query(
       "select * from finops.bank_transactions where status not in ('MATCHED', 'RESOLVED') order by value_date, external_id for update",
     );
-    const { rows: openInvoices } = await client.query(
-      "select id, invoice_number, gross_amount, currency, supplier_iban_raw from finops.invoices where state in ('PAID', 'RECONCILIATION_EXCEPTION')",
+    // Compared against what was instructed, not against what the document
+    // claimed. An invoice with no instruction was never paid, so an inner join
+    // is the rule rather than a convenience.
+    const { rows: openPayments } = await client.query(
+      `select i.id as invoice_id, p.reference, p.amount, p.currency, p.creditor_iban
+       from finops.invoices i
+       join finops.payment_instructions p on p.invoice_id = i.id
+       where i.state in ('PAID', 'RECONCILIATION_EXCEPTION')`,
     );
 
     const summary = { matched: 0, exceptions: 0, unmatched: 0 };
 
     for (const tx of transactions) {
-      const result = matchTransaction(tx, openInvoices);
+      const result = matchTransaction(tx, openPayments);
 
       if (result.outcome === "MATCHED") {
         await client.query(
@@ -60,9 +66,9 @@ export async function runReconciliation({ pool }, { actor }) {
           reason: `Zahlungseingang ${tx.external_id} zugeordnet`,
           evidence: { external_id: tx.external_id, amount: tx.amount, reference: tx.reference },
         });
-        // Reconciled invoices leave the candidate pool immediately, so a
+        // A reconciled payment leaves the candidate pool immediately, so a
         // second transaction cannot close the same invoice in this run.
-        openInvoices.splice(openInvoices.findIndex((i) => i.id === result.invoiceId), 1);
+        openPayments.splice(openPayments.findIndex((p) => p.invoice_id === result.invoiceId), 1);
         summary.matched += 1;
         continue;
       }
