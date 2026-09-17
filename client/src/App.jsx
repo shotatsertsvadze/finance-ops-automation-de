@@ -3,8 +3,11 @@ import { NavLink, Route, Routes } from "react-router-dom";
 import { listInvoices } from "./lib/api.js";
 import InboxView from "./features/inbox/InboxView.jsx";
 import InvoiceDetail from "./features/invoice/InvoiceDetail.jsx";
+import ActorPicker from "./components/ActorPicker.jsx";
+import { useActor } from "./lib/useActor.js";
 
 export default function App() {
+  const { users, actorId, setActorId, actor } = useActor();
   const [counts, setCounts] = useState({ all: 0, REVIEW_REQUIRED: 0, READY_FOR_APPROVAL: 0, APPROVED: 0 });
 
   const refresh = useCallback(() => {
@@ -45,8 +48,11 @@ export default function App() {
           </NavLink>
         </nav>
         <div className="rail-foot">
-          Demonstrationssystem.<br />
-          Synthetische Daten, keine echten Zahlungen.
+          <ActorPicker users={users} actorId={actorId} onChange={setActorId} />
+          <p>
+            Demonstrationssystem.<br />
+            Synthetische Daten, keine echten Zahlungen.
+          </p>
         </div>
       </aside>
       <main className="main">
@@ -55,7 +61,7 @@ export default function App() {
           <Route path="/sichtpruefung" element={<InboxView view="review" onChanged={refresh} />} />
           <Route path="/freigaben" element={<InboxView view="approval" onChanged={refresh} />} />
           <Route path="/freigegeben" element={<InboxView view="done" onChanged={refresh} />} />
-          <Route path="/rechnung/:id" element={<InvoiceDetail />} />
+          <Route path="/rechnung/:id" element={<InvoiceDetail actor={actor} onChanged={refresh} />} />
         </Routes>
       </main>
     </div>

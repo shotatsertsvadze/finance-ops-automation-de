@@ -67,3 +67,15 @@ curl -F file=@fixtures/xrechnung/A_clean_1240.xml http://localhost:4400/api/invo
   declared profile and the structure it needs; it does not certify compliance.
 - Accounting, payment and bank data are simulated.
 - Approval thresholds and savings figures are demo assumptions.
+
+## Working an invoice
+
+Pick who you are acting as in the sidebar. The server resolves that identity on
+every request and enforces the rules; the picker is not a login.
+
+An invoice in review can be sent to approval, rejected, put on hold with a
+query, or confirmed as a duplicate. Rejection, query and duplicate need a
+reason. Sending an exception to approval never approves it: it always produces
+at least one approval step, and the person who released it cannot take that
+step. Approval steps run in order, each needs the exact role, and no one may
+decide two steps of the same invoice.

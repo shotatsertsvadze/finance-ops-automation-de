@@ -117,6 +117,8 @@ Key columns (full definitions in `db/migrations/0001_core.sql`):
   steps as computed by the policy, with the policy snapshot.
 - `approval_steps`: `step_no`, `required_role`, `status`, `actor_id`,
   `decided_at`, `comment`.
+- `invoices.review_accepted_by`: who released the invoice from review, so that
+  person can be excluded from approving it (migration `0002_review_actor.sql`).
 - `audit_events`: `occurred_at`, `actor_type` (SYSTEM|HUMAN), `actor_id`,
   `action`, `from_state`, `to_state`, `reason`, `evidence jsonb`.
 
@@ -233,8 +235,9 @@ invoice above the auto limit.
 | GET | `/api/invoices/:id/file` | 1 | original XML |
 | POST | `/api/invoices/:id/reprocess` | 1 | re-run validation from RECEIVED/VALIDATING/REVIEW_REQUIRED |
 | GET | `/api/master-data/suppliers`, `/purchase-orders`, `/api/users` | 1 | read-only master data |
-| POST | `/api/invoices/:id/review/accept|reject|request-info|confirm-duplicate` | 2 | reviewer actions |
-| POST | `/api/invoices/:id/approvals/:stepNo/approve|reject` | 2 | approver actions |
+| POST | `/api/invoices/:id/review/accept\|reject\|request-info\|confirm-duplicate` | 2 | reviewer actions; `request-info` is also valid from READY_FOR_APPROVAL |
+| POST | `/api/invoices/:id/info-received` | 2 | INFO_REQUESTED back to REVIEW_REQUIRED |
+| POST | `/api/invoices/:id/approvals/:stepNo/approve\|reject` | 2 | approver actions |
 | POST | `/api/invoices/:id/accounting-record` | 3 | produce and export the accounting record |
 | POST | `/api/payments/...`, `/api/reconciliation/run` | 3 | simulated payment and matching |
 | GET | `/api/dashboard/kpis` | 4 | operational KPIs |

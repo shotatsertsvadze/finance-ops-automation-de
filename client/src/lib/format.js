@@ -41,6 +41,22 @@ export const ACTION_LABELS = {
   auto_approved: "Automatisch freigegeben",
   duplicate_file_detected: "Als Duplikat erkannt",
   duplicate_attempt: "Erneuter Upload derselben Datei",
+  review_accepted: "Sichtprüfung freigegeben",
+  review_rejected: "In der Sichtprüfung abgelehnt",
+  information_requested: "Rückfrage gestellt",
+  info_received: "Rückmeldung eingegangen",
+  duplicate_confirmed: "Als Duplikat bestätigt",
+  approval_step_approved: "Freigabeschritt erteilt",
+  approved: "Freigegeben",
+  approval_rejected: "Freigabe verweigert",
+};
+
+export const ROLE_LABELS = {
+  AP_CLERK: "Kreditorenbuchhaltung",
+  MANAGER: "Kostenstellenleitung",
+  FINANCE: "Finanzen",
+  CFO: "CFO",
+  ADMIN: "Administration",
 };
 
 const euro = new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" });

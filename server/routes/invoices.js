@@ -4,6 +4,8 @@ import { handleUpload, processInvoice } from "../domain/intake/intake.js";
 import { getInvoiceDetail, listInvoices } from "../domain/invoice/queries.js";
 import { MAX_XML_BYTES } from "../domain/invoice/xml-safety.js";
 import { STATES } from "../domain/workflow/states.js";
+import { decideApprovalStep, decideReview, requestInfoFromApproval } from "../domain/approvals/approvals.js";
+import { requireHuman } from "./actor.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -68,5 +70,53 @@ export function invoicesRouter(deps) {
     }
   });
 
+  const REVIEW_ACTIONS = ["accept", "reject", "request-info", "confirm-duplicate"];
+
+  router.post("/:id/review/:action", requireHuman, async (req, res, next) => {
+    try {
+      const { action } = req.params;
+      if (!REVIEW_ACTIONS.includes(action)) return res.status(400).json({ error: "Unbekannte Entscheidung" });
+      // Requesting information is also valid while an invoice waits for
+      // approval, and must invalidate approvals already given.
+      const invoiceState = await currentState(deps.pool, req.params.id);
+      const handler =
+        action === "request-info" && invoiceState === "READY_FOR_APPROVAL" ? requestInfoFromApproval : null;
+      if (handler) await handler(deps, { invoiceId: req.params.id, actor: req.actor, comment: req.body?.comment });
+      else await decideReview(deps, { invoiceId: req.params.id, action, actor: req.actor, comment: req.body?.comment });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/info-received", requireHuman, async (req, res, next) => {
+    try {
+      await decideReview(deps, { invoiceId: req.params.id, action: "info-received", actor: req.actor, comment: req.body?.comment });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/approvals/:stepNo/:action", requireHuman, async (req, res, next) => {
+    try {
+      const { action } = req.params;
+      if (!["approve", "reject"].includes(action)) return res.status(400).json({ error: "Unbekannte Entscheidung" });
+      const stepNo = Number(req.params.stepNo);
+      if (!Number.isInteger(stepNo) || stepNo < 1) return res.status(400).json({ error: "Ungültiger Schritt" });
+      await decideApprovalStep(deps, {
+        invoiceId: req.params.id, stepNo, action, actor: req.actor, user: req.user, comment: req.body?.comment,
+      });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
   return router;
+}
+
+async function currentState(pool, invoiceId) {
+  const { rows: [row] } = await pool.query("select state from finops.invoices where id = $1", [invoiceId]);
+  return row?.state ?? null;
 }

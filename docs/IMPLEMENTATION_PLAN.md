@@ -24,11 +24,16 @@ this plan, product and process docs, fixtures A-G.
 7. Client: upload, inbox, invoice detail with validation results and timeline.
 8. Test matrix rows for everything above.
 
-## Phase 2 - Approvals and exceptions
+## Phase 2 - Approvals and exceptions (done 2026-09-17)
 
-Review endpoints, approval endpoints, four-eyes and segregation of duties,
-cancellation of steps on INFO_REQUESTED, review and approval queues in the UI,
-tests for the high-priority list in `docs/TEST_MATRIX.md`.
+Review decisions (accept, reject, request-info, confirm-duplicate), the
+approval chain with ordered steps, exact role matching, segregation of duties
+on identity, four-eyes after review, and cancellation of every existing
+approval when information is requested. Decision panel and actor picker in the
+UI. 20 new tests in `server/domain/approvals/approvals.test.js`.
+
+Deliberately not done: refused attempts are not audited (ADR-015), and there
+is no delegation or substitution when an approver is absent.
 
 ## Phase 3 - Accounting and payment simulation
 
@@ -53,6 +58,5 @@ machine with a single `transition()` choke point, intake orchestration,
 REST API, and the React console (inbox, review, approval and done queues,
 invoice detail with evidence and timeline).
 
-Not done in Phase 1, by design: review and approval endpoints (Phase 2), so
-`READY_FOR_APPROVAL` invoices currently have no UI action to advance them. The
-state machine and approval-step rows they need already exist.
+Not done in Phase 1, by design: review and approval endpoints, which Phase 2
+added.

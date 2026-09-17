@@ -113,6 +113,43 @@ Decision: the API reads `API_PORT` (default 4400); the UI dev server owns 5400.
 Consequences: two servers, two unambiguous variables; an ambient `PORT` cannot
 collide with either.
 
+## ADR-013 Segregation of duties is checked on identity, in a fixed order
+
+Context: the brief requires that one actor cannot satisfy two independent
+approval steps, and that a finalised invoice cannot be processed again.
+Decision: `decideApprovalStep()` checks, in this order: the invoice is still
+READY_FOR_APPROVAL; the step exists and is PENDING; it is the lowest pending
+step (steps run in order); the actor's role equals the step's `required_role`
+exactly; the actor has not decided another step on this invoice; and the actor
+is not the person recorded in `invoices.review_accepted_by`.
+Roles must match exactly. A CFO does not implicitly satisfy a MANAGER step,
+because an implicit hierarchy would quietly let one person cover a chain.
+Consequences: refusals are 403 for a role mismatch and 409 for everything
+else, and nothing is written when a check fails.
+
+## ADR-014 Requesting information cancels approvals already given
+
+Context: an invoice can reach READY_FOR_APPROVAL, collect one approval, and
+then turn out to need a correction. Phase 1's re-validation only cancelled
+PENDING steps, so an approval given before the correction would have survived
+into the next run.
+Decision: moving to INFO_REQUESTED sets every PENDING *and* APPROVED step to
+CANCELLED and clears `review_accepted_by`. Re-validation then rebuilds the
+steps from scratch.
+Consequences: a correction always restarts the approval chain. The cancelled
+rows are removed on the next validation run; the audit trail keeps the record
+of who had approved what.
+
+## ADR-015 Refused attempts are not written to the audit trail
+
+Context: a blocked four-eyes attempt is interesting security telemetry.
+Decision: `audit_events` records state transitions and decisions that
+happened. A refused request changes nothing and is rejected before any write,
+so it produces no event; the API returns the reason to the caller.
+Consequences: the audit trail answers "what happened to this invoice", not
+"what did someone try". Recording attempts would need a second connection
+outside the rolled-back transaction. Noted as a limitation, not done.
+
 ## Assumptions and contradictions found in the brief
 
 - The brief lists "totals mathematically consistent" under business validation

@@ -8,7 +8,7 @@ Legend:
 - **CODE** inferred from reading the code only, never executed
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (56 tests, all passing as of 2026-09-17). Database tests need
+Run: `npm test` (76 tests, all passing as of 2026-09-17). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
 
 ## High-priority business risks
@@ -22,9 +22,9 @@ Run: `npm test` (56 tests, all passing as of 2026-09-17). Database tests need
 | R5 | Malformed / non-XML input | fail closed to REVIEW_REQUIRED, file kept and readable | AUTO | `intake.test.js` "F: malformed file fails closed", "non-XML bytes fail closed" |
 | R6 | XML with DOCTYPE or ENTITY | rejected before the parser runs | AUTO | `technical-validation.test.js` "DOCTYPE is rejected before parsing" |
 | R7 | Amount thresholds route to the right tier | 380 auto, 1 240 MANAGER, 30 000 three steps | AUTO | `decide.test.js` (incl. boundary values); `intake.test.js` A, E, G |
-| R8 | Same actor cannot satisfy two approval steps | 409, no state change | OPEN | Phase 2 |
-| R9 | Reviewer cannot approve what they released from review | 409 | OPEN | Phase 2 |
-| R10 | Rejected invoice cannot become approved | no transition exists | AUTO (state machine) | `states.test.js` "rejected and duplicate cannot come back". Endpoint-level check is Phase 2 |
+| R8 | Same actor cannot satisfy two approval steps | 409, step stays PENDING, invoice not approved | AUTO | `approvals.test.js` "one actor cannot satisfy two approval steps" |
+| R9 | Reviewer cannot approve what they released from review | 409, another approver succeeds | AUTO | `approvals.test.js` "whoever released an invoice from review cannot also approve it" |
+| R10 | Rejected invoice cannot become approved | 409 at the endpoint, no transition in the machine | AUTO | `approvals.test.js` "a rejected invoice cannot be approved afterwards"; `states.test.js` |
 | R11 | Finalised invoice cannot be processed again | 409, nothing changes | AUTO | `intake.test.js` "reprocess ... refused from APPROVED"; `app.test.js` returns 409 |
 | R12 | Undeclared transition is impossible | throws, nothing written | AUTO | `intake.test.js` "an undeclared transition throws and writes nothing" |
 | R13 | Every state change has an audit event | last event's to_state equals current state for every invoice; no orphan from_state | AUTO | `intake.test.js` "every state change has exactly one audit event" |
@@ -33,6 +33,12 @@ Run: `npm test` (56 tests, all passing as of 2026-09-17). Database tests need
 | R16 | A human action without an actor is refused | throws before any write | AUTO | `intake.test.js` "a human action without actor id is refused"; `app.test.js` unknown actor returns 400 |
 | R17 | Fixing master data clears the exception on re-validation | REVIEW_REQUIRED becomes READY_FOR_APPROVAL | AUTO | `intake.test.js` "after the IBAN is approved in master data" |
 | R18 | Intake facts are not derived from document content | filename and channel survive processing | AUTO | `intake.test.js` "receiveInvoice writes intake facts" |
+| R19 | A review never exits directly to APPROVED | always at least one approval step, even under the auto limit | AUTO | `approvals.test.js` "a review of a small invoice still requires one approval" |
+| R20 | An approval given before a correction is not inherited | every step restarts after re-validation | AUTO | `approvals.test.js` "an approval given before a correction cannot be inherited" |
+| R21 | Rejection and rückfrage require a reason | 400, nothing changes | AUTO | `approvals.test.js` review-reject and step-reject cases |
+| R22 | An approver without the required role is refused | 403, step stays PENDING | AUTO | `approvals.test.js` "an approver whose role does not match" |
+| R23 | Steps are decided in order | 409 on an out-of-order step | AUTO | `approvals.test.js` "steps must be decided in order" |
+| R24 | A decided step cannot be decided twice | 409 | AUTO | `approvals.test.js` "an already-decided step cannot be decided again" |
 
 ## Fixtures
 
@@ -48,6 +54,7 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | E | clean, 30 000 EUR | READY_FOR_APPROVAL, MANAGER + FINANCE + CFO | AUTO | `intake.test.js` "E:" |
 | F | malformed | REVIEW_REQUIRED, TECHNICAL_VALIDATION_FAILED | AUTO | `intake.test.js` "F:" |
 | G | clean, 380 EUR | APPROVED by SYSTEM, no steps | AUTO | `intake.test.js` "G:" |
+| H | 380 EUR with a changed IBAN | REVIEW_REQUIRED; accepting it still needs one approval | AUTO | `approvals.test.js` "a review of a small invoice" |
 
 ## Parsing and technical validation
 
@@ -72,6 +79,21 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | B6 | Unknown PO reference | `po_exists` HIGH | AUTO | `business-checks.test.js` |
 | B7 | Missing PO above the policy threshold | MEDIUM | AUTO | `business-checks.test.js` |
 
+## Review and approval workflow
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| W1 | Accept from review | READY_FOR_APPROVAL, steps created, reviewer recorded, audit event names the person | AUTO | `approvals.test.js` |
+| W2 | Reject from review | REJECTED, reason required | AUTO | `approvals.test.js` |
+| W3 | Request info, then info received | INFO_REQUESTED then REVIEW_REQUIRED | AUTO | `approvals.test.js` |
+| W4 | Confirm duplicate | DUPLICATE | AUTO | `approvals.test.js` |
+| W5 | Review action on an invoice not in review | 409 | AUTO | `approvals.test.js` |
+| W6 | Review action without an actor | 400, nothing changes | AUTO | `approvals.test.js` |
+| W7 | Single-step approval | APPROVED, approver recorded | AUTO | `approvals.test.js` |
+| W8 | Three-step approval | APPROVED only after the last step | AUTO | `approvals.test.js` |
+| W9 | Step rejection | REJECTED, remaining steps CANCELLED | AUTO | `approvals.test.js` |
+| W10 | Unknown step number | 404 from the handler | AUTO | `approvals.test.js` |
+
 ## API
 
 | # | Case | Expected | Status | Evidence |
@@ -92,3 +114,6 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | U3 | State spine shows position and blocker | blocked node rendered at the stage reached | MANUAL | Browser, 2026-09-17 |
 | U4 | No horizontal page scroll at 375 px | scrollWidth equals clientWidth | MANUAL | Browser, 2026-09-17, measured in page |
 | U5 | Keyboard focus visible, reduced motion respected | focus ring, animations disabled | CODE | `:focus-visible` and `prefers-reduced-motion` in `styles.css`, not yet exercised |
+| U6 | Four-eyes refusal is visible to the user | server message shown, invoice unchanged | MANUAL | Browser, 2026-09-17: same manager accepted then tried to approve, refusal rendered, step stayed open |
+| U7 | Full review-to-approval round trip in the UI | two different people, audit shows both | MANUAL | Browser, 2026-09-17: Tim Kessler released, Lea Sommer approved |
+| U8 | Decision panel comes first on a phone | actions above the spine, no page overflow | MANUAL | Browser, 2026-09-17 at 375 px |

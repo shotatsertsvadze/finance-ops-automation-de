@@ -98,6 +98,18 @@ a { color: inherit; }
 .nav a[aria-current="page"] .nav-count { color: #fff; }
 
 .rail-foot { margin-top: auto; padding: 0 20px; font-size: 10px; color: #6b7383; line-height: 1.6; }
+.rail-foot p { margin: 14px 0 0; }
+
+.actor-picker { display: grid; gap: 4px; }
+.actor-picker .label { color: #8b94a6; }
+.actor-picker select {
+  width: 100%;
+  background: #1b2130;
+  color: #fff;
+  border-color: #333c4e;
+  font-size: 12px;
+  padding: 5px 8px;
+}
 
 /* min-width: 0 so this grid item cannot be widened by a long table: without
    it the track grows past the viewport and the page scrolls sideways. */
@@ -195,6 +207,23 @@ select {
   color: inherit;
 }
 .hint { font-size: 12px; color: var(--ink-3); }
+
+.btn-danger { background: transparent; color: var(--high); border-color: #eab5bd; }
+.btn-danger:hover:not(:disabled) { background: var(--high-bg); }
+
+.action-prompt { margin: 0 0 10px; font-size: 13px; color: var(--ink-2); }
+.action-comment { display: grid; gap: 3px; margin-bottom: 10px; }
+.action-comment textarea {
+  font: inherit;
+  font-size: 13px;
+  padding: 7px 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  resize: vertical;
+}
+.action-row { display: flex; flex-wrap: wrap; gap: 8px; }
 .error { color: var(--high); font-size: 13px; }
 
 /* ---------- detail layout ---------- */
@@ -347,6 +376,11 @@ select {
 
   .page-head h1 { font-size: 19px; }
   .facts-split { grid-template-columns: 1fr; }
+
+  /* On a phone the decision and its evidence come before the orientation
+     panels; otherwise a reviewer scrolls past the whole spine to reach the
+     buttons. */
+  .detail-stack:last-child { order: -1; }
 }
 
 /* A ledger keeps its columns; on a narrow screen the table scrolls, the page

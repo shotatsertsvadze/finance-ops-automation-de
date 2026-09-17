@@ -5,15 +5,18 @@ import { ACTION_LABELS, formatDate, formatDateTime, formatMoney, groupIban, REVI
 import StateChip from "../../components/StateChip.jsx";
 import StateSpine from "./StateSpine.jsx";
 import EvidenceRow from "./EvidenceRow.jsx";
+import ActionPanel from "./ActionPanel.jsx";
 
-export default function InvoiceDetail() {
+export default function InvoiceDetail({ actor, onChanged }) {
   const { id } = useParams();
   const [invoice, setInvoice] = useState(null);
   const [error, setError] = useState(null);
   const [showPassed, setShowPassed] = useState(false);
 
+  const load = () => getInvoice(id).then(setInvoice).catch((e) => setError(e.message));
+
   useEffect(() => {
-    getInvoice(id).then(setInvoice).catch((e) => setError(e.message));
+    load();
   }, [id]);
 
   if (error) return <p className="error">{error}</p>;
@@ -93,6 +96,15 @@ export default function InvoiceDetail() {
         </div>
 
         <div className="detail-stack">
+          <ActionPanel
+            invoice={invoice}
+            actor={actor}
+            onDone={() => {
+              load();
+              onChanged();
+            }}
+          />
+
           {invoice.review_reason && (
             <section className="panel">
               <div className="panel-head">

@@ -39,8 +39,8 @@ flowchart TD
 | Business validation | yes | any HIGH/MEDIUM → review | ✅ |
 | Routing and tier calculation | yes | - | ✅ |
 | Straight-through approval ≤ auto limit | yes | - | ✅ |
-| Review decision | no | AP clerk / Finance | ❌ Phase 2 |
-| Approval steps | no | MANAGER / FINANCE / CFO, different actors | ❌ Phase 2 |
+| Review decision | no | AP clerk / Finance | ✅ |
+| Approval steps | no | MANAGER / FINANCE / CFO, different actors | ✅ |
 | Accounting record and export | yes | - | ❌ Phase 3 |
 | Payment instruction (mock) | yes | - | ❌ Phase 3 |
 | Reconciliation | yes | ambiguous → human | ❌ Phase 3 |

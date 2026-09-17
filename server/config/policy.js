@@ -30,6 +30,16 @@ export function requiredApprovalSteps(policy, grossCents) {
   return roles.map((required_role, i) => ({ step_no: i + 1, required_role }));
 }
 
+/**
+ * Steps required once a human has released an invoice from review. Always at
+ * least one, so an exception is never waved through by the reviewer alone
+ * (ADR-010), even when the amount is under the auto-approve limit.
+ */
+export function stepsAfterReview(policy, grossCents) {
+  const steps = requiredApprovalSteps(policy, grossCents);
+  return steps.length ? steps : [{ step_no: 1, required_role: "MANAGER" }];
+}
+
 export function approvalTierLabel(policy, grossCents) {
   if (grossCents <= policy.autoApproveLimitCents) return "AUTO";
   if (grossCents <= policy.tier1LimitCents) return "MANAGER";
