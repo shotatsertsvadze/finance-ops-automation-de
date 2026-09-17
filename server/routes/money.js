@@ -1,16 +1,27 @@
 import { Router } from "express";
-import { exportAccountingCsv } from "../domain/accounting/accounting.js";
+import { EXPORT_PROFILES, exportAccountingCsv } from "../domain/accounting/accounting.js";
 import { importStatement, listBankTransactions, runReconciliation } from "../domain/reconciliation/reconciliation.js";
 import { requirePermission } from "../auth/authorize.js";
 import { computeKpis } from "../domain/kpi/kpi.js";
 
 export function accountingRouter(deps) {
   const router = Router();
+  /**
+   * The caller states who is reading. The default is the bookkeeping import,
+   * which must see identifiers unaltered; `spreadsheet` neutralises cells a
+   * spreadsheet would execute, at the cost of an apostrophe the importer would
+   * then have to strip (ADR-045).
+   */
   router.get("/export", async (req, res, next) => {
     try {
-      const csv = await exportAccountingCsv(deps);
+      const profile = req.query.profile ?? "machine";
+      if (!EXPORT_PROFILES.includes(profile)) {
+        return res.status(400).json({ error: `Unbekanntes Exportprofil: ${profile}`, code: "UNKNOWN_EXPORT_PROFILE" });
+      }
+      const csv = await exportAccountingCsv(deps, profile);
+      const filename = profile === "spreadsheet" ? "buchungssaetze-tabellenkalkulation.csv" : "buchungssaetze.csv";
       res.type("text/csv; charset=utf-8")
-        .set("Content-Disposition", 'attachment; filename="buchungssaetze.csv"')
+        .set("Content-Disposition", `attachment; filename="${filename}"`)
         .send(csv);
     } catch (error) {
       next(error);

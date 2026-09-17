@@ -65,3 +65,50 @@ test("missing XRechnung customization id is a MEDIUM failure", () => {
   assert.equal(c.status, "FAILED");
   assert.equal(c.severity, "MEDIUM");
 });
+
+// --------------------------------------------------- what counts as UBL ----
+
+/**
+ * L3: namespaces were stripped before the format was decided, so any document
+ * whose root element happened to be named `Invoice` was read as an XRechnung.
+ * The element name is not the format; the namespace is.
+ */
+const UBL_NS = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
+
+const rootedIn = (namespace, prefix = "ubl") => Buffer.from(
+  `<?xml version="1.0" encoding="UTF-8"?>
+   <${prefix}:Invoice xmlns:${prefix}="${namespace}"
+        xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+     <cbc:ID>NS-1</cbc:ID>
+   </${prefix}:Invoice>`,
+);
+
+test("a document rooted in another namespace is not read as an XRechnung", () => {
+  const result = runTechnicalValidation(rootedIn("urn:example:not-ubl:Invoice-2"));
+  assert.equal(result.passed, false, "only the local name matched, which is not the format");
+  const formatCheck = result.checks.find((c) => c.check === "format_recognised");
+  assert.equal(formatCheck.status, "FAILED");
+});
+
+test("a document in the UBL Invoice namespace is read", () => {
+  const result = runTechnicalValidation(rootedIn(UBL_NS));
+  const formatCheck = result.checks.find((c) => c.check === "format_recognised");
+  assert.equal(formatCheck.status, "PASSED", JSON.stringify(formatCheck));
+});
+
+test("the default namespace counts as much as a prefixed one", () => {
+  const xml = Buffer.from(
+    `<?xml version="1.0" encoding="UTF-8"?>
+     <Invoice xmlns="${UBL_NS}" xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
+       <cbc:ID>NS-2</cbc:ID>
+     </Invoice>`,
+  );
+  const formatCheck = runTechnicalValidation(xml).checks.find((c) => c.check === "format_recognised");
+  assert.equal(formatCheck.status, "PASSED");
+});
+
+test("a root element with no namespace at all is refused", () => {
+  const xml = Buffer.from(`<?xml version="1.0"?><Invoice><ID>NS-3</ID></Invoice>`);
+  const formatCheck = runTechnicalValidation(xml).checks.find((c) => c.check === "format_recognised");
+  assert.equal(formatCheck.status, "FAILED", "an unqualified Invoice states no format");
+});

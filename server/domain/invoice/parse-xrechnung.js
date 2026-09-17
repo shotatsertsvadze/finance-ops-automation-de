@@ -32,9 +32,37 @@ const text = (node) => {
 const get = (obj, path) => path.split(".").reduce((o, key) => (o && o[key] !== undefined ? o[key] : undefined), obj);
 const str = (obj, path) => text(get(obj, path));
 
-export function detectFormat(doc) {
-  if (doc.Invoice) return "XRECHNUNG_UBL";
-  if (doc.CrossIndustryInvoice) return "CII";
+const UBL_INVOICE_NS = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
+const CII_NS_PREFIX = "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice";
+
+/**
+ * The namespace the root element is in.
+ *
+ * The parser strips namespace prefixes so the rest of this file can address
+ * elements by local name, which also threw away the only statement the
+ * document makes about what it is. Read from the text before that happens:
+ * an element called `Invoice` in somebody else's namespace is not an
+ * XRechnung, and one in no namespace says nothing at all.
+ */
+export function rootNamespace(xmlText) {
+  const head = xmlText.replace(/<\?[\s\S]*?\?>/g, "").replace(/<!--[\s\S]*?-->/g, "");
+  const root = head.match(/<\s*([^\s/>!?]+)((?:[^>"']|"[^"]*"|'[^']*')*)>/);
+  if (!root) return null;
+
+  const [, qualifiedName, attributes = ""] = root;
+  const prefix = qualifiedName.includes(":") ? qualifiedName.split(":")[0] : "";
+
+  for (const [, declared, doubleQuoted, singleQuoted] of
+    attributes.matchAll(/xmlns(?::([A-Za-z_][\w.-]*))?\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+    if ((declared ?? "") === prefix) return doubleQuoted ?? singleQuoted ?? null;
+  }
+  return null;
+}
+
+/** The format a document declares itself to be, by namespace and root element. */
+export function detectFormat(doc, namespace) {
+  if (doc.Invoice && namespace === UBL_INVOICE_NS) return "XRECHNUNG_UBL";
+  if (doc.CrossIndustryInvoice && (namespace ?? "").startsWith(CII_NS_PREFIX)) return "CII";
   return "UNKNOWN";
 }
 
@@ -42,9 +70,15 @@ export function parseInvoiceXml(xmlText) {
   const valid = XMLValidator.validate(xmlText);
   if (valid !== true) throw new InvoiceParseError("NOT_WELL_FORMED", valid.err?.msg ?? "XML nicht wohlgeformt");
   const doc = parser.parse(xmlText);
-  const format = detectFormat(doc);
+  const namespace = rootNamespace(xmlText);
+  const format = detectFormat(doc, namespace);
   if (format !== "XRECHNUNG_UBL") {
-    throw new InvoiceParseError("UNSUPPORTED_FORMAT", format === "CII" ? "UN/CEFACT CII wird noch nicht unterstützt" : "Kein UBL-Invoice-Dokument");
+    throw new InvoiceParseError(
+      "UNSUPPORTED_FORMAT",
+      format === "CII"
+        ? "UN/CEFACT CII wird noch nicht unterstützt"
+        : `Kein UBL-Invoice-Dokument (Namensraum: ${namespace ?? "keiner"})`,
+    );
   }
   const inv = doc.Invoice;
   const supplier = get(inv, "AccountingSupplierParty.Party") ?? {};
@@ -93,6 +127,15 @@ export function parseInvoiceXml(xmlText) {
       taxAmount: str(inv, "TaxTotal.TaxAmount"),
       taxInclusive: str(inv, "LegalMonetaryTotal.TaxInclusiveAmount"),
       payable: str(inv, "LegalMonetaryTotal.PayableAmount"),
+    },
+    // Parts of UBL this adapter does not model. Reported rather than ignored:
+    // an invoice whose total we cannot reconstruct must not look like one we
+    // checked. See ADR-043.
+    unsupported: {
+      allowanceTotal: str(inv, "LegalMonetaryTotal.AllowanceTotalAmount"),
+      chargeTotal: str(inv, "LegalMonetaryTotal.ChargeTotalAmount"),
+      prepaidAmount: str(inv, "LegalMonetaryTotal.PrepaidAmount"),
+      allowanceCharges: inv.AllowanceCharge ? 1 : 0,
     },
     lines,
   };

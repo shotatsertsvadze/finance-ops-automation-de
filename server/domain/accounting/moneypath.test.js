@@ -315,3 +315,38 @@ test("the full money path is one unbroken audit chain", async () => {
     assert.equal(event.from_state, after.audit_events[i - 1].to_state, `gap before ${event.action}`);
   }
 });
+
+// ----------------------------------------- who the CSV export is written for -
+
+test("the export names its consumer, and refuses one it does not know", async () => {
+  const invoice = await approved();
+  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
+
+  const machine = await clients.finance.get("/api/accounting/export");
+  assert.equal(machine.status, 200);
+  assert.match(machine.headers.get("content-disposition") ?? "", /buchungssaetze\.csv/);
+
+  const sheet = await clients.finance.get("/api/accounting/export?profile=spreadsheet");
+  assert.equal(sheet.status, 200);
+  assert.match(sheet.headers.get("content-disposition") ?? "", /tabellenkalkulation/,
+    "the two files are told apart by name, so nobody imports the wrong one");
+
+  const wrong = await clients.finance.get("/api/accounting/export?profile=etwas");
+  assert.equal(wrong.status, 400);
+  assert.equal((await wrong.json()).code, "UNKNOWN_EXPORT_PROFILE");
+});
+
+test("an invoice number that a spreadsheet would execute reaches the machine export intact", async () => {
+  // Written straight into the booking record: what matters here is the export,
+  // and driving a formula-shaped number through intake is a separate concern.
+  const invoice = await approved();
+  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
+  await deps.pool.query("update finops.accounting_records set reference = $1 where invoice_id = $2", ["=1+1", invoice.id]);
+
+  const machine = await (await clients.finance.get("/api/accounting/export")).text();
+  assert.ok(machine.includes(";=1+1"), `the importer sees the identifier: ${machine.split("\n").at(-2)}`);
+
+  const sheet = await (await clients.finance.get("/api/accounting/export?profile=spreadsheet")).text();
+  assert.ok(!sheet.includes(";=1+1"), "and the spreadsheet does not execute it");
+  assert.ok(sheet.includes("'=1+1"), `the value still reads: ${sheet.split("\n").at(-2)}`);
+});

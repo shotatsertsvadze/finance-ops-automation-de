@@ -12,20 +12,49 @@ import { parseIsoDate } from "../dates.js";
 const sha256 = (buffer) => createHash("sha256").update(buffer).digest("hex");
 
 /**
+ * States an invoice is in only while its first processing run has not
+ * finished. Receiving and processing are separate transactions on purpose, so
+ * a run that falls over leaves the arrival on the record; these are the states
+ * that means (ADR-044).
+ */
+const UNFINISHED_INTAKE = ["RECEIVED", "VALIDATING"];
+
+/**
  * Stores the upload and creates the invoice in RECEIVED, or in DUPLICATE when
  * the identical file is already live. Intake facts are written here and never
  * touched again.
+ *
+ * Sending the same file again while its first run never finished resumes that
+ * invoice instead of recording a duplicate: the stranded row used to count as
+ * the live one, so the obvious thing for a sender to try was also the one
+ * thing that could not work.
  */
 export async function receiveInvoice({ pool, storage }, { buffer, originalFilename, sourceChannel, actor }) {
   const id = randomUUID();
   const fileSha256 = sha256(buffer);
-  const filePath = await storage.writeOriginal(id, buffer);
   return withTransaction(pool, async (client) => {
+    // `for update` rather than a plain read: a run that is processing this
+    // invoice right now holds the row, so this waits and then sees where it
+    // actually ended instead of racing it.
     const { rows: existing } = await client.query(
-      "select id from finops.invoices where file_sha256 = $1 and state <> 'DUPLICATE' limit 1",
+      "select id, state from finops.invoices where file_sha256 = $1 and state <> 'DUPLICATE' limit 1 for update",
       [fileSha256],
     );
-    const duplicateOf = existing[0]?.id ?? null;
+    const live = existing[0] ?? null;
+
+    if (live && UNFINISHED_INTAKE.includes(live.state)) {
+      await recordEvent(client, {
+        invoiceId: live.id, actor, action: "intake_resumed",
+        reason: `Dieselbe Datei erneut übermittelt, Verarbeitung wird fortgesetzt (${sourceChannel})`,
+        evidence: { file_sha256: fileSha256, original_filename: originalFilename, stalled_in: live.state },
+      });
+      return { id: live.id, state: live.state, duplicateOf: null, resumed: true };
+    }
+
+    // Written only once it is clear a row will reference it; a resumption
+    // would otherwise leave a second copy of identical bytes behind.
+    const filePath = await storage.writeOriginal(id, buffer);
+    const duplicateOf = live?.id ?? null;
     const state = duplicateOf ? "DUPLICATE" : "RECEIVED";
     try {
       await client.query(
@@ -44,7 +73,7 @@ export async function receiveInvoice({ pool, storage }, { buffer, originalFilena
     } else {
       await writeEvent(client, { invoiceId: id, actor, action: "received", fromState: null, toState: "RECEIVED", reason: `Eingang über ${sourceChannel}`, evidence: { file_sha256: fileSha256, original_filename: originalFilename, size_bytes: buffer.length } });
     }
-    return { id, state, duplicateOf };
+    return { id, state, duplicateOf, resumed: false };
   });
 }
 

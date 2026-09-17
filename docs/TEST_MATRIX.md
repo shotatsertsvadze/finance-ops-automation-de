@@ -133,8 +133,8 @@ described as working.
 | # | Limitation | Reproduction | Status |
 |---|---|---|---|
 | ~~L1 (R07)~~ | ~~Cumulative PO overrun is not prevented~~ | **Fixed 2026-09-17**: capacity is a commitment ledger; the original reproduction now stops the second invoice. See ADR-032 and the table below. | CLOSED |
-| L2 (R08) | Intake and processing are separate transactions. If processing fails after receipt, re-uploading the same file returns DUPLICATE while the original stays in RECEIVED; recovery is a manual reprocess. | Inject a storage read failure after intake commits | OPEN |
-| L3 (R10) | The recognised XML subset is loose: namespaces are stripped and only the local name `Invoice` is required, so a non-UBL namespace is still accepted. Allowances, charges, prepayments and rounding are not modelled. | Replace the UBL root namespace | OPEN |
+| ~~L2 (R08)~~ | ~~A stranded intake could only be rescued by an operator~~ | **Fixed 2026-09-17**: sending the same file again resumes an invoice whose first run never finished. See ADR-044 and the table below. | CLOSED |
+| L3 (R10, partly closed) | The recognised XML subset is narrow. **Fixed 2026-09-17**: the root namespace is now required, and allowances, charges and prepayments are refused by name instead of being ignored or mis-reported (ADR-043, ADR-044). Still narrow: only UBL syntax is read, and CII remains an adapter boundary. | Upload a CII document | OPEN |
 | ~~L4 (R11)~~ | ~~Decisions are not bound to a document hash or validation-run identifier~~ | **Fixed 2026-09-17**: each decision records the document, the validation run and the amount, and two gates refuse a mismatch. See ADR-033 and the table below. | CLOSED |
 | ~~L8~~ | ~~Server refusals stay German in English mode~~ | **Fixed 2026-09-17**: every refusal carries a code and its parameters; the client renders it in the chosen language and falls back to the server's sentence. See ADR-042 and the table below. | CLOSED |
 | ~~L7~~ | ~~Business checks are not re-run at the final approval gate~~ | **Fixed 2026-09-17**: the gate re-checks business facts against current master data and returns the invoice to review when one has newly failed. See ADR-041 and the table below. | CLOSED |
@@ -253,7 +253,7 @@ described as working.
 | U2 | Detail shows expected vs found with IBAN divergence marked | differing characters highlighted, both sides grouped in fours | MANUAL | Browser, 2026-09-17 |
 | U3 | State spine shows position and blocker | blocked node rendered at the stage reached | MANUAL | Browser, 2026-09-17 |
 | U4 | No horizontal page scroll at 375 px | scrollWidth equals clientWidth | MANUAL | Browser, 2026-09-17, measured in page |
-| U5 | Keyboard focus visible, reduced motion respected | focus ring, animations disabled | CODE | `:focus-visible` and `prefers-reduced-motion` in `styles.css`, not yet exercised |
+| U5 | Keyboard focus visible, reduced motion respected | focus ring on keyboard focus but not on a click; animation collapsed under a reduced-motion preference | AUTO | `browser/accessibility.browser.test.js`, against the real stylesheet in chromium |
 | U6 | Four-eyes refusal is visible to the user | server message shown, invoice unchanged | MANUAL | Browser, 2026-09-17: same manager accepted then tried to approve, refusal rendered, step stayed open |
 | U7 | Full review-to-approval round trip in the UI | two different people, audit shows both | MANUAL | Browser, 2026-09-17: Tim Kessler released, Lea Sommer approved |
 | U8 | Decision panel comes first on a phone | actions above the spine, no page overflow | MANUAL | Browser, 2026-09-17 at 375 px |
@@ -302,6 +302,30 @@ Found while verifying the above, not in the report:
 | G8 | Both halves of the gate are load-bearing | removing it fails 4 tests; treating every failure as new fails G4 | MANUAL | Mutation check, 2026-09-17 |
 | G9 | The refusal is visible to the approver | invoice shown in review with the blocking reason | MANUAL | Browser, 2026-09-17: step CANCELLED, "Lieferant gesperrt", `supplier_active FAILED · HIGH` |
 
+## Closing the documented limitations
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| K1 | A document rooted in another namespace is not an XRechnung | format_recognised FAILED | AUTO | `technical-validation.test.js` |
+| K2 | The default namespace counts as much as a prefixed one | PASSED | AUTO | `technical-validation.test.js` |
+| K3 | An unqualified `Invoice` root is refused | FAILED | AUTO | `technical-validation.test.js` |
+| K4 | A discount the totals already absorb is not waved through | document_features_supported FAILED | AUTO | `business-checks.test.js`; this case passed every check before |
+| K5 | A prepayment is named, not called inconsistent totals | FAILED naming Anzahlungen; totals SKIPPED | AUTO | `business-checks.test.js` |
+| K6 | An unmodelled document cannot be approved | listed in payableBlockers | AUTO | `eligibility` non-overridable checks |
+| K7 | A failed first run leaves the receipt on the record | one invoice, RECEIVED | AUTO | `recovery.test.js` |
+| K8 | Sending the same file again resumes it | same invoice id, processed, no second row | AUTO | `recovery.test.js` |
+| K9 | A resumed invoice keeps its intake facts | received_at, filename, channel unchanged | AUTO | `recovery.test.js` |
+| K10 | The resumption is on the audit trail | `intake_resumed` recorded | AUTO | `recovery.test.js` |
+| K11 | A file sent again after processing is still a duplicate | DUPLICATE | AUTO | `recovery.test.js` |
+| K12 | The machine export returns identifiers unaltered | `=1+1` survives | AUTO | `csv-export.test.js`, `moneypath.test.js` |
+| K13 | The spreadsheet export makes such a cell inert | prefixed, value intact | AUTO | `csv-export.test.js` |
+| K14 | The two exports are told apart by filename | different Content-Disposition | AUTO | `moneypath.test.js` |
+| K15 | An unknown export profile is refused | 400 UNKNOWN_EXPORT_PROFILE | AUTO | `moneypath.test.js` |
+| K16 | The stored original does not execute in a browser | no script, no API call, no title | AUTO | `browser/file-serving.browser.test.js` |
+| K17 | A real invoice is still readable as source in a browser | content shown | AUTO | `browser/file-serving.browser.test.js` |
+| K18 | The browser tests skip rather than fail without a browser | 6 skipped, 0 failed, install hint shown | MANUAL | 2026-09-17, `PLAYWRIGHT_BROWSERS_PATH` pointed at an empty directory |
+| K19 | Both browser suites are load-bearing | reverting the content type fails K16 | MANUAL | Mutation check, 2026-09-17 |
+
 ## Residual items from the same review
 
 The report asked for more than the ten findings. These were addressed after the
@@ -320,8 +344,8 @@ findings themselves.
 
 | # | Limitation | Why it stays open | Status |
 |---|---|---|---|
-| L9 | No automated real-browser regression proves the served original cannot execute. The automated tests assert the response contract: type, nosniff, sandbox policy. Browser execution was verified by hand. | A headless-browser runner is a dependency this PoC does not carry. | OPEN |
-| L10 | The CSV export prefixes a formula-triggering cell, which alters the value a machine importer reads. | The consumer is a bookkeeping import that should strip a leading apostrophe; the alternative is leaving live formulas in a file people open. Recorded in ADR-038 rather than resolved. | OPEN |
+| ~~L9~~ | ~~No automated real-browser regression for the served original~~ | **Fixed 2026-09-17**: Playwright drives the original attack and proves the script neither runs nor reaches the API. See ADR-046. | CLOSED |
+| ~~L10~~ | ~~The CSV export altered the value a machine importer reads~~ | **Fixed 2026-09-17**: the export takes a consumer profile; `machine` is faithful and the default, `spreadsheet` is inert. See ADR-045. | CLOSED |
 
 ## Display language
 

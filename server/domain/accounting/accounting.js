@@ -102,29 +102,35 @@ const CSV_COLUMNS = [
 ];
 
 /**
- * One CSV cell. Quoting keeps a value inside its column; it does not stop a
- * spreadsheet executing it. A cell opening with `=`, `+`, `-`, `@` or a control
- * character is a formula in Excel, LibreOffice and Sheets alike, so such a cell
- * is prefixed with an apostrophe, which those applications read as "this is
- * text". A well-formed number is left alone: otherwise every credit amount
- * would be mangled to defend against a leading minus.
+ * One CSV cell, for a stated consumer.
  *
- * The export's consumer is a bookkeeping import, which should strip a leading
- * apostrophe. Exported to be read rather than imported, it is inert.
+ * `machine` returns the value as it arrived: a bookkeeping import matching on
+ * an invoice number must see that number and nothing else. `spreadsheet`
+ * additionally prefixes a cell that Excel, LibreOffice or Sheets would execute
+ * — one opening with `=`, `+`, `-`, `@` or a control character — with an
+ * apostrophe, which those applications read as "this is text".
+ *
+ * A well-formed number is never prefixed, or every credit amount would be
+ * mangled to defend against a leading minus. Quoting is applied for both: it
+ * keeps a value inside its column, which is a different problem.
  */
-export const csvCell = (value) => {
+export const csvCell = (value, profile = "machine") => {
   const text = value === null || value === undefined ? "" : String(value);
-  const executable = /^[=+\-@\t\r]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text);
+  const executable = profile === "spreadsheet"
+    && /^[=+\-@\t\r]/.test(text)
+    && !/^-?\d+(\.\d+)?$/.test(text);
   const cell = executable ? `'${text}` : text;
   return /[",;\n\r\t]/.test(cell) ? `"${cell.replace(/"/g, '""')}"` : cell;
 };
 
+export const EXPORT_PROFILES = ["machine", "spreadsheet"];
+
 /** Neutral CSV handoff. A vendor adapter would replace this formatter only. */
-export async function exportAccountingCsv({ pool }) {
+export async function exportAccountingCsv({ pool }, profile = "machine") {
   const { rows } = await pool.query(
     `select ${CSV_COLUMNS.join(", ")} from finops.accounting_records order by document_no`,
   );
   const lines = [CSV_COLUMNS.join(";")];
-  for (const row of rows) lines.push(CSV_COLUMNS.map((c) => csvCell(row[c])).join(";"));
+  for (const row of rows) lines.push(CSV_COLUMNS.map((c) => csvCell(row[c], profile)).join(";"));
   return lines.join("\n") + "\n";
 }

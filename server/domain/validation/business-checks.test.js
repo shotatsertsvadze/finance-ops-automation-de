@@ -115,3 +115,58 @@ test("a purchase order belonging to another supplier names that supplier, not an
   assert.match(c.actual, /S-1003/);
   assert.ok(!/[0-9a-f]{8}-[0-9a-f]{4}/.test(c.actual), `no raw identifier in the evidence: ${c.actual}`);
 });
+
+// ------------------------------------- parts of UBL this adapter skips -----
+
+/**
+ * L3: allowances, charges and prepayments were "not modelled", which meant
+ * three different outcomes depending on how the document was written. One of
+ * them was a silent pass.
+ */
+import { buildInvoiceXml } from "../../test-support/invoice-xml.js";
+
+const MASTER = { supplier: S1, bankAccounts: S1_ACCOUNTS, purchaseOrder: { ...PO_0101, po_number: "PO-2026-0102", remaining_amount: "150000.00" }, existingSameNumber: [] };
+const runXml = (xml) => {
+  const technical = runTechnicalValidation(Buffer.from(xml, "utf8"));
+  assert.equal(technical.passed, true, "the document is technically readable");
+  return runBusinessChecks(technical.parsed, MASTER, policy, company);
+};
+const plain = () => buildInvoiceXml({ number: "FEAT-1", netCents: 100000 });
+
+test("an invoice without those parts is unaffected", () => {
+  const r = runXml(plain());
+  assert.equal(check(r, "document_features_supported").status, "PASSED");
+  assert.equal(check(r, "totals_consistent").status, "PASSED");
+});
+
+test("a discount the totals already absorb is not waved through", () => {
+  // The dangerous case: internally consistent, so nothing else notices it.
+  const xml = plain().replace("<cac:LegalMonetaryTotal>", `<cac:AllowanceCharge>
+     <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+     <cbc:Amount currencyID="EUR">200.00</cbc:Amount>
+   </cac:AllowanceCharge>
+   <cac:LegalMonetaryTotal>`);
+  const c = check(runXml(xml), "document_features_supported");
+  assert.equal(c.status, "FAILED");
+  assert.match(c.actual, /AllowanceCharge/);
+});
+
+test("a prepayment is named for what it is, not called inconsistent totals", () => {
+  const xml = plain().replace(
+    /<cbc:PayableAmount currencyID="EUR">[\d.]+<\/cbc:PayableAmount>/,
+    '<cbc:PrepaidAmount currencyID="EUR">190.00</cbc:PrepaidAmount><cbc:PayableAmount currencyID="EUR">1000.00</cbc:PayableAmount>',
+  );
+  const r = runXml(xml);
+  assert.equal(check(r, "document_features_supported").status, "FAILED");
+  assert.match(check(r, "document_features_supported").actual, /Anzahlungen/);
+  assert.equal(check(r, "totals_consistent").status, "SKIPPED",
+    "a rule that does not apply is neither passed nor failed");
+});
+
+test("the totals rule is skipped rather than failed, and says why", () => {
+  const xml = plain().replace("<cac:LegalMonetaryTotal>",
+    '<cac:LegalMonetaryTotal><cbc:AllowanceTotalAmount currencyID="EUR">200.00</cbc:AllowanceTotalAmount>');
+  const c = check(runXml(xml), "totals_consistent");
+  assert.equal(c.status, "SKIPPED");
+  assert.match(c.reason, /nicht nachrechenbar/);
+});

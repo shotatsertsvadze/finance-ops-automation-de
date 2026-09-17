@@ -16,6 +16,10 @@ export const NON_OVERRIDABLE_CHECKS = [
   "amounts_numeric",
   "dates_valid",
   "totals_consistent",
+  // A document built from parts this adapter does not model cannot have its
+  // payable amount reconstructed. A reviewer judges business facts; they
+  // cannot supply a total the system never computed (ADR-043).
+  "document_features_supported",
 ];
 
 /** Returns the reasons this invoice may not become payable. Empty means eligible. */

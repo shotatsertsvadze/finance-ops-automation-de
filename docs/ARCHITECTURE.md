@@ -135,6 +135,11 @@ master data. A check that was not failing at the last run and is failing now
 sends the invoice back to `REVIEW_REQUIRED` with its steps cancelled; one that
 was already failing was seen by a reviewer and does not (ADR-041).
 
+An invoice whose first processing run never finished stays in RECEIVED or
+VALIDATING. Sending the same file again resumes it instead of recording a
+duplicate, decided under a row lock so it cannot race a run still in progress
+(ADR-044).
+
 Database-enforced invariants:
 
 - `unique (file_sha256) where state <> 'DUPLICATE'`: the same file can exist

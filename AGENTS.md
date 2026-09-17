@@ -21,6 +21,8 @@ npm run db:migrate        # applies db/migrations/* to DATABASE_URL
 npm run db:seed           # synthetic master data
 npm run dev               # API (4400) + Vite (5400)
 npm test                  # node --test; DB tests use TEST_DATABASE_URL
+npm run test:browser      # the browser suite alone; skips without chromium
+npx playwright install chromium   # once, to stop the browser tests skipping
 ```
 
 ## Rules that hold everything together

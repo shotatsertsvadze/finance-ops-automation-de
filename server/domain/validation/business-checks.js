@@ -129,6 +129,33 @@ export function runBusinessChecks(parsed, master, policy, company) {
     }
   }
 
+  // Parts of UBL this adapter does not model. Their presence means the total
+  // cannot be reconstructed from what is read, so the document is reported as
+  // unsupported instead of being measured against a rule that does not apply
+  // to it. Before this, a correctly formed invoice carrying a discount was
+  // refused for "inconsistent totals", which was not true of the document.
+  const unsupported = parsed.unsupported ?? {};
+  const unsupportedFeatures = [
+    [unsupported.allowanceTotal, "Nachlässe (AllowanceTotalAmount)"],
+    [unsupported.chargeTotal, "Zuschläge (ChargeTotalAmount)"],
+    [unsupported.prepaidAmount, "Anzahlungen (PrepaidAmount)"],
+    [unsupported.allowanceCharges ? "1" : null, "Positionsnachlässe (AllowanceCharge)"],
+  ].filter(([value]) => value !== null && value !== undefined && value !== "").map(([, label]) => label);
+
+  if (unsupportedFeatures.length) {
+    checks.push(failed("document_features_supported", SEVERITY.HIGH, {
+      expected: "Rechnung ohne Nachlässe, Zuschläge oder Anzahlungen",
+      actual: unsupportedFeatures.join(", "),
+      reason: "Das Dokument nutzt Bestandteile, die dieser Prototyp nicht abbildet; der Zahlbetrag ist damit nicht nachrechenbar",
+    }));
+  } else {
+    checks.push(passed("document_features_supported", SEVERITY.HIGH, {
+      expected: "Rechnung ohne Nachlässe, Zuschläge oder Anzahlungen",
+      actual: "keine",
+      reason: "Das Dokument nutzt nur abgebildete Bestandteile",
+    }));
+  }
+
   const lineSum = parsed.lines.reduce((sum, l) => (sum === null ? null : (toCents(l.lineNet) === null ? null : sum + toCents(l.lineNet))), 0);
   const lineExtensionCents = toCents(parsed.totals.lineExtension);
   const taxInclusiveCents = toCents(parsed.totals.taxInclusive);
@@ -150,7 +177,15 @@ export function runBusinessChecks(parsed, master, policy, company) {
       inconsistencies.push(`Bruttobetrag ${centsToDecimal(taxInclusiveCents)} != Zahlbetrag ${centsToDecimal(grossCents)}`);
     }
   }
-  if (inconsistencies.length) {
+  if (unsupportedFeatures.length) {
+    // Not a pass and not a failure: the rule does not apply to this document,
+    // and claiming either would be a statement we cannot support.
+    checks.push(skipped("totals_consistent", {
+      expected: "Positionen = Netto; Netto + Steuer = Brutto",
+      actual: unsupportedFeatures.join(", "),
+      reason: "Summen nicht nachrechenbar, solange diese Bestandteile nicht abgebildet sind",
+    }));
+  } else if (inconsistencies.length) {
     checks.push(failed("totals_consistent", SEVERITY.HIGH, { expected: "Positionen = Netto; Netto + Steuer = Brutto", actual: inconsistencies.join("; "), reason: "Summen sind rechnerisch nicht konsistent" }));
   } else {
     checks.push(passed("totals_consistent", SEVERITY.HIGH, { expected: "Positionen = Netto; Netto + Steuer = Brutto", actual: `${centsToDecimal(netCents)} + ${centsToDecimal(vatCents)} = ${centsToDecimal(grossCents)}`, reason: "Summen sind rechnerisch konsistent" }));

@@ -714,6 +714,109 @@ parameterised entries, which it had skipped entirely, and trips on distinctive
 German vocabulary. It is a tripwire, not language detection, and is named for
 what it does.
 
+## ADR-043 A document built from parts we do not model is refused, not measured
+
+Closes half of L3. The adapter reads lines and totals. UBL also has allowances,
+charges and prepayments, and an invoice using them behaves three different ways
+depending on how it is written: a prepayment failed `totals_consistent`, a
+correctly formed discount also failed it, and a discount the totals had already
+absorbed passed every check. The first two were right for the wrong reason —
+the totals were consistent, we simply could not reconstruct them — and the
+third was a silent pass on a document whose payable amount we never verified.
+
+Decision: the parser reports these parts, and `document_features_supported`
+fails when any is present, naming which. The totals rule is then reported
+SKIPPED rather than FAILED: a rule that does not apply to a document is neither
+passed nor failed, and claiming either would be a statement we cannot support.
+
+The check is non-overridable. A reviewer judges business facts; they cannot
+supply a total the system never computed. Such an invoice can reach review and
+be rejected or queried, and can never reach approval.
+
+The cost, stated plainly: any invoice carrying a discount line is unpayable in
+this prototype. That is the honest consequence of not modelling discounts, and
+better than paying an amount nobody checked.
+
+## ADR-044 Sending a stranded file again resumes it
+
+Closes L2. Receiving a file and processing it are separate transactions on
+purpose: that a document arrived is worth keeping even when the run that should
+have read it fell over. The cost was that the invoice sat in RECEIVED and the
+duplicate rule counted it as the live one, so re-sending the same file answered
+DUPLICATE. The obvious thing for a sender to try was the one thing that could
+not work, and only an operator with the reprocess endpoint could rescue it.
+
+Decision: when the identical file arrives and the existing invoice is still in
+RECEIVED or VALIDATING — states it only occupies while its first run has not
+finished — that invoice is resumed instead of a duplicate being recorded. Its
+intake facts are untouched, because it is the same arrival; the second delivery
+is recorded as `intake_resumed` rather than passing silently.
+
+The decision is taken under `select ... for update`. A run processing the
+invoice at that moment holds the row, so the second arrival waits and then sees
+where the first actually ended, rather than racing it into a second run.
+
+A file sent again after processing finished is still a duplicate. Resumption is
+for work that never completed, not a way around the duplicate rule.
+
+The upload also writes to storage only once it is clear a row will reference
+the bytes, so a resumption no longer leaves a second copy of an identical file
+behind.
+
+## ADR-045 The CSV export asks who is reading it
+
+Closes L10, which ADR-038 recorded as a trade-off rather than a fix.
+
+Two consumers want incompatible things from the same file. A bookkeeping import
+matching on an invoice number must see that number byte for byte. A spreadsheet
+executes any cell beginning `=`, `+`, `-` or `@`, so the same number becomes a
+live formula in front of whoever opens it. Prefixing an apostrophe serves the
+second and corrupts the first; ADR-038 chose the second and said so.
+
+Decision: the export takes a profile. `machine`, the default, returns values
+exactly as they arrived. `spreadsheet` neutralises cells that would execute.
+The two download under different filenames so nobody imports the wrong one, and
+an unknown profile is refused rather than guessed.
+
+Defaulting to `machine` follows the documented purpose: this endpoint is an
+accounting handoff, and nothing in the interface links it. Making the faithful
+form the default means no identifier is ever altered unasked; a person who
+wants to open the file in Excel says so.
+
+A well-formed number is never prefixed under either profile, or every credit
+amount would be mangled to defend against a leading minus.
+
+## ADR-046 Two claims need a browser, so the tests use one
+
+Closes L9 and U5, both of which had been verified only by hand.
+
+Whether a served document executes is the browser's decision, made from the
+headers. Asserting the headers proves the contract, not the consequence.
+Whether a focus ring appears or an animation is suppressed is the result of
+cascade and media-query evaluation, and `:focus-visible` is a heuristic about
+how an element was focused. None of this can be checked by reading a file, and
+the matrix had been claiming the accessibility rules worked on the evidence
+that they were present in the stylesheet.
+
+Decision: Playwright as a development dependency, with the browser tests in
+`browser/`. They skip with the install command when the binary is absent, so
+`npm test` still passes on a clean clone and in CI without a download, and run
+for anyone who has it.
+
+This does not reopen ADR-031. The stack that ships is unchanged; this is a test
+dependency, and nothing in `server/` or `client/` imports it.
+
+The security test reproduces the original attack rather than restating the fix:
+it uploads the XHTML that once executed, opens it with a real session, and
+asserts the script neither ran nor reached the API. Reverting the content type
+makes it fail, which is how it was checked.
+
+The accessibility tests read `client/src/styles.css` directly rather than a
+build, so they need no `npm run build` first and exercise the file the project
+edits. One of them clicks the control with a mouse and asserts the ring does
+*not* appear: without it, a plain `:focus` rule would pass and the point of
+`:focus-visible` would go untested.
+
 ## Assumptions and contradictions found in the brief
 
 - The brief lists "totals mathematically consistent" under business validation

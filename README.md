@@ -67,14 +67,13 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
 - **A purchase order is a single balance, not a line-by-line receipt.**
   Capacity is committed and released correctly, but partial deliveries, credit
   notes returning capacity, and order closure are not modelled.
-- **The recognised XML subset is loose.** Namespaces are stripped, and
-  allowances, charges, prepayments and rounding are not modelled.
+- **Allowances, charges and prepayments are not modelled.** An invoice using
+  them is refused by name and can reach review but never approval: its payable
+  amount cannot be recomputed from what this adapter reads. In practice that
+  makes any invoice carrying a discount line unpayable here.
 - **Reconciliation matches one statement line to one invoice.** Part payments,
   collective payments covering several invoices and credit notes are not
   modelled; each becomes an exception for a person to resolve.
-- **Recovery after a partial intake is manual.** If processing fails after the
-  file is received, re-uploading returns a duplicate and the original waits for
-  a manual reprocess.
 - **Authentication is demo-grade.** Real password login, sessions and a role
   matrix, but no password reset, no second factor and no SSO. Accounts are
   seeded with a shared, documented password.
@@ -83,6 +82,20 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
   declared profile and the structure it needs; it does not certify compliance.
 - Accounting, payment and bank data are simulated.
 - Approval thresholds and savings figures are demo assumptions.
+
+## When an intake does not finish
+
+Receiving a file and processing it are separate steps, so an arrival is
+recorded even if the run that reads it fails. Sending the same file again
+resumes that invoice rather than answering "duplicate"; a file sent again after
+processing finished is still a duplicate. See ADR-044.
+
+## Handing figures to accounting
+
+`GET /api/accounting/export` returns the booking records as CSV for a
+bookkeeping import, with values exactly as they arrived. Add
+`?profile=spreadsheet` for a copy in which cells a spreadsheet would execute
+are made inert; the two download under different names. See ADR-045.
 
 ## Refusals
 
