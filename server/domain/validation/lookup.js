@@ -1,4 +1,6 @@
-/** Loads the master data a business validation needs. Read-only. */
+import { availableCents } from "../purchase-orders/commitments.js";
+
+/** Loads the master data a business validation needs. */
 export async function loadMasterData(client, parsed, { excludeInvoiceId = null } = {}) {
   // How the supplier was identified is part of the evidence, so it is reported
   // rather than inferred from whether the document happened to carry a VAT id.
@@ -41,5 +43,11 @@ export async function loadMasterData(client, parsed, { excludeInvoiceId = null }
         [supplier.id, parsed.invoiceNumber, excludeInvoiceId ?? "00000000-0000-0000-0000-000000000000"],
       )).rows
     : [];
-  return { supplier, matchedBy, bankAccounts, purchaseOrder, existingSameNumber };
+  // Locks the order row, so two invoices arriving together cannot both read
+  // the same availability and both commit.
+  const poAvailableCents = purchaseOrder
+    ? await availableCents(client, purchaseOrder.id, excludeInvoiceId)
+    : null;
+
+  return { supplier, matchedBy, bankAccounts, purchaseOrder, poAvailableCents, existingSameNumber };
 }

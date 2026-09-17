@@ -64,9 +64,9 @@ curl -F file=@fixtures/xrechnung/A_clean_1240.xml http://localhost:4400/api/invo
 These are reproduced and accepted, not hidden. Full list with reproductions in
 `docs/TEST_MATRIX.md` under "Known limitations".
 
-- **Cumulative purchase-order overruns are not prevented.** The PO check
-  compares one invoice against the remaining amount at that moment; the amount
-  is never consumed, so two invoices that each fit can together exceed it.
+- **A purchase order is a single balance, not a line-by-line receipt.**
+  Capacity is committed and released correctly, but partial deliveries, credit
+  notes returning capacity, and order closure are not modelled.
 - **The recognised XML subset is loose.** Namespaces are stripped, and
   allowances, charges, prepayments and rounding are not modelled.
 - **Decisions are not bound to a document hash or validation run**, so an

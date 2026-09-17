@@ -100,14 +100,32 @@ export function runBusinessChecks(parsed, master, policy, company) {
         reason: "Bestellung gehört zu einem anderen Lieferanten",
       }));
     }
-    const remainingCents = toCents(purchaseOrder.remaining_amount);
-    const toleranceCents = Math.max(Math.round((remainingCents * policy.poTolerancePct) / 100), policy.poToleranceMinCents);
+    // Available capacity, not the opening balance: other live invoices already
+    // hold part of this order. Tolerance is granted once per order, not once
+    // per invoice, or several invoices each "within tolerance" drift the total.
+    const openingCents = toCents(purchaseOrder.remaining_amount);
+    const availableCents = master.poAvailableCents ?? openingCents;
+    const toleranceCents = Math.max(Math.round((openingCents * policy.poTolerancePct) / 100), policy.poToleranceMinCents);
+    const ceilingCents = availableCents + toleranceCents;
+    const committedCents = openingCents - availableCents;
+    const held = committedCents > 0 ? `, davon ${centsToDecimal(committedCents)} EUR durch andere Rechnungen gebunden` : "";
+
     if (netCents === null) {
       checks.push(skipped("po_amount_within_tolerance", { reason: "Nettobetrag nicht lesbar" }));
-    } else if (netCents <= remainingCents + toleranceCents) {
-      checks.push(passed("po_amount_within_tolerance", SEVERITY.HIGH, { expected: `<= ${centsToDecimal(remainingCents + toleranceCents)} EUR (Rest ${centsToDecimal(remainingCents)} + Toleranz)`, actual: `${centsToDecimal(netCents)} EUR`, reason: "Nettobetrag innerhalb des Bestellrests" }));
+    } else if (netCents <= ceilingCents) {
+      checks.push(passed("po_amount_within_tolerance", SEVERITY.HIGH, {
+        expected: `<= ${centsToDecimal(ceilingCents)} EUR (verfügbar ${centsToDecimal(availableCents)} + Toleranz${held})`,
+        actual: `${centsToDecimal(netCents)} EUR`,
+        reason: "Nettobetrag innerhalb der verfügbaren Bestellsumme",
+      }));
     } else {
-      checks.push(failed("po_amount_within_tolerance", SEVERITY.HIGH, { expected: `<= ${centsToDecimal(remainingCents + toleranceCents)} EUR (Rest ${centsToDecimal(remainingCents)} + Toleranz ${policy.poTolerancePct} %)`, actual: `${centsToDecimal(netCents)} EUR`, reason: "Nettobetrag überschreitet den offenen Bestellwert" }));
+      checks.push(failed("po_amount_within_tolerance", SEVERITY.HIGH, {
+        expected: `<= ${centsToDecimal(ceilingCents)} EUR (verfügbar ${centsToDecimal(availableCents)} + Toleranz ${policy.poTolerancePct} %${held})`,
+        actual: `${centsToDecimal(netCents)} EUR`,
+        reason: committedCents > 0
+          ? "Nettobetrag überschreitet zusammen mit bereits gebundenen Rechnungen den Bestellwert"
+          : "Nettobetrag überschreitet den offenen Bestellwert",
+      }));
     }
   }
 

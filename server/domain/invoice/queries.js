@@ -22,7 +22,13 @@ export async function getInvoiceDetail(pool, id) {
   const { rows: [invoice] } = await pool.query(
     `select i.*, s.supplier_no, s.legal_name as supplier_name, s.status as supplier_status, s.default_cost_center,
             p.po_number, p.remaining_amount as po_remaining_amount, p.approved_amount as po_approved_amount, p.cost_center as po_cost_center,
-            d.invoice_number as duplicate_of_number
+            d.invoice_number as duplicate_of_number,
+            -- Available capacity, not the opening balance: other live invoices
+            -- may already hold part of this order.
+            (p.remaining_amount - coalesce((
+              select sum(c.amount) from finops.po_commitments c
+              where c.purchase_order_id = p.id and c.status = 'ACTIVE' and c.invoice_id <> i.id
+            ), 0)) as po_available_amount
      from finops.invoices i
      left join finops.suppliers s on s.id = i.supplier_id
      left join finops.purchase_orders p on p.id = i.purchase_order_id

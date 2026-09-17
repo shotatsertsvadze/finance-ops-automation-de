@@ -1,4 +1,5 @@
 import { canTransition } from "./states.js";
+import { syncCommitment } from "../purchase-orders/commitments.js";
 
 export class TransitionError extends Error {
   constructor(message, details = {}) {
@@ -35,6 +36,9 @@ export async function transition(client, { invoiceId, to, actor, action, reason 
     [invoiceId, to, reviewReason],
   );
   await writeEvent(client, { invoiceId, actor, action, fromState: from, toState: to, reason, evidence });
+  // A purchase order is a spending limit, so the claim on it belongs to the
+  // state change, not to whichever caller remembered to adjust it.
+  await syncCommitment(client, invoiceId, to);
   return { from, to };
 }
 

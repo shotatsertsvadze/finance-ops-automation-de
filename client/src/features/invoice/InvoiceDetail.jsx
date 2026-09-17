@@ -67,7 +67,7 @@ export default function InvoiceDetail({ may, onChanged }) {
                   label="Bestellung"
                   value={
                     invoice.po_number
-                      ? `${invoice.po_number} · Rest ${formatMoney(invoice.po_remaining_amount)}`
+                      ? `${invoice.po_number} · verfügbar ${formatMoney(invoice.po_available_amount)}`
                       : invoice.po_reference_raw ?? "—"
                   }
                   mono

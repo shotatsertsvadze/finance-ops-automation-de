@@ -255,6 +255,9 @@ weaker control.
 
 ## ADR-024 PO matching is a snapshot comparison, not a spending control
 
+**Superseded by ADR-032 (2026-09-17).** The limitation is closed; the decisions
+this ADR said were unsettled are settled there.
+
 Context: two invoices, each within the PO's remaining amount, both approve even
 though together they exceed it. There is no reservation, consumption or release
 lifecycle; `purchase_orders.remaining_amount` is never decremented.
@@ -365,6 +368,49 @@ TypeScript is worth doing and is recorded as the next scoped piece of work
 rather than an incidental rewrite. It is honest to note that it would not have
 prevented any of the defects the independent review found: those were runtime
 data and control-flow problems, not shape mismatches.
+
+## ADR-032 Purchase-order capacity is a commitment ledger
+
+Supersedes ADR-024, which recorded the gap and listed the decisions it needed.
+Those are settled here.
+
+Context: `purchase_orders.remaining_amount` was read but never consumed, so two
+invoices that each fitted inside it both became payable. A purchase order is a
+spending limit, so what matters is the sum of everything live against it.
+
+Decision: every invoice that is live against an order holds a row in
+`finops.po_commitments`. Available capacity is the opening `remaining_amount`
+minus the active commitments. The balance itself is never mutated: doing so
+would be destructive, unauditable and racy, and it would lose the distinction
+between "committed" and "spent".
+
+The open questions, answered:
+- **When is capacity taken?** On entering any state where the invoice is a
+  claim on the order: READY_FOR_APPROVAL and every payable state through to
+  RECONCILED. Taking it at approval alone would surprise an approver with a
+  refusal at the click; taking it at validation means the second invoice is
+  routed to review with the reason stated.
+- **When is it released?** On entering REVIEW_REQUIRED, INFO_REQUESTED,
+  REJECTED or DUPLICATE. A question or a rejection frees the money again.
+- **Where is it maintained?** Inside `transition()`, the same choke point as
+  the audit event. The claim belongs to the state change, not to whichever
+  caller remembers to adjust it.
+- **Per invoice or cumulative tolerance?** Cumulative. Tolerance is computed
+  once on the order's opening balance and applies to the sum of commitments,
+  otherwise N invoices each "within tolerance" drift the order by N times it.
+- **Concurrency?** `availableCents()` locks the order row, so two invoices
+  arriving together serialise instead of both reading the same availability.
+  A test asserts that exactly one of two simultaneous uploads proceeds, and it
+  fails when the lock is removed.
+
+Consequences: a partially consumed order shows available capacity, not its
+opening balance, in the UI and in the check evidence, which names how much is
+held by other invoices. The demo data now creates its own orders with
+realistic capacity, because otherwise a month of invoices against a handful of
+small seeded orders turns almost every invoice into a PO exception.
+
+Still not modelled: partial deliveries, credit notes returning capacity, and
+order closure. An order is a single balance, not a line-by-line receipt.
 
 ## Assumptions and contradictions found in the brief
 

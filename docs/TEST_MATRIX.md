@@ -8,7 +8,7 @@ Legend:
 - **CODE** inferred from reading the code only, never executed
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (154 tests, all passing as of 2026-09-17). Database tests need
+Run: `npm test` (165 tests, all passing as of 2026-09-17). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
 
 ## High-priority business risks
@@ -103,6 +103,28 @@ Tests live in `server/domain/workflow/controls.test.js`.
 | C13 (R09) | Non-numeric tier limits became NaN and dropped a 30.000-EUR invoice to one approver | `loadPolicy()` throws | AUTO | "invalid policy configuration is rejected" |
 | C14 (R09) | Out-of-order tiers were accepted | `loadPolicy()` throws | AUTO | "thresholds that are out of order are rejected" |
 
+## Purchase-order capacity
+
+Tests in `server/domain/purchase-orders/commitments.test.js`. PO-2026-0102
+opens with 500,00 EUR and a tolerance of 10,00, so the ceiling for all live
+commitments is 510,00.
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| P1 | One invoice inside the balance | passes and holds capacity | AUTO | "a single invoice inside the remaining amount still passes" |
+| P2 | Second invoice exceeding the order together with the first | REVIEW_REQUIRED, holds nothing | AUTO | "a second invoice that would exceed the order together with the first" |
+| P3 | Check evidence | names available capacity and what others hold | AUTO | "the evidence names what is still available" |
+| P4 | Tolerance | applies once per order, not per invoice | AUTO | "tolerance applies to the whole order" |
+| P5 | Rejection | releases capacity for the next invoice | AUTO | "rejecting an invoice gives its capacity back" |
+| P6 | Request for information | releases capacity while the question is open | AUTO | "requesting information releases capacity" |
+| P7 | Re-validation | one invoice, one commitment | AUTO | "re-validating an invoice does not commit its amount twice" |
+| P8 | Money path | a paid invoice has consumed, not released, the order | AUTO | "capacity stays held all the way through" |
+| P9 | Two simultaneous uploads | exactly one proceeds. Mutation-checked: removing the row lock breaks it | AUTO | "two invoices arriving at the same time" |
+| P10 | A different order | unaffected | AUTO | "an invoice against a different order is unaffected" |
+| P11 | Invoice detail | reports available capacity, excluding the invoice's own hold | AUTO | "the invoice detail reports available capacity" |
+| P12 | Original R07 reproduction | no longer reproduces | MANUAL | Probe against a fresh database, 2026-09-17 |
+| P13 | Partial deliveries, credit notes, order closure | not modelled | OPEN | Deliberate, see ADR-032 |
+
 ## Known limitations, confirmed by reproduction
 
 These are reproduced and accepted for the PoC, not fixed. They must not be
@@ -110,7 +132,7 @@ described as working.
 
 | # | Limitation | Reproduction | Status |
 |---|---|---|---|
-| L1 (R07) | Cumulative PO overrun is not prevented. Two invoices of 319.33 net each both approve against a PO with 500.00 remaining, because `remaining_amount` is never consumed. | Upload two variants of fixture G with different invoice numbers | OPEN, see ADR-024 |
+| ~~L1 (R07)~~ | ~~Cumulative PO overrun is not prevented~~ | **Fixed 2026-09-17**: capacity is a commitment ledger; the original reproduction now stops the second invoice. See ADR-032 and the table below. | CLOSED |
 | L2 (R08) | Intake and processing are separate transactions. If processing fails after receipt, re-uploading the same file returns DUPLICATE while the original stays in RECEIVED; recovery is a manual reprocess. | Inject a storage read failure after intake commits | OPEN |
 | L3 (R10) | The recognised XML subset is loose: namespaces are stripped and only the local name `Invoice` is required, so a non-UBL namespace is still accepted. Allowances, charges, prepayments and rounding are not modelled. | Replace the UBL root namespace | OPEN |
 | L4 (R11) | Decisions are not bound to a document hash or validation-run identifier, and approval rows are recreated without a cycle identifier. | Source review | OPEN |

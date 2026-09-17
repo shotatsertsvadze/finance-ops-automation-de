@@ -33,10 +33,40 @@ const USERS = {
 };
 
 const SUPPLIERS = {
-  S1: { name: "Berliner Bürobedarf GmbH", vat: "DE123456789", iban: "DE89370400440532013000", bic: "COBADEFFXXX", po: "PO-2026-0101" },
-  S2: { name: "Havel Logistik GmbH", vat: "DE234567890", iban: "DE02120300000000202051", bic: "BYLADEM1001", po: "PO-2026-0201" },
-  S3: { name: "Spree IT-Systeme AG", vat: "DE345678901", iban: "DE02500105170137075030", bic: "INGDDEFFXXX", po: "PO-2026-0305" },
+  S1: { no: "S-1001", name: "Berliner Bürobedarf GmbH", vat: "DE123456789", iban: "DE89370400440532013000", bic: "COBADEFFXXX" },
+  S2: { no: "S-1002", name: "Havel Logistik GmbH", vat: "DE234567890", iban: "DE02120300000000202051", bic: "BYLADEM1001" },
+  S3: { no: "S-1003", name: "Spree IT-Systeme AG", vat: "DE345678901", iban: "DE02500105170137075030", bic: "INGDDEFFXXX" },
 };
+
+// The seeded orders are a small, readable master-data example. A month of
+// invoices needs more capacity than that, and since orders are now genuinely
+// consumed, too little capacity would turn every later invoice into a PO
+// exception and drown out the other cases.
+const ORDERS_PER_SUPPLIER = 4;
+const ORDER_AMOUNT = "18000.00";
+const SMALL_ORDER = "DEMO-PO-KLEIN";
+
+async function seedDemoOrders(pool) {
+  for (const [key, supplier] of Object.entries(SUPPLIERS)) {
+    for (let i = 1; i <= ORDERS_PER_SUPPLIER; i += 1) {
+      await pool.query(
+        `insert into finops.purchase_orders (po_number, supplier_id, approved_amount, remaining_amount, cost_center, status)
+         select $1, s.id, $2, $2, s.default_cost_center, 'OPEN' from finops.suppliers s where s.supplier_no = $3
+         on conflict (po_number) do nothing`,
+        [`DEMO-PO-${key}-${i}`, ORDER_AMOUNT, supplier.no],
+      );
+    }
+  }
+  // One deliberately small order, so the overrun case still appears.
+  await pool.query(
+    `insert into finops.purchase_orders (po_number, supplier_id, approved_amount, remaining_amount, cost_center, status)
+     select $1, s.id, '500.00', '500.00', s.default_cost_center, 'OPEN' from finops.suppliers s where s.supplier_no = 'S-1001'
+     on conflict (po_number) do nothing`,
+    [SMALL_ORDER],
+  );
+}
+
+const orderFor = (key, random) => `DEMO-PO-${key}-${Math.floor(random() * ORDERS_PER_SUPPLIER) + 1}`;
 const WRONG_IBAN = "DE75512108001245126199";
 
 const pad = (n, w = 5) => String(n).padStart(w, "0");
@@ -112,6 +142,7 @@ const iso = (date) => date.toISOString().slice(0, 10);
 
 export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
   const random = rng(seed);
+  await seedDemoOrders(deps.pool);
   const today = new Date();
   const summary = { created: 0, auto: 0, approved: 0, exceptions: 0, paid: 0, reconciled: 0 };
   const created = [];
@@ -121,6 +152,7 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
     const receivedAt = new Date(today.getTime() - daysAgo * 86400000);
     const supplierKey = ["S1", "S2", "S3"][Math.floor(random() * 3)];
     const supplier = SUPPLIERS[supplierKey];
+    const order = orderFor(supplierKey, random);
     const roll = random();
 
     // Mix chosen so the dashboard shows a believable spread, not a perfect run.
@@ -132,7 +164,7 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
 
     const netCents = scenario === "auto" ? 8000 + Math.floor(random() * 32000)
       : scenario === "approval" ? 60000 + Math.floor(random() * 400000)
-      : scenario === "po_overrun" ? 4000000
+      : scenario === "po_overrun" ? 120000
       : 50000 + Math.floor(random() * 150000);
 
     const number = `DEMO-2026-${pad(1000 + i)}`;
@@ -144,7 +176,7 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
       : invoiceXml({
           number, issueDate, dueDate, supplier,
           iban: scenario === "iban" ? WRONG_IBAN : supplier.iban,
-          netCents, po: scenario === "po_overrun" ? "PO-2026-0102" : supplier.po,
+          netCents, po: scenario === "po_overrun" ? SMALL_ORDER : order,
         });
 
     const received = await handleUpload(deps, {
