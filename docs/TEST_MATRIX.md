@@ -1,0 +1,94 @@
+# Test Matrix
+
+One consolidated matrix. Update rows in place; never start a second matrix.
+
+Legend:
+- **AUTO** verified by an automated test (`npm test`), test file named
+- **MANUAL** verified by hand, date and method named
+- **CODE** inferred from reading the code only, never executed
+- **OPEN** not yet tested, a real gap
+
+Run: `npm test` (56 tests, all passing as of 2026-09-17). Database tests need
+`TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
+
+## High-priority business risks
+
+| # | Risk / behaviour | Expected | Status | Evidence |
+|---|---|---|---|---|
+| R1 | Changed IBAN never auto-passes | HIGH failure, REVIEW_REQUIRED | AUTO | `intake.test.js` "B: changed IBAN never auto-passes"; `business-checks.test.js` also covers a RETIRED account not counting as approved |
+| R2 | Identical file uploaded twice | second is DUPLICATE, not processed, original untouched | AUTO | `intake.test.js` "identical file uploaded again becomes DUPLICATE" |
+| R3 | Same supplier + number, different file | REVIEW_REQUIRED, no payable record | AUTO | `intake.test.js` "D: same supplier and number in a different file" |
+| R4 | Two payable records for one supplier invoice number | impossible, DB rejects with 23505 | AUTO | `intake.test.js` "database forbids two payable records"; partial unique index `invoices_one_payable_per_number` |
+| R5 | Malformed / non-XML input | fail closed to REVIEW_REQUIRED, file kept and readable | AUTO | `intake.test.js` "F: malformed file fails closed", "non-XML bytes fail closed" |
+| R6 | XML with DOCTYPE or ENTITY | rejected before the parser runs | AUTO | `technical-validation.test.js` "DOCTYPE is rejected before parsing" |
+| R7 | Amount thresholds route to the right tier | 380 auto, 1 240 MANAGER, 30 000 three steps | AUTO | `decide.test.js` (incl. boundary values); `intake.test.js` A, E, G |
+| R8 | Same actor cannot satisfy two approval steps | 409, no state change | OPEN | Phase 2 |
+| R9 | Reviewer cannot approve what they released from review | 409 | OPEN | Phase 2 |
+| R10 | Rejected invoice cannot become approved | no transition exists | AUTO (state machine) | `states.test.js` "rejected and duplicate cannot come back". Endpoint-level check is Phase 2 |
+| R11 | Finalised invoice cannot be processed again | 409, nothing changes | AUTO | `intake.test.js` "reprocess ... refused from APPROVED"; `app.test.js` returns 409 |
+| R12 | Undeclared transition is impossible | throws, nothing written | AUTO | `intake.test.js` "an undeclared transition throws and writes nothing" |
+| R13 | Every state change has an audit event | last event's to_state equals current state for every invoice; no orphan from_state | AUTO | `intake.test.js` "every state change has exactly one audit event" |
+| R14 | Reconciliation cannot match the wrong invoice on amount alone | exception, not RECONCILED | OPEN | Phase 3 |
+| R15 | Repeated payment/webhook call is idempotent | one record | OPEN | Phase 3 |
+| R16 | A human action without an actor is refused | throws before any write | AUTO | `intake.test.js` "a human action without actor id is refused"; `app.test.js` unknown actor returns 400 |
+| R17 | Fixing master data clears the exception on re-validation | REVIEW_REQUIRED becomes READY_FOR_APPROVAL | AUTO | `intake.test.js` "after the IBAN is approved in master data" |
+| R18 | Intake facts are not derived from document content | filename and channel survive processing | AUTO | `intake.test.js` "receiveInvoice writes intake facts" |
+
+## Fixtures
+
+All seven run through the real pipeline in `intake.test.js` and were also
+uploaded through the running UI on 2026-09-17 (MANUAL, browser).
+
+| Fixture | Scenario | Expected state | Status | Evidence |
+|---|---|---|---|---|
+| A | clean, 1 240 EUR | READY_FOR_APPROVAL, 1 MANAGER step | AUTO | `intake.test.js` "A: clean 1240 EUR" |
+| B | IBAN differs from master data | REVIEW_REQUIRED, `supplier_iban_match` HIGH | AUTO | `intake.test.js` "B:" |
+| C | 8 500 EUR net vs PO remaining 5 000 | REVIEW_REQUIRED, `po_amount_within_tolerance` HIGH | AUTO | `intake.test.js` "C:" |
+| D | same number as A, different file | REVIEW_REQUIRED, `duplicate_invoice_number` HIGH | AUTO | `intake.test.js` "D:" |
+| E | clean, 30 000 EUR | READY_FOR_APPROVAL, MANAGER + FINANCE + CFO | AUTO | `intake.test.js` "E:" |
+| F | malformed | REVIEW_REQUIRED, TECHNICAL_VALIDATION_FAILED | AUTO | `intake.test.js` "F:" |
+| G | clean, 380 EUR | APPROVED by SYSTEM, no steps | AUTO | `intake.test.js` "G:" |
+
+## Parsing and technical validation
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| T1 | UBL fields map to the neutral structure | number, VAT ID, IBAN, PO, totals, lines | AUTO | `technical-validation.test.js` |
+| T2 | Not well-formed XML | `xml_well_formed` FAILED | AUTO | `technical-validation.test.js` |
+| T3 | CII (ZUGFeRD syntax) | `format_recognised` FAILED, reported as unsupported, not a crash | AUTO | `technical-validation.test.js` |
+| T4 | Missing XRechnung CustomizationID | MEDIUM failure | AUTO | `technical-validation.test.js` |
+| T5 | Non-numeric amounts or quantities | `amounts_numeric` FAILED | AUTO | `technical-validation.test.js` |
+| T6 | Official EN 16931 / KoSIT validation | not implemented, adapter boundary only | OPEN | Deliberate, see ADR-008 |
+
+## Business checks
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| B1 | Clean invoice, all master data matches | no FAILED check | AUTO | `business-checks.test.js` |
+| B2 | Unknown supplier | HIGH, dependent checks SKIPPED not passed | AUTO | `business-checks.test.js` |
+| B3 | Blocked supplier | `supplier_active` HIGH | AUTO | `business-checks.test.js` |
+| B4 | Amount within PO tolerance | PASSED | AUTO | `business-checks.test.js` |
+| B5 | Inconsistent totals | `totals_consistent` HIGH | AUTO | `business-checks.test.js` |
+| B6 | Unknown PO reference | `po_exists` HIGH | AUTO | `business-checks.test.js` |
+| B7 | Missing PO above the policy threshold | MEDIUM | AUTO | `business-checks.test.js` |
+
+## API
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| A1 | Upload returns 201 with full detail incl. actor name | 201 | AUTO | `app.test.js` |
+| A2 | List and filter by state | correct rows | AUTO | `app.test.js` |
+| A3 | Unknown state filter | 400 | AUTO | `app.test.js` |
+| A4 | Non-XML upload | 400 | AUTO | `app.test.js` |
+| A5 | Original file download | byte-identical | AUTO | `app.test.js` |
+| A6 | Unknown invoice | 404 | AUTO | `app.test.js` |
+
+## UI
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| U1 | Inbox shows the blocking reason per row | reason visible without opening the invoice | MANUAL | Browser, 2026-09-17 |
+| U2 | Detail shows expected vs found with IBAN divergence marked | differing characters highlighted, both sides grouped in fours | MANUAL | Browser, 2026-09-17 |
+| U3 | State spine shows position and blocker | blocked node rendered at the stage reached | MANUAL | Browser, 2026-09-17 |
+| U4 | No horizontal page scroll at 375 px | scrollWidth equals clientWidth | MANUAL | Browser, 2026-09-17, measured in page |
+| U5 | Keyboard focus visible, reduced motion respected | focus ring, animations disabled | CODE | `:focus-visible` and `prefers-reduced-motion` in `styles.css`, not yet exercised |

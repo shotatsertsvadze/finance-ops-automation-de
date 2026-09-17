@@ -1,0 +1,33 @@
+{
+  "name": "finance-ops-automation-de",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "German finance operations PoC: XRechnung intake to payment with deterministic validation, routing, approvals, audit trail and KPIs.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "concurrently -n api,ui -c blue,green \"npm:dev:api\" \"npm:dev:ui\"",
+    "dev:api": "node --env-file=.env --watch server/index.js",
+    "dev:ui": "vite --config client/vite.config.js",
+    "build": "vite build --config client/vite.config.js",
+    "db:migrate": "node --env-file=.env scripts/migrate.js",
+    "db:seed": "node --env-file=.env scripts/seed.js",
+    "db:reset": "node --env-file=.env scripts/reset.js",
+    "test": "node --env-file=.env --test --test-concurrency=1 \"server/**/*.test.js\""
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "fast-xml-parser": "^5.11.1",
+    "multer": "^2.4.0",
+    "pg": "^8.23.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "concurrently": "^10.0.5",
+    "vite": "^8.3.0"
+  }
+}

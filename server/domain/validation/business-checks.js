@@ -1,0 +1,128 @@
+import { SEVERITY, failed, info, passed, skipped, warning } from "../checks.js";
+import { centsToDecimal, toCents } from "../money.js";
+import { approvalTierLabel } from "../../config/policy.js";
+
+/**
+ * "Does this invoice make sense for our company?" Pure function over the
+ * parsed invoice and already-loaded master data:
+ *   master = { supplier, bankAccounts, purchaseOrder, existingSameNumber }
+ */
+export function runBusinessChecks(parsed, master, policy) {
+  const checks = [];
+  const { supplier, bankAccounts = [], purchaseOrder, existingSameNumber = [] } = master;
+  const netCents = toCents(parsed.totals.taxExclusive);
+  const vatCents = toCents(parsed.totals.taxAmount);
+  const grossCents = toCents(parsed.totals.payable);
+
+  if (supplier) {
+    checks.push(passed("supplier_known", SEVERITY.HIGH, { expected: "Lieferant im Stammdatenbestand", actual: `${supplier.supplier_no} ${supplier.legal_name}`, reason: `Lieferant über ${parsed.supplier.vatId ? "USt-IdNr." : "Namen"} zugeordnet` }));
+    if (supplier.status === "ACTIVE") {
+      checks.push(passed("supplier_active", SEVERITY.HIGH, { expected: "ACTIVE", actual: supplier.status, reason: "Lieferant ist aktiv" }));
+    } else {
+      checks.push(failed("supplier_active", SEVERITY.HIGH, { expected: "ACTIVE", actual: supplier.status, reason: `Lieferant ist ${supplier.status}` }));
+    }
+  } else {
+    checks.push(failed("supplier_known", SEVERITY.HIGH, { expected: "bekannte USt-IdNr. oder Firmenname", actual: `${parsed.supplier.vatId ?? "(keine USt-IdNr.)"} / ${parsed.supplier.name ?? "(kein Name)"}`, reason: "Lieferant nicht im Stammdatenbestand" }));
+    checks.push(skipped("supplier_active", { reason: "Lieferant unbekannt" }));
+  }
+
+  const activeIbans = bankAccounts.filter((a) => a.status === "ACTIVE").map((a) => a.iban.replace(/\s+/g, "").toUpperCase());
+  const invoiceIban = parsed.payment.iban;
+  if (!supplier) {
+    checks.push(skipped("supplier_iban_match", { actual: invoiceIban, reason: "Lieferant unbekannt, IBAN nicht prüfbar" }));
+  } else if (!invoiceIban) {
+    checks.push(failed("supplier_iban_match", SEVERITY.HIGH, { expected: activeIbans.join(", "), actual: "(keine IBAN)", reason: "Rechnung enthält keine IBAN" }));
+  } else if (activeIbans.includes(invoiceIban)) {
+    checks.push(passed("supplier_iban_match", SEVERITY.HIGH, { expected: activeIbans.join(", "), actual: invoiceIban, reason: "IBAN stimmt mit freigegebener Bankverbindung überein" }));
+  } else {
+    checks.push(failed("supplier_iban_match", SEVERITY.HIGH, { expected: activeIbans.join(", "), actual: invoiceIban, reason: "IBAN weicht von den freigegebenen Bankverbindungen des Lieferanten ab (Betrugsrisiko)" }));
+  }
+
+  if (!supplier) {
+    checks.push(skipped("duplicate_invoice_number", { reason: "Lieferant unbekannt" }));
+  } else if (existingSameNumber.length) {
+    checks.push(failed("duplicate_invoice_number", SEVERITY.HIGH, { expected: "Rechnungsnummer noch nicht erfasst", actual: `${parsed.invoiceNumber} bereits als ${existingSameNumber.map((e) => e.state).join(", ")}`, reason: "Gleiche Rechnungsnummer desselben Lieferanten bereits im Bestand" }));
+  } else {
+    checks.push(passed("duplicate_invoice_number", SEVERITY.HIGH, { expected: "keine", actual: "keine", reason: "Rechnungsnummer für diesen Lieferanten neu" }));
+  }
+
+  const poRequired = grossCents !== null && grossCents > policy.poRequiredAboveCents;
+  if (parsed.poReference) {
+    checks.push(passed("po_reference_present", SEVERITY.MEDIUM, { expected: "Bestellreferenz", actual: parsed.poReference, reason: "Bestellreferenz vorhanden" }));
+  } else if (poRequired) {
+    checks.push(failed("po_reference_present", SEVERITY.MEDIUM, { expected: `Bestellreferenz ab ${centsToDecimal(policy.poRequiredAboveCents)} EUR`, actual: "(keine)", reason: "Bestellreferenz fehlt, obwohl die Richtlinie sie verlangt" }));
+  } else {
+    checks.push(warning("po_reference_present", { expected: "Bestellreferenz", actual: "(keine)", reason: "Keine Bestellreferenz; unterhalb der Pflichtgrenze" }));
+  }
+
+  if (!parsed.poReference) {
+    checks.push(skipped("po_exists", { reason: "keine Bestellreferenz" }));
+    checks.push(skipped("po_supplier_match", { reason: "keine Bestellreferenz" }));
+    checks.push(skipped("po_amount_within_tolerance", { reason: "keine Bestellreferenz" }));
+  } else if (!purchaseOrder || purchaseOrder.status !== "OPEN") {
+    checks.push(failed("po_exists", SEVERITY.HIGH, { expected: "offene Bestellung", actual: purchaseOrder ? `Status ${purchaseOrder.status}` : "nicht gefunden", reason: purchaseOrder ? "Bestellung ist nicht offen" : "Bestellreferenz unbekannt" }));
+    checks.push(skipped("po_supplier_match", { reason: "Bestellung nicht verwendbar" }));
+    checks.push(skipped("po_amount_within_tolerance", { reason: "Bestellung nicht verwendbar" }));
+  } else {
+    checks.push(passed("po_exists", SEVERITY.HIGH, { expected: "offene Bestellung", actual: purchaseOrder.po_number, reason: "Bestellung gefunden" }));
+    if (supplier && purchaseOrder.supplier_id === supplier.id) {
+      checks.push(passed("po_supplier_match", SEVERITY.HIGH, { expected: supplier.supplier_no, actual: supplier.supplier_no, reason: "Bestellung gehört zum Rechnungssteller" }));
+    } else {
+      checks.push(failed("po_supplier_match", SEVERITY.HIGH, { expected: supplier?.supplier_no ?? "(unbekannt)", actual: purchaseOrder.supplier_id, reason: "Bestellung gehört zu einem anderen Lieferanten" }));
+    }
+    const remainingCents = toCents(purchaseOrder.remaining_amount);
+    const toleranceCents = Math.max(Math.round((remainingCents * policy.poTolerancePct) / 100), policy.poToleranceMinCents);
+    if (netCents === null) {
+      checks.push(skipped("po_amount_within_tolerance", { reason: "Nettobetrag nicht lesbar" }));
+    } else if (netCents <= remainingCents + toleranceCents) {
+      checks.push(passed("po_amount_within_tolerance", SEVERITY.HIGH, { expected: `<= ${centsToDecimal(remainingCents + toleranceCents)} EUR (Rest ${centsToDecimal(remainingCents)} + Toleranz)`, actual: `${centsToDecimal(netCents)} EUR`, reason: "Nettobetrag innerhalb des Bestellrests" }));
+    } else {
+      checks.push(failed("po_amount_within_tolerance", SEVERITY.HIGH, { expected: `<= ${centsToDecimal(remainingCents + toleranceCents)} EUR (Rest ${centsToDecimal(remainingCents)} + Toleranz ${policy.poTolerancePct} %)`, actual: `${centsToDecimal(netCents)} EUR`, reason: "Nettobetrag überschreitet den offenen Bestellwert" }));
+    }
+  }
+
+  const lineSum = parsed.lines.reduce((sum, l) => (sum === null ? null : (toCents(l.lineNet) === null ? null : sum + toCents(l.lineNet))), 0);
+  const lineNetCents = toCents(parsed.totals.lineExtension) ?? netCents;
+  const inconsistencies = [];
+  if (netCents === null || vatCents === null || grossCents === null || lineSum === null) inconsistencies.push("Beträge nicht lesbar");
+  else {
+    if (Math.abs(lineSum - lineNetCents) > policy.totalsToleranceCents) inconsistencies.push(`Positionen ${centsToDecimal(lineSum)} != Netto ${centsToDecimal(lineNetCents)}`);
+    if (Math.abs(netCents + vatCents - grossCents) > policy.totalsToleranceCents) inconsistencies.push(`Netto ${centsToDecimal(netCents)} + Steuer ${centsToDecimal(vatCents)} != Brutto ${centsToDecimal(grossCents)}`);
+  }
+  if (inconsistencies.length) {
+    checks.push(failed("totals_consistent", SEVERITY.HIGH, { expected: "Positionen = Netto; Netto + Steuer = Brutto", actual: inconsistencies.join("; "), reason: "Summen sind rechnerisch nicht konsistent" }));
+  } else {
+    checks.push(passed("totals_consistent", SEVERITY.HIGH, { expected: "Positionen = Netto; Netto + Steuer = Brutto", actual: `${centsToDecimal(netCents)} + ${centsToDecimal(vatCents)} = ${centsToDecimal(grossCents)}`, reason: "Summen sind rechnerisch konsistent" }));
+  }
+
+  if (policy.allowedCurrencies.includes(parsed.currency)) {
+    checks.push(passed("currency_expected", SEVERITY.MEDIUM, { expected: policy.allowedCurrencies.join(", "), actual: parsed.currency, reason: "Währung erwartet" }));
+  } else {
+    checks.push(failed("currency_expected", SEVERITY.MEDIUM, { expected: policy.allowedCurrencies.join(", "), actual: parsed.currency ?? "(keine)", reason: "Unerwartete Währung" }));
+  }
+
+  const completeness = { "Fälligkeitsdatum": parsed.dueDate, "IBAN": invoiceIban, "Käuferreferenz": parsed.buyerReference, "USt-IdNr. Lieferant": parsed.supplier.vatId };
+  const missing = Object.entries(completeness).filter(([, v]) => !v).map(([k]) => k);
+  if (missing.length) {
+    checks.push(failed("required_fields_complete", SEVERITY.MEDIUM, { expected: Object.keys(completeness).join(", "), actual: `fehlt: ${missing.join(", ")}`, reason: `Für die Verarbeitung erwartete Angaben fehlen: ${missing.join(", ")}` }));
+  } else {
+    checks.push(passed("required_fields_complete", SEVERITY.MEDIUM, { expected: Object.keys(completeness).join(", "), actual: "vollständig", reason: "Alle erwarteten Angaben vorhanden" }));
+  }
+
+  if (supplier?.payment_terms_days && parsed.issueDate && parsed.dueDate) {
+    const days = Math.round((Date.parse(parsed.dueDate) - Date.parse(parsed.issueDate)) / 86400000);
+    if (days === supplier.payment_terms_days) {
+      checks.push(passed("payment_terms_match", SEVERITY.LOW, { expected: `${supplier.payment_terms_days} Tage`, actual: `${days} Tage`, reason: "Zahlungsziel entspricht den Stammdaten" }));
+    } else {
+      checks.push(warning("payment_terms_match", { expected: `${supplier.payment_terms_days} Tage`, actual: `${days} Tage`, reason: "Zahlungsziel weicht von den Stammdaten ab (Hinweis)" }));
+    }
+  } else {
+    checks.push(skipped("payment_terms_match", { reason: "Zahlungsziel nicht vergleichbar" }));
+  }
+
+  if (grossCents !== null) {
+    checks.push(info("approval_threshold", { expected: `Auto bis ${centsToDecimal(policy.autoApproveLimitCents)} EUR`, actual: `${centsToDecimal(grossCents)} EUR -> ${approvalTierLabel(policy, grossCents)}`, reason: "Freigabestufe laut Richtlinie" }));
+  }
+
+  return { checks, supplierId: supplier?.id ?? null, purchaseOrderId: purchaseOrder?.id ?? null, grossCents };
+}

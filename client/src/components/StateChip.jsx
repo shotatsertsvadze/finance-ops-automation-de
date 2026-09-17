@@ -1,0 +1,19 @@
+import { STATE_LABELS } from "../lib/format.js";
+
+const TONE = {
+  REVIEW_REQUIRED: "chip-review",
+  RECONCILIATION_EXCEPTION: "chip-review",
+  REJECTED: "chip-review",
+  INFO_REQUESTED: "chip-wait",
+  READY_FOR_APPROVAL: "chip-wait",
+  VALIDATING: "chip-wait",
+  APPROVED: "chip-ok",
+  ACCOUNTING_READY: "chip-ok",
+  PAYMENT_PENDING: "chip-ok",
+  PAID: "chip-ok",
+  RECONCILED: "chip-ok",
+};
+
+export default function StateChip({ state }) {
+  return <span className={`chip ${TONE[state] ?? "chip-neutral"}`}>{STATE_LABELS[state] ?? state}</span>;
+}

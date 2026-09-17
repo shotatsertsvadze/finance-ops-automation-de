@@ -1,0 +1,34 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { PAYABLE_STATES, STATES, TERMINAL_STATES, TRANSITIONS, canTransition } from "./states.js";
+
+test("terminal states have no outgoing transitions", () => {
+  assert.deepEqual(TERMINAL_STATES.sort(), ["DUPLICATE", "RECONCILED", "REJECTED"]);
+  for (const s of TERMINAL_STATES) assert.deepEqual(TRANSITIONS[s], []);
+});
+
+test("every transition target is a known state", () => {
+  for (const [from, targets] of Object.entries(TRANSITIONS)) for (const to of targets) assert.ok(STATES.includes(to), `${from} -> ${to}`);
+});
+
+test("every non-initial state is reachable", () => {
+  const reachable = new Set(Object.values(TRANSITIONS).flat());
+  for (const s of STATES.filter((s) => s !== "RECEIVED")) assert.ok(reachable.has(s), s);
+});
+
+test("nothing leaves a payable state except forward in the money path or reconciliation", () => {
+  const allowed = new Set(["ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED", "RECONCILIATION_EXCEPTION"]);
+  for (const s of PAYABLE_STATES) for (const to of TRANSITIONS[s]) assert.ok(allowed.has(to), `${s} -> ${to}`);
+});
+
+test("review never leads directly to APPROVED", () => {
+  assert.equal(canTransition("REVIEW_REQUIRED", "APPROVED"), false);
+  assert.equal(canTransition("INFO_REQUESTED", "APPROVED"), false);
+});
+
+test("rejected and duplicate cannot come back", () => {
+  for (const to of STATES) {
+    assert.equal(canTransition("REJECTED", to), false);
+    assert.equal(canTransition("DUPLICATE", to), false);
+  }
+});
