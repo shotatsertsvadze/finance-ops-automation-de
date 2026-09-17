@@ -13,6 +13,7 @@
     "db:migrate": "node --env-file=.env scripts/migrate.js",
     "db:seed": "node --env-file=.env scripts/seed.js",
     "db:reset": "node --env-file=.env scripts/reset.js",
+    "db:demo": "node --env-file=.env scripts/demo-data.js",
     "test": "node --env-file=.env --test --test-concurrency=1 \"server/**/*.test.js\""
   },
   "dependencies": {

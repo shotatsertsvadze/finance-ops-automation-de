@@ -262,6 +262,46 @@ invoice reserves capacity, how a rejection releases it, whether tolerance
 applies per invoice or cumulatively, and how concurrent invoices share a
 balance. That is scoped work, not a patch.
 
+## ADR-025 KPIs are computed, never counted
+
+Context: a dashboard that maintains its own counters has a second source of
+truth and drifts from the process it describes.
+Decision: every figure in `GET /api/dashboard/kpis` is a query over
+`invoices`, `validation_results` and `audit_events`. There is no KPI table, no
+increment on write, and no cache. Straight-through means an `auto_approved`
+event exists; an exception means the invoice carries `had_exception`.
+Consequences: the dashboard cannot disagree with the invoice list. If a figure
+looks wrong, the process data is wrong, and that is the useful failure mode.
+
+## ADR-026 Cycle times are medians, split by path, and null when absent
+
+Decision: cycle times use `percentile_cont(0.5)`, not averages, so one invoice
+left over a weekend does not move a headline. Processing time is reported both
+overall and for the human-touched path, because straight-through invoices are
+approved within seconds and would otherwise hide how long a touched invoice
+takes. Review dwell time is measured separately. A stage nothing has reached
+reports null, never zero: "no data" and "instant" are different answers.
+
+## ADR-027 The savings figure always travels with its assumptions
+
+Context: the brief forbids inventing claims about customer savings.
+Decision: `server/config/assumptions.js` holds the minutes-per-invoice and
+hourly-cost inputs, the API returns them inside the `economics` block, and the
+dashboard renders them as a table directly beneath the figure they produce,
+labelled as a scenario and not a measurement. The estimate is applied to the
+invoice population actually in the database, and the basis count is shown.
+
+## ADR-028 Demo data goes through the real pipeline, then is backdated
+
+Context: a demo run produces a median processing time under a second, so the
+cycle-time panel says nothing.
+Decision: `npm run db:demo` generates invoices and pushes every one through the
+real intake, validation, routing, approval and payment functions. Nothing is
+inserted straight into a table, so states and audit trails are genuine. Only
+the timestamps are then shifted into the past with plausible gaps per step.
+Consequences: the KPIs are computed over real process data with realistic
+timing. The data is synthetic and labelled as such in the UI.
+
 ## Assumptions and contradictions found in the brief
 
 - The brief lists "totals mathematically consistent" under business validation

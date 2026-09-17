@@ -2,6 +2,7 @@ import { Router } from "express";
 import { exportAccountingCsv } from "../domain/accounting/accounting.js";
 import { importStatement, listBankTransactions, runReconciliation } from "../domain/reconciliation/reconciliation.js";
 import { requireHuman } from "./actor.js";
+import { computeKpis } from "../domain/kpi/kpi.js";
 
 export function accountingRouter(deps) {
   const router = Router();
@@ -42,6 +43,18 @@ export function reconciliationRouter(deps) {
   router.post("/run", requireHuman, async (req, res, next) => {
     try {
       res.json(await runReconciliation(deps, { actor: req.actor }));
+    } catch (error) {
+      next(error);
+    }
+  });
+  return router;
+}
+
+export function dashboardRouter(deps) {
+  const router = Router();
+  router.get("/kpis", async (req, res, next) => {
+    try {
+      res.json(await computeKpis(deps));
     } catch (error) {
       next(error);
     }

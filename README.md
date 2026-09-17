@@ -110,3 +110,17 @@ one part payment and one payment that matches nothing.
 
 Booking accounts and tax keys in the export are demo assignments, not a
 certified SKR mapping.
+
+## Dashboard
+
+```bash
+npm run db:reset && npm run db:demo   # a month of synthetic invoices
+```
+
+`npm run db:demo` pushes every generated invoice through the real pipeline and
+then shifts the timestamps into the past, so the cycle-time figures are
+meaningful rather than sub-second. The data is synthetic.
+
+Every dashboard figure is computed from the invoices and their audit events.
+There is no counter to drift. The savings estimate is a scenario shown together
+with the assumptions that produce it, not a measured benefit.

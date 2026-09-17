@@ -8,7 +8,7 @@ Legend:
 - **CODE** inferred from reading the code only, never executed
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (120 tests, all passing as of 2026-09-17). Database tests need
+Run: `npm test` (132 tests, all passing as of 2026-09-17). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
 
 ## High-priority business risks
@@ -116,6 +116,25 @@ described as working.
 | L4 (R11) | Decisions are not bound to a document hash or validation-run identifier, and approval rows are recreated without a cycle identifier. | Source review | OPEN |
 | L5 (R12) | `X-Actor-Id` is unauthenticated and review actions accept any seeded role, so this demonstrates identity-based rules, not authenticated segregation of duties. CORS is unrestricted and the server binds all interfaces. | Source review | OPEN, deliberate for a local demo |
 | L6 (R13) | The test helper drops schema `finops` in whatever `TEST_DATABASE_URL` names, without checking it differs from the application database. | Source review | OPEN |
+
+## Operational KPIs
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| K1 | Empty system | zeros, no division by zero | AUTO | `kpi.test.js` |
+| K2 | Straight-through and exception rates | counted per invoice, not per event | AUTO | `kpi.test.js` |
+| K3 | Duplicates | reported separately, never counted as processed volume | AUTO | `kpi.test.js` |
+| K4 | Risk signals | count the invoices that raised them | AUTO | `kpi.test.js` |
+| K5 | Exception reasons | ranked, biggest first | AUTO | `kpi.test.js` |
+| K6 | Workload | counts what waits for a person now | AUTO | `kpi.test.js` |
+| K7 | Approval time | measured release to approval | AUTO | `kpi.test.js` |
+| K8 | Stage with no data | null, not zero | AUTO | `kpi.test.js` |
+| K9 | Processing time split by path | touched path has its own median | AUTO | `kpi.test.js` |
+| K10 | Review dwell time | measured entering review to release | AUTO | `kpi.test.js` |
+| K11 | Savings estimate | derived from the stated assumptions and real volume | AUTO | `kpi.test.js` |
+| K12 | API serves the same figures | 200 with the computed values | AUTO | `kpi.test.js` |
+| K13 | Dashboard renders over demo data | all panels, German number format, no page overflow | MANUAL | Browser, 2026-09-17, 1400 px and 375 px |
+| K14 | Release-time measurement is sound | reviewed invoices show 17,9 h to release, non-reviewed 0,005 h | MANUAL | SQL check against demo data, 2026-09-17 |
 
 ## Money path: accounting, payment, reconciliation
 

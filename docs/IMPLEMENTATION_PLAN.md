@@ -46,10 +46,21 @@ Idempotency is carried by unique constraints rather than pre-flight checks
 Deliberately not done: no real bank or accounting connection, no partial
 payment handling beyond raising an exception, no credit notes.
 
-## Phase 4 - Operational BI
+## Phase 4 - Operational BI (done 2026-09-17)
 
-`GET /api/dashboard/kpis` computed from `audit_events` and `invoices`; dashboard
-view; assumptions for cost figures shown next to the numbers.
+`GET /api/dashboard/kpis` computed entirely from the process data (ADR-025):
+volume, straight-through and exception rates, ranked exception reasons, risk
+signals, workload and due dates, and median cycle times split by path
+(ADR-026). The savings estimate travels with its assumptions (ADR-027).
+`npm run db:demo` generates a month of invoices through the real pipeline and
+backdates the timestamps so the cycle-time panel is meaningful (ADR-028).
+
+Chart choices follow the data's job: the only chart is a ranked single-hue bar
+for exception reasons, because length already encodes the count and a second
+colour dimension would imply a distinction that is not there. Everything else
+is a stat tile or a table. The status palette was validated for contrast,
+lightness and colour-vision separation; the green was re-stepped to
+`#0F7B4F` after failing the chroma floor.
 
 ## Phase 5 - Hardening
 

@@ -37,6 +37,7 @@ export const resolveReconciliation = (id, actorId, comment) =>
   actorPost(`/invoices/${id}/reconciliation/resolve`, actorId, { comment });
 
 export const listBankTransactions = () => request("/bank/transactions");
+export const getKpis = () => request("/dashboard/kpis");
 export const runReconciliation = (actorId) => actorPost("/reconciliation/run", actorId);
 export const importBankStatement = (statement, actorId) => actorPost("/bank/import", actorId, statement);
 

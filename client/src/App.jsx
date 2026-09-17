@@ -4,6 +4,7 @@ import { listInvoices } from "./lib/api.js";
 import InboxView from "./features/inbox/InboxView.jsx";
 import InvoiceDetail from "./features/invoice/InvoiceDetail.jsx";
 import PaymentsView from "./features/payments/PaymentsView.jsx";
+import DashboardView from "./features/dashboard/DashboardView.jsx";
 import ActorPicker from "./components/ActorPicker.jsx";
 import { useActor } from "./lib/useActor.js";
 
@@ -37,6 +38,8 @@ export default function App() {
           <div className="brand-sub">Rechnungseingang</div>
         </div>
         <nav className="nav">
+          <div className="nav-group label">Überblick</div>
+          <NavLink to="/dashboard">Kennzahlen</NavLink>
           <div className="nav-group label">Arbeitsvorrat</div>
           <NavLink to="/" end>
             Posteingang <span className="nav-count">{counts.all}</span>
@@ -69,6 +72,7 @@ export default function App() {
           <Route path="/sichtpruefung" element={<InboxView view="review" onChanged={refresh} />} />
           <Route path="/freigaben" element={<InboxView view="approval" onChanged={refresh} />} />
           <Route path="/freigegeben" element={<InboxView view="done" onChanged={refresh} />} />
+          <Route path="/dashboard" element={<DashboardView />} />
           <Route path="/zahlungen" element={<PaymentsView actor={actor} onChanged={refresh} />} />
           <Route path="/rechnung/:id" element={<InvoiceDetail actor={actor} onChanged={refresh} />} />
         </Routes>
