@@ -63,8 +63,10 @@ export default function PaymentsView({ may, onChanged }) {
           {message && (
             <div className={`toast${message.ok ? "" : " is-error"}`} role="status">{message.text}</div>
           )}
+          {!may("bank:import") && (
+            <p className="action-prompt">Import und Abgleich sind der Finanzbuchhaltung vorbehalten.</p>
+          )}
           <div className="action-row">
-            {!may("bank:import") && <span className="hint">Import und Abgleich sind der Finanzbuchhaltung vorbehalten.</span>}
             <button
               className="btn btn-ghost"
               disabled={busy || !may("bank:import")}
