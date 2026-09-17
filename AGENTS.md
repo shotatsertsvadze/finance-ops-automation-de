@@ -36,7 +36,11 @@ npm test                  # node --test; DB tests use TEST_DATABASE_URL
   approval.
 - Intake facts (`received_at`, `source_channel`, `file_sha256`, `file_path`) are
   never derived from document content and never updated.
-- UI text German, identifiers and docs English. No emojis anywhere.
+- German is the product's language: the server, the database and every stored
+  string are German. Identifiers and docs are English. The client can also
+  display English, from the codes the API sends; add new UI text to both
+  dictionaries in `client/src/lib/dictionaries.js`, never inline in a
+  component (ADR-034). No emojis anywhere.
 - No secrets in the repository. `.env.example` holds placeholders only.
 - Wording: see ADR-008. Never claim EN 16931, GoBD or GDPR compliance.
 - Tests: add or update a row in `docs/TEST_MATRIX.md` for every behaviour you

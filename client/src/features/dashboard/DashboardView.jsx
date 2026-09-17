@@ -1,24 +1,23 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { getKpis } from "../../lib/api.js";
-import { REVIEW_REASON_LABELS } from "../../lib/format.js";
-
-// German UI: decimal comma and thousands point, everywhere.
-const de = (value, digits = 1) =>
-  new Intl.NumberFormat("de-DE", { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
-const deInt = (value) => new Intl.NumberFormat("de-DE").format(value);
-
-const pct = (value) => `${de(value * 100)} %`;
-
-/** Hours below one are minutes; a median of "0,01 Std." tells a reader nothing. */
-function duration(hours) {
-  if (hours === null || hours === undefined) return "—";
-  if (hours < 1) return `${deInt(Math.max(Math.round(hours * 60), 1))} Min.`;
-  if (hours < 48) return `${de(hours)} Std.`;
-  return `${de(hours / 24)} Tage`;
-}
+import { useI18n } from "../../lib/i18n.js";
 
 export default function DashboardView() {
+  const { t, reviewReason, formatNumber, term } = useI18n();
+  // Numbers follow the chosen language: decimal comma in German, point in English.
+  const num = (value, digits = 1) => formatNumber(value, { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  const int = (value) => formatNumber(value);
+  const pct = (value) => `${num(value * 100)} %`;
+
+  /** Hours below one are minutes; a median of "0.01 h" tells a reader nothing. */
+  const duration = (hours) => {
+    if (hours === null || hours === undefined) return "—";
+    if (hours < 1) return `${int(Math.max(Math.round(hours * 60), 1))} ${t("unitMinutes")}`;
+    if (hours < 48) return `${num(hours)} ${t("unitHours")}`;
+    return `${num(hours / 24)} ${t("unitDays")}`;
+  };
+
   const [kpi, setKpi] = useState(null);
   const [error, setError] = useState(null);
 
@@ -27,7 +26,7 @@ export default function DashboardView() {
   }, []);
 
   if (error) return <p className="error">{error}</p>;
-  if (!kpi) return <p className="empty">Wird geladen…</p>;
+  if (!kpi) return <p className="empty">{t("loading")}</p>;
 
   const { volume, automation, exceptions, risk, workload, cycle, economics } = kpi;
   const a = economics.assumptions;
@@ -36,83 +35,80 @@ export default function DashboardView() {
     <>
       <div className="page-head">
         <div>
-          <h1>Betriebskennzahlen</h1>
-          <p>
-            Alle Werte sind aus den Rechnungen und ihrem Prüfprotokoll berechnet, nicht separat gezählt.
-            Grundlage: {deInt(volume.processed)} verarbeitete Rechnungen (synthetische Demodaten).
-          </p>
+          <h1>{t("kpiTitle")}</h1>
+          <p>{t("kpiLead", int(volume.processed))}</p>
         </div>
       </div>
 
       <section className="kpi-row">
-        <Stat label="Dunkelverarbeitung" value={pct(automation.stp_rate)}
-              note={`${deInt(automation.straight_through)} von ${deInt(volume.processed)} ohne menschlichen Eingriff`} tone="ok" />
-        <Stat label="Ausnahmequote" value={pct(exceptions.rate)}
-              note={`${deInt(exceptions.count)} Rechnungen mit Sichtprüfung`} tone={exceptions.rate > 0.25 ? "high" : "neutral"} />
-        <Stat label="Freigabedauer (Median)" value={duration(cycle.median_approval_hours)}
-              note={`über ${deInt(cycle.approved_count)} Freigaben`} />
-        <Stat label="Wartet auf eine Person" value={deInt(workload.awaiting_review + workload.awaiting_approval)}
-              note={`${deInt(workload.awaiting_review)} Sichtprüfung, ${deInt(workload.awaiting_approval)} Freigabe`}
+        <Stat label={t("kpiStp")} value={pct(automation.stp_rate)}
+              note={t("kpiStpNote", int(automation.straight_through), int(volume.processed))} tone="ok" />
+        <Stat label={t("kpiExceptionRate")} value={pct(exceptions.rate)}
+              note={t("kpiExceptionNote", int(exceptions.count))} tone={exceptions.rate > 0.25 ? "high" : "neutral"} />
+        <Stat label={t("kpiApprovalMedian")} value={duration(cycle.median_approval_hours)}
+              note={t("kpiApprovalNote", int(cycle.approved_count))} />
+        <Stat label={t("kpiWaitingPerson")} value={int(workload.awaiting_review + workload.awaiting_approval)}
+              note={t("kpiWaitingNote", int(workload.awaiting_review), int(workload.awaiting_approval))}
               tone={workload.awaiting_review + workload.awaiting_approval > 0 ? "medium" : "neutral"} />
       </section>
 
       <div className="dash-grid">
         <section className="panel">
           <div className="panel-head">
-            <span className="label">Ausnahmegründe</span>
-            <span className="hint">warum Rechnungen angehalten wurden</span>
+            <span className="label">{t("kpiExceptionReasons")}</span>
+            <span className="hint">{t("kpiExceptionReasonsSub")}</span>
           </div>
           <div className="panel-body">
             {exceptions.by_reason.length === 0 ? (
-              <p className="empty" style={{ padding: "10px 0" }}>Keine Ausnahmen.</p>
+              <p className="empty" style={{ padding: "10px 0" }}>{t("kpiNoExceptions")}</p>
             ) : (
-              <ReasonBars data={exceptions.by_reason} />
+              <ReasonBars data={exceptions.by_reason} label={reviewReason} format={int} />
             )}
           </div>
         </section>
 
         <section className="panel">
-          <div className="panel-head"><span className="label">Durchlaufzeiten</span></div>
+          <div className="panel-head"><span className="label">{t("kpiCycleTimes")}</span></div>
           <div className="panel-body">
             <dl className="metric-list">
-              <Metric label="Eingang bis Freigabe, gesamt" value={duration(cycle.median_processing_hours)} />
-              <Metric label="Eingang bis Freigabe, mit menschlichem Schritt" value={duration(cycle.median_processing_hours_touched)} />
-              <Metric label="Liegezeit in der Sichtprüfung" value={duration(cycle.median_review_hours)} />
-              <Metric label="Freigabe ab Vorlage" value={duration(cycle.median_approval_hours)} />
+              <Metric label={t("kpiIntakeToApproval")} value={duration(cycle.median_processing_hours)} />
+              <Metric label={t("kpiIntakeToApprovalTouched")} value={duration(cycle.median_processing_hours_touched)} />
+              <Metric label={t("kpiReviewDwell")} value={duration(cycle.median_review_hours)} />
+              <Metric label={t("kpiApprovalFromSubmission")} value={duration(cycle.median_approval_hours)} />
             </dl>
             <p className="hint" style={{ marginBottom: 0 }}>
-              Mediane, keine Mittelwerte: eine über das Wochenende liegengebliebene Rechnung soll die Kennzahl nicht verschieben.
+              {t("kpiMedianNote")}
             </p>
           </div>
         </section>
 
         <section className="panel">
           <div className="panel-head">
-            <span className="label">Risikosignale</span>
-            <span className="hint">Rechnungen, die das Signal ausgelöst haben, auch wenn später geklärt</span>
+            <span className="label">{t("kpiRiskSignals")}</span>
+            <span className="hint">{t("kpiRiskSub")}</span>
           </div>
           <div className="panel-body">
             <dl className="metric-list">
-              <Metric label="IBAN weicht von den Stammdaten ab" value={risk.iban_alerts} tone={risk.iban_alerts > 0 ? "high" : null} />
-              <Metric label="Betrag überschreitet die Bestellung" value={risk.po_mismatches} tone={risk.po_mismatches > 0 ? "medium" : null} />
-              <Metric label="Rechnungsnummer doppelt" value={risk.duplicate_numbers} tone={risk.duplicate_numbers > 0 ? "medium" : null} />
-              <Metric label="Identische Datei erneut hochgeladen" value={risk.duplicate_attempts} />
-              <Metric label="Falscher Rechnungsempfänger" value={risk.buyer_mismatches} tone={risk.buyer_mismatches > 0 ? "high" : null} />
+              <Metric label={t("kpiIbanAlert")} value={risk.iban_alerts} tone={risk.iban_alerts > 0 ? "high" : null} />
+              <Metric label={t("kpiPoOverrun")} value={risk.po_mismatches} tone={risk.po_mismatches > 0 ? "medium" : null} />
+              <Metric label={t("kpiDuplicateNumber")} value={risk.duplicate_numbers} tone={risk.duplicate_numbers > 0 ? "medium" : null} />
+              <Metric label={t("kpiDuplicateFile")} value={risk.duplicate_attempts} />
+              <Metric label={t("kpiWrongRecipient")} value={risk.buyer_mismatches} tone={risk.buyer_mismatches > 0 ? "high" : null} />
             </dl>
           </div>
         </section>
 
         <section className="panel">
-          <div className="panel-head"><span className="label">Arbeitsvorrat und Fälligkeiten</span></div>
+          <div className="panel-head"><span className="label">{t("kpiWorkload")}</span></div>
           <div className="panel-body">
             <dl className="metric-list">
-              <Metric label="Sichtprüfung offen" value={workload.awaiting_review} link="/sichtpruefung" />
-              <Metric label="Freigabe offen" value={workload.awaiting_approval} link="/freigaben" />
-              <Metric label="Rückfrage offen" value={workload.awaiting_information} />
-              <Metric label="Abgleich unklar" value={workload.reconciliation_exceptions} link="/zahlungen"
+              <Metric label={t("kpiReviewOpen")} value={workload.awaiting_review} link="/sichtpruefung" />
+              <Metric label={t("kpiApprovalOpen")} value={workload.awaiting_approval} link="/freigaben" />
+              <Metric label={t("kpiInfoOpen")} value={workload.awaiting_information} />
+              <Metric label={t("kpiReconciliationUnclear")} value={workload.reconciliation_exceptions} link="/zahlungen"
                       tone={workload.reconciliation_exceptions > 0 ? "high" : null} />
-              <Metric label="Fällig in 7 Tagen" value={workload.due_within_7_days} tone={workload.due_within_7_days > 0 ? "medium" : null} />
-              <Metric label="Überfällig" value={workload.overdue} tone={workload.overdue > 0 ? "high" : null} />
+              <Metric label={t("kpiDueIn7")} value={workload.due_within_7_days} tone={workload.due_within_7_days > 0 ? "medium" : null} />
+              <Metric label={t("kpiOverdue")} value={workload.overdue} tone={workload.overdue > 0 ? "high" : null} />
             </dl>
           </div>
         </section>
@@ -120,35 +116,34 @@ export default function DashboardView() {
 
       <section className="panel" style={{ marginTop: 18 }}>
         <div className="panel-head">
-          <span className="label">Modellrechnung Entlastung</span>
-          <span className="hint">Szenario auf offengelegten Annahmen, keine Messung</span>
+          <span className="label">{t("kpiEconomics")}</span>
+          <span className="hint">{t("kpiAssumption")}</span>
         </div>
         <div className="panel-body">
           <div className="econ">
             <div>
-              <div className="econ-value">{de(economics.hours_saved)} Std.</div>
-              <div className="label">Rechnerische Entlastung</div>
+              <div className="econ-value">{num(economics.hours_saved)} {t("unitHours")}</div>
+              <div className="label">{t("kpiSavings")}</div>
             </div>
             <div>
-              <div className="econ-value">{deInt(economics.cost_saved_eur)} €</div>
-              <div className="label">bei {a.hourly_cost_eur} € je Stunde</div>
+              <div className="econ-value">{int(economics.cost_saved_eur)} €</div>
+              <div className="label">{t("kpiPerHour", a.hourly_cost_eur)}</div>
             </div>
             <div>
-              <div className="econ-value">{de(economics.minutes_per_invoice_now)} Min.</div>
-              <div className="label">Bearbeitungszeit je Rechnung</div>
+              <div className="econ-value">{num(economics.minutes_per_invoice_now)} {t("unitMinutes")}</div>
+              <div className="label">{t("kpiPerInvoice")}</div>
             </div>
           </div>
           <table className="assumptions">
             <caption className="hint">
-              Diese Zahlen folgen aus den Annahmen unten, angewendet auf {deInt(economics.basis_invoices)} Rechnungen dieser Demo.
-              Sie sind kein gemessener Kundennutzen.
+              {t("kpiAssumptionCaption", int(economics.basis_invoices))}
             </caption>
             <tbody>
-              <tr><th>Manuell je saubere Rechnung</th><td className="num mono">{a.manual_minutes_clean} Min.</td>
-                  <th>mit System</th><td className="num mono">{a.system_minutes_clean} Min.</td></tr>
-              <tr><th>Manuell je Ausnahme</th><td className="num mono">{a.manual_minutes_exception} Min.</td>
-                  <th>mit System</th><td className="num mono">{a.system_minutes_exception} Min.</td></tr>
-              <tr><th>Quelle</th><td colSpan={3}>{a.source}</td></tr>
+              <tr><th>{t("kpiManualClean")}</th><td className="num mono">{a.manual_minutes_clean} {t("unitMinutes")}</td>
+                  <th>{t("kpiWithSystem")}</th><td className="num mono">{a.system_minutes_clean} {t("unitMinutes")}</td></tr>
+              <tr><th>{t("kpiManualException")}</th><td className="num mono">{a.manual_minutes_exception} {t("unitMinutes")}</td>
+                  <th>{t("kpiWithSystem")}</th><td className="num mono">{a.system_minutes_exception} {t("unitMinutes")}</td></tr>
+              <tr><th>{t("kpiSource")}</th><td colSpan={3}>{term(a.source)}</td></tr>
             </tbody>
           </table>
         </div>
@@ -162,17 +157,17 @@ export default function DashboardView() {
  * and a second colour dimension would imply a distinction that is not there.
  * Each bar is labelled directly, so identity never depends on colour.
  */
-function ReasonBars({ data }) {
+function ReasonBars({ data, label, format }) {
   const max = Math.max(...data.map((d) => d.count));
   return (
     <ul className="bars">
       {data.map((row) => (
         <li key={row.reason}>
-          <span className="bar-label">{REVIEW_REASON_LABELS[row.reason] ?? row.reason}</span>
+          <span className="bar-label">{label(row.reason)}</span>
           <span className="bar-track">
             <span className="bar-fill" style={{ width: `${Math.max((row.count / max) * 100, 2)}%` }} />
           </span>
-          <span className="bar-value mono">{deInt(row.count)}</span>
+          <span className="bar-value mono">{format(row.count)}</span>
         </li>
       ))}
     </ul>

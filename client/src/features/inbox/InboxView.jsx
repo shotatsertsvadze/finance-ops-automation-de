@@ -1,18 +1,19 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { listInvoices } from "../../lib/api.js";
-import { formatDate, formatMoney, REVIEW_REASON_LABELS } from "../../lib/format.js";
+import { useI18n } from "../../lib/i18n.js";
 import StateChip from "../../components/StateChip.jsx";
 import UploadPanel from "../upload/UploadPanel.jsx";
 
 const VIEWS = {
-  inbox: { title: "Posteingang", lead: "Alle eingegangenen E-Rechnungen, neueste zuerst.", state: null },
-  review: { title: "Sichtprüfung", lead: "Rechnungen, die eine Entscheidung brauchen. Der Grund steht in der Liste.", state: "REVIEW_REQUIRED" },
-  approval: { title: "Freigaben", lead: "Geprüft und freigabebereit. Die Stufe richtet sich nach dem Bruttobetrag.", state: "READY_FOR_APPROVAL" },
-  done: { title: "Freigegeben", lead: "Automatisch oder durch Freigabe abgeschlossen.", state: "APPROVED" },
+  inbox: { title: "navInbox", lead: "leadInbox", state: null },
+  review: { title: "navReview", lead: "leadReview", state: "REVIEW_REQUIRED" },
+  approval: { title: "navApprovals", lead: "leadApproval", state: "READY_FOR_APPROVAL" },
+  done: { title: "navApproved", lead: "leadDone", state: "APPROVED" },
 };
 
 export default function InboxView({ view, onChanged }) {
+  const { t, formatDate, formatMoney } = useI18n();
   const config = VIEWS[view];
   const [invoices, setInvoices] = useState([]);
   const [status, setStatus] = useState("loading");
@@ -37,8 +38,8 @@ export default function InboxView({ view, onChanged }) {
     <>
       <div className="page-head">
         <div>
-          <h1>{config.title}</h1>
-          <p>{config.lead}</p>
+          <h1>{t(config.title)}</h1>
+          <p>{t(config.lead)}</p>
         </div>
       </div>
 
@@ -53,22 +54,20 @@ export default function InboxView({ view, onChanged }) {
 
       <div className="panel" style={{ marginTop: view === "inbox" ? 18 : 0 }}>
         <div className="panel-head">
-          <span className="label">
-            {invoices.length} {invoices.length === 1 ? "Rechnung" : "Rechnungen"}
-          </span>
+          <span className="label">{t("invoiceCount", invoices.length)}</span>
         </div>
         {status === "error" && <p className="empty error">{error}</p>}
-        {status === "ready" && invoices.length === 0 && <p className="empty">Nichts zu tun. Diese Liste ist leer.</p>}
+        {status === "ready" && invoices.length === 0 && <p className="empty">{t("emptyList")}</p>}
         {invoices.length > 0 && (
           <div className="ledger-scroll">
           <table className="ledger">
             <thead>
               <tr>
-                <th>Rechnung</th>
-                <th>Lieferant</th>
-                <th>Status</th>
-                <th>Eingang</th>
-                <th className="num">Brutto</th>
+                <th>{t("colInvoice")}</th>
+                <th>{t("colSupplier")}</th>
+                <th>{t("colStatus")}</th>
+                <th>{t("colReceived")}</th>
+                <th className="num">{t("colGross")}</th>
               </tr>
             </thead>
             <tbody>
@@ -78,7 +77,7 @@ export default function InboxView({ view, onChanged }) {
                     <Link to={`/rechnung/${invoice.id}`} className="mono">
                       {invoice.invoice_number ?? invoice.original_filename}
                     </Link>
-                    <div className="supplier-sub">{invoice.invoice_number ? invoice.original_filename : "keine Nummer gelesen"}</div>
+                    <div className="supplier-sub">{invoice.invoice_number ? invoice.original_filename : t("noNumberRead")}</div>
                   </td>
                   <td>
                     {invoice.supplier_name ?? invoice.supplier_name_raw ?? "—"}
@@ -105,14 +104,13 @@ export default function InboxView({ view, onChanged }) {
 
 /** Why this row needs attention, shown in the list so no click is needed. */
 function Blocker({ invoice }) {
+  const { t, reviewReason } = useI18n();
   if (invoice.review_reason) {
-    return <span className="blocker">{REVIEW_REASON_LABELS[invoice.review_reason] ?? invoice.review_reason}</span>;
+    return <span className="blocker">{reviewReason(invoice.review_reason)}</span>;
   }
   if (invoice.pending_steps > 0) {
     return (
-      <span className="blocker is-wait">
-        {invoice.pending_steps} {invoice.pending_steps === 1 ? "Freigabe offen" : "Freigaben offen"}
-      </span>
+      <span className="blocker is-wait">{t("approvalsOpen", invoice.pending_steps)}</span>
     );
   }
   return null;

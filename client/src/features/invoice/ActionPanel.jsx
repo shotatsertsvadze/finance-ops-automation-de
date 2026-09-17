@@ -3,7 +3,7 @@ import {
   confirmPayment, createAccountingRecord, decideReview, decideStep,
   instructPayment, reportInfoReceived, reprocessInvoice, resolveReconciliation,
 } from "../../lib/api.js";
-import { ROLE_LABELS } from "../../lib/format.js";
+import { useI18n } from "../../lib/i18n.js";
 
 /**
  * What this person can do with this invoice right now, and what the system
@@ -11,6 +11,7 @@ import { ROLE_LABELS } from "../../lib/format.js";
  * verbatim so a blocked four-eyes check is visible rather than silent.
  */
 export default function ActionPanel({ invoice, may, onDone }) {
+  const { t, role } = useI18n();
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -36,38 +37,38 @@ export default function ActionPanel({ invoice, may, onDone }) {
   let prompt = null;
 
   if (invoice.state === "REVIEW_REQUIRED") {
-    prompt = "Die automatische Verarbeitung ist gestoppt. Entscheiden Sie auf Basis der Prüfspur.";
+    prompt = t("hintReviewStopped");
     actions.push(
-      { key: "accept", label: "Zur Freigabe geben", tone: "ok", needs: "review:decide", run: () => decideReview(id, "accept", comment) },
-      { key: "request-info", label: "Rückfrage stellen", tone: "", needsComment: true, needs: "review:decide", run: () => decideReview(id, "request-info", comment) },
-      { key: "confirm-duplicate", label: "Duplikat bestätigen", tone: "", needsComment: true, needs: "review:decide", run: () => decideReview(id, "confirm-duplicate", comment) },
-      { key: "reject", label: "Ablehnen", tone: "high", needsComment: true, needs: "review:decide", run: () => decideReview(id, "reject", comment) },
-      { key: "reprocess", label: "Erneut prüfen", tone: "", needs: "invoice:reprocess", run: () => reprocessInvoice(id) },
+      { key: "accept", label: t("releaseFromReview"), tone: "ok", needs: "review:decide", run: () => decideReview(id, "accept", comment) },
+      { key: "request-info", label: t("requestInfo"), tone: "", needsComment: true, needs: "review:decide", run: () => decideReview(id, "request-info", comment) },
+      { key: "confirm-duplicate", label: t("confirmDuplicate"), tone: "", needsComment: true, needs: "review:decide", run: () => decideReview(id, "confirm-duplicate", comment) },
+      { key: "reject", label: t("reject"), tone: "high", needsComment: true, needs: "review:decide", run: () => decideReview(id, "reject", comment) },
+      { key: "reprocess", label: t("reprocess"), tone: "", needs: "invoice:reprocess", run: () => reprocessInvoice(id) },
     );
   } else if (invoice.state === "READY_FOR_APPROVAL" && step) {
-    prompt = `Schritt ${step.step_no} von ${invoice.approval_steps.length}: Freigabe durch ${ROLE_LABELS[step.required_role] ?? step.required_role}.`;
+    prompt = t("stepOf", step.step_no, invoice.approval_steps.length, role(step.required_role));
     actions.push(
-      { key: "approve", label: "Freigeben", tone: "ok", needs: "approval:decide", run: () => decideStep(id, step.step_no, "approve", comment) },
-      { key: "step-reject", label: "Ablehnen", tone: "high", needsComment: true, needs: "approval:decide", run: () => decideStep(id, step.step_no, "reject", comment) },
-      { key: "request-info", label: "Rückfrage stellen", tone: "", needsComment: true, needs: "review:decide", run: () => decideReview(id, "request-info", comment) },
+      { key: "approve", label: t("approve"), tone: "ok", needs: "approval:decide", run: () => decideStep(id, step.step_no, "approve", comment) },
+      { key: "step-reject", label: t("reject"), tone: "high", needsComment: true, needs: "approval:decide", run: () => decideStep(id, step.step_no, "reject", comment) },
+      { key: "request-info", label: t("requestInfo"), tone: "", needsComment: true, needs: "review:decide", run: () => decideReview(id, "request-info", comment) },
     );
   } else if (invoice.state === "APPROVED") {
-    prompt = "Freigegeben. Der Buchungssatz kann an die Buchhaltung übergeben werden.";
-    actions.push({ key: "accounting", label: "Buchungssatz erzeugen", tone: "ok", needs: "accounting:handoff", run: () => createAccountingRecord(id) });
+    prompt = t("hintApproved");
+    actions.push({ key: "accounting", label: t("createBookingRecord"), tone: "ok", needs: "accounting:handoff", run: () => createAccountingRecord(id) });
   } else if (invoice.state === "ACCOUNTING_READY") {
-    prompt = `Buchungssatz ${invoice.accounting_record?.document_no ?? ""} liegt vor. Zahlung anweisen?`;
-    actions.push({ key: "pay", label: "Zahlung anweisen", tone: "ok", needs: "payment:instruct", run: () => instructPayment(id) });
+    prompt = t("hintAccountingReady", invoice.accounting_record?.document_no ?? "");
+    actions.push({ key: "pay", label: t("instructPayment"), tone: "ok", needs: "payment:instruct", run: () => instructPayment(id) });
   } else if (invoice.state === "PAYMENT_PENDING") {
-    prompt = "Zahlung ist angewiesen. Die Bestätigung käme in einem echten System vom Zahlungsdienstleister.";
-    actions.push({ key: "confirm", label: "Zahlung bestätigen (Simulation)", tone: "ok", needs: "payment:confirm", run: () => confirmPayment(id) });
+    prompt = t("hintPaymentPending");
+    actions.push({ key: "confirm", label: t("confirmPayment"), tone: "ok", needs: "payment:confirm", run: () => confirmPayment(id) });
   } else if (invoice.state === "RECONCILIATION_EXCEPTION") {
-    prompt = "Der Zahlungsabgleich ist nicht eindeutig. Prüfen Sie den Zahlungseingang und schließen Sie den Fall mit Begründung ab.";
-    actions.push({ key: "resolve", label: "Abgleich abschließen", tone: "ok", needsComment: true, needs: "reconciliation:resolve", run: () => resolveReconciliation(id, comment) });
+    prompt = t("hintReconciliationException");
+    actions.push({ key: "resolve", label: t("closeReconciliation"), tone: "ok", needsComment: true, needs: "reconciliation:resolve", run: () => resolveReconciliation(id, comment) });
   } else if (invoice.state === "INFO_REQUESTED") {
-    prompt = "Die Rechnung wartet auf eine Rückmeldung. Sobald sie vorliegt, geht sie zurück in die Sichtprüfung.";
+    prompt = t("hintInfoRequested");
     actions.push(
-      { key: "info-received", label: "Rückmeldung eingegangen", tone: "ok", needs: "review:decide", run: () => reportInfoReceived(id, comment) },
-      { key: "reject", label: "Ablehnen", tone: "high", needsComment: true, needs: "review:decide", run: () => decideReview(id, "reject", comment) },
+      { key: "info-received", label: t("infoReceived"), tone: "ok", needs: "review:decide", run: () => reportInfoReceived(id, comment) },
+      { key: "reject", label: t("reject"), tone: "high", needsComment: true, needs: "review:decide", run: () => decideReview(id, "reject", comment) },
     );
   }
 
@@ -77,10 +78,10 @@ export default function ActionPanel({ invoice, may, onDone }) {
   if (permitted.length === 0) {
     return prompt ? (
       <section className="panel">
-        <div className="panel-head"><span className="label">Status</span></div>
+        <div className="panel-head"><span className="label">{t("status")}</span></div>
         <div className="panel-body">
           <p className="action-prompt" style={{ marginBottom: 0 }}>{prompt}</p>
-          <p className="hint" style={{ marginBottom: 0 }}>Für diesen Schritt ist eine andere Rolle zuständig.</p>
+          <p className="hint" style={{ marginBottom: 0 }}>{t("otherRoleResponsible")}</p>
         </div>
       </section>
     ) : null;
@@ -91,7 +92,7 @@ export default function ActionPanel({ invoice, may, onDone }) {
   return (
     <section className="panel">
       <div className="panel-head">
-        <span className="label">Ihre Entscheidung</span>
+        <span className="label">{t("yourDecision")}</span>
         
       </div>
       <div className="panel-body">
@@ -99,12 +100,12 @@ export default function ActionPanel({ invoice, may, onDone }) {
         {error && <div className="toast is-error" role="alert">{error}</div>}
         {needsComment && (
           <label className="action-comment">
-            <span className="label">Begründung</span>
+            <span className="label">{t("reason")}</span>
             <textarea
               rows={2}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
-              placeholder="Grund angeben"
+              placeholder={t("reasonPlaceholder")}
             />
           </label>
         )}

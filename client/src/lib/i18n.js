@@ -1,0 +1,76 @@
+import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { DEFAULT_LANGUAGE, LANGUAGES, dictionaryFor, auditReason, checkSentence, translateTerms } from "./dictionaries.js";
+
+const STORAGE_KEY = "finops.language";
+
+const stored = () => {
+  try {
+    const value = localStorage.getItem(STORAGE_KEY);
+    return LANGUAGES.some((l) => l.code === value) ? value : DEFAULT_LANGUAGE;
+  } catch {
+    return DEFAULT_LANGUAGE;
+  }
+};
+
+const Context = createContext(null);
+
+export function LanguageProvider({ children }) {
+  const [lang, setLangState] = useState(stored);
+
+  const setLang = useCallback((next) => {
+    setLangState(next);
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // A blocked storage is not a reason to refuse the language change.
+    }
+  }, []);
+
+  // Without this a screen reader reads English text with German phonetics.
+  useEffect(() => {
+    document.documentElement.lang = lang;
+    document.title = dictionaryFor(lang).ui.documentTitle;
+  }, [lang]);
+
+  const value = useMemo(() => {
+    const dict = dictionaryFor(lang);
+    const money = new Intl.NumberFormat(dict.locale, { style: "currency", currency: "EUR" });
+    const date = new Intl.DateTimeFormat(dict.locale, { day: "2-digit", month: "2-digit", year: "numeric" });
+    const dateTime = new Intl.DateTimeFormat(dict.locale, {
+      day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+    });
+
+    return {
+      lang,
+      setLang,
+      dict,
+      /** A chrome string. Entries that take parameters are functions. */
+      t: (key, ...args) => {
+        const entry = dict.ui[key];
+        return typeof entry === "function" ? entry(...args) : entry ?? key;
+      },
+      state: (code) => dict.state[code] ?? code,
+      action: (code) => dict.action[code] ?? code,
+      role: (code) => dict.role[code] ?? code,
+      reviewReason: (code) => dict.reviewReason[code] ?? code,
+      matchReason: (code) => dict.matchReason[code] ?? code,
+      checkSentence: (result) => checkSentence(dict, result),
+      term: (value) => translateTerms(dict, value),
+      auditReason: (reason) => auditReason(dict, reason),
+      formatMoney: (value) => (value === null || value === undefined ? "—" : money.format(Number(value))),
+      formatDate: (value) => (value ? date.format(new Date(value)) : "—"),
+      formatDateTime: (value) => (value ? dateTime.format(new Date(value)) : "—"),
+      formatNumber: (value, options) => new Intl.NumberFormat(dict.locale, options).format(value),
+    };
+  }, [lang, setLang]);
+
+  return createElement(Context.Provider, { value }, children);
+}
+
+export function useI18n() {
+  const value = useContext(Context);
+  if (!value) throw new Error("useI18n must be used inside a LanguageProvider");
+  return value;
+}
+
+export { LANGUAGES };

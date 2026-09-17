@@ -446,6 +446,40 @@ between step 1 and step 2 is still approved today, because only
 `payableBlockers` is re-checked. That is a separate control with its own
 semantics, recorded as an open limitation rather than smuggled in here.
 
+## ADR-034 English is a display language, German is the product's
+
+Extends the rule in `AGENTS.md` that UI text is German. It still is: German is
+what the server generates, what the database stores, and what an auditor of
+this system would read. English exists so the same demo can be shown to an
+audience that does not read German.
+
+Decision: the client renders either language from the codes the API already
+sends (`state`, `action`, `check_code`, `review_reason`, `match_reason`). The
+server, the schema and the `CheckResult` contract are untouched, and the choice
+lives in the browser, not on the account: it changes nothing that is stored.
+
+Rejected: replacing German outright, which would have cost German-speaking
+audiences for a product about German e-invoicing; and persisting message keys
+plus parameters instead of prose, which is the architecturally clean answer but
+needs a migration, a change to the contract the brief specified, and a backfill
+of every existing row. That remains the right move if the product ever needs
+stored history to be language-neutral.
+
+The honest cost of the cheap option: an English label is a translation of a
+German sentence the server produced, so it can fall behind. Three guards in
+`dictionaries.test.js` make that fail loudly rather than silently. They read
+the server's own source, so a check, an audit action, a state or a role added
+without an English label breaks `npm test`.
+
+Two things stay German on purpose. Supplier names, invoice numbers and the
+payment terms read out of the document are data, not chrome; translating a
+supplier's own wording would misrepresent the document. And a comment a person
+typed stays in the words they wrote, because rewriting someone's entry in an
+audit trail is worse than showing German to an English reader.
+
+The URL paths stay German (`/sichtpruefung`, `/freigaben`). They are
+identifiers, and changing them would break existing links for no gain.
+
 ## Assumptions and contradictions found in the brief
 
 - The brief lists "totals mathematically consistent" under business validation

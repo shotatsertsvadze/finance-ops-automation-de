@@ -1,4 +1,4 @@
-import { STATE_LABELS, REVIEW_REASON_LABELS } from "../../lib/format.js";
+import { useI18n } from "../../lib/i18n.js";
 
 /**
  * The happy path as a vertical spine, with the invoice's actual position on
@@ -17,6 +17,7 @@ const OFF_PATH = {
 };
 
 export default function StateSpine({ state, reviewReason, pendingRole }) {
+  const { t, state: stateLabel, reviewReason: reasonLabel, role } = useI18n();
   const off = OFF_PATH[state];
   const reachedIndex = off ? PATH.indexOf(off.after) : PATH.indexOf(state);
 
@@ -28,16 +29,16 @@ export default function StateSpine({ state, reviewReason, pendingRole }) {
     const isDone = off ? i <= reachedIndex : i < reachedIndex;
     nodes.push({
       key: stage,
-      name: STATE_LABELS[stage],
+      name: stateLabel(stage),
       className: isDone ? "done" : isCurrent ? "current" : "",
-      note: isCurrent && stage === "READY_FOR_APPROVAL" && pendingRole ? `Wartet auf ${pendingRole}` : null,
+      note: isCurrent && stage === "READY_FOR_APPROVAL" && pendingRole ? t("waitingFor", role(pendingRole)) : null,
     });
     if (off && stage === off.after) {
       nodes.push({
         key: state,
-        name: STATE_LABELS[state],
+        name: stateLabel(state),
         className: off.tone,
-        note: reviewReason ? (REVIEW_REASON_LABELS[reviewReason] ?? reviewReason) : null,
+        note: reviewReason ? reasonLabel(reviewReason) : null,
       });
     }
   });

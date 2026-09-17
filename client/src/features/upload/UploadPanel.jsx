@@ -1,7 +1,9 @@
 import { useRef, useState } from "react";
 import { uploadInvoice } from "../../lib/api.js";
+import { useI18n } from "../../lib/i18n.js";
 
 export default function UploadPanel({ onUploaded }) {
+  const { t } = useI18n();
   const inputRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
@@ -12,7 +14,7 @@ export default function UploadPanel({ onUploaded }) {
     setMessage(null);
     try {
       const invoice = await uploadInvoice(file);
-      setMessage({ ok: true, text: `${file.name} verarbeitet.` });
+      setMessage({ ok: true, text: t("uploadDone", file.name) });
       onUploaded(invoice);
     } catch (error) {
       setMessage({ ok: false, text: error.message });
@@ -25,8 +27,8 @@ export default function UploadPanel({ onUploaded }) {
   return (
     <div className="panel">
       <div className="panel-head">
-        <span className="label">XRechnung hochladen</span>
-        <span className="hint">Nur XML. Die Datei wird unverändert gespeichert.</span>
+        <span className="label">{t("uploadTitle")}</span>
+        <span className="hint">{t("uploadOnlyXml")}</span>
       </div>
       <div className="panel-body">
         {message && (
@@ -43,9 +45,9 @@ export default function UploadPanel({ onUploaded }) {
             onChange={(e) => send(e.target.files?.[0])}
           />
           <button className="btn" onClick={() => inputRef.current?.click()} disabled={busy}>
-            {busy ? "Wird geprüft…" : "Datei auswählen"}
+            {busy ? t("checking") : t("uploadPick")}
           </button>
-          <span className="hint">Beispieldateien liegen in fixtures/xrechnung/.</span>
+          <span className="hint">{t("uploadFixtures")}</span>
         </div>
       </div>
     </div>

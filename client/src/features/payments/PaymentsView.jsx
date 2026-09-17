@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { importBankStatement, listBankTransactions, runReconciliation } from "../../lib/api.js";
-import { formatDate, formatMoney, MATCH_REASON_LABELS } from "../../lib/format.js";
+import { useI18n } from "../../lib/i18n.js";
 
-const STATUS_LABELS = { MATCHED: "Zugeordnet", EXCEPTION: "Unklar", UNMATCHED: "Offen" };
 const STATUS_TONE = { MATCHED: "chip-ok", EXCEPTION: "chip-review", UNMATCHED: "chip-neutral" };
 
 /**
@@ -11,6 +10,8 @@ const STATUS_TONE = { MATCHED: "chip-ok", EXCEPTION: "chip-review", UNMATCHED: "
  * transaction was not matched. The reason is the point, so it sits in the row.
  */
 export default function PaymentsView({ may, onChanged }) {
+  const { t, matchReason, formatDate, formatMoney } = useI18n();
+  const statusLabel = { MATCHED: t("txMatched"), EXCEPTION: t("txException"), UNMATCHED: t("txUnmatched") };
   const [rows, setRows] = useState([]);
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -46,59 +47,56 @@ export default function PaymentsView({ may, onChanged }) {
     <>
       <div className="page-head">
         <div>
-          <h1>Zahlungen und Abgleich</h1>
-          <p>
-            Synthetische Kontoumsätze. Ein Umsatz wird nur zugeordnet, wenn der Verwendungszweck eine
-            Rechnung benennt und der Betrag übereinstimmt. Betragsgleichheit allein reicht nie.
-          </p>
+          <h1>{t("paymentsTitle")}</h1>
+          <p>{t("paymentsLead")}</p>
         </div>
       </div>
 
       <div className="panel">
         <div className="panel-head">
-          <span className="label">Kontoauszug</span>
-          <span className="hint">{rows.length} Umsätze importiert</span>
+          <span className="label">{t("bankStatement")}</span>
+          <span className="hint">{t("transactionsImported", rows.length)}</span>
         </div>
         <div className="panel-body">
           {message && (
             <div className={`toast${message.ok ? "" : " is-error"}`} role="status">{message.text}</div>
           )}
           {!may("bank:import") && (
-            <p className="action-prompt">Import und Abgleich sind der Finanzbuchhaltung vorbehalten.</p>
+            <p className="action-prompt">{t("financeOnly")}</p>
           )}
           <div className="action-row">
             <button
               className="btn btn-ghost"
               disabled={busy || !may("bank:import")}
-              onClick={() => act((r) => `${r.imported} neue Umsätze übernommen (${r.received} gelesen).`, importDemoStatement)}
+              onClick={() => act((r) => t("importResult", r.imported, r.received), importDemoStatement)}
             >
-              Demo-Kontoauszug importieren
+              {t("importDemoStatement")}
             </button>
             <button
               className="btn"
               disabled={busy || !may("reconciliation:run")}
-              onClick={() => act((r) => `${r.matched} zugeordnet, ${r.exceptions} unklar, ${r.unmatched} offen.`, () => runReconciliation())}
+              onClick={() => act((r) => t("reconcileResult", r.matched, r.exceptions, r.unmatched), () => runReconciliation())}
             >
-              Abgleich starten
+              {t("runReconciliation")}
             </button>
           </div>
         </div>
       </div>
 
       <div className="panel" style={{ marginTop: 18 }}>
-        <div className="panel-head"><span className="label">Umsätze</span></div>
+        <div className="panel-head"><span className="label">{t("transactions")}</span></div>
         {rows.length === 0 ? (
-          <p className="empty">Noch kein Kontoauszug importiert.</p>
+          <p className="empty">{t("noStatement")}</p>
         ) : (
           <div className="ledger-scroll">
             <table className="ledger">
               <thead>
                 <tr>
-                  <th>Umsatz</th>
-                  <th>Verwendungszweck</th>
-                  <th>Status</th>
-                  <th>Wertstellung</th>
-                  <th className="num">Betrag</th>
+                  <th>{t("transaction")}</th>
+                  <th>{t("colReference")}</th>
+                  <th>{t("colStatus")}</th>
+                  <th>{t("colValueDate")}</th>
+                  <th className="num">{t("colAmount")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -117,10 +115,10 @@ export default function PaymentsView({ may, onChanged }) {
                       )}
                     </td>
                     <td>
-                      <span className={`chip ${STATUS_TONE[tx.status]}`}>{STATUS_LABELS[tx.status]}</span>
+                      <span className={`chip ${STATUS_TONE[tx.status]}`}>{statusLabel[tx.status]}</span>
                       {tx.match_reason && (
                         <div style={{ marginTop: 4 }}>
-                          <span className="blocker">{MATCH_REASON_LABELS[tx.match_reason] ?? tx.match_reason}</span>
+                          <span className="blocker">{matchReason(tx.match_reason)}</span>
                         </div>
                       )}
                     </td>

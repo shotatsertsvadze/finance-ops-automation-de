@@ -69,8 +69,11 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
   notes returning capacity, and order closure are not modelled.
 - **The recognised XML subset is loose.** Namespaces are stripped, and
   allowances, charges, prepayments and rounding are not modelled.
-- **Decisions are not bound to a document hash or validation run**, so an
-  approval records who and when, but not "of exactly this version".
+- **Business checks are not re-run at the final approval gate.** Only the
+  mandatory-field and technical blockers are checked again, so a supplier
+  blocked between two approval steps is still approved.
+- **A refusal from the server is shown verbatim**, so it stays German even when
+  the interface is set to English. The API returns prose, not an error code.
 - **Recovery after a partial intake is manual.** If processing fails after the
   file is received, re-uploading returns a duplicate and the original waits for
   a manual reprocess.
@@ -82,6 +85,14 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
   declared profile and the structure it needs; it does not certify compliance.
 - Accounting, payment and bank data are simulated.
 - Approval thresholds and savings figures are demo assumptions.
+
+## Display language
+
+The interface runs in German or English; the switch is at the bottom of the
+sidebar and the choice is remembered per browser. German is the product's
+language and the one the server generates and stores, so supplier names,
+document text and comments people typed stay in German either way. See
+ADR-034.
 
 ## Signing in
 

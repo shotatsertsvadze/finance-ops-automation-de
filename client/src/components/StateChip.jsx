@@ -1,4 +1,4 @@
-import { STATE_LABELS } from "../lib/format.js";
+import { useI18n } from "../lib/i18n.js";
 
 const TONE = {
   REVIEW_REQUIRED: "chip-review",
@@ -15,5 +15,6 @@ const TONE = {
 };
 
 export default function StateChip({ state }) {
-  return <span className={`chip ${TONE[state] ?? "chip-neutral"}`}>{STATE_LABELS[state] ?? state}</span>;
+  const { state: label } = useI18n();
+  return <span className={`chip ${TONE[state] ?? "chip-neutral"}`}>{label(state)}</span>;
 }

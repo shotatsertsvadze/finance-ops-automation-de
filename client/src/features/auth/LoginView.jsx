@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ROLE_LABELS } from "../../lib/format.js";
+import { useI18n } from "../../lib/i18n.js";
+import LanguageSwitch from "../../components/LanguageSwitch.jsx";
 
 const DEMO_ACCOUNTS = [
   { email: "anna.berger@nordwerk.example", role: "AP_CLERK" },
@@ -9,6 +10,7 @@ const DEMO_ACCOUNTS = [
 ];
 
 export default function LoginView({ onLogin }) {
+  const { t, role } = useI18n();
   const [email, setEmail] = useState(DEMO_ACCOUNTS[0].email);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,18 +33,19 @@ export default function LoginView({ onLogin }) {
     <div className="login">
       <div className="login-card">
         <div className="login-brand">
-          <div className="brand-mark">Nordwerk GmbH</div>
-          <div className="brand-sub">Rechnungseingang</div>
+          <LanguageSwitch />
+          <div className="brand-mark">{t("brand")}</div>
+          <div className="brand-sub">{t("brandSub")}</div>
         </div>
 
         <form onSubmit={submit}>
           <label className="login-field">
-            <span className="label">E-Mail</span>
+            <span className="label">{t("email")}</span>
             <input type="email" value={email} autoComplete="username" required
                    onChange={(e) => setEmail(e.target.value)} />
           </label>
           <label className="login-field">
-            <span className="label">Passwort</span>
+            <span className="label">{t("password")}</span>
             <input type="password" value={password} autoComplete="current-password" required
                    onChange={(e) => setPassword(e.target.value)} />
           </label>
@@ -50,25 +53,23 @@ export default function LoginView({ onLogin }) {
           {error && <div className="toast is-error" role="alert">{error}</div>}
 
           <button className="btn login-submit" type="submit" disabled={busy}>
-            {busy ? "Wird geprüft…" : "Anmelden"}
+            {busy ? t("checking") : t("login")}
           </button>
         </form>
 
         <div className="login-demo">
-          <div className="label">Demokonten</div>
+          <div className="label">{t("demoAccounts")}</div>
           <ul>
             {DEMO_ACCOUNTS.map((account) => (
               <li key={account.email}>
                 <button type="button" className="link-button mono" onClick={() => setEmail(account.email)}>
                   {account.email}
                 </button>
-                <span className="hint">{ROLE_LABELS[account.role]}</span>
+                <span className="hint">{role(account.role)}</span>
               </li>
             ))}
           </ul>
-          <p className="hint">
-            Demonstrationssystem mit synthetischen Daten. Das gemeinsame Passwort der Demokonten steht in der README.
-          </p>
+          <p className="hint">{t("loginHint")}</p>
         </div>
       </div>
     </div>

@@ -7,10 +7,12 @@ import PaymentsView from "./features/payments/PaymentsView.jsx";
 import DashboardView from "./features/dashboard/DashboardView.jsx";
 import LoginView from "./features/auth/LoginView.jsx";
 import { useSession } from "./lib/useSession.js";
-import { ROLE_LABELS } from "./lib/format.js";
+import { useI18n } from "./lib/i18n.js";
+import LanguageSwitch from "./components/LanguageSwitch.jsx";
 
 export default function App() {
   const { user, may, checked, login, logout } = useSession();
+  const { t, role } = useI18n();
   const [counts, setCounts] = useState({ all: 0, REVIEW_REQUIRED: 0, READY_FOR_APPROVAL: 0, APPROVED: 0, openMoney: 0 });
 
   const refresh = useCallback(() => {
@@ -33,47 +35,45 @@ export default function App() {
     if (user) refresh();
   }, [user, refresh]);
 
-  if (!checked) return <p className="empty">Sitzung wird geprüft…</p>;
+  if (!checked) return <p className="empty">{t("sessionChecking")}</p>;
   if (!user) return <LoginView onLogin={login} />;
 
   return (
     <div className="shell">
       <aside className="rail">
         <div className="brand">
-          <div className="brand-mark">Nordwerk GmbH</div>
-          <div className="brand-sub">Rechnungseingang</div>
+          <div className="brand-mark">{t("brand")}</div>
+          <div className="brand-sub">{t("brandSub")}</div>
         </div>
         <nav className="nav">
-          <div className="nav-group label">Überblick</div>
-          <NavLink to="/dashboard">Kennzahlen</NavLink>
-          <div className="nav-group label">Arbeitsvorrat</div>
+          <div className="nav-group label">{t("navOverview")}</div>
+          <NavLink to="/dashboard">{t("navKpis")}</NavLink>
+          <div className="nav-group label">{t("navQueue")}</div>
           <NavLink to="/" end>
-            Posteingang <span className="nav-count">{counts.all}</span>
+            {t("navInbox")} <span className="nav-count">{counts.all}</span>
           </NavLink>
           <NavLink to="/sichtpruefung">
-            Sichtprüfung <span className="nav-count">{counts.REVIEW_REQUIRED}</span>
+            {t("navReview")} <span className="nav-count">{counts.REVIEW_REQUIRED}</span>
           </NavLink>
           <NavLink to="/freigaben">
-            Freigaben <span className="nav-count">{counts.READY_FOR_APPROVAL}</span>
+            {t("navApprovals")} <span className="nav-count">{counts.READY_FOR_APPROVAL}</span>
           </NavLink>
           <NavLink to="/freigegeben">
-            Freigegeben <span className="nav-count">{counts.APPROVED}</span>
+            {t("navApproved")} <span className="nav-count">{counts.APPROVED}</span>
           </NavLink>
-          <div className="nav-group label">Geld</div>
+          <div className="nav-group label">{t("navMoney")}</div>
           <NavLink to="/zahlungen">
-            Zahlungen und Abgleich <span className="nav-count">{counts.openMoney}</span>
+            {t("navPayments")} <span className="nav-count">{counts.openMoney}</span>
           </NavLink>
         </nav>
         <div className="rail-foot">
+          <LanguageSwitch />
           <div className="session">
             <div className="session-name">{user.name}</div>
-            <div className="session-role">{ROLE_LABELS[user.role] ?? user.role}</div>
-            <button type="button" className="link-button" onClick={logout}>Abmelden</button>
+            <div className="session-role">{role(user.role)}</div>
+            <button type="button" className="link-button" onClick={logout}>{t("signOut")}</button>
           </div>
-          <p>
-            Demonstrationssystem.<br />
-            Synthetische Daten, keine echten Zahlungen.
-          </p>
+          <p>{t("demoDisclaimer")}</p>
         </div>
       </aside>
       <main className="main">

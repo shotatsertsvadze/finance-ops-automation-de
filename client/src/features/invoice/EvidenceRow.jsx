@@ -1,4 +1,5 @@
 import { diffChars, isSingleIdentifier } from "../../lib/format.js";
+import { useI18n } from "../../lib/i18n.js";
 
 /**
  * One validation result. The comparison block is the point of the product:
@@ -7,6 +8,7 @@ import { diffChars, isSingleIdentifier } from "../../lib/format.js";
  * changed bank account can be read at a glance instead of character-counted.
  */
 export default function EvidenceRow({ result }) {
+  const { t, checkSentence, term } = useI18n();
   const tone = result.status.toLowerCase();
   const showCompare = result.status === "FAILED" && (result.expected || result.actual);
   const markable = result.status === "FAILED" && isSingleIdentifier(result.expected) && isSingleIdentifier(result.actual);
@@ -22,14 +24,14 @@ export default function EvidenceRow({ result }) {
             {result.severity !== "INFO" && result.status === "FAILED" ? ` · ${result.severity}` : ""}
           </span>
         </div>
-        <p className="ev-reason">{result.reason}</p>
+        <p className="ev-reason">{checkSentence(result)}</p>
 
         {showCompare && (
           <dl className="ev-compare">
-            <dt>Erwartet</dt>
-            <dd>{markable ? <Grouped value={result.expected} /> : (result.expected ?? "—")}</dd>
-            <dt>Gefunden</dt>
-            <dd>{markable ? <Marked expected={result.expected} actual={result.actual} /> : (result.actual ?? "—")}</dd>
+            <dt>{t("expected")}</dt>
+            <dd>{markable ? <Grouped value={result.expected} /> : (term(result.expected) ?? "—")}</dd>
+            <dt>{t("found")}</dt>
+            <dd>{markable ? <Marked expected={result.expected} actual={result.actual} /> : (term(result.actual) ?? "—")}</dd>
           </dl>
         )}
 

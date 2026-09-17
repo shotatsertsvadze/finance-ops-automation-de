@@ -136,6 +136,7 @@ described as working.
 | L2 (R08) | Intake and processing are separate transactions. If processing fails after receipt, re-uploading the same file returns DUPLICATE while the original stays in RECEIVED; recovery is a manual reprocess. | Inject a storage read failure after intake commits | OPEN |
 | L3 (R10) | The recognised XML subset is loose: namespaces are stripped and only the local name `Invoice` is required, so a non-UBL namespace is still accepted. Allowances, charges, prepayments and rounding are not modelled. | Replace the UBL root namespace | OPEN |
 | ~~L4 (R11)~~ | ~~Decisions are not bound to a document hash or validation-run identifier~~ | **Fixed 2026-09-17**: each decision records the document, the validation run and the amount, and two gates refuse a mismatch. See ADR-033 and the table below. | CLOSED |
+| L8 | A refusal from the server (a four-eyes violation, a state conflict) is shown verbatim, so it stays German in English mode. The API returns prose, not an error code. | Trigger any 409 in English mode | OPEN |
 | L7 | Business checks are not re-run at the final approval gate. Only `payableBlockers` is re-checked, so a supplier blocked between step 1 and step 2 is still approved. | Set a supplier to BLOCKED between two approval steps | OPEN |
 | ~~L5 (R12)~~ | ~~Unauthenticated actor header, unrestricted CORS, binds all interfaces~~ | **Fixed 2026-09-17**: password login with server-side sessions, CSRF double-submit, a role matrix, same-origin CORS and loopback binding. See ADR-029 and ADR-030. | CLOSED |
 | ~~L6 (R13)~~ | ~~The test helper could drop the development schema~~ | **Fixed 2026-09-17**: `testDeps()` refuses to run when `TEST_DATABASE_URL` equals `DATABASE_URL`. | CLOSED |
@@ -261,3 +262,25 @@ described as working.
 | U11 | Spine marks the stage an exception branched from as reached | "Bezahlt" filled while the exception is current | MANUAL | Browser, 2026-09-17, fixed after being spotted |
 | U12 | Decided approval step shows what it was signed for | document prefix, validation run and amount under the step; prefix matches the intake SHA-256 | MANUAL | Browser, 2026-09-17: `Beleg 8b48b6eb3f2b · Prüflauf 1 · 4.352,73 €` against file hash `8b48b6eb3f2bf49a…` |
 | U13 | Binding line does not overflow at 375 px | scrollWidth equals clientWidth | MANUAL | Browser, 2026-09-17, measured in page |
+
+## Display language
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| I1 | Every check the server can emit has English text | no missing key | AUTO | `dictionaries.test.js`, scans the check source |
+| I2 | No English entry for a check that no longer exists | no stale key | AUTO | `dictionaries.test.js` |
+| I3 | Every state, role and audit action has both languages | no missing label | AUTO | `dictionaries.test.js`, scans `states.js`, `authorize.js` and the domain modules |
+| I4 | The two dictionaries carry the same keys | identical key sets | AUTO | `dictionaries.test.js` |
+| I5 | The English dictionary contains no German | no German characters | AUTO | `dictionaries.test.js` |
+| I6 | A check with no English entry falls back to the server sentence | German shown, nothing blank | AUTO | `dictionaries.test.js` |
+| I7 | German terms inside expected/actual are translated | nothing German left | AUTO | `dictionaries.test.js` |
+| I8 | Audit reasons the server writes are translated | nothing German left | AUTO | `dictionaries.test.js` |
+| I9 | A comment a person typed is left unchanged | same words in both languages | AUTO | `dictionaries.test.js` |
+| I10 | German mode passes server text through untouched | identical string | AUTO | `dictionaries.test.js` |
+| I11 | Switching language changes every view | nav, dashboard, detail, payments all switch | MANUAL | Browser, 2026-09-17, both directions |
+| I12 | Only data stays German in English mode | supplier names, document payment terms | MANUAL | Browser, 2026-09-17: page scan found only `Berliner Bürobedarf GmbH` |
+| I13 | The choice survives a reload | localStorage, per browser | MANUAL | Browser, 2026-09-17 |
+| I14 | `lang` and the document title follow the language | `lang="en"`, English title | MANUAL | Browser, 2026-09-17, read from the DOM |
+| I15 | Numbers and dates follow the language | `62,9 %` in German, `62.9 %` in English; EUR in both | MANUAL | Browser, 2026-09-17 |
+| I16 | No horizontal overflow at 375 px in English | scrollWidth equals clientWidth | MANUAL | Browser, 2026-09-17, measured in page |
+| I17 | Server refusal messages stay German in English mode | shown verbatim | OPEN | Known limitation L8 |

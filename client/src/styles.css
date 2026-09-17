@@ -470,3 +470,19 @@ select {
 @media (max-width: 760px) {
   .ledger { min-width: 660px; }
 }
+
+/* ---------- language switch ---------- */
+.lang-switch { display: flex; gap: 4px; margin-bottom: 12px; }
+.lang-switch button {
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.lang-switch button:hover { color: var(--ink-1); border-color: var(--line-strong); }
+.lang-switch button.is-active { color: var(--ink-1); border-color: var(--line-strong); background: var(--surface); }
