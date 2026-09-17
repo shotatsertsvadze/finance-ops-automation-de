@@ -8,7 +8,7 @@ Legend:
 - **CODE** inferred from reading the code only, never executed
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (132 tests, all passing as of 2026-09-17). Database tests need
+Run: `npm test` (154 tests, all passing as of 2026-09-17). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
 
 ## High-priority business risks
@@ -114,8 +114,37 @@ described as working.
 | L2 (R08) | Intake and processing are separate transactions. If processing fails after receipt, re-uploading the same file returns DUPLICATE while the original stays in RECEIVED; recovery is a manual reprocess. | Inject a storage read failure after intake commits | OPEN |
 | L3 (R10) | The recognised XML subset is loose: namespaces are stripped and only the local name `Invoice` is required, so a non-UBL namespace is still accepted. Allowances, charges, prepayments and rounding are not modelled. | Replace the UBL root namespace | OPEN |
 | L4 (R11) | Decisions are not bound to a document hash or validation-run identifier, and approval rows are recreated without a cycle identifier. | Source review | OPEN |
-| L5 (R12) | `X-Actor-Id` is unauthenticated and review actions accept any seeded role, so this demonstrates identity-based rules, not authenticated segregation of duties. CORS is unrestricted and the server binds all interfaces. | Source review | OPEN, deliberate for a local demo |
-| L6 (R13) | The test helper drops schema `finops` in whatever `TEST_DATABASE_URL` names, without checking it differs from the application database. | Source review | OPEN |
+| ~~L5 (R12)~~ | ~~Unauthenticated actor header, unrestricted CORS, binds all interfaces~~ | **Fixed 2026-09-17**: password login with server-side sessions, CSRF double-submit, a role matrix, same-origin CORS and loopback binding. See ADR-029 and ADR-030. | CLOSED |
+| ~~L6 (R13)~~ | ~~The test helper could drop the development schema~~ | **Fixed 2026-09-17**: `testDeps()` refuses to run when `TEST_DATABASE_URL` equals `DATABASE_URL`. | CLOSED |
+
+## Authentication and authorization
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| S1 | Correct password | 200, user returned, no secret in the body | AUTO | `auth.test.js` |
+| S2 | Session cookie flags | HttpOnly and SameSite=Strict | AUTO | `auth.test.js` |
+| S3 | Wrong password vs unknown address | identical 401 answer, no account enumeration | AUTO | `auth.test.js` |
+| S4 | Repeated failures | account locks, 429 even with the right password | AUTO | `auth.test.js` |
+| S5 | Successful login | failure counter cleared | AUTO | `auth.test.js` |
+| S6 | No session | 401 on every protected route | AUTO | `auth.test.js` |
+| S7 | Forged session token | 401 | AUTO | `auth.test.js` |
+| S8 | `X-Actor-Id` header | grants nothing; removed, not deprecated | AUTO | `auth.test.js` |
+| S9 | Logout | session revoked server-side, replayed cookie is dead | AUTO | `auth.test.js` |
+| S10 | Expired session | 401 | AUTO | `auth.test.js` |
+| S11 | Mutation without CSRF token | 403 | AUTO | `auth.test.js` |
+| S12 | Mutation with a mismatched CSRF token | 403 | AUTO | `auth.test.js` |
+| S13 | Reads without a CSRF token | allowed | AUTO | `auth.test.js` |
+| S14 | Password hashing | per-user salt, same password hashes differently | AUTO | `auth.test.js` |
+| S15 | Manager attempting a review decision | 403 | AUTO | `auth.test.js` |
+| S16 | Clerk attempting the money path | 403 | AUTO | `auth.test.js` |
+| S17 | Finance on the money path | 200 | AUTO | `auth.test.js` |
+| S18 | Audit actor | the authenticated user, not a claimed one | AUTO | `auth.test.js` |
+| S19 | Permissions reported per role | manager lacks review and payment rights | AUTO | `auth.test.js` |
+| S20 | Four-eyes after review, with real roles | finance releases, cannot sign; second finance user can | AUTO | `approvals.test.js` |
+| S21 | Login and logout through the UI | wrong password refused, session bar, sign-out reachable | MANUAL | Browser, 2026-09-17 |
+| S22 | UI hides actions a role may not take | manager sees no review buttons, sees whose step it is | MANUAL | Browser, 2026-09-17 |
+| S23 | Test database safeguard | refuses to run when it equals `DATABASE_URL` | MANUAL | Probe, 2026-09-17 |
+| S24 | No password reset, second factor or SSO | out of scope | OPEN | Deliberate, see ADR-029 |
 
 ## Operational KPIs
 

@@ -9,36 +9,30 @@ import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createApp } from "../../app.js";
-import { testDeps, USERS } from "../../test-support/db.js";
+import { loginAs, testDeps } from "../../test-support/db.js";
 
-let deps, server, base;
+let deps, server, base, clients;
 
 const fixture = (name) => readFileSync(new URL(`../../../fixtures/xrechnung/${name}`, import.meta.url));
 const statement = JSON.parse(readFileSync(new URL("../../../fixtures/bank/statement_2026-09.json", import.meta.url), "utf8"));
 
-async function upload(name) {
-  const form = new FormData();
-  form.append("file", new Blob([fixture(name)], { type: "application/xml" }), name);
-  const res = await fetch(`${base}/api/invoices`, { method: "POST", body: form });
+async function upload(name, client = clients.clerk) {
+  const res = await client.upload(fixture(name), name);
   assert.equal(res.status, 201, `upload ${name}`);
   return res.json();
 }
 
-const post = (path, { actor, body } = {}) =>
-  fetch(`${base}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(actor ? { "x-actor-id": actor } : {}) },
-    body: JSON.stringify(body ?? {}),
-  });
+/** `actor` is now an authenticated client, not a claimed id. */
+const post = (path, { actor, body } = {}) => (actor ?? clients.clerk).post(path, body);
 
-const get = (id) => fetch(`${base}/api/invoices/${id}`).then((r) => r.json());
+const get = (id) => clients.clerk.get(`/api/invoices/${id}`).then((r) => r.json());
 
 /** An approved invoice, through the real approval path. */
 async function approved(name = "A_clean_1240.xml") {
   const invoice = await upload(name);
   if (invoice.state === "APPROVED") return invoice;
   assert.equal(invoice.state, "READY_FOR_APPROVAL");
-  const res = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager, body: {} });
+  const res = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
   assert.equal(res.status, 200);
   return get(invoice.id);
 }
@@ -46,19 +40,27 @@ async function approved(name = "A_clean_1240.xml") {
 /** All the way to PAID, ready for reconciliation. */
 async function paid(name = "A_clean_1240.xml") {
   const invoice = await approved(name);
-  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: USERS.finance });
-  await post(`/api/invoices/${invoice.id}/payment`, { actor: USERS.finance });
-  await post(`/api/invoices/${invoice.id}/payment/confirm`, { actor: USERS.finance, body: { provider_ref: "MOCK-1" } });
+  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
+  await post(`/api/invoices/${invoice.id}/payment`, { actor: clients.finance });
+  await post(`/api/invoices/${invoice.id}/payment/confirm`, { actor: clients.finance, body: { provider_ref: "MOCK-1" } });
   return get(invoice.id);
 }
 
-const importStatement = (payload = statement) => post("/api/bank/import", { actor: USERS.finance, body: payload });
-const runReconciliation = () => post("/api/reconciliation/run", { actor: USERS.finance });
+const importStatement = (payload = statement) => post("/api/bank/import", { actor: clients.finance, body: payload });
+const runReconciliation = () => post("/api/reconciliation/run", { actor: clients.finance });
 
 before(async () => {
   deps = await testDeps();
   server = createApp(deps).listen(0);
   base = `http://127.0.0.1:${server.address().port}`;
+  clients = {
+    clerk: await loginAs(base, "clerk"),
+    manager: await loginAs(base, "manager"),
+    manager2: await loginAs(base, "manager2"),
+    finance: await loginAs(base, "finance"),
+    finance2: await loginAs(base, "finance2"),
+    cfo: await loginAs(base, "cfo"),
+  };
 });
 
 after(async () => {
@@ -76,7 +78,7 @@ beforeEach(async () => {
 test("an approved invoice produces one accounting record and becomes bookable", async () => {
   const invoice = await approved();
 
-  const res = await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: USERS.finance });
+  const res = await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
   assert.equal(res.status, 200);
 
   const after = await get(invoice.id);
@@ -93,9 +95,9 @@ test("an approved invoice produces one accounting record and becomes bookable", 
 
 test("a repeated accounting handoff does not create a second booking", async () => {
   const invoice = await approved();
-  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: USERS.finance });
+  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
 
-  const again = await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: USERS.finance });
+  const again = await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
   assert.equal(again.status, 409);
 
   const { rows } = await deps.pool.query("select count(*)::int as n from finops.accounting_records where invoice_id = $1", [invoice.id]);
@@ -106,16 +108,16 @@ test("an invoice that is not approved cannot be handed to accounting", async () 
   const invoice = await upload("B_iban_changed_2499.xml");
   assert.equal(invoice.state, "REVIEW_REQUIRED");
 
-  const res = await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: USERS.finance });
+  const res = await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
   assert.equal(res.status, 409);
   assert.equal((await get(invoice.id)).state, "REVIEW_REQUIRED");
 });
 
 test("the accounting export is a CSV of the booked records", async () => {
   const invoice = await approved();
-  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: USERS.finance });
+  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
 
-  const res = await fetch(`${base}/api/accounting/export`);
+  const res = await clients.finance.get("/api/accounting/export");
   assert.equal(res.status, 200);
   assert.match(res.headers.get("content-type"), /text\/csv/);
   const csv = await res.text();
@@ -130,9 +132,9 @@ test("the accounting export is a CSV of the booked records", async () => {
 
 test("a bookable invoice can be paid, and the payment carries an idempotency key", async () => {
   const invoice = await approved();
-  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: USERS.finance });
+  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
 
-  const res = await post(`/api/invoices/${invoice.id}/payment`, { actor: USERS.finance });
+  const res = await post(`/api/invoices/${invoice.id}/payment`, { actor: clients.finance });
   assert.equal(res.status, 200);
   assert.equal((await get(invoice.id)).state, "PAYMENT_PENDING");
 
@@ -146,10 +148,10 @@ test("a bookable invoice can be paid, and the payment carries an idempotency key
 
 test("a replayed payment instruction does not create a second payment", async () => {
   const invoice = await approved();
-  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: USERS.finance });
-  await post(`/api/invoices/${invoice.id}/payment`, { actor: USERS.finance });
+  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
+  await post(`/api/invoices/${invoice.id}/payment`, { actor: clients.finance });
 
-  const again = await post(`/api/invoices/${invoice.id}/payment`, { actor: USERS.finance });
+  const again = await post(`/api/invoices/${invoice.id}/payment`, { actor: clients.finance });
   assert.equal(again.status, 409);
 
   const { rows } = await deps.pool.query("select count(*)::int as n from finops.payment_instructions where invoice_id = $1", [invoice.id]);
@@ -158,10 +160,10 @@ test("a replayed payment instruction does not create a second payment", async ()
 
 test("confirming payment marks the invoice paid", async () => {
   const invoice = await approved();
-  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: USERS.finance });
-  await post(`/api/invoices/${invoice.id}/payment`, { actor: USERS.finance });
+  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
+  await post(`/api/invoices/${invoice.id}/payment`, { actor: clients.finance });
 
-  const res = await post(`/api/invoices/${invoice.id}/payment/confirm`, { actor: USERS.finance, body: { provider_ref: "MOCK-77" } });
+  const res = await post(`/api/invoices/${invoice.id}/payment/confirm`, { actor: clients.finance, body: { provider_ref: "MOCK-77" } });
   assert.equal(res.status, 200);
 
   const after = await get(invoice.id);
@@ -173,14 +175,14 @@ test("confirming payment marks the invoice paid", async () => {
 
 test("a repeated payment confirmation is refused and changes nothing", async () => {
   const invoice = await paid();
-  const again = await post(`/api/invoices/${invoice.id}/payment/confirm`, { actor: USERS.finance, body: { provider_ref: "MOCK-77" } });
+  const again = await post(`/api/invoices/${invoice.id}/payment/confirm`, { actor: clients.finance, body: { provider_ref: "MOCK-77" } });
   assert.equal(again.status, 409);
   assert.equal((await get(invoice.id)).state, "PAID");
 });
 
 test("payment cannot skip the accounting handoff", async () => {
   const invoice = await approved();
-  const res = await post(`/api/invoices/${invoice.id}/payment`, { actor: USERS.finance });
+  const res = await post(`/api/invoices/${invoice.id}/payment`, { actor: clients.finance });
   assert.equal(res.status, 409);
   assert.equal((await get(invoice.id)).state, "APPROVED");
 });
@@ -277,7 +279,7 @@ test("a reconciliation exception can be resolved by hand", async () => {
   assert.equal((await get(invoice.id)).state, "RECONCILIATION_EXCEPTION");
 
   const res = await post(`/api/invoices/${invoice.id}/reconciliation/resolve`, {
-    actor: USERS.finance,
+    actor: clients.finance,
     body: { comment: "Restbetrag per Gutschrift ausgeglichen" },
   });
   assert.equal(res.status, 200);
@@ -292,7 +294,7 @@ test("resolving a reconciliation exception needs a reason", async () => {
   await importStatement();
   await runReconciliation();
 
-  const res = await post(`/api/invoices/${invoice.id}/reconciliation/resolve`, { actor: USERS.finance, body: {} });
+  const res = await post(`/api/invoices/${invoice.id}/reconciliation/resolve`, { actor: clients.finance, body: {} });
   assert.equal(res.status, 400);
   assert.equal((await get(invoice.id)).state, "RECONCILIATION_EXCEPTION");
 });

@@ -10,7 +10,7 @@ import { ROLE_LABELS } from "../../lib/format.js";
  * needs from them. The server enforces every rule here; refusals are shown
  * verbatim so a blocked four-eyes check is visible rather than silent.
  */
-export default function ActionPanel({ invoice, actor, onDone }) {
+export default function ActionPanel({ invoice, may, onDone }) {
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -38,48 +38,61 @@ export default function ActionPanel({ invoice, actor, onDone }) {
   if (invoice.state === "REVIEW_REQUIRED") {
     prompt = "Die automatische Verarbeitung ist gestoppt. Entscheiden Sie auf Basis der Prüfspur.";
     actions.push(
-      { key: "accept", label: "Zur Freigabe geben", tone: "ok", run: () => decideReview(id, "accept", actor?.id, comment) },
-      { key: "request-info", label: "Rückfrage stellen", tone: "", needsComment: true, run: () => decideReview(id, "request-info", actor?.id, comment) },
-      { key: "confirm-duplicate", label: "Duplikat bestätigen", tone: "", needsComment: true, run: () => decideReview(id, "confirm-duplicate", actor?.id, comment) },
-      { key: "reject", label: "Ablehnen", tone: "high", needsComment: true, run: () => decideReview(id, "reject", actor?.id, comment) },
-      { key: "reprocess", label: "Erneut prüfen", tone: "", run: () => reprocessInvoice(id, actor?.id) },
+      { key: "accept", label: "Zur Freigabe geben", tone: "ok", needs: "review:decide", run: () => decideReview(id, "accept", comment) },
+      { key: "request-info", label: "Rückfrage stellen", tone: "", needsComment: true, needs: "review:decide", run: () => decideReview(id, "request-info", comment) },
+      { key: "confirm-duplicate", label: "Duplikat bestätigen", tone: "", needsComment: true, needs: "review:decide", run: () => decideReview(id, "confirm-duplicate", comment) },
+      { key: "reject", label: "Ablehnen", tone: "high", needsComment: true, needs: "review:decide", run: () => decideReview(id, "reject", comment) },
+      { key: "reprocess", label: "Erneut prüfen", tone: "", needs: "invoice:reprocess", run: () => reprocessInvoice(id) },
     );
   } else if (invoice.state === "READY_FOR_APPROVAL" && step) {
     prompt = `Schritt ${step.step_no} von ${invoice.approval_steps.length}: Freigabe durch ${ROLE_LABELS[step.required_role] ?? step.required_role}.`;
     actions.push(
-      { key: "approve", label: "Freigeben", tone: "ok", run: () => decideStep(id, step.step_no, "approve", actor?.id, comment) },
-      { key: "step-reject", label: "Ablehnen", tone: "high", needsComment: true, run: () => decideStep(id, step.step_no, "reject", actor?.id, comment) },
-      { key: "request-info", label: "Rückfrage stellen", tone: "", needsComment: true, run: () => decideReview(id, "request-info", actor?.id, comment) },
+      { key: "approve", label: "Freigeben", tone: "ok", needs: "approval:decide", run: () => decideStep(id, step.step_no, "approve", comment) },
+      { key: "step-reject", label: "Ablehnen", tone: "high", needsComment: true, needs: "approval:decide", run: () => decideStep(id, step.step_no, "reject", comment) },
+      { key: "request-info", label: "Rückfrage stellen", tone: "", needsComment: true, needs: "review:decide", run: () => decideReview(id, "request-info", comment) },
     );
   } else if (invoice.state === "APPROVED") {
     prompt = "Freigegeben. Der Buchungssatz kann an die Buchhaltung übergeben werden.";
-    actions.push({ key: "accounting", label: "Buchungssatz erzeugen", tone: "ok", run: () => createAccountingRecord(id, actor?.id) });
+    actions.push({ key: "accounting", label: "Buchungssatz erzeugen", tone: "ok", needs: "accounting:handoff", run: () => createAccountingRecord(id) });
   } else if (invoice.state === "ACCOUNTING_READY") {
     prompt = `Buchungssatz ${invoice.accounting_record?.document_no ?? ""} liegt vor. Zahlung anweisen?`;
-    actions.push({ key: "pay", label: "Zahlung anweisen", tone: "ok", run: () => instructPayment(id, actor?.id) });
+    actions.push({ key: "pay", label: "Zahlung anweisen", tone: "ok", needs: "payment:instruct", run: () => instructPayment(id) });
   } else if (invoice.state === "PAYMENT_PENDING") {
     prompt = "Zahlung ist angewiesen. Die Bestätigung käme in einem echten System vom Zahlungsdienstleister.";
-    actions.push({ key: "confirm", label: "Zahlung bestätigen (Simulation)", tone: "ok", run: () => confirmPayment(id, actor?.id) });
+    actions.push({ key: "confirm", label: "Zahlung bestätigen (Simulation)", tone: "ok", needs: "payment:confirm", run: () => confirmPayment(id) });
   } else if (invoice.state === "RECONCILIATION_EXCEPTION") {
     prompt = "Der Zahlungsabgleich ist nicht eindeutig. Prüfen Sie den Zahlungseingang und schließen Sie den Fall mit Begründung ab.";
-    actions.push({ key: "resolve", label: "Abgleich abschließen", tone: "ok", needsComment: true, run: () => resolveReconciliation(id, actor?.id, comment) });
+    actions.push({ key: "resolve", label: "Abgleich abschließen", tone: "ok", needsComment: true, needs: "reconciliation:resolve", run: () => resolveReconciliation(id, comment) });
   } else if (invoice.state === "INFO_REQUESTED") {
     prompt = "Die Rechnung wartet auf eine Rückmeldung. Sobald sie vorliegt, geht sie zurück in die Sichtprüfung.";
     actions.push(
-      { key: "info-received", label: "Rückmeldung eingegangen", tone: "ok", run: () => reportInfoReceived(id, actor?.id, comment) },
-      { key: "reject", label: "Ablehnen", tone: "high", needsComment: true, run: () => decideReview(id, "reject", actor?.id, comment) },
+      { key: "info-received", label: "Rückmeldung eingegangen", tone: "ok", needs: "review:decide", run: () => reportInfoReceived(id, comment) },
+      { key: "reject", label: "Ablehnen", tone: "high", needsComment: true, needs: "review:decide", run: () => decideReview(id, "reject", comment) },
     );
   }
 
-  if (actions.length === 0) return null;
+  // Hide what this role may not do. The server refuses it regardless; this
+  // only avoids offering a button that always fails.
+  const permitted = actions.filter((action) => !action.needs || may(action.needs));
+  if (permitted.length === 0) {
+    return prompt ? (
+      <section className="panel">
+        <div className="panel-head"><span className="label">Status</span></div>
+        <div className="panel-body">
+          <p className="action-prompt" style={{ marginBottom: 0 }}>{prompt}</p>
+          <p className="hint" style={{ marginBottom: 0 }}>Für diesen Schritt ist eine andere Rolle zuständig.</p>
+        </div>
+      </section>
+    ) : null;
+  }
 
-  const needsComment = actions.some((a) => a.needsComment);
+  const needsComment = permitted.some((a) => a.needsComment);
 
   return (
     <section className="panel">
       <div className="panel-head">
         <span className="label">Ihre Entscheidung</span>
-        {actor && <span className="hint">{actor.name} · {ROLE_LABELS[actor.role] ?? actor.role}</span>}
+        
       </div>
       <div className="panel-body">
         <p className="action-prompt">{prompt}</p>
@@ -96,7 +109,7 @@ export default function ActionPanel({ invoice, actor, onDone }) {
           </label>
         )}
         <div className="action-row">
-          {actions.map((action) => (
+          {permitted.map((action) => (
             <button
               key={action.key}
               className={`btn ${action.tone === "ok" ? "" : action.tone === "high" ? "btn-danger" : "btn-ghost"}`}

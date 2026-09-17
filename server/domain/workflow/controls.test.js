@@ -10,33 +10,34 @@ import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createApp } from "../../app.js";
-import { testDeps, USERS } from "../../test-support/db.js";
+import { loginAs, testDeps } from "../../test-support/db.js";
 import { loadPolicy } from "../../config/policy.js";
 
-let deps, server, base;
+let deps, server, base, clients;
 
 const fixture = (name) => readFileSync(new URL(`../../../fixtures/xrechnung/${name}`, import.meta.url), "utf8");
 
-async function upload(xml, name) {
-  const form = new FormData();
-  form.append("file", new Blob([xml], { type: "application/xml" }), name);
-  const res = await fetch(`${base}/api/invoices`, { method: "POST", body: form });
+async function upload(xml, name, client = clients.clerk) {
+  const res = await client.upload(xml, name);
   return { status: res.status, body: await res.json().catch(() => null) };
 }
 
-const post = (path, actor, body) =>
-  fetch(`${base}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(actor ? { "x-actor-id": actor } : {}) },
-    body: JSON.stringify(body ?? {}),
-  });
+const post = (path, client, body) => client.post(path, body);
 
-const get = (id) => fetch(`${base}/api/invoices/${id}`).then((r) => r.json());
+const get = (id) => clients.clerk.get(`/api/invoices/${id}`).then((r) => r.json());
 
 before(async () => {
   deps = await testDeps();
   server = createApp(deps).listen(0);
   base = `http://127.0.0.1:${server.address().port}`;
+  clients = {
+    clerk: await loginAs(base, "clerk"),
+    manager: await loginAs(base, "manager"),
+    manager2: await loginAs(base, "manager2"),
+    finance: await loginAs(base, "finance"),
+    finance2: await loginAs(base, "finance2"),
+    cfo: await loginAs(base, "cfo"),
+  };
 });
 after(async () => {
   server.close();
@@ -53,7 +54,7 @@ test("R01: a technically invalid invoice cannot be released from review into app
   const { body: invoice } = await upload(fixture("F_malformed.xml"), "F_malformed.xml");
   assert.equal(invoice.state, "REVIEW_REQUIRED");
 
-  const res = await post(`/api/invoices/${invoice.id}/review/accept`, USERS.clerk, { comment: "trotzdem freigeben" });
+  const res = await post(`/api/invoices/${invoice.id}/review/accept`, clients.clerk, { comment: "trotzdem freigeben" });
   assert.equal(res.status, 422, "technical invalidity is not an overridable business exception");
 
   const after = await get(invoice.id);
@@ -63,7 +64,7 @@ test("R01: a technically invalid invoice cannot be released from review into app
 
 test("R01: an invoice without a resolved amount or supplier can never reach a payable state", async () => {
   const { body: invoice } = await upload(fixture("F_malformed.xml"), "F2.xml");
-  const res = await post(`/api/invoices/${invoice.id}/review/accept`, USERS.clerk, { comment: "x" });
+  const res = await post(`/api/invoices/${invoice.id}/review/accept`, clients.clerk, { comment: "x" });
   assert.equal(res.status, 422);
   const body = await res.json();
   assert.match(body.error, /Pflichtangaben|nicht freigabefähig/i);
@@ -75,7 +76,7 @@ test("R01: a business exception such as a changed IBAN stays overridable", async
   const { body: invoice } = await upload(fixture("B_iban_changed_2499.xml"), "B.xml");
   assert.equal(invoice.state, "REVIEW_REQUIRED");
 
-  const res = await post(`/api/invoices/${invoice.id}/review/accept`, USERS.clerk, { comment: "IBAN bestätigt" });
+  const res = await post(`/api/invoices/${invoice.id}/review/accept`, clients.clerk, { comment: "IBAN bestätigt" });
   assert.equal(res.status, 200, "business exceptions are what review exists for");
   assert.equal((await get(invoice.id)).state, "READY_FOR_APPROVAL");
 });
@@ -91,7 +92,7 @@ test("R06: an invoice that was ever an exception cannot be auto-approved by re-v
     "insert into finops.supplier_bank_accounts (supplier_id, iban, status) values ($1, 'DE75512108001245126199', 'ACTIVE') on conflict do nothing",
     [invoice.supplier_id],
   );
-  const res = await post(`/api/invoices/${invoice.id}/reprocess`, USERS.clerk);
+  const res = await post(`/api/invoices/${invoice.id}/reprocess`, clients.clerk);
   assert.equal(res.status, 200);
 
   const after = await get(invoice.id);
@@ -116,13 +117,13 @@ test("R02: duplicate protection survives a reconciliation exception", async () =
   const { body: first } = await upload(fixture("G_clean_380.xml"), "G.xml");
   // Drive it to a reconciliation exception through the real money path.
   for (const step of ["accounting-record", "payment", "payment/confirm"]) {
-    const r = await post(`/api/invoices/${first.id}/${step}`, USERS.finance, {});
+    const r = await post(`/api/invoices/${first.id}/${step}`, clients.finance, {});
     assert.equal(r.status, 200, step);
   }
-  await post("/api/bank/import", USERS.finance, {
+  await post("/api/bank/import", clients.finance, {
     transactions: [{ external_id: "TX-R02", value_date: "2026-09-22", amount: "-350.00", currency: "EUR", reference: "Teilzahlung zu INV-2026-00433" }],
   });
-  await post("/api/reconciliation/run", USERS.finance, {});
+  await post("/api/reconciliation/run", clients.finance, {});
   assert.equal((await get(first.id)).state, "RECONCILIATION_EXCEPTION");
 
   // A second file for the same supplier and invoice number must not become payable.

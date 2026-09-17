@@ -15,4 +15,8 @@ const deps = {
   company: loadCompany(),
 };
 
-createApp(deps).listen(port, () => console.log(`finops api listening on http://localhost:${port}`));
+// Loopback by default. Exposing a demo on every interface should be a
+// deliberate act, not the default.
+const host = process.env.API_HOST ?? "127.0.0.1";
+
+createApp(deps).listen(port, host, () => console.log(`finops api listening on http://${host}:${port}`));

@@ -89,9 +89,16 @@ export function runBusinessChecks(parsed, master, policy, company) {
   } else {
     checks.push(passed("po_exists", SEVERITY.HIGH, { expected: "offene Bestellung", actual: purchaseOrder.po_number, reason: "Bestellung gefunden" }));
     if (supplier && purchaseOrder.supplier_id === supplier.id) {
-      checks.push(passed("po_supplier_match", SEVERITY.HIGH, { expected: supplier.supplier_no, actual: supplier.supplier_no, reason: "Bestellung gehört zum Rechnungssteller" }));
+      checks.push(passed("po_supplier_match", SEVERITY.HIGH, { expected: `${supplier.supplier_no} ${supplier.legal_name}`, actual: `${purchaseOrder.po_number} gehört zu ${supplier.supplier_no}`, reason: "Bestellung gehört zum Rechnungssteller" }));
     } else {
-      checks.push(failed("po_supplier_match", SEVERITY.HIGH, { expected: supplier?.supplier_no ?? "(unbekannt)", actual: purchaseOrder.supplier_id, reason: "Bestellung gehört zu einem anderen Lieferanten" }));
+      const orderSupplier = purchaseOrder.supplier_supplier_no
+        ? `${purchaseOrder.supplier_supplier_no} ${purchaseOrder.supplier_legal_name ?? ""}`.trim()
+        : "(unbekannter Lieferant)";
+      checks.push(failed("po_supplier_match", SEVERITY.HIGH, {
+        expected: supplier ? `${supplier.supplier_no} ${supplier.legal_name}` : "(Lieferant unbekannt)",
+        actual: `${purchaseOrder.po_number} gehört zu ${orderSupplier}`,
+        reason: "Bestellung gehört zu einem anderen Lieferanten",
+      }));
     }
     const remainingCents = toCents(purchaseOrder.remaining_amount);
     const toleranceCents = Math.max(Math.round((remainingCents * policy.poTolerancePct) / 100), policy.poToleranceMinCents);

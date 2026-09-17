@@ -95,3 +95,23 @@ test("missing PO above the threshold is a MEDIUM failure", () => {
   assert.equal(c.status, "FAILED");
   assert.equal(c.severity, "MEDIUM");
 });
+
+test("a purchase order belonging to another supplier names that supplier, not an id", () => {
+  const r = runBusinessChecks(
+    parse("A_clean_1240.xml"),
+    {
+      supplier: S1,
+      bankAccounts: S1_ACCOUNTS,
+      purchaseOrder: {
+        id: "po9", po_number: "PO-2026-0999", supplier_id: "other", remaining_amount: "5000.00", status: "OPEN",
+        supplier_supplier_no: "S-1003", supplier_legal_name: "Spree IT-Systeme AG",
+      },
+      existingSameNumber: [],
+    },
+    policy, company,
+  );
+  const c = check(r, "po_supplier_match");
+  assert.equal(c.status, "FAILED");
+  assert.match(c.actual, /S-1003/);
+  assert.ok(!/[0-9a-f]{8}-[0-9a-f]{4}/.test(c.actual), `no raw identifier in the evidence: ${c.actual}`);
+});

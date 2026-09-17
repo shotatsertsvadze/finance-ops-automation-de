@@ -23,8 +23,16 @@ export async function loadMasterData(client, parsed, { excludeInvoiceId = null }
   const bankAccounts = supplier
     ? (await client.query("select iban, bic, status from finops.supplier_bank_accounts where supplier_id = $1", [supplier.id])).rows
     : [];
+  // Carry the order's supplier number: the evidence a clerk reads should name
+  // the supplier, not print an internal identifier.
   const purchaseOrder = parsed.poReference
-    ? (await client.query("select * from finops.purchase_orders where po_number = $1", [parsed.poReference])).rows[0] ?? null
+    ? (await client.query(
+        `select p.*, s.supplier_no as supplier_supplier_no, s.legal_name as supplier_legal_name
+         from finops.purchase_orders p
+         left join finops.suppliers s on s.id = p.supplier_id
+         where p.po_number = $1`,
+        [parsed.poReference],
+      )).rows[0] ?? null
     : null;
   const existingSameNumber = supplier && parsed.invoiceNumber
     ? (await client.query(

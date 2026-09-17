@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { uploadInvoice } from "../../lib/api.js";
 
-export default function UploadPanel({ users, actorId, onActorChange, onUploaded }) {
+export default function UploadPanel({ onUploaded }) {
   const inputRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
@@ -11,7 +11,7 @@ export default function UploadPanel({ users, actorId, onActorChange, onUploaded 
     setBusy(true);
     setMessage(null);
     try {
-      const invoice = await uploadInvoice(file, actorId);
+      const invoice = await uploadInvoice(file);
       setMessage({ ok: true, text: `${file.name} verarbeitet.` });
       onUploaded(invoice);
     } catch (error) {

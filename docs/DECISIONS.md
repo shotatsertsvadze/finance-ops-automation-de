@@ -45,6 +45,10 @@ Consequences: one source of truth for rules; the demo runs with two processes
 
 ## ADR-005 Identity boundary: seeded users, `X-Actor-Id` header, roles enforced server-side
 
+**Superseded by ADR-029 (2026-09-17).** The header was never authentication;
+anyone who could reach the API could claim any identity. Kept here as the
+record of what was decided and why it was replaced.
+
 Context: no authentication in the MVP. Feldmark's name-based four-eyes was easy
 to fake.
 Decision: `users` table with roles AP_CLERK, MANAGER, FINANCE, CFO, ADMIN.
@@ -301,6 +305,66 @@ inserted straight into a table, so states and audit trails are genuine. Only
 the timestamps are then shifted into the past with plausible gaps per step.
 Consequences: the KPIs are computed over real process data with realistic
 timing. The data is synthetic and labelled as such in the UI.
+
+## ADR-029 Real authentication replaces the trusted actor header
+
+Supersedes ADR-005.
+
+Context: `X-Actor-Id` let any caller name themselves. Every server-side
+control built on top of it (four-eyes, segregation of duties, the approval
+chain) demonstrated identity-based rules without authenticating the identity.
+An independent review flagged this as a deployment gate, and it is the last
+thing standing between this PoC and something defensible.
+
+Decision: password login with server-side sessions.
+- Passwords: scrypt from `node:crypto`, a salt per user, constant-time
+  comparison. No new dependency.
+- Sessions: a random 32-byte token in an HttpOnly, SameSite=Strict cookie.
+  Only its SHA-256 is stored, so a dump of `finops.sessions` yields no usable
+  session. Logout revokes server-side, so a replayed cookie is dead.
+- CSRF: double-submit. The token sits in a readable cookie and must be echoed
+  in `X-CSRF-Token` on every state-changing request. A cross-site form can
+  send the cookie but cannot set the header.
+- Login failures are counted per account and lock it temporarily. A wrong
+  password and an unknown address get the same answer, so the form cannot be
+  used to enumerate staff.
+- The actor for every audit event comes from the session, never from the
+  request body or a header.
+
+Consequences: `X-Actor-Id` is gone, not deprecated, and a test asserts it
+grants nothing. This is authentication suitable for a demo, not an identity
+provider: there is no password reset, no second factor, and no SSO.
+
+## ADR-030 One authorization matrix, served to the client
+
+Context: the target process says review belongs to accounts payable and
+finance and the money path to finance, but every signed-in role could do
+everything, and the UI offered buttons that would be refused.
+Decision: `server/auth/authorize.js` holds the role-to-permission table and is
+the only place it exists. Routes are guarded by `requirePermission(...)`.
+`GET /api/auth/me` returns the permissions of the signed-in role, and the UI
+hides what the server would refuse rather than re-implementing the rules.
+Which role may decide an individual approval step stays in the approvals
+domain, next to segregation of duties, because it is a property of the step
+and not of the route.
+Consequences: a manager can no longer take review decisions. Finance is
+deliberately the one role that may both review and approve, which is what
+makes the four-eyes-after-review rule meaningful rather than theoretical.
+
+## ADR-031 The stack stays Express, `pg` and React
+
+Context: revisiting ADR-001 after Phases 1-5, with the question of whether
+Next.js or TypeScript would serve the project better.
+Decision: no change to the runtime stack. The client is already React; the
+gap against a "modern" stack is TypeScript, not the framework. Next.js solves
+server rendering, routing and asset delivery, none of which this internal
+console needs, and it would replace a working transport layer for no domain
+benefit. The domain is already framework-agnostic: plain functions over a
+`deps` object, which is what makes the transport replaceable at all.
+TypeScript is worth doing and is recorded as the next scoped piece of work
+rather than an incidental rewrite. It is honest to note that it would not have
+prevented any of the defects the independent review found: those were runtime
+data and control-flow problems, not shape mismatches.
 
 ## Assumptions and contradictions found in the brief
 

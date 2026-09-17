@@ -9,33 +9,35 @@ import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createApp } from "../../app.js";
-import { testDeps, USERS } from "../../test-support/db.js";
+import { loginAs, testDeps } from "../../test-support/db.js";
 
-let deps, server, base;
+let deps, server, base, clients;
 
 const fixture = (name) => readFileSync(new URL(`../../../fixtures/xrechnung/${name}`, import.meta.url));
 
-async function upload(name) {
-  const form = new FormData();
-  form.append("file", new Blob([fixture(name)], { type: "application/xml" }), name);
-  const res = await fetch(`${base}/api/invoices`, { method: "POST", body: form });
+async function upload(name, client = clients.clerk) {
+  const res = await client.upload(fixture(name), name);
   assert.equal(res.status, 201, `upload ${name}`);
   return res.json();
 }
 
-const post = (path, { actor, body } = {}) =>
-  fetch(`${base}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(actor ? { "x-actor-id": actor } : {}) },
-    body: JSON.stringify(body ?? {}),
-  });
+/** `actor` is now an authenticated client, not a claimed id. */
+const post = (path, { actor, body } = {}) => (actor ?? clients.clerk).post(path, body);
 
-const get = (id) => fetch(`${base}/api/invoices/${id}`).then((r) => r.json());
+const get = (id) => clients.clerk.get(`/api/invoices/${id}`).then((r) => r.json());
 
 before(async () => {
   deps = await testDeps();
   server = createApp(deps).listen(0);
   base = `http://127.0.0.1:${server.address().port}`;
+  clients = {
+    clerk: await loginAs(base, "clerk"),
+    manager: await loginAs(base, "manager"),
+    manager2: await loginAs(base, "manager2"),
+    finance: await loginAs(base, "finance"),
+    finance2: await loginAs(base, "finance2"),
+    cfo: await loginAs(base, "cfo"),
+  };
 });
 
 after(async () => {
@@ -54,7 +56,7 @@ test("accepting a review moves the invoice to approval and records who accepted"
   assert.equal(invoice.state, "REVIEW_REQUIRED");
 
   const res = await post(`/api/invoices/${invoice.id}/review/accept`, {
-    actor: USERS.clerk,
+    actor: clients.clerk,
     body: { comment: "IBAN telefonisch beim Lieferanten bestätigt" },
   });
   assert.equal(res.status, 200);
@@ -75,29 +77,33 @@ test("a review of a small invoice still requires one approval, never straight-th
   assert.equal(invoice.state, "REVIEW_REQUIRED");
   assert.equal(invoice.gross_amount, "380.00", "below the auto-approve limit");
 
-  await post(`/api/invoices/${invoice.id}/review/accept`, { actor: USERS.clerk, body: { comment: "geprüft" } });
+  await post(`/api/invoices/${invoice.id}/review/accept`, { actor: clients.clerk, body: { comment: "geprüft" } });
 
   const after = await get(invoice.id);
   assert.equal(after.state, "READY_FOR_APPROVAL", "must not jump to APPROVED");
   assert.deepEqual(after.approval_steps.map((s) => s.required_role), ["MANAGER"]);
 });
 
-test("a review decision without an actor is refused", async () => {
+test("a review decision from an unauthenticated caller is refused", async () => {
   const invoice = await upload("B_iban_changed_2499.xml");
-  const res = await post(`/api/invoices/${invoice.id}/review/accept`, { body: { comment: "x" } });
-  assert.equal(res.status, 400);
+  const res = await fetch(`${base}/api/invoices/${invoice.id}/review/accept`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ comment: "x" }),
+  });
+  assert.equal(res.status, 401);
   assert.equal((await get(invoice.id)).state, "REVIEW_REQUIRED");
 });
 
 test("rejecting a review needs a reason and ends the invoice", async () => {
   const invoice = await upload("B_iban_changed_2499.xml");
 
-  const noReason = await post(`/api/invoices/${invoice.id}/review/reject`, { actor: USERS.clerk, body: {} });
+  const noReason = await post(`/api/invoices/${invoice.id}/review/reject`, { actor: clients.clerk, body: {} });
   assert.equal(noReason.status, 400);
   assert.equal((await get(invoice.id)).state, "REVIEW_REQUIRED", "refused request changed nothing");
 
   const res = await post(`/api/invoices/${invoice.id}/review/reject`, {
-    actor: USERS.clerk,
+    actor: clients.clerk,
     body: { comment: "Lieferant hat Gutschrift angekündigt" },
   });
   assert.equal(res.status, 200);
@@ -108,13 +114,13 @@ test("requesting information parks the invoice and it returns to review", async 
   const invoice = await upload("C_po_overrun_8500.xml");
 
   await post(`/api/invoices/${invoice.id}/review/request-info`, {
-    actor: USERS.clerk,
+    actor: clients.clerk,
     body: { comment: "Bestellung erhöhen oder Rechnung korrigieren" },
   });
   assert.equal((await get(invoice.id)).state, "INFO_REQUESTED");
 
   const res = await post(`/api/invoices/${invoice.id}/info-received`, {
-    actor: USERS.clerk,
+    actor: clients.clerk,
     body: { comment: "Korrigierte Bestellung liegt vor" },
   });
   assert.equal(res.status, 200);
@@ -128,7 +134,7 @@ test("confirming a duplicate ends the invoice without a payable record", async (
   assert.equal(invoice.review_reason, "DUPLICATE_INVOICE_NUMBER");
 
   const res = await post(`/api/invoices/${invoice.id}/review/confirm-duplicate`, {
-    actor: USERS.clerk,
+    actor: clients.clerk,
     body: { comment: "Gleiche Rechnung kam bereits per Portal" },
   });
   assert.equal(res.status, 200);
@@ -139,7 +145,7 @@ test("a review decision on an invoice that is not in review is refused", async (
   const invoice = await upload("A_clean_1240.xml");
   assert.equal(invoice.state, "READY_FOR_APPROVAL");
 
-  const res = await post(`/api/invoices/${invoice.id}/review/accept`, { actor: USERS.clerk, body: { comment: "x" } });
+  const res = await post(`/api/invoices/${invoice.id}/review/accept`, { actor: clients.clerk, body: { comment: "x" } });
   assert.equal(res.status, 409);
   assert.equal((await get(invoice.id)).state, "READY_FOR_APPROVAL");
 });
@@ -149,7 +155,7 @@ test("a review decision on an invoice that is not in review is refused", async (
 test("approving the only step approves the invoice", async () => {
   const invoice = await upload("A_clean_1240.xml");
 
-  const res = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager, body: {} });
+  const res = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
   assert.equal(res.status, 200);
 
   const after = await get(invoice.id);
@@ -164,13 +170,13 @@ test("a multi-step invoice is only approved after the last step", async () => {
   const invoice = await upload("E_high_value_30000.xml");
   assert.deepEqual(invoice.approval_steps.map((s) => s.required_role), ["MANAGER", "FINANCE", "CFO"]);
 
-  await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager, body: {} });
+  await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
   assert.equal((await get(invoice.id)).state, "READY_FOR_APPROVAL");
 
-  await post(`/api/invoices/${invoice.id}/approvals/2/approve`, { actor: USERS.finance, body: {} });
+  await post(`/api/invoices/${invoice.id}/approvals/2/approve`, { actor: clients.finance, body: {} });
   assert.equal((await get(invoice.id)).state, "READY_FOR_APPROVAL");
 
-  const last = await post(`/api/invoices/${invoice.id}/approvals/3/approve`, { actor: USERS.cfo, body: {} });
+  const last = await post(`/api/invoices/${invoice.id}/approvals/3/approve`, { actor: clients.cfo, body: {} });
   assert.equal(last.status, 200);
   assert.equal((await get(invoice.id)).state, "APPROVED");
 });
@@ -178,7 +184,7 @@ test("a multi-step invoice is only approved after the last step", async () => {
 test("an approver whose role does not match the step is refused", async () => {
   const invoice = await upload("E_high_value_30000.xml");
 
-  const res = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.finance, body: {} });
+  const res = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.finance, body: {} });
   assert.equal(res.status, 403);
   assert.equal((await get(invoice.id)).approval_steps[0].status, "PENDING");
 });
@@ -186,16 +192,16 @@ test("an approver whose role does not match the step is refused", async () => {
 test("steps must be decided in order", async () => {
   const invoice = await upload("E_high_value_30000.xml");
 
-  const res = await post(`/api/invoices/${invoice.id}/approvals/2/approve`, { actor: USERS.finance, body: {} });
+  const res = await post(`/api/invoices/${invoice.id}/approvals/2/approve`, { actor: clients.finance, body: {} });
   assert.equal(res.status, 409);
   assert.equal((await get(invoice.id)).approval_steps[1].status, "PENDING");
 });
 
 test("an already-decided step cannot be decided again", async () => {
   const invoice = await upload("A_clean_1240.xml");
-  await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager, body: {} });
+  await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
 
-  const res = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager2, body: {} });
+  const res = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager2, body: {} });
   assert.equal(res.status, 409);
 });
 
@@ -208,30 +214,40 @@ test("one actor cannot satisfy two approval steps of the same invoice", async ()
     [invoice.id],
   );
 
-  const first = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager, body: {} });
+  const first = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
   assert.equal(first.status, 200);
 
-  const second = await post(`/api/invoices/${invoice.id}/approvals/2/approve`, { actor: USERS.manager, body: {} });
+  const second = await post(`/api/invoices/${invoice.id}/approvals/2/approve`, { actor: clients.manager, body: {} });
   assert.equal(second.status, 409);
 
   const after = await get(invoice.id);
   assert.equal(after.approval_steps[1].status, "PENDING");
   assert.equal(after.state, "READY_FOR_APPROVAL", "invoice must not be approved by one person alone");
 
-  const other = await post(`/api/invoices/${invoice.id}/approvals/2/approve`, { actor: USERS.manager2, body: {} });
+  const other = await post(`/api/invoices/${invoice.id}/approvals/2/approve`, { actor: clients.manager2, body: {} });
   assert.equal(other.status, 200);
   assert.equal((await get(invoice.id)).state, "APPROVED");
 });
 
 test("whoever released an invoice from review cannot also approve it", async () => {
-  const invoice = await upload("B_iban_changed_2499.xml");
-  await post(`/api/invoices/${invoice.id}/review/accept`, { actor: USERS.manager, body: { comment: "geklärt" } });
+  // Finance is the one role that may both review and approve, so it is where
+  // the four-eyes-after-review rule actually bites. This invoice needs a
+  // MANAGER and a FINANCE signature.
+  const invoice = await upload("C_po_overrun_8500.xml");
+  assert.equal(invoice.state, "REVIEW_REQUIRED");
+  await post(`/api/invoices/${invoice.id}/review/accept`, { actor: clients.finance, body: { comment: "Bestellung erhöht" } });
 
-  const self = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager, body: {} });
-  assert.equal(self.status, 409);
+  const released = await get(invoice.id);
+  assert.deepEqual(released.approval_steps.map((s) => s.required_role), ["MANAGER", "FINANCE"]);
+
+  const first = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
+  assert.equal(first.status, 200);
+
+  const self = await post(`/api/invoices/${invoice.id}/approvals/2/approve`, { actor: clients.finance, body: {} });
+  assert.equal(self.status, 409, "the person who cleared the exception may not sign it off");
   assert.equal((await get(invoice.id)).state, "READY_FOR_APPROVAL");
 
-  const other = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager2, body: {} });
+  const other = await post(`/api/invoices/${invoice.id}/approvals/2/approve`, { actor: clients.finance2, body: {} });
   assert.equal(other.status, 200);
   assert.equal((await get(invoice.id)).state, "APPROVED");
 });
@@ -239,11 +255,11 @@ test("whoever released an invoice from review cannot also approve it", async () 
 test("rejecting a step needs a reason, ends the invoice and cancels the remaining steps", async () => {
   const invoice = await upload("E_high_value_30000.xml");
 
-  const noReason = await post(`/api/invoices/${invoice.id}/approvals/1/reject`, { actor: USERS.manager, body: {} });
+  const noReason = await post(`/api/invoices/${invoice.id}/approvals/1/reject`, { actor: clients.manager, body: {} });
   assert.equal(noReason.status, 400);
 
   const res = await post(`/api/invoices/${invoice.id}/approvals/1/reject`, {
-    actor: USERS.manager,
+    actor: clients.manager,
     body: { comment: "Leistung wurde nie erbracht" },
   });
   assert.equal(res.status, 200);
@@ -255,24 +271,24 @@ test("rejecting a step needs a reason, ends the invoice and cancels the remainin
 
 test("a rejected invoice cannot be approved afterwards", async () => {
   const invoice = await upload("A_clean_1240.xml");
-  await post(`/api/invoices/${invoice.id}/approvals/1/reject`, { actor: USERS.manager, body: { comment: "falsch" } });
+  await post(`/api/invoices/${invoice.id}/approvals/1/reject`, { actor: clients.manager, body: { comment: "falsch" } });
 
-  const res = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager2, body: {} });
+  const res = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager2, body: {} });
   assert.equal(res.status, 409);
   assert.equal((await get(invoice.id)).state, "REJECTED");
 });
 
 test("an approved invoice cannot be approved again", async () => {
   const invoice = await upload("A_clean_1240.xml");
-  await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager, body: {} });
+  await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
 
-  const res = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager2, body: {} });
+  const res = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager2, body: {} });
   assert.equal(res.status, 409);
 });
 
 test("an unknown step number is a 404 from the handler, not a missing route", async () => {
   const invoice = await upload("A_clean_1240.xml");
-  const res = await post(`/api/invoices/${invoice.id}/approvals/7/approve`, { actor: USERS.manager, body: {} });
+  const res = await post(`/api/invoices/${invoice.id}/approvals/7/approve`, { actor: clients.manager, body: {} });
   assert.equal(res.status, 404);
   // Asserting the body keeps this from passing merely because the route is absent.
   assert.match((await res.json()).error, /Freigabeschritt/);
@@ -280,11 +296,11 @@ test("an unknown step number is a 404 from the handler, not a missing route", as
 
 test("requesting information cancels approvals already given", async () => {
   const invoice = await upload("E_high_value_30000.xml");
-  await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager, body: {} });
+  await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
   assert.equal((await get(invoice.id)).approval_steps[0].status, "APPROVED");
 
   const res = await post(`/api/invoices/${invoice.id}/review/request-info`, {
-    actor: USERS.clerk,
+    actor: clients.clerk,
     body: { comment: "Lieferschein fehlt" },
   });
   assert.equal(res.status, 200);
@@ -299,11 +315,11 @@ test("requesting information cancels approvals already given", async () => {
 
 test("an approval given before a correction cannot be inherited after re-validation", async () => {
   const invoice = await upload("E_high_value_30000.xml");
-  await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: USERS.manager, body: {} });
+  await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
 
-  await post(`/api/invoices/${invoice.id}/review/request-info`, { actor: USERS.clerk, body: { comment: "Lieferschein fehlt" } });
-  await post(`/api/invoices/${invoice.id}/info-received`, { actor: USERS.clerk, body: { comment: "liegt vor" } });
-  const revalidated = await post(`/api/invoices/${invoice.id}/reprocess`, { actor: USERS.clerk });
+  await post(`/api/invoices/${invoice.id}/review/request-info`, { actor: clients.clerk, body: { comment: "Lieferschein fehlt" } });
+  await post(`/api/invoices/${invoice.id}/info-received`, { actor: clients.clerk, body: { comment: "liegt vor" } });
+  const revalidated = await post(`/api/invoices/${invoice.id}/reprocess`, { actor: clients.clerk });
   assert.equal(revalidated.status, 200);
 
   const after = await get(invoice.id);

@@ -2,21 +2,17 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createApp } from "./app.js";
-import { testDeps, USERS } from "./test-support/db.js";
+import { loginAs, testDeps } from "./test-support/db.js";
 
-let deps, server, base;
+let deps, server, base, clients;
 const fixture = (name) => readFileSync(new URL(`../fixtures/xrechnung/${name}`, import.meta.url));
-const upload = async (name, headers = {}) => {
-  const form = new FormData();
-  form.append("file", new Blob([fixture(name)], { type: "application/xml" }), name);
-  form.append("source_channel", "upload");
-  return fetch(`${base}/api/invoices`, { method: "POST", body: form, headers });
-};
+const upload = (name, client = clients.clerk) => client.upload(fixture(name), name);
 
 before(async () => {
   deps = await testDeps();
   server = createApp(deps).listen(0);
   base = `http://127.0.0.1:${server.address().port}`;
+  clients = { clerk: await loginAs(base, "clerk"), manager: await loginAs(base, "manager") };
 });
 after(async () => {
   server.close();
@@ -24,7 +20,7 @@ after(async () => {
 });
 
 test("POST /api/invoices returns 201 with the full detail", async () => {
-  const res = await upload("A_clean_1240.xml", { "x-actor-id": USERS.clerk });
+  const res = await upload("A_clean_1240.xml");
   assert.equal(res.status, 201);
   const body = await res.json();
   assert.equal(body.state, "READY_FOR_APPROVAL");
@@ -34,39 +30,39 @@ test("POST /api/invoices returns 201 with the full detail", async () => {
 
 test("GET /api/invoices lists and filters by state", async () => {
   await upload("G_clean_380.xml");
-  const all = await (await fetch(`${base}/api/invoices`)).json();
+  const all = await (await clients.clerk.get(`/api/invoices`)).json();
   assert.equal(all.length, 2);
-  const approved = await (await fetch(`${base}/api/invoices?state=APPROVED`)).json();
+  const approved = await (await clients.clerk.get(`/api/invoices?state=APPROVED`)).json();
   assert.equal(approved.length, 1);
   assert.equal(approved[0].supplier_name, "Berliner Bürobedarf GmbH");
-  assert.equal((await fetch(`${base}/api/invoices?state=NOPE`)).status, 400);
+  assert.equal((await clients.clerk.get(`/api/invoices?state=NOPE`)).status, 400);
 });
 
 test("non-XML upload is refused with 400", async () => {
-  const form = new FormData();
-  form.append("file", new Blob([Buffer.from("%PDF")], { type: "application/pdf" }), "scan.pdf");
-  const res = await fetch(`${base}/api/invoices`, { method: "POST", body: form });
+  const res = await clients.clerk.upload(Buffer.from("%PDF"), "scan.pdf");
   assert.equal(res.status, 400);
 });
 
-test("unknown actor id is refused with 400", async () => {
-  const res = await upload("E_high_value_30000.xml", { "x-actor-id": "00000000-0000-0000-0000-0000000000ff" });
-  assert.equal(res.status, 400);
+test("an unauthenticated upload is refused", async () => {
+  const form = new FormData();
+  form.append("file", new Blob([fixture("E_high_value_30000.xml")], { type: "application/xml" }), "E.xml");
+  const res = await fetch(`${base}/api/invoices`, { method: "POST", body: form });
+  assert.equal(res.status, 401);
 });
 
 test("GET /api/invoices/:id/file serves the immutable original", async () => {
-  const [inv] = await (await fetch(`${base}/api/invoices?state=APPROVED`)).json();
-  const res = await fetch(`${base}/api/invoices/${inv.id}/file`);
+  const [inv] = await (await clients.clerk.get(`/api/invoices?state=APPROVED`)).json();
+  const res = await clients.clerk.get(`/api/invoices/${inv.id}/file`);
   assert.equal(res.status, 200);
   assert.equal((await res.text()).length, fixture("G_clean_380.xml").toString().length);
 });
 
 test("POST /api/invoices/:id/reprocess on an approved invoice is a 409", async () => {
-  const [inv] = await (await fetch(`${base}/api/invoices?state=APPROVED`)).json();
-  const res = await fetch(`${base}/api/invoices/${inv.id}/reprocess`, { method: "POST" });
+  const [inv] = await (await clients.clerk.get(`/api/invoices?state=APPROVED`)).json();
+  const res = await clients.clerk.post(`/api/invoices/${inv.id}/reprocess`);
   assert.equal(res.status, 409);
 });
 
 test("unknown invoice is a 404", async () => {
-  assert.equal((await fetch(`${base}/api/invoices/00000000-0000-0000-0000-000000000000`)).status, 404);
+  assert.equal((await clients.clerk.get(`/api/invoices/00000000-0000-0000-0000-000000000000`)).status, 404);
 });

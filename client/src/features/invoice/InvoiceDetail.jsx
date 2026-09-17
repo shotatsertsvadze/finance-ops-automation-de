@@ -7,7 +7,7 @@ import StateSpine from "./StateSpine.jsx";
 import EvidenceRow from "./EvidenceRow.jsx";
 import ActionPanel from "./ActionPanel.jsx";
 
-export default function InvoiceDetail({ actor, onChanged }) {
+export default function InvoiceDetail({ may, onChanged }) {
   const { id } = useParams();
   const [invoice, setInvoice] = useState(null);
   const [error, setError] = useState(null);
@@ -98,7 +98,7 @@ export default function InvoiceDetail({ actor, onChanged }) {
         <div className="detail-stack">
           <ActionPanel
             invoice={invoice}
-            actor={actor}
+            may={may}
             onDone={() => {
               load();
               onChanged();

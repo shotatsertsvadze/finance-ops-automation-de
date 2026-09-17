@@ -74,19 +74,44 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
 - **Recovery after a partial intake is manual.** If processing fails after the
   file is received, re-uploading returns a duplicate and the original waits for
   a manual reprocess.
-- No authentication. Actors are seeded users passed as `X-Actor-Id`; roles and
-  segregation of duties are enforced server-side on that identity, which
-  demonstrates identity-based rules rather than authenticated ones.
+- **Authentication is demo-grade.** Real password login, sessions and a role
+  matrix, but no password reset, no second factor and no SSO. Accounts are
+  seeded with a shared, documented password.
 - Only XRechnung in UBL syntax is parsed. CII and ZUGFeRD are adapter boundaries.
 - No official EN 16931 / XRechnung validator is wired in. The system checks the
   declared profile and the structure it needs; it does not certify compliance.
 - Accounting, payment and bank data are simulated.
 - Approval thresholds and savings figures are demo assumptions.
 
+## Signing in
+
+The demo accounts share one password, `nordwerk-demo`, set by `npm run db:seed`
+and overridable with `DEMO_PASSWORD`. These are synthetic accounts in a local
+demo.
+
+| Account | Role | May |
+|---|---|---|
+| anna.berger@nordwerk.example | Kreditorenbuchhaltung | upload, review decisions |
+| tim.kessler@nordwerk.example | Kostenstellenleitung | upload, approval steps |
+| lea.sommer@nordwerk.example | Kostenstellenleitung | upload, approval steps |
+| jonas.weber@nordwerk.example | Finanzen | review, approval, the money path |
+| mira.hoffmann@nordwerk.example | Finanzen | as above |
+| sabine.vogt@nordwerk.example | CFO | upload, approval steps |
+
+Passwords are hashed with scrypt and a per-user salt. The session is a random
+token in an HttpOnly, SameSite=Strict cookie; only its hash is stored, so a
+database dump yields no usable session. Signing out revokes it server-side.
+State-changing requests carry a CSRF token. Repeated failed logins lock an
+account temporarily, and a wrong password and an unknown address get the same
+answer.
+
+Finance is deliberately the one role that may both review and approve. That is
+what makes the four-eyes rule after a review meaningful rather than theoretical.
+
 ## Working an invoice
 
-Pick who you are acting as in the sidebar. The server resolves that identity on
-every request and enforces the rules; the picker is not a login.
+Every action is authorised server-side against the signed-in session. The UI
+hides what your role may not do; the server refuses it either way.
 
 An invoice in review can be sent to approval, rejected, put on hold with a
 query, or confirmed as a duplicate. Rejection, query and duplicate need a

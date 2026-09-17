@@ -10,7 +10,7 @@ const STATUS_TONE = { MATCHED: "chip-ok", EXCEPTION: "chip-review", UNMATCHED: "
  * Bank side of the process: what came in, what it was matched to, and why a
  * transaction was not matched. The reason is the point, so it sits in the row.
  */
-export default function PaymentsView({ actor, onChanged }) {
+export default function PaymentsView({ may, onChanged }) {
   const [rows, setRows] = useState([]);
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -39,7 +39,7 @@ export default function PaymentsView({ actor, onChanged }) {
 
   async function importDemoStatement() {
     const statement = await fetch("/demo/statement_2026-09.json").then((r) => r.json());
-    return importBankStatement(statement, actor?.id);
+    return importBankStatement(statement);
   }
 
   return (
@@ -64,17 +64,18 @@ export default function PaymentsView({ actor, onChanged }) {
             <div className={`toast${message.ok ? "" : " is-error"}`} role="status">{message.text}</div>
           )}
           <div className="action-row">
+            {!may("bank:import") && <span className="hint">Import und Abgleich sind der Finanzbuchhaltung vorbehalten.</span>}
             <button
               className="btn btn-ghost"
-              disabled={busy}
+              disabled={busy || !may("bank:import")}
               onClick={() => act((r) => `${r.imported} neue Umsätze übernommen (${r.received} gelesen).`, importDemoStatement)}
             >
               Demo-Kontoauszug importieren
             </button>
             <button
               className="btn"
-              disabled={busy}
-              onClick={() => act((r) => `${r.matched} zugeordnet, ${r.exceptions} unklar, ${r.unmatched} offen.`, () => runReconciliation(actor?.id))}
+              disabled={busy || !may("reconciliation:run")}
+              onClick={() => act((r) => `${r.matched} zugeordnet, ${r.exceptions} unklar, ${r.unmatched} offen.`, () => runReconciliation())}
             >
               Abgleich starten
             </button>

@@ -100,16 +100,48 @@ a { color: inherit; }
 .rail-foot { margin-top: auto; padding: 0 20px; font-size: 10px; color: #6b7383; line-height: 1.6; }
 .rail-foot p { margin: 14px 0 0; }
 
-.actor-picker { display: grid; gap: 4px; }
-.actor-picker .label { color: #8b94a6; }
-.actor-picker select {
-  width: 100%;
-  background: #1b2130;
-  color: #fff;
-  border-color: #333c4e;
-  font-size: 12px;
-  padding: 5px 8px;
+.session { display: grid; gap: 1px; padding-bottom: 4px; border-bottom: 1px solid #262e3d; }
+.session-name { font-size: 13px; color: #fff; font-weight: 500; }
+.session-role { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: #8b94a6; }
+.link-button {
+  font: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  text-align: left;
 }
+.link-button:hover { text-decoration: underline; }
+.session .link-button { color: #8fa8e0; font-size: 11px; margin-top: 5px; }
+
+/* ---------- login ---------- */
+.login { min-height: 100vh; display: grid; place-items: center; padding: 24px 16px; background: var(--paper); }
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 26px 24px;
+}
+.login-brand { padding-bottom: 18px; margin-bottom: 18px; border-bottom: 1px solid var(--line); }
+.login-brand .brand-mark { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; }
+.login-brand .brand-sub { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); margin-top: 3px; }
+.login-field { display: grid; gap: 4px; margin-bottom: 12px; }
+.login-field input {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+}
+.login-submit { width: 100%; margin-top: 4px; }
+.login-demo { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.login-demo ul { list-style: none; margin: 8px 0 10px; padding: 0; display: grid; gap: 5px; }
+.login-demo li { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.login-demo .link-button { font-size: 12px; }
 
 /* min-width: 0 so this grid item cannot be widened by a long table: without
    it the track grows past the viewport and the page scrolls sideways. */
@@ -414,7 +446,12 @@ select {
     white-space: nowrap;
   }
   .nav a[aria-current="page"] { border-left: 0; border-bottom-color: var(--high); }
-  .rail-foot { display: none; }
+  /* The footer used to be decoration; it now holds the sign-out control, so
+     it stays reachable. Only the disclaimer is dropped. */
+  .rail-foot { display: block; margin-top: 0; padding: 0 16px 10px; }
+  .rail-foot p { display: none; }
+  .session { display: flex; align-items: baseline; gap: 8px; border-bottom: 0; padding-bottom: 0; }
+  .session .link-button { margin-top: 0; margin-left: auto; }
 
   .page-head h1 { font-size: 19px; }
   .facts-split { grid-template-columns: 1fr; }

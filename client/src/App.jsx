@@ -5,11 +5,12 @@ import InboxView from "./features/inbox/InboxView.jsx";
 import InvoiceDetail from "./features/invoice/InvoiceDetail.jsx";
 import PaymentsView from "./features/payments/PaymentsView.jsx";
 import DashboardView from "./features/dashboard/DashboardView.jsx";
-import ActorPicker from "./components/ActorPicker.jsx";
-import { useActor } from "./lib/useActor.js";
+import LoginView from "./features/auth/LoginView.jsx";
+import { useSession } from "./lib/useSession.js";
+import { ROLE_LABELS } from "./lib/format.js";
 
 export default function App() {
-  const { users, actorId, setActorId, actor } = useActor();
+  const { user, may, checked, login, logout } = useSession();
   const [counts, setCounts] = useState({ all: 0, REVIEW_REQUIRED: 0, READY_FOR_APPROVAL: 0, APPROVED: 0, openMoney: 0 });
 
   const refresh = useCallback(() => {
@@ -28,7 +29,12 @@ export default function App() {
       .catch(() => {});
   }, []);
 
-  useEffect(refresh, [refresh]);
+  useEffect(() => {
+    if (user) refresh();
+  }, [user, refresh]);
+
+  if (!checked) return <p className="empty">Sitzung wird geprüft…</p>;
+  if (!user) return <LoginView onLogin={login} />;
 
   return (
     <div className="shell">
@@ -59,7 +65,11 @@ export default function App() {
           </NavLink>
         </nav>
         <div className="rail-foot">
-          <ActorPicker users={users} actorId={actorId} onChange={setActorId} />
+          <div className="session">
+            <div className="session-name">{user.name}</div>
+            <div className="session-role">{ROLE_LABELS[user.role] ?? user.role}</div>
+            <button type="button" className="link-button" onClick={logout}>Abmelden</button>
+          </div>
           <p>
             Demonstrationssystem.<br />
             Synthetische Daten, keine echten Zahlungen.
@@ -73,8 +83,8 @@ export default function App() {
           <Route path="/freigaben" element={<InboxView view="approval" onChanged={refresh} />} />
           <Route path="/freigegeben" element={<InboxView view="done" onChanged={refresh} />} />
           <Route path="/dashboard" element={<DashboardView />} />
-          <Route path="/zahlungen" element={<PaymentsView actor={actor} onChanged={refresh} />} />
-          <Route path="/rechnung/:id" element={<InvoiceDetail actor={actor} onChanged={refresh} />} />
+          <Route path="/zahlungen" element={<PaymentsView may={may} onChanged={refresh} />} />
+          <Route path="/rechnung/:id" element={<InvoiceDetail may={may} onChanged={refresh} />} />
         </Routes>
       </main>
     </div>

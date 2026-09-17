@@ -46,5 +46,10 @@ flowchart TD
 | Reconciliation | yes | ambiguous → human | ✅ |
 | KPIs | yes | - | ❌ Phase 4 |
 
+Roles: review belongs to accounts payable and finance; approval steps to the
+cost-centre manager, finance and the CFO by amount tier; the money path to
+finance. Enforced server-side against an authenticated session, not a claimed
+identity (ADR-029, ADR-030).
+
 Deliberately human: every IBAN change, every unknown supplier, every PO overrun,
 every approval above the auto limit, every ambiguous bank match.

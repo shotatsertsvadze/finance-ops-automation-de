@@ -9,25 +9,18 @@ import { test, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createApp } from "../../app.js";
-import { testDeps, USERS } from "../../test-support/db.js";
+import { loginAs, testDeps } from "../../test-support/db.js";
 import { computeKpis } from "./kpi.js";
 
-let deps, server, base;
+let deps, server, base, clients;
 
 const fixture = (name) => readFileSync(new URL(`../../../fixtures/xrechnung/${name}`, import.meta.url), "utf8");
 
-async function upload(xml, name) {
-  const form = new FormData();
-  form.append("file", new Blob([xml], { type: "application/xml" }), name);
-  const res = await fetch(`${base}/api/invoices`, { method: "POST", body: form });
+async function upload(xml, name, client = clients.clerk) {
+  const res = await client.upload(xml, name);
   return res.json();
 }
-const post = (path, actor, body) =>
-  fetch(`${base}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(actor ? { "x-actor-id": actor } : {}) },
-    body: JSON.stringify(body ?? {}),
-  });
+const post = (path, client, body) => client.post(path, body);
 
 const kpis = () => computeKpis(deps);
 
@@ -35,6 +28,14 @@ before(async () => {
   deps = await testDeps();
   server = createApp(deps).listen(0);
   base = `http://127.0.0.1:${server.address().port}`;
+  clients = {
+    clerk: await loginAs(base, "clerk"),
+    manager: await loginAs(base, "manager"),
+    manager2: await loginAs(base, "manager2"),
+    finance: await loginAs(base, "finance"),
+    finance2: await loginAs(base, "finance2"),
+    cfo: await loginAs(base, "cfo"),
+  };
 });
 after(async () => {
   server.close();
@@ -114,7 +115,7 @@ test("workload counts what is waiting for a person right now", async () => {
 
 test("approval time is measured from release to approval", async () => {
   const invoice = await upload(fixture("A_clean_1240.xml"), "A.xml");
-  await post(`/api/invoices/${invoice.id}/approvals/1/approve`, USERS.manager, {});
+  await post(`/api/invoices/${invoice.id}/approvals/1/approve`, clients.manager, {});
 
   const k = await kpis();
   assert.equal(k.cycle.approved_count, 1);
@@ -148,7 +149,7 @@ test("the savings estimate is derived from the stated assumptions and the real v
 
 test("the API serves the same figures", async () => {
   await upload(fixture("G_clean_380.xml"), "G.xml");
-  const res = await fetch(`${base}/api/dashboard/kpis`);
+  const res = await clients.clerk.get("/api/dashboard/kpis");
   assert.equal(res.status, 200);
   const body = await res.json();
   assert.equal(body.volume.received, 1);
@@ -160,7 +161,7 @@ test("processing time is reported separately for the path a human touched", asyn
   const auto = await upload(fixture("G_clean_380.xml"), "G.xml");
   assert.equal(auto.state, "APPROVED");
   const manual = await upload(fixture("A_clean_1240.xml"), "A.xml");
-  await post(`/api/invoices/${manual.id}/approvals/1/approve`, USERS.manager, {});
+  await post(`/api/invoices/${manual.id}/approvals/1/approve`, clients.manager, {});
 
   const k = await kpis();
   assert.equal(k.cycle.approved_count, 2);
@@ -171,7 +172,7 @@ test("processing time is reported separately for the path a human touched", asyn
 test("review dwell time is measured from entering review to release", async () => {
   const invoice = await upload(fixture("B_iban_changed_2499.xml"), "B.xml");
   assert.equal(invoice.state, "REVIEW_REQUIRED");
-  await post(`/api/invoices/${invoice.id}/review/accept`, USERS.clerk, { comment: "geklärt" });
+  await post(`/api/invoices/${invoice.id}/review/accept`, clients.clerk, { comment: "geklärt" });
 
   const k = await kpis();
   assert.ok(k.cycle.median_review_hours !== null, "a released exception yields a dwell time");

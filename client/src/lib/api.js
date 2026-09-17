@@ -1,5 +1,15 @@
+/** Reads the CSRF cookie the server set at login and echoes it in a header. */
+function csrfToken() {
+  return document.cookie.split("; ").find((c) => c.startsWith("finops_csrf="))?.split("=")[1] ?? "";
+}
+
 async function request(path, options = {}) {
-  const response = await fetch(`/api${path}`, options);
+  const mutating = options.method && options.method !== "GET";
+  const response = await fetch(`/api${path}`, {
+    ...options,
+    credentials: "same-origin",
+    headers: { ...(mutating ? { "X-CSRF-Token": csrfToken() } : {}), ...options.headers },
+  });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
     throw new Error(body.error ?? `Anfrage fehlgeschlagen (${response.status})`);
@@ -12,42 +22,41 @@ export const getInvoice = (id) => request(`/invoices/${id}`);
 export const getUsers = () => request("/users");
 export const getMeta = () => request("/meta/states");
 
-const actorPost = (path, actorId, body) =>
-  request(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(actorId ? { "x-actor-id": actorId } : {}) },
-    body: JSON.stringify(body ?? {}),
-  });
+// The server takes the actor from the session cookie, so nothing here states
+// who is acting.
+const actorPost = (path, body) =>
+  request(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body ?? {}) });
 
-export const decideReview = (id, action, actorId, comment) =>
-  actorPost(`/invoices/${id}/review/${action}`, actorId, { comment });
+export const login = (email, password) =>
+  request("/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+export const logout = () => actorPost("/auth/logout");
+export const getMe = () => request("/auth/me");
 
-export const reportInfoReceived = (id, actorId, comment) =>
-  actorPost(`/invoices/${id}/info-received`, actorId, { comment });
+export const decideReview = (id, action, comment) =>
+  actorPost(`/invoices/${id}/review/${action}`, { comment });
 
-export const decideStep = (id, stepNo, action, actorId, comment) =>
-  actorPost(`/invoices/${id}/approvals/${stepNo}/${action}`, actorId, { comment });
+export const reportInfoReceived = (id, comment) =>
+  actorPost(`/invoices/${id}/info-received`, { comment });
 
-export const reprocessInvoice = (id, actorId) => actorPost(`/invoices/${id}/reprocess`, actorId);
+export const decideStep = (id, stepNo, action, comment) =>
+  actorPost(`/invoices/${id}/approvals/${stepNo}/${action}`, { comment });
 
-export const createAccountingRecord = (id, actorId) => actorPost(`/invoices/${id}/accounting-record`, actorId);
-export const instructPayment = (id, actorId) => actorPost(`/invoices/${id}/payment`, actorId);
-export const confirmPayment = (id, actorId) => actorPost(`/invoices/${id}/payment/confirm`, actorId);
-export const resolveReconciliation = (id, actorId, comment) =>
-  actorPost(`/invoices/${id}/reconciliation/resolve`, actorId, { comment });
+export const reprocessInvoice = (id) => actorPost(`/invoices/${id}/reprocess`);
+
+export const createAccountingRecord = (id) => actorPost(`/invoices/${id}/accounting-record`);
+export const instructPayment = (id) => actorPost(`/invoices/${id}/payment`);
+export const confirmPayment = (id) => actorPost(`/invoices/${id}/payment/confirm`);
+export const resolveReconciliation = (id, comment) =>
+  actorPost(`/invoices/${id}/reconciliation/resolve`, { comment });
 
 export const listBankTransactions = () => request("/bank/transactions");
 export const getKpis = () => request("/dashboard/kpis");
-export const runReconciliation = (actorId) => actorPost("/reconciliation/run", actorId);
-export const importBankStatement = (statement, actorId) => actorPost("/bank/import", actorId, statement);
+export const runReconciliation = () => actorPost("/reconciliation/run");
+export const importBankStatement = (statement) => actorPost("/bank/import", statement);
 
-export function uploadInvoice(file, actorId) {
+export function uploadInvoice(file) {
   const form = new FormData();
   form.append("file", file);
   form.append("source_channel", "UPLOAD");
-  return request("/invoices", {
-    method: "POST",
-    body: form,
-    headers: actorId ? { "x-actor-id": actorId } : {},
-  });
+  return request("/invoices", { method: "POST", body: form });
 }

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { exportAccountingCsv } from "../domain/accounting/accounting.js";
 import { importStatement, listBankTransactions, runReconciliation } from "../domain/reconciliation/reconciliation.js";
-import { requireHuman } from "./actor.js";
+import { requirePermission } from "../auth/authorize.js";
 import { computeKpis } from "../domain/kpi/kpi.js";
 
 export function accountingRouter(deps) {
@@ -21,7 +21,7 @@ export function accountingRouter(deps) {
 
 export function bankRouter(deps) {
   const router = Router();
-  router.post("/import", requireHuman, async (req, res, next) => {
+  router.post("/import", requirePermission("bank:import"), async (req, res, next) => {
     try {
       res.json(await importStatement(deps, { statement: req.body }));
     } catch (error) {
@@ -40,7 +40,7 @@ export function bankRouter(deps) {
 
 export function reconciliationRouter(deps) {
   const router = Router();
-  router.post("/run", requireHuman, async (req, res, next) => {
+  router.post("/run", requirePermission("reconciliation:run"), async (req, res, next) => {
     try {
       res.json(await runReconciliation(deps, { actor: req.actor }));
     } catch (error) {

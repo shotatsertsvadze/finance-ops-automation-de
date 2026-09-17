@@ -7,7 +7,10 @@ insert into finops.users (id, name, email, role) values
   ('00000000-0000-0000-0000-000000000003', 'Lea Sommer',       'lea.sommer@nordwerk.example',   'MANAGER'),
   ('00000000-0000-0000-0000-000000000004', 'Jonas Weber',      'jonas.weber@nordwerk.example',  'FINANCE'),
   ('00000000-0000-0000-0000-000000000005', 'Dr. Sabine Vogt',  'sabine.vogt@nordwerk.example',  'CFO'),
-  ('00000000-0000-0000-0000-000000000006', 'System Admin',     'admin@nordwerk.example',        'ADMIN')
+  ('00000000-0000-0000-0000-000000000006', 'System Admin',     'admin@nordwerk.example',        'ADMIN'),
+  -- A second finance user, so a release from review and the finance approval
+  -- step can be taken by different people.
+  ('00000000-0000-0000-0000-000000000007', 'Mira Hoffmann',    'mira.hoffmann@nordwerk.example','FINANCE')
 on conflict (id) do nothing;
 
 insert into finops.suppliers (id, supplier_no, legal_name, vat_id, status, default_cost_center, payment_terms_days, risk_level) values
