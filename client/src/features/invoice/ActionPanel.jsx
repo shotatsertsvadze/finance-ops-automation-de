@@ -11,7 +11,7 @@ import { useI18n } from "../../lib/i18n.js";
  * verbatim so a blocked four-eyes check is visible rather than silent.
  */
 export default function ActionPanel({ invoice, may, onDone }) {
-  const { t, role } = useI18n();
+  const { t, errorText, role } = useI18n();
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -26,7 +26,7 @@ export default function ActionPanel({ invoice, may, onDone }) {
       setComment("");
       onDone();
     } catch (e) {
-      setError(e.message);
+      setError(errorText(e));
       // A refusal can still have moved the invoice: the final approval gate
       // sends it back to review and answers 409. Reloading either way keeps
       // the screen showing what the server actually holds.
@@ -84,6 +84,10 @@ export default function ActionPanel({ invoice, may, onDone }) {
       <section className="panel">
         <div className="panel-head"><span className="label">{t("status")}</span></div>
         <div className="panel-body">
+          {/* The refusal that moved the invoice here is shown in this branch
+              too, otherwise a click that fails and relocates the invoice
+              leaves no trace of why. */}
+          {error && <div className="toast is-error" role="alert">{error}</div>}
           <p className="action-prompt" style={{ marginBottom: 0 }}>{prompt}</p>
           <p className="hint" style={{ marginBottom: 0 }}>{t("otherRoleResponsible")}</p>
         </div>

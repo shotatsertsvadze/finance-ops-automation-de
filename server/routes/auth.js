@@ -8,7 +8,7 @@ const LOCK_MINUTES = Number(process.env.LOGIN_LOCK_MINUTES ?? 15);
 
 // One answer for every failure. Saying "unknown address" would turn the login
 // form into a way to enumerate who works here.
-const REFUSED = { error: "E-Mail-Adresse oder Passwort ist falsch" };
+const REFUSED = { error: "E-Mail-Adresse oder Passwort ist falsch", code: "SIGN_IN_REFUSED" };
 
 export function authRouter({ pool }) {
   const router = Router();
@@ -17,7 +17,7 @@ export function authRouter({ pool }) {
     try {
       const email = String(req.body?.email ?? "").trim().toLowerCase();
       const password = String(req.body?.password ?? "");
-      if (!email || !password) return res.status(400).json({ error: "E-Mail und Passwort sind erforderlich" });
+      if (!email || !password) return res.status(400).json({ error: "E-Mail und Passwort sind erforderlich", code: "CREDENTIALS_REQUIRED" });
 
       const { rows: [user] } = await pool.query(
         "select id, name, email, role, password_hash, password_salt, failed_attempts, locked_until from finops.users where lower(email) = $1",
@@ -25,7 +25,7 @@ export function authRouter({ pool }) {
       );
 
       if (user?.locked_until && new Date(user.locked_until) > new Date()) {
-        return res.status(429).json({ error: "Konto ist vorübergehend gesperrt. Bitte später erneut versuchen." });
+        return res.status(429).json({ error: "Konto ist vorübergehend gesperrt. Bitte später erneut versuchen.", code: "ACCOUNT_LOCKED" });
       }
 
       // A lock that has run out starts the count again, rather than leaving the
@@ -68,7 +68,7 @@ export function authRouter({ pool }) {
   });
 
   router.get("/me", (req, res) => {
-    if (!req.user) return res.status(401).json({ error: "Nicht angemeldet" });
+    if (!req.user) return res.status(401).json({ error: "Nicht angemeldet", code: "NOT_SIGNED_IN" });
     res.json({ user: req.user, permissions: permissionsFor(req.user.role) });
   });
 

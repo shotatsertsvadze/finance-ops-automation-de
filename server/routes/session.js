@@ -30,7 +30,7 @@ export function sessionMiddleware(pool) {
         // echoed in a header. A cross-site form can send the cookie but
         // cannot set the header.
         if (!csrfMatches(session.csrfToken, req.get(CSRF_HEADER))) {
-          return res.status(403).json({ error: "CSRF-Token fehlt oder passt nicht" });
+          return res.status(403).json({ error: "CSRF-Token fehlt oder passt nicht", code: "CSRF_INVALID" });
         }
       }
       next();
@@ -42,6 +42,6 @@ export function sessionMiddleware(pool) {
 
 /** Everything under /api needs a session, except logging in. */
 export function requireSession(req, res, next) {
-  if (!req.user) return res.status(401).json({ error: "Nicht angemeldet" });
+  if (!req.user) return res.status(401).json({ error: "Nicht angemeldet", code: "NOT_SIGNED_IN" });
   next();
 }

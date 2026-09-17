@@ -28,7 +28,7 @@ export function invoicesRouter(deps) {
 
   router.post("/", requirePermission("invoice:upload"), upload.single("file"), async (req, res, next) => {
     try {
-      if (!req.file) return res.status(400).json({ error: "Feld 'file' fehlt" });
+      if (!req.file) return res.status(400).json({ error: "Feld 'file' fehlt", code: "FILE_FIELD_MISSING" });
       const sourceChannel = String(req.body?.source_channel || "UPLOAD").toUpperCase().slice(0, 32);
       const { id } = await handleUpload(deps, { buffer: req.file.buffer, originalFilename: req.file.originalname, sourceChannel, actor: req.actor });
       res.status(201).json(await getInvoiceDetail(deps.pool, id));
@@ -40,7 +40,7 @@ export function invoicesRouter(deps) {
   router.get("/", async (req, res, next) => {
     try {
       const state = req.query.state ? String(req.query.state) : undefined;
-      if (state && !STATES.includes(state)) return res.status(400).json({ error: "Unbekannter Status" });
+      if (state && !STATES.includes(state)) return res.status(400).json({ error: "Unbekannter Status", code: "UNKNOWN_STATE_FILTER" });
       res.json(await listInvoices(deps.pool, { state }));
     } catch (error) {
       next(error);
@@ -50,7 +50,7 @@ export function invoicesRouter(deps) {
   router.get("/:id", async (req, res, next) => {
     try {
       const invoice = await getInvoiceDetail(deps.pool, req.params.id);
-      if (!invoice) return res.status(404).json({ error: "Rechnung nicht gefunden" });
+      if (!invoice) return res.status(404).json({ error: "Rechnung nicht gefunden", code: "INVOICE_NOT_FOUND" });
       res.json(invoice);
     } catch (error) {
       next(error);
@@ -67,7 +67,7 @@ export function invoicesRouter(deps) {
   router.get("/:id/file", async (req, res, next) => {
     try {
       const { rows: [row] } = await deps.pool.query("select file_path, original_filename from finops.invoices where id = $1", [req.params.id]);
-      if (!row) return res.status(404).json({ error: "Rechnung nicht gefunden" });
+      if (!row) return res.status(404).json({ error: "Rechnung nicht gefunden", code: "INVOICE_NOT_FOUND" });
       const filename = row.original_filename.replace(/["\\\r\n]/g, "");
       res
         .type("text/plain; charset=utf-8")
@@ -94,7 +94,7 @@ export function invoicesRouter(deps) {
   router.post("/:id/review/:action", requirePermission("review:decide"), async (req, res, next) => {
     try {
       const { action } = req.params;
-      if (!REVIEW_ACTIONS.includes(action)) return res.status(400).json({ error: "Unbekannte Entscheidung" });
+      if (!REVIEW_ACTIONS.includes(action)) return res.status(400).json({ error: "Unbekannte Entscheidung", code: "UNKNOWN_DECISION" });
       // Requesting information is also valid while an invoice waits for
       // approval, and must invalidate approvals already given.
       const invoiceState = await currentState(deps.pool, req.params.id);
@@ -120,9 +120,9 @@ export function invoicesRouter(deps) {
   router.post("/:id/approvals/:stepNo/:action", requirePermission("approval:decide"), async (req, res, next) => {
     try {
       const { action } = req.params;
-      if (!["approve", "reject"].includes(action)) return res.status(400).json({ error: "Unbekannte Entscheidung" });
+      if (!["approve", "reject"].includes(action)) return res.status(400).json({ error: "Unbekannte Entscheidung", code: "UNKNOWN_DECISION" });
       const stepNo = Number(req.params.stepNo);
-      if (!Number.isInteger(stepNo) || stepNo < 1) return res.status(400).json({ error: "Ungültiger Schritt" });
+      if (!Number.isInteger(stepNo) || stepNo < 1) return res.status(400).json({ error: "Ungültiger Schritt", code: "INVALID_STEP" });
       const result = await decideApprovalStep(deps, {
         invoiceId: req.params.id, stepNo, action, actor: req.actor, user: req.user, comment: req.body?.comment,
       });
@@ -132,6 +132,7 @@ export function invoicesRouter(deps) {
       if (result?.outcome === "ROUTED_TO_REVIEW") {
         return res.status(409).json({
           error: "Rechnung wurde nicht freigegeben: die fachliche Prüfung ist seit der Vorlage fehlgeschlagen",
+          code: "BUSINESS_CHECK_FAILED_AT_GATE",
           details: { reasons: result.reasons, review_reason: result.reviewReason },
           invoice: detail,
         });

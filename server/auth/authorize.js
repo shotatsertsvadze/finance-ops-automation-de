@@ -29,11 +29,12 @@ export function may(role, permission) {
 /** Express guard. Runs after the session middleware, so req.user is set. */
 export function requirePermission(permission) {
   return (req, res, next) => {
-    if (!req.user) return res.status(401).json({ error: "Nicht angemeldet" });
+    if (!req.user) return res.status(401).json({ error: "Nicht angemeldet", code: "NOT_SIGNED_IN" });
     if (!may(req.user.role, permission)) {
       return res.status(403).json({
         error: `Ihre Rolle ${req.user.role} darf diese Aktion nicht ausführen`,
-        details: { permission, allowed: PERMISSIONS[permission] },
+        code: "ROLE_NOT_PERMITTED",
+        details: { permission, role: req.user.role, allowed: PERMISSIONS[permission] },
       });
     }
     next();

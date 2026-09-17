@@ -1,18 +1,27 @@
 import { canTransition } from "./states.js";
 import { syncCommitment } from "../purchase-orders/commitments.js";
 
+/**
+ * A refusal carries a stable `code` as well as its German sentence. The
+ * sentence is what the server has always said and what a non-UI caller reads;
+ * the code is what lets the client say it in the reader's language, the same
+ * way a check is rendered from its check_code (ADR-042).
+ */
 export class TransitionError extends Error {
-  constructor(message, details = {}) {
+  constructor(code, message, details = {}) {
     super(message);
     this.status = 409;
+    this.code = code;
     this.details = details;
   }
 }
 
 export class NotFoundError extends Error {
-  constructor(message) {
+  constructor(code, message, details = {}) {
     super(message);
     this.status = 404;
+    this.code = code;
+    this.details = details;
   }
 }
 
@@ -26,10 +35,10 @@ export const human = (userId) => ({ type: "HUMAN", id: userId });
  */
 export async function transition(client, { invoiceId, to, actor, action, reason = null, evidence = {}, reviewReason = null }) {
   const { rows } = await client.query("select state from finops.invoices where id = $1 for update", [invoiceId]);
-  if (!rows[0]) throw new NotFoundError(`Rechnung ${invoiceId} nicht gefunden`);
+  if (!rows[0]) throw new NotFoundError("INVOICE_NOT_FOUND", `Rechnung ${invoiceId} nicht gefunden`);
   const from = rows[0].state;
   if (!canTransition(from, to)) {
-    throw new TransitionError(`Übergang ${from} -> ${to} ist nicht erlaubt`, { from, to, action });
+    throw new TransitionError("TRANSITION_NOT_ALLOWED", `Übergang ${from} -> ${to} ist nicht erlaubt`, { from, to, action });
   }
   await client.query(
     "update finops.invoices set state = $2, review_reason = $3, updated_at = now() where id = $1",
@@ -45,12 +54,12 @@ export async function transition(client, { invoiceId, to, actor, action, reason 
 /** Audit an action that does not change state (e.g. a single approval step). */
 export async function recordEvent(client, { invoiceId, actor, action, reason = null, evidence = {} }) {
   const { rows } = await client.query("select state from finops.invoices where id = $1", [invoiceId]);
-  if (!rows[0]) throw new NotFoundError(`Rechnung ${invoiceId} nicht gefunden`);
+  if (!rows[0]) throw new NotFoundError("INVOICE_NOT_FOUND", `Rechnung ${invoiceId} nicht gefunden`);
   await writeEvent(client, { invoiceId, actor, action, fromState: rows[0].state, toState: rows[0].state, reason, evidence });
 }
 
 export async function writeEvent(client, { invoiceId, actor, action, fromState, toState, reason, evidence }) {
-  if (actor.type === "HUMAN" && !actor.id) throw new TransitionError("Menschliche Aktion ohne Akteur", { action });
+  if (actor.type === "HUMAN" && !actor.id) throw new TransitionError("HUMAN_ACTION_WITHOUT_ACTOR", "Menschliche Aktion ohne Akteur", { action });
   await client.query(
     `insert into finops.audit_events (invoice_id, actor_type, actor_id, action, from_state, to_state, reason, evidence)
      values ($1, $2, $3, $4, $5, $6, $7, $8)`,

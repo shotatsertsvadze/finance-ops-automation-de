@@ -8,22 +8,23 @@ import { toCents } from "../money.js";
 
 /** A refusal the caller caused, distinct from a state-machine violation. */
 export class RuleError extends Error {
-  constructor(status, message, details = {}) {
+  constructor(status, code, message, details = {}) {
     super(message);
     this.status = status;
+    this.code = code;
     this.details = details;
   }
 }
 
 const requireComment = (comment) => {
   const text = (comment ?? "").trim();
-  if (!text) throw new RuleError(400, "Für diese Entscheidung ist eine Begründung erforderlich");
+  if (!text) throw new RuleError(400, "REASON_REQUIRED", "Für diese Entscheidung ist eine Begründung erforderlich");
   return text;
 };
 
 async function lockInvoice(client, invoiceId) {
   const { rows: [invoice] } = await client.query("select * from finops.invoices where id = $1 for update", [invoiceId]);
-  if (!invoice) throw new NotFoundError("Rechnung nicht gefunden");
+  if (!invoice) throw new NotFoundError("INVOICE_NOT_FOUND", "Rechnung nicht gefunden");
   return invoice;
 }
 
@@ -44,7 +45,7 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
 
     if (action === "info-received") {
       if (invoice.state !== "INFO_REQUESTED") {
-        throw new TransitionError(`Rechnung im Status ${invoice.state} wartet nicht auf eine Rückmeldung`, { state: invoice.state });
+        throw new TransitionError("NOT_AWAITING_INFORMATION", `Rechnung im Status ${invoice.state} wartet nicht auf eine Rückmeldung`, { state: invoice.state });
       }
       await transition(client, {
         invoiceId, to: "REVIEW_REQUIRED", actor, action: "info_received",
@@ -65,7 +66,7 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
     }
 
     if (invoice.state !== "REVIEW_REQUIRED") {
-      throw new TransitionError(`Rechnung im Status ${invoice.state} steht nicht in der Sichtprüfung`, { state: invoice.state });
+      throw new TransitionError("NOT_IN_REVIEW", `Rechnung im Status ${invoice.state} steht nicht in der Sichtprüfung`, { state: invoice.state });
     }
 
     if (action === "accept") {
@@ -73,7 +74,7 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
       // evidence must be eligible before anyone can sign for it.
       const blockers = payableBlockers(invoice, await latestFailedChecks(client, invoiceId));
       if (blockers.length) {
-        throw new RuleError(422, "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben", { blockers });
+        throw new RuleError(422, "NOT_PAYABLE_ELIGIBLE", "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben", { blockers });
       }
       const steps = stepsAfterReview(policy, toCents(invoice.gross_amount));
       await client.query("delete from finops.approval_steps where invoice_id = $1", [invoiceId]);
@@ -117,7 +118,7 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
       return;
     }
 
-    throw new RuleError(400, "Unbekannte Entscheidung");
+    throw new RuleError(400, "UNKNOWN_DECISION", "Unbekannte Entscheidung");
   });
 }
 
@@ -130,7 +131,7 @@ export async function requestInfoFromApproval({ pool }, { invoiceId, actor, comm
   return withTransaction(pool, async (client) => {
     const invoice = await lockInvoice(client, invoiceId);
     if (invoice.state !== "READY_FOR_APPROVAL") {
-      throw new TransitionError(`Rechnung im Status ${invoice.state} steht nicht zur Freigabe`, { state: invoice.state });
+      throw new TransitionError("NOT_AWAITING_APPROVAL", `Rechnung im Status ${invoice.state} steht nicht zur Freigabe`, { state: invoice.state });
     }
     const reason = requireComment(comment);
     await cancelAllSteps(client, invoiceId);
@@ -150,7 +151,7 @@ export async function decideApprovalStep({ pool, policy, company }, { invoiceId,
   return withTransaction(pool, async (client) => {
     const invoice = await lockInvoice(client, invoiceId);
     if (invoice.state !== "READY_FOR_APPROVAL") {
-      throw new TransitionError(`Rechnung im Status ${invoice.state} kann nicht freigegeben werden`, { state: invoice.state });
+      throw new TransitionError("CANNOT_BE_APPROVED", `Rechnung im Status ${invoice.state} kann nicht freigegeben werden`, { state: invoice.state });
     }
 
     const { rows: steps } = await client.query(
@@ -158,25 +159,25 @@ export async function decideApprovalStep({ pool, policy, company }, { invoiceId,
       [invoiceId],
     );
     const step = steps.find((s) => s.step_no === stepNo);
-    if (!step) throw new NotFoundError(`Freigabeschritt ${stepNo} existiert nicht`);
+    if (!step) throw new NotFoundError("APPROVAL_STEP_NOT_FOUND", `Freigabeschritt ${stepNo} existiert nicht`, { step_no: stepNo });
     if (step.status !== "PENDING") {
-      throw new RuleError(409, `Freigabeschritt ${stepNo} wurde bereits entschieden (${step.status})`);
+      throw new RuleError(409, "STEP_ALREADY_DECIDED", `Freigabeschritt ${stepNo} wurde bereits entschieden (${step.status})`, { step_no: stepNo, step_status: step.status });
     }
 
     const firstPending = steps.find((s) => s.status === "PENDING");
     if (firstPending.step_no !== stepNo) {
-      throw new RuleError(409, `Freigabeschritt ${firstPending.step_no} ist zuerst an der Reihe`);
+      throw new RuleError(409, "STEP_OUT_OF_ORDER", `Freigabeschritt ${firstPending.step_no} ist zuerst an der Reihe`, { step_no: firstPending.step_no });
     }
 
     if (user.role !== step.required_role) {
-      throw new RuleError(403, `Dieser Schritt verlangt die Rolle ${step.required_role}, nicht ${user.role}`);
+      throw new RuleError(403, "WRONG_ROLE_FOR_STEP", `Dieser Schritt verlangt die Rolle ${step.required_role}, nicht ${user.role}`, { required_role: step.required_role, role: user.role });
     }
 
     if (steps.some((s) => s.actor_id === actor.id && s.step_no !== stepNo)) {
-      throw new RuleError(409, "Dieselbe Person darf nicht zwei Freigabeschritte derselben Rechnung entscheiden");
+      throw new RuleError(409, "SAME_PERSON_TWO_STEPS", "Dieselbe Person darf nicht zwei Freigabeschritte derselben Rechnung entscheiden");
     }
     if (invoice.review_accepted_by === actor.id) {
-      throw new RuleError(409, "Wer die Rechnung aus der Sichtprüfung freigegeben hat, darf sie nicht auch fachlich freigeben");
+      throw new RuleError(409, "REVIEWER_CANNOT_APPROVE", "Wer die Rechnung aus der Sichtprüfung freigegeben hat, darf sie nicht auch fachlich freigeben");
     }
 
     // Checked again at the last gate: master data or a re-validation may have
@@ -185,14 +186,14 @@ export async function decideApprovalStep({ pool, policy, company }, { invoiceId,
     if (action === "approve") {
       const blockers = payableBlockers(invoice, await latestFailedChecks(client, invoiceId));
       if (blockers.length) {
-        throw new RuleError(422, "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben", { blockers });
+        throw new RuleError(422, "NOT_PAYABLE_ELIGIBLE", "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben", { blockers });
       }
       // A signature is given for one version of one document. If the invoice
       // no longer matches what an earlier step signed, the remaining steps
       // cannot inherit that signature.
       const drift = bindingDrift(binding, steps.filter((s) => s.status === "APPROVED"));
       if (drift.length) {
-        throw new RuleError(409, "Rechnung hat sich seit der vorherigen Freigabe geändert und muss neu geprüft werden", { drift });
+        throw new RuleError(409, "CHANGED_SINCE_PREVIOUS_APPROVAL", "Rechnung hat sich seit der vorherigen Freigabe geändert und muss neu geprüft werden", { drift });
       }
 
       // Master data may have moved while the invoice waited. A fact that has

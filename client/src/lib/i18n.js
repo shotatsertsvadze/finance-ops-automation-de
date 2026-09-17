@@ -1,5 +1,5 @@
 import { createContext, createElement, useCallback, useContext, useEffect, useMemo, useState } from "react";
-import { DEFAULT_LANGUAGE, LANGUAGES, dictionaryFor, auditReason, checkSentence, translateTerms } from "./dictionaries.js";
+import { DEFAULT_LANGUAGE, LANGUAGES, dictionaryFor, auditReason, checkSentence, errorText, translateTerms } from "./dictionaries.js";
 
 const STORAGE_KEY = "finops.language";
 
@@ -57,6 +57,7 @@ export function LanguageProvider({ children }) {
       checkSentence: (result) => checkSentence(dict, result),
       term: (value) => translateTerms(dict, value),
       auditReason: (reason) => auditReason(dict, reason),
+      errorText: (error) => errorText(dict, error ?? {}),
       formatMoney: (value) => (value === null || value === undefined ? "—" : money.format(Number(value))),
       formatDate: (value) => (value ? date.format(new Date(value)) : "—"),
       formatDateTime: (value) => (value ? dateTime.format(new Date(value)) : "—"),

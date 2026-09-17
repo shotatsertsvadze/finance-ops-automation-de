@@ -53,10 +53,10 @@ export function createApp(deps) {
   app.use("/api/dashboard", dashboardRouter(deps));
 
   app.use((error, req, res, next) => {
-    if (error.status) return res.status(error.status).json({ error: error.message, details: error.details ?? null });
-    if (error.name === "MulterError" || /XML-Dateien/.test(error.message)) return res.status(400).json({ error: error.message });
+    if (error.status) return res.status(error.status).json({ error: error.message, code: error.code ?? null, details: error.details ?? null });
+    if (error.name === "MulterError" || /XML-Dateien/.test(error.message)) return res.status(400).json({ error: error.message, code: "UPLOAD_REJECTED" });
     console.error(error);
-    res.status(500).json({ error: "Interner Fehler" });
+    res.status(500).json({ error: "Interner Fehler", code: "INTERNAL_ERROR" });
   });
   return app;
 }

@@ -13,7 +13,7 @@ const VIEWS = {
 };
 
 export default function InboxView({ view, onChanged }) {
-  const { t, formatDate, formatMoney } = useI18n();
+  const { t, errorText, formatDate, formatMoney } = useI18n();
   const config = VIEWS[view];
   const [invoices, setInvoices] = useState([]);
   const [status, setStatus] = useState("loading");
@@ -27,7 +27,7 @@ export default function InboxView({ view, onChanged }) {
         setStatus("ready");
       })
       .catch((e) => {
-        setError(e.message);
+        setError(errorText(e));
         setStatus("error");
       });
   };

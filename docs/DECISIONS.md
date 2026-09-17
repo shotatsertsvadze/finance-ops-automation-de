@@ -681,6 +681,39 @@ reloads after a refusal for the same reason.
 Rejection is deliberately unaffected. The gate guards the payable direction:
 refusing to pay a blocked supplier is always allowed.
 
+## ADR-042 A refusal carries a code as well as a sentence
+
+Closes L8. ADR-034 put the display language on the client, rendered from the
+codes the API already sent. Refusals had no code: they were German prose, shown
+verbatim, so an English demo was English until something went wrong and then
+answered in German at exactly the moment a reader most needs to understand.
+
+Decision: every refusal carries a stable `code`, and `details` carry the
+parameters its sentence interpolates. The German sentence stays in `error`
+unchanged, so nothing that logs or reads the API breaks and a non-UI caller
+still gets something legible. The client renders from the code and falls back
+to the sentence when it does not know one.
+
+The fallback direction matters. A missing entry shows German, which is a worse
+answer than English and a far better one than nothing; a refusal must never be
+swallowed because a translation is absent.
+
+State and role parameters are translated before the sentence is built, so a
+refusal names them in the same words as the rest of the screen: "An invoice in
+state Approved is not in manual review", not "in state APPROVED".
+
+Kept from going stale by the same technique as the check codes: the tests scan
+the server's own source for every code it can send and fail when one has no
+text in either language, when text exists for a code that can no longer happen,
+and when a refusal is thrown without a code at all.
+
+One guard was weaker than its name. "The English dictionary carries no German
+text" only tested for umlauts, and a deliberate mutation putting
+"Freigabeschritt" into an English string passed. It now also renders
+parameterised entries, which it had skipped entirely, and trips on distinctive
+German vocabulary. It is a tripwire, not language detection, and is named for
+what it does.
+
 ## Assumptions and contradictions found in the brief
 
 - The brief lists "totals mathematically consistent" under business validation

@@ -69,8 +69,6 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
   notes returning capacity, and order closure are not modelled.
 - **The recognised XML subset is loose.** Namespaces are stripped, and
   allowances, charges, prepayments and rounding are not modelled.
-- **A refusal from the server is shown verbatim**, so it stays German even when
-  the interface is set to English. The API returns prose, not an error code.
 - **Reconciliation matches one statement line to one invoice.** Part payments,
   collective payments covering several invoices and credit notes are not
   modelled; each becomes an exception for a person to resolve.
@@ -85,6 +83,13 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
   declared profile and the structure it needs; it does not certify compliance.
 - Accounting, payment and bank data are simulated.
 - Approval thresholds and savings figures are demo assumptions.
+
+## Refusals
+
+A refusal from the server carries a stable code and the parameters its sentence
+uses, alongside the German sentence itself. The interface renders it in the
+chosen language and falls back to the server's wording when it does not know a
+code, so an error is never swallowed by a missing translation. See ADR-042.
 
 ## Stored originals
 

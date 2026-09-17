@@ -10,7 +10,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { DICTIONARIES, auditReason, checkSentence, translateTerms } from "../../../client/src/lib/dictionaries.js";
+import { DICTIONARIES, auditReason, checkSentence, errorText, translateTerms } from "../../../client/src/lib/dictionaries.js";
 import { STATES } from "../workflow/states.js";
 import { PERMISSIONS } from "../../auth/authorize.js";
 
@@ -82,17 +82,39 @@ test("every audit action the server writes has a label in both languages", () =>
 });
 
 test("the two dictionaries carry the same keys", () => {
-  for (const group of ["ui", "state", "reviewReason", "action", "matchReason", "role"]) {
+  for (const group of ["ui", "state", "reviewReason", "action", "matchReason", "role", "error"]) {
     const de = Object.keys(DICTIONARIES.de[group]).sort();
     const en = Object.keys(DICTIONARIES.en[group]).sort();
     assert.deepEqual(en, de, `the ${group} groups differ`);
   }
 });
 
-test("the English dictionary carries no German text", () => {
+/**
+ * Distinctive German words that no English entry would contain. The umlaut
+ * test alone passes anything written in German without one — "Freigabeschritt"
+ * slipped through a deliberate mutation — so the obvious vocabulary is checked
+ * as well. This is a tripwire, not language detection: it catches a slip, it
+ * does not prove the text is English. Words spelled the same in both languages,
+ * such as "Status", are deliberately absent: they would only fire falsely.
+ */
+const GERMAN_WORDS = /\b(Rechnung\w*|Freigabe\w*|Lieferant\w*|Betrag\w*|Zahlung\w*|Bestellung\w*|Buchung\w*|Prüf\w*|nicht|kein\w*|und|oder|wurde|bereits|erforderlich)\b/i;
+
+test("the English dictionary carries no German characters or obvious German words", () => {
+  // Parameterised entries are functions, so they are called with a probe
+  // before being checked: skipping them would leave half the English text
+  // unexamined, which is where the German would survive.
+  const probe = { step_no: 1, state: "APPROVED", from: "APPROVED", to: "PAID", role: "FINANCE", required_role: "MANAGER", n: 1 };
   const walk = (value, path) => {
+    const check = (text, where) => {
+      assert.ok(!/[äöüßÄÖÜ]/.test(text), `German characters left in en.${where}: ${text}`);
+      assert.ok(!GERMAN_WORDS.test(text), `a German word left in en.${where}: ${text}`);
+    };
+    if (typeof value === "function") {
+      check(String(value(probe, 2, "MANAGER")), path);
+      return;
+    }
     if (typeof value === "string") {
-      assert.ok(!/[äöüßÄÖÜ]/.test(value), `German characters left in en.${path}: ${value}`);
+      check(value, path);
       return;
     }
     if (value && typeof value === "object") {
@@ -151,4 +173,75 @@ test("a comment a person typed is left in their own words", () => {
   // German to an English reader.
   const comment = "Mit Lieferant telefonisch geklärt";
   assert.equal(auditReason(DICTIONARIES.en, comment), comment);
+});
+
+// ------------------------------------------------------------- refusals ----
+
+/**
+ * Every refusal code the server can send: the second argument of a RuleError,
+ * the first of a TransitionError or NotFoundError, and the `code` field of a
+ * refusal a route writes directly.
+ */
+function emittedErrorCodes() {
+  const files = [
+    "../../routes/invoices.js", "../../routes/auth.js", "../../routes/session.js", "../../routes/money.js",
+    "../../app.js", "../../auth/authorize.js",
+    "../workflow/transitions.js", "../intake/intake.js", "../approvals/approvals.js",
+    "../accounting/accounting.js", "../payments/payments.js", "../reconciliation/reconciliation.js",
+  ];
+  const codes = new Set();
+  for (const path of files) {
+    const text = source(path);
+    for (const [, code] of text.matchAll(/new RuleError\(\s*\d+,\s*"([A-Z_]+)"/g)) codes.add(code);
+    for (const [, code] of text.matchAll(/new (?:TransitionError|NotFoundError)\(\s*"([A-Z_]+)"/g)) codes.add(code);
+    for (const [, code] of text.matchAll(/\bcode: "([A-Z_]+)"/g)) codes.add(code);
+  }
+  return [...codes].sort();
+}
+
+test("the scan finds the refusals at all", () => {
+  const codes = emittedErrorCodes();
+  assert.ok(codes.length > 30, `expected the server's refusals, found ${codes.length}`);
+  assert.ok(codes.includes("INVOICE_NOT_FOUND"));
+  assert.ok(codes.includes("REVIEWER_CANNOT_APPROVE"));
+});
+
+test("every refusal the server can send has text in both languages", () => {
+  for (const [lang, dict] of Object.entries(DICTIONARIES)) {
+    const missing = emittedErrorCodes().filter((code) => !(code in dict.error));
+    assert.deepEqual(missing, [], `${lang} is missing refusal text: ${missing.join(", ")}`);
+  }
+});
+
+test("no refusal text exists for a code the server cannot send", () => {
+  const emitted = new Set(emittedErrorCodes());
+  const stale = Object.keys(DICTIONARIES.en.error).filter((code) => !emitted.has(code));
+  assert.deepEqual(stale, [], `these can no longer happen and should be removed: ${stale.join(", ")}`);
+});
+
+test("every refusal is thrown with a code", () => {
+  // A refusal without one falls back to German, which is the defect this
+  // closes, so the absence has to fail rather than degrade quietly.
+  const domain = ["../workflow/transitions.js", "../intake/intake.js", "../approvals/approvals.js",
+    "../accounting/accounting.js", "../payments/payments.js", "../reconciliation/reconciliation.js"];
+  for (const path of domain) {
+    for (const [line] of source(path).matchAll(/throw new (?:RuleError|TransitionError|NotFoundError)\([^\n]*/g)) {
+      assert.match(line, /"[A-Z_]{3,}"/, `refusal without a code in ${path}: ${line.trim()}`);
+    }
+  }
+});
+
+test("a refusal reads in both languages, naming states and roles as the screen does", () => {
+  const refusal = { code: "NOT_IN_REVIEW", message: "Rechnung im Status APPROVED steht nicht in der Sichtprüfung", details: { state: "APPROVED" } };
+  assert.equal(errorText(DICTIONARIES.en, refusal), "An invoice in state Approved is not in manual review");
+  assert.equal(errorText(DICTIONARIES.de, refusal), "Rechnung im Status Freigegeben steht nicht in der Sichtprüfung");
+
+  const role = { code: "WRONG_ROLE_FOR_STEP", message: "…", details: { required_role: "MANAGER", role: "FINANCE" } };
+  assert.equal(errorText(DICTIONARIES.en, role), "This step requires the role Cost centre manager, not Finance");
+});
+
+test("an unknown refusal code falls back to the sentence the server sent", () => {
+  const unknown = { code: "ETWAS_NEUES", message: "Serversatz auf Deutsch", details: null };
+  assert.equal(errorText(DICTIONARIES.en, unknown), "Serversatz auf Deutsch");
+  assert.equal(errorText(DICTIONARIES.en, { message: "ohne Code" }), "ohne Code");
 });

@@ -23,7 +23,7 @@ export function buildAccountingRecord(invoice, { documentNo, bookingDate }) {
   const vatCents = toCents(invoice.vat_amount);
   const grossCents = toCents(invoice.gross_amount);
   if (netCents === null || vatCents === null || grossCents === null) {
-    throw new RuleError(422, "Beträge der Rechnung sind unvollständig, Buchungssatz nicht erzeugbar");
+    throw new RuleError(422, "AMOUNTS_INCOMPLETE", "Beträge der Rechnung sind unvollständig, Buchungssatz nicht erzeugbar");
   }
   const ratePercent = netCents === 0 ? 0 : Math.round((vatCents / netCents) * 100);
   const costCenter = invoice.po_cost_center ?? invoice.default_cost_center ?? null;
@@ -50,7 +50,7 @@ export async function createAccountingRecord({ pool }, { invoiceId, actor }) {
     // Lock the invoice row on its own: Postgres refuses FOR UPDATE on a query
     // whose outer joins may produce null rows.
     const locked = await client.query("select 1 from finops.invoices where id = $1 for update", [invoiceId]);
-    if (locked.rowCount === 0) throw new NotFoundError("Rechnung nicht gefunden");
+    if (locked.rowCount === 0) throw new NotFoundError("INVOICE_NOT_FOUND", "Rechnung nicht gefunden");
     const { rows: [invoice] } = await client.query(
       `select i.*, s.supplier_no, s.default_cost_center, p.cost_center as po_cost_center
        from finops.invoices i
@@ -60,7 +60,7 @@ export async function createAccountingRecord({ pool }, { invoiceId, actor }) {
       [invoiceId],
     );
     if (invoice.state !== "APPROVED") {
-      throw new TransitionError(`Rechnung im Status ${invoice.state} ist nicht buchungsreif`, { state: invoice.state });
+      throw new TransitionError("NOT_READY_TO_BOOK", `Rechnung im Status ${invoice.state} ist nicht buchungsreif`, { state: invoice.state });
     }
 
     // The booking must be of the invoice that was approved, not of whatever
@@ -70,7 +70,7 @@ export async function createAccountingRecord({ pool }, { invoiceId, actor }) {
     );
     const drift = bindingDrift(bindingOf(invoice, await latestRunNo(client, invoiceId)), approved);
     if (drift.length) {
-      throw new RuleError(409, "Rechnung hat sich seit der Freigabe geändert und kann nicht gebucht werden", { drift });
+      throw new RuleError(409, "CHANGED_SINCE_APPROVAL", "Rechnung hat sich seit der Freigabe geändert und kann nicht gebucht werden", { drift });
     }
 
     const { rows: [seq] } = await client.query("select nextval('finops.accounting_document_seq') as n");

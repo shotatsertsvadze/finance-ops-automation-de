@@ -8,7 +8,7 @@
 | Database | PostgreSQL 14+, schema `finops`, accessed with `pg` | Runs locally today; identical SQL on Supabase later |
 | Files | Local `storage/` in the MVP, path `<invoice_id>/original.xml` | Bucket-compatible path; swap to Supabase Storage behind one module |
 | XML | `fast-xml-parser` with DTD processing off, `<!DOCTYPE` rejected | No entity expansion, no XXE |
-| UI | React 19 + Vite 8, react-router 7, plain CSS with design tokens | Operations console; German or English display, one dictionary per language (ADR-034) |
+| UI | React 19 + Vite 8, react-router 7, plain CSS with design tokens | Operations console; German or English display, one dictionary per language (ADR-034), refusals included (ADR-042) |
 | Tests | `node --test` | No framework dependency; pure-function tests plus a local test database |
 | Workflow engine | none in Phases 1-3 | See `docs/DECISIONS.md` ADR-004 |
 | AI | none in the XRechnung path | Structured data needs no extraction; see ADR-006 |

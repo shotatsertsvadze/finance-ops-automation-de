@@ -9,13 +9,13 @@ import EvidenceRow from "./EvidenceRow.jsx";
 import ActionPanel from "./ActionPanel.jsx";
 
 export default function InvoiceDetail({ may, onChanged }) {
-  const { t, role, action, reviewReason, auditReason, formatDate, formatDateTime, formatMoney } = useI18n();
+  const { t, errorText, role, action, reviewReason, auditReason, formatDate, formatDateTime, formatMoney } = useI18n();
   const { id } = useParams();
   const [invoice, setInvoice] = useState(null);
   const [error, setError] = useState(null);
   const [showPassed, setShowPassed] = useState(false);
 
-  const load = () => getInvoice(id).then(setInvoice).catch((e) => setError(e.message));
+  const load = () => getInvoice(id).then(setInvoice).catch((e) => setError(errorText(e)));
 
   useEffect(() => {
     load();

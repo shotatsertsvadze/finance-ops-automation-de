@@ -10,7 +10,7 @@ const STATUS_TONE = { MATCHED: "chip-ok", EXCEPTION: "chip-review", UNMATCHED: "
  * transaction was not matched. The reason is the point, so it sits in the row.
  */
 export default function PaymentsView({ may, onChanged }) {
-  const { t, matchReason, formatDate, formatMoney } = useI18n();
+  const { t, errorText, matchReason, formatDate, formatMoney } = useI18n();
   const statusLabel = { MATCHED: t("txMatched"), EXCEPTION: t("txException"), UNMATCHED: t("txUnmatched") };
   const [rows, setRows] = useState([]);
   const [message, setMessage] = useState(null);
@@ -32,7 +32,7 @@ export default function PaymentsView({ may, onChanged }) {
       await load();
       onChanged();
     } catch (error) {
-      setMessage({ ok: false, text: error.message });
+      setMessage({ ok: false, text: errorText(error) });
     } finally {
       setBusy(false);
     }

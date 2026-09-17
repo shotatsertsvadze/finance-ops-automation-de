@@ -36,7 +36,7 @@ export async function receiveInvoice({ pool, storage }, { buffer, originalFilena
     } catch (error) {
       if (error.code !== "23505") throw error;
       // Lost a race against an identical upload: record this one as the duplicate.
-      throw new TransitionError("Gleiche Datei wurde gerade parallel verarbeitet, bitte erneut hochladen", { code: "CONCURRENT_DUPLICATE" });
+      throw new TransitionError("CONCURRENT_DUPLICATE", "Gleiche Datei wurde gerade parallel verarbeitet, bitte erneut hochladen");
     }
     if (duplicateOf) {
       await writeEvent(client, { invoiceId: id, actor, action: "duplicate_file_detected", fromState: null, toState: "DUPLICATE", reason: "Identische Datei (SHA-256) bereits vorhanden", evidence: { duplicate_of: duplicateOf, file_sha256: fileSha256 } });
@@ -56,9 +56,9 @@ export async function receiveInvoice({ pool, storage }, { buffer, originalFilena
 export async function processInvoice({ pool, storage, policy, company }, invoiceId, actor = SYSTEM) {
   return withTransaction(pool, async (client) => {
     const { rows: [invoice] } = await client.query("select * from finops.invoices where id = $1 for update", [invoiceId]);
-    if (!invoice) throw new NotFoundError(`Rechnung ${invoiceId} nicht gefunden`);
+    if (!invoice) throw new NotFoundError("INVOICE_NOT_FOUND", `Rechnung ${invoiceId} nicht gefunden`);
     if (!REPROCESSABLE_STATES.includes(invoice.state)) {
-      throw new TransitionError(`Rechnung im Status ${invoice.state} kann nicht erneut verarbeitet werden`, { state: invoice.state });
+      throw new TransitionError("NOT_REPROCESSABLE", `Rechnung im Status ${invoice.state} kann nicht erneut verarbeitet werden`, { state: invoice.state });
     }
     if (invoice.state !== "VALIDATING") {
       await transition(client, { invoiceId, to: "VALIDATING", actor, action: invoice.state === "RECEIVED" ? "processing_started" : "reprocessing_started" });

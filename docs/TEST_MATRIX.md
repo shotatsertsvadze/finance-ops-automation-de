@@ -136,7 +136,7 @@ described as working.
 | L2 (R08) | Intake and processing are separate transactions. If processing fails after receipt, re-uploading the same file returns DUPLICATE while the original stays in RECEIVED; recovery is a manual reprocess. | Inject a storage read failure after intake commits | OPEN |
 | L3 (R10) | The recognised XML subset is loose: namespaces are stripped and only the local name `Invoice` is required, so a non-UBL namespace is still accepted. Allowances, charges, prepayments and rounding are not modelled. | Replace the UBL root namespace | OPEN |
 | ~~L4 (R11)~~ | ~~Decisions are not bound to a document hash or validation-run identifier~~ | **Fixed 2026-09-17**: each decision records the document, the validation run and the amount, and two gates refuse a mismatch. See ADR-033 and the table below. | CLOSED |
-| L8 | A refusal from the server (a four-eyes violation, a state conflict) is shown verbatim, so it stays German in English mode. The API returns prose, not an error code. | Trigger any 409 in English mode | OPEN |
+| ~~L8~~ | ~~Server refusals stay German in English mode~~ | **Fixed 2026-09-17**: every refusal carries a code and its parameters; the client renders it in the chosen language and falls back to the server's sentence. See ADR-042 and the table below. | CLOSED |
 | ~~L7~~ | ~~Business checks are not re-run at the final approval gate~~ | **Fixed 2026-09-17**: the gate re-checks business facts against current master data and returns the invoice to review when one has newly failed. See ADR-041 and the table below. | CLOSED |
 | ~~L5 (R12)~~ | ~~Unauthenticated actor header, unrestricted CORS, binds all interfaces~~ | **Fixed 2026-09-17**: password login with server-side sessions, CSRF double-submit, a role matrix, same-origin CORS and loopback binding. See ADR-029 and ADR-030. | CLOSED |
 | ~~L6 (R13)~~ | ~~The test helper could drop the development schema~~ | **Fixed 2026-09-17**: `testDeps()` refuses to run when `TEST_DATABASE_URL` equals `DATABASE_URL`. | CLOSED |
@@ -343,4 +343,11 @@ findings themselves.
 | I14 | `lang` and the document title follow the language | `lang="en"`, English title | MANUAL | Browser, 2026-09-17, read from the DOM |
 | I15 | Numbers and dates follow the language | `62,9 %` in German, `62.9 %` in English; EUR in both | MANUAL | Browser, 2026-09-17 |
 | I16 | No horizontal overflow at 375 px in English | scrollWidth equals clientWidth | MANUAL | Browser, 2026-09-17, measured in page |
-| I17 | Server refusal messages stay German in English mode | shown verbatim | OPEN | Known limitation L8 |
+| I17 | Server refusals read in the chosen language | code plus parameters, rendered client-side | AUTO | `dictionaries.test.js` |
+| I18 | Every refusal the server can send has text in both languages | no missing code | AUTO | `dictionaries.test.js`, scans the routes and domain modules |
+| I19 | No refusal text exists for a code that cannot happen | no stale code | AUTO | `dictionaries.test.js` |
+| I20 | Every refusal is thrown with a code | no bare refusal | AUTO | `dictionaries.test.js` |
+| I21 | A refusal names states and roles as the screen does | "in state Approved", not "APPROVED" | AUTO | `dictionaries.test.js` |
+| I22 | An unknown code falls back to the server's sentence | German rather than nothing | AUTO | `dictionaries.test.js` |
+| I23 | The English guard catches German without umlauts | a German word in an English entry fails | MANUAL | Mutation check, 2026-09-17: "Freigabeschritt" passed the old guard, fails the new one |
+| I24 | A refusal is visible in English end to end | sign-in and a business-gate 409 both read in English | MANUAL | Browser, 2026-09-17: "Email address or password is wrong"; "Not approved: a business check has failed since the invoice was submitted" |

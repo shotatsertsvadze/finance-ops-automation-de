@@ -12,7 +12,14 @@ async function request(path, options = {}) {
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(body.error ?? `Anfrage fehlgeschlagen (${response.status})`);
+    // The German sentence stays the message, so anything that only logs an
+    // error still reads. The code and details travel alongside it, so the UI
+    // can say the same thing in the reader's language (ADR-042).
+    const error = new Error(body.error ?? `Anfrage fehlgeschlagen (${response.status})`);
+    error.code = body.code ?? null;
+    error.details = body.details ?? null;
+    error.status = response.status;
+    throw error;
   }
   return response.json();
 }

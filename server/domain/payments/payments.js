@@ -18,7 +18,7 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
   return withTransaction(pool, async (client) => {
     // See accounting.js: the row lock is taken separately from the join.
     const locked = await client.query("select 1 from finops.invoices where id = $1 for update", [invoiceId]);
-    if (locked.rowCount === 0) throw new NotFoundError("Rechnung nicht gefunden");
+    if (locked.rowCount === 0) throw new NotFoundError("INVOICE_NOT_FOUND", "Rechnung nicht gefunden");
     const { rows: [invoice] } = await client.query(
       `select i.*, s.legal_name as supplier_name from finops.invoices i
        left join finops.suppliers s on s.id = i.supplier_id
@@ -26,9 +26,9 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
       [invoiceId],
     );
     if (invoice.state !== "ACCOUNTING_READY") {
-      throw new TransitionError(`Rechnung im Status ${invoice.state} kann nicht zur Zahlung gegeben werden`, { state: invoice.state });
+      throw new TransitionError("NOT_READY_FOR_PAYMENT", `Rechnung im Status ${invoice.state} kann nicht zur Zahlung gegeben werden`, { state: invoice.state });
     }
-    if (!invoice.supplier_iban_raw) throw new RuleError(422, "Ohne IBAN kann keine Zahlung angewiesen werden");
+    if (!invoice.supplier_iban_raw) throw new RuleError(422, "NO_IBAN", "Ohne IBAN kann keine Zahlung angewiesen werden");
 
     const key = idempotencyKey(invoice);
     const inserted = await client.query(
@@ -39,7 +39,7 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
       [invoiceId, key, invoice.gross_amount, invoice.currency ?? "EUR", invoice.supplier_iban_raw,
         invoice.supplier_name ?? invoice.supplier_name_raw ?? "", invoice.invoice_number ?? ""],
     );
-    if (inserted.rowCount === 0) throw new RuleError(409, "Für diese Rechnung besteht bereits eine Zahlungsanweisung");
+    if (inserted.rowCount === 0) throw new RuleError(409, "PAYMENT_ALREADY_INSTRUCTED", "Für diese Rechnung besteht bereits eine Zahlungsanweisung");
 
     await transition(client, {
       invoiceId, to: "PAYMENT_PENDING", actor, action: "payment_instructed",
@@ -53,15 +53,15 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
 export async function confirmPayment({ pool }, { invoiceId, actor, providerRef }) {
   return withTransaction(pool, async (client) => {
     const { rows: [invoice] } = await client.query("select * from finops.invoices where id = $1 for update", [invoiceId]);
-    if (!invoice) throw new NotFoundError("Rechnung nicht gefunden");
+    if (!invoice) throw new NotFoundError("INVOICE_NOT_FOUND", "Rechnung nicht gefunden");
     if (invoice.state !== "PAYMENT_PENDING") {
-      throw new TransitionError(`Rechnung im Status ${invoice.state} wartet nicht auf eine Zahlungsbestätigung`, { state: invoice.state });
+      throw new TransitionError("NOT_AWAITING_PAYMENT_CONFIRMATION", `Rechnung im Status ${invoice.state} wartet nicht auf eine Zahlungsbestätigung`, { state: invoice.state });
     }
 
     const { rows: [instruction] } = await client.query(
       "select * from finops.payment_instructions where invoice_id = $1 for update", [invoiceId],
     );
-    if (!instruction) throw new NotFoundError("Keine Zahlungsanweisung vorhanden");
+    if (!instruction) throw new NotFoundError("PAYMENT_INSTRUCTION_NOT_FOUND", "Keine Zahlungsanweisung vorhanden");
 
     const ref = providerRef ?? mockProvider.submit({ idempotencyKey: instruction.idempotency_key }).providerRef;
     await client.query(

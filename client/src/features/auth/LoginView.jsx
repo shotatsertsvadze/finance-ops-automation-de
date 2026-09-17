@@ -10,7 +10,7 @@ const DEMO_ACCOUNTS = [
 ];
 
 export default function LoginView({ onLogin }) {
-  const { t, role } = useI18n();
+  const { t, errorText, role } = useI18n();
   const [email, setEmail] = useState(DEMO_ACCOUNTS[0].email);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -23,7 +23,7 @@ export default function LoginView({ onLogin }) {
     try {
       await onLogin(email, password);
     } catch (e) {
-      setError(e.message);
+      setError(errorText(e));
     } finally {
       setBusy(false);
     }

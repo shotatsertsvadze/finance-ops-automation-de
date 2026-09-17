@@ -9,13 +9,13 @@ import { matchTransaction } from "./matching.js";
  */
 export async function importStatement({ pool }, { statement }) {
   const transactions = statement?.transactions;
-  if (!Array.isArray(transactions)) throw new RuleError(400, "Kontoauszug enthält keine Buchungen");
+  if (!Array.isArray(transactions)) throw new RuleError(400, "STATEMENT_WITHOUT_TRANSACTIONS", "Kontoauszug enthält keine Buchungen");
 
   return withTransaction(pool, async (client) => {
     let imported = 0;
     for (const tx of transactions) {
       if (!tx.external_id || !tx.value_date || tx.amount === undefined) {
-        throw new RuleError(400, "Buchung ohne external_id, Datum oder Betrag");
+        throw new RuleError(400, "TRANSACTION_INCOMPLETE", "Buchung ohne external_id, Datum oder Betrag");
       }
       const { rowCount } = await client.query(
         `insert into finops.bank_transactions
@@ -106,13 +106,13 @@ export async function runReconciliation({ pool }, { actor }) {
 /** A human closes a reconciliation exception, with a reason. */
 export async function resolveReconciliation({ pool }, { invoiceId, actor, comment }) {
   const reason = (comment ?? "").trim();
-  if (!reason) throw new RuleError(400, "Für den Abschluss ist eine Begründung erforderlich");
+  if (!reason) throw new RuleError(400, "REASON_REQUIRED", "Für den Abschluss ist eine Begründung erforderlich");
 
   return withTransaction(pool, async (client) => {
     const { rows: [invoice] } = await client.query("select state from finops.invoices where id = $1 for update", [invoiceId]);
-    if (!invoice) throw new NotFoundError("Rechnung nicht gefunden");
+    if (!invoice) throw new NotFoundError("INVOICE_NOT_FOUND", "Rechnung nicht gefunden");
     if (invoice.state !== "RECONCILIATION_EXCEPTION") {
-      throw new TransitionError(`Rechnung im Status ${invoice.state} hat keine offene Abgleich-Ausnahme`, { state: invoice.state });
+      throw new TransitionError("NO_OPEN_RECONCILIATION_EXCEPTION", `Rechnung im Status ${invoice.state} hat keine offene Abgleich-Ausnahme`, { state: invoice.state });
     }
     // Closing the invoice without closing its evidence leaves the transaction
     // free to attach itself to a later invoice, so both move together.

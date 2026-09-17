@@ -292,6 +292,58 @@ const de = {
     ADMIN: "Administration",
   },
 
+
+  /**
+   * Refusals from the server, by the code it sends. A parameterised entry is a
+   * function; `state` and `role` arrive as codes and are passed in already
+   * translated, so a refusal names the state in the same words as the rest of
+   * the screen.
+   */
+  error: {
+    INVOICE_NOT_FOUND: "Rechnung nicht gefunden",
+    APPROVAL_STEP_NOT_FOUND: ({ step_no }) => `Freigabeschritt ${step_no} existiert nicht`,
+    PAYMENT_INSTRUCTION_NOT_FOUND: "Keine Zahlungsanweisung vorhanden",
+    NOT_SIGNED_IN: "Nicht angemeldet",
+    SIGN_IN_REFUSED: "E-Mail-Adresse oder Passwort ist falsch",
+    CREDENTIALS_REQUIRED: "E-Mail und Passwort sind erforderlich",
+    ACCOUNT_LOCKED: "Konto ist vorübergehend gesperrt. Bitte später erneut versuchen.",
+    CSRF_INVALID: "CSRF-Token fehlt oder passt nicht",
+    ROLE_NOT_PERMITTED: ({ role }) => `Ihre Rolle ${role} darf diese Aktion nicht ausführen`,
+    WRONG_ROLE_FOR_STEP: ({ required_role, role }) => `Dieser Schritt verlangt die Rolle ${required_role}, nicht ${role}`,
+    SAME_PERSON_TWO_STEPS: "Dieselbe Person darf nicht zwei Freigabeschritte derselben Rechnung entscheiden",
+    REVIEWER_CANNOT_APPROVE: "Wer die Rechnung aus der Sichtprüfung freigegeben hat, darf sie nicht auch fachlich freigeben",
+    STEP_ALREADY_DECIDED: ({ step_no }) => `Freigabeschritt ${step_no} wurde bereits entschieden`,
+    STEP_OUT_OF_ORDER: ({ step_no }) => `Freigabeschritt ${step_no} ist zuerst an der Reihe`,
+    NOT_PAYABLE_ELIGIBLE: "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben",
+    CHANGED_SINCE_PREVIOUS_APPROVAL: "Rechnung hat sich seit der vorherigen Freigabe geändert und muss neu geprüft werden",
+    CHANGED_SINCE_APPROVAL: "Rechnung hat sich seit der Freigabe geändert und kann nicht gebucht werden",
+    BUSINESS_CHECK_FAILED_AT_GATE: "Rechnung wurde nicht freigegeben: die fachliche Prüfung ist seit der Vorlage fehlgeschlagen",
+    REASON_REQUIRED: "Für diese Entscheidung ist eine Begründung erforderlich",
+    UNKNOWN_DECISION: "Unbekannte Entscheidung",
+    INVALID_STEP: "Ungültiger Schritt",
+    NOT_IN_REVIEW: ({ state }) => `Rechnung im Status ${state} steht nicht in der Sichtprüfung`,
+    NOT_AWAITING_INFORMATION: ({ state }) => `Rechnung im Status ${state} wartet nicht auf eine Rückmeldung`,
+    NOT_AWAITING_APPROVAL: ({ state }) => `Rechnung im Status ${state} steht nicht zur Freigabe`,
+    CANNOT_BE_APPROVED: ({ state }) => `Rechnung im Status ${state} kann nicht freigegeben werden`,
+    NOT_READY_TO_BOOK: ({ state }) => `Rechnung im Status ${state} ist nicht buchungsreif`,
+    NOT_READY_FOR_PAYMENT: ({ state }) => `Rechnung im Status ${state} kann nicht zur Zahlung gegeben werden`,
+    NOT_AWAITING_PAYMENT_CONFIRMATION: ({ state }) => `Rechnung im Status ${state} wartet nicht auf eine Zahlungsbestätigung`,
+    NO_OPEN_RECONCILIATION_EXCEPTION: ({ state }) => `Rechnung im Status ${state} hat keine offene Abgleich-Ausnahme`,
+    NOT_REPROCESSABLE: ({ state }) => `Rechnung im Status ${state} kann nicht erneut verarbeitet werden`,
+    TRANSITION_NOT_ALLOWED: ({ from, to }) => `Übergang ${from} nach ${to} ist nicht erlaubt`,
+    HUMAN_ACTION_WITHOUT_ACTOR: "Menschliche Aktion ohne Akteur",
+    CONCURRENT_DUPLICATE: "Gleiche Datei wurde gerade parallel verarbeitet, bitte erneut hochladen",
+    AMOUNTS_INCOMPLETE: "Beträge der Rechnung sind unvollständig, Buchungssatz nicht erzeugbar",
+    NO_IBAN: "Ohne IBAN kann keine Zahlung angewiesen werden",
+    PAYMENT_ALREADY_INSTRUCTED: "Für diese Rechnung besteht bereits eine Zahlungsanweisung",
+    STATEMENT_WITHOUT_TRANSACTIONS: "Kontoauszug enthält keine Buchungen",
+    TRANSACTION_INCOMPLETE: "Buchung ohne external_id, Datum oder Betrag",
+    FILE_FIELD_MISSING: "Feld 'file' fehlt",
+    UNKNOWN_STATE_FILTER: "Unbekannter Status",
+    UPLOAD_REJECTED: "Datei abgelehnt: nur XML-Dateien werden angenommen",
+    INTERNAL_ERROR: "Interner Fehler",
+  },
+
   // German check text comes from the server as `reason`, so the dictionary is
   // empty here and the API string is shown unchanged.
   check: {},
@@ -573,6 +625,52 @@ const en = {
     ADMIN: "Administration",
   },
 
+
+  error: {
+    INVOICE_NOT_FOUND: "Invoice not found",
+    APPROVAL_STEP_NOT_FOUND: ({ step_no }) => `Approval step ${step_no} does not exist`,
+    PAYMENT_INSTRUCTION_NOT_FOUND: "No payment instruction exists",
+    NOT_SIGNED_IN: "Not signed in",
+    SIGN_IN_REFUSED: "Email address or password is wrong",
+    CREDENTIALS_REQUIRED: "Email and password are required",
+    ACCOUNT_LOCKED: "The account is temporarily locked. Please try again later.",
+    CSRF_INVALID: "The CSRF token is missing or does not match",
+    ROLE_NOT_PERMITTED: ({ role }) => `Your role ${role} may not take this action`,
+    WRONG_ROLE_FOR_STEP: ({ required_role, role }) => `This step requires the role ${required_role}, not ${role}`,
+    SAME_PERSON_TWO_STEPS: "One person may not decide two approval steps of the same invoice",
+    REVIEWER_CANNOT_APPROVE: "Whoever released the invoice from review may not also approve it",
+    STEP_ALREADY_DECIDED: ({ step_no }) => `Approval step ${step_no} has already been decided`,
+    STEP_OUT_OF_ORDER: ({ step_no }) => `Approval step ${step_no} comes first`,
+    NOT_PAYABLE_ELIGIBLE: "The invoice is not eligible for approval: mandatory details are missing or unreadable",
+    CHANGED_SINCE_PREVIOUS_APPROVAL: "The invoice has changed since the previous approval and must be checked again",
+    CHANGED_SINCE_APPROVAL: "The invoice has changed since approval and cannot be booked",
+    BUSINESS_CHECK_FAILED_AT_GATE: "Not approved: a business check has failed since the invoice was submitted",
+    REASON_REQUIRED: "This decision needs a reason",
+    UNKNOWN_DECISION: "Unknown decision",
+    INVALID_STEP: "Invalid step",
+    NOT_IN_REVIEW: ({ state }) => `An invoice in state ${state} is not in manual review`,
+    NOT_AWAITING_INFORMATION: ({ state }) => `An invoice in state ${state} is not waiting for an answer`,
+    NOT_AWAITING_APPROVAL: ({ state }) => `An invoice in state ${state} is not awaiting approval`,
+    CANNOT_BE_APPROVED: ({ state }) => `An invoice in state ${state} cannot be approved`,
+    NOT_READY_TO_BOOK: ({ state }) => `An invoice in state ${state} is not ready to book`,
+    NOT_READY_FOR_PAYMENT: ({ state }) => `An invoice in state ${state} cannot be sent for payment`,
+    NOT_AWAITING_PAYMENT_CONFIRMATION: ({ state }) => `An invoice in state ${state} is not awaiting payment confirmation`,
+    NO_OPEN_RECONCILIATION_EXCEPTION: ({ state }) => `An invoice in state ${state} has no open reconciliation exception`,
+    NOT_REPROCESSABLE: ({ state }) => `An invoice in state ${state} cannot be processed again`,
+    TRANSITION_NOT_ALLOWED: ({ from, to }) => `The transition from ${from} to ${to} is not allowed`,
+    HUMAN_ACTION_WITHOUT_ACTOR: "A human action without an actor",
+    CONCURRENT_DUPLICATE: "The same file was being processed at that moment, please upload it again",
+    AMOUNTS_INCOMPLETE: "The invoice amounts are incomplete, no booking record can be created",
+    NO_IBAN: "No payment can be instructed without an IBAN",
+    PAYMENT_ALREADY_INSTRUCTED: "A payment instruction already exists for this invoice",
+    STATEMENT_WITHOUT_TRANSACTIONS: "The bank statement contains no transactions",
+    TRANSACTION_INCOMPLETE: "A transaction without an external id, date or amount",
+    FILE_FIELD_MISSING: "The 'file' field is missing",
+    UNKNOWN_STATE_FILTER: "Unknown state",
+    UPLOAD_REJECTED: "File rejected: only XML files are accepted",
+    INTERNAL_ERROR: "Internal error",
+  },
+
   /**
    * English text per check outcome, keyed `check_code:STATUS`. The server's
    * German `reason` varies in its detail; the specifics stay visible in the
@@ -685,6 +783,29 @@ export const dictionaryFor = (lang) => DICTIONARIES[lang] ?? DICTIONARIES[DEFAUL
  */
 export function checkSentence(dict, result) {
   return dict.check[`${result.check_code}:${result.status}`] ?? result.reason;
+}
+
+/**
+ * A refusal from the server, in the reader's language.
+ *
+ * Falls back to the sentence the server sent, so an error is never swallowed
+ * by a missing entry: a German sentence is a worse answer than an English one,
+ * and far better than nothing. State and role parameters are translated first,
+ * so a refusal names them in the same words as the rest of the screen.
+ */
+export function errorText(dict, { code, message, details }) {
+  const entry = code ? dict.error[code] : undefined;
+  if (!entry) return message;
+  if (typeof entry !== "function") return entry;
+
+  const params = { ...(details ?? {}) };
+  for (const key of ["state", "from", "to"]) {
+    if (params[key]) params[key] = dict.state[params[key]] ?? params[key];
+  }
+  for (const key of ["role", "required_role"]) {
+    if (params[key]) params[key] = dict.role[params[key]] ?? params[key];
+  }
+  return entry(params);
 }
 
 /** Translates German free text the server sends: check evidence and audit reasons. */

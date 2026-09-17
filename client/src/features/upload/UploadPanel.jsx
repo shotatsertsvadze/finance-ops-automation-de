@@ -3,7 +3,7 @@ import { uploadInvoice } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
 
 export default function UploadPanel({ onUploaded }) {
-  const { t } = useI18n();
+  const { t, errorText } = useI18n();
   const inputRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null);
@@ -17,7 +17,7 @@ export default function UploadPanel({ onUploaded }) {
       setMessage({ ok: true, text: t("uploadDone", file.name) });
       onUploaded(invoice);
     } catch (error) {
-      setMessage({ ok: false, text: error.message });
+      setMessage({ ok: false, text: errorText(error) });
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";

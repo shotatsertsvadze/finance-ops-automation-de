@@ -4,7 +4,7 @@ import { getKpis } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
 
 export default function DashboardView() {
-  const { t, reviewReason, formatNumber, term } = useI18n();
+  const { t, errorText, reviewReason, formatNumber, term } = useI18n();
   // Numbers follow the chosen language: decimal comma in German, point in English.
   const num = (value, digits = 1) => formatNumber(value, { minimumFractionDigits: digits, maximumFractionDigits: digits });
   const int = (value) => formatNumber(value);
@@ -22,7 +22,7 @@ export default function DashboardView() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    getKpis().then(setKpi).catch((e) => setError(e.message));
+    getKpis().then(setKpi).catch((e) => setError(errorText(e)));
   }, []);
 
   if (error) return <p className="error">{error}</p>;
