@@ -10,6 +10,7 @@
  *
  * Synthetic data for a fictional company. Not a measurement of anything.
  */
+import { writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { createPool } from "../server/db.js";
 import { createStorage } from "../server/storage/files.js";
@@ -19,6 +20,7 @@ import { handleUpload } from "../server/domain/intake/intake.js";
 import { decideApprovalStep, decideReview } from "../server/domain/approvals/approvals.js";
 import { createAccountingRecord } from "../server/domain/accounting/accounting.js";
 import { confirmPayment, createPaymentInstruction } from "../server/domain/payments/payments.js";
+import { importStatement, runReconciliation } from "../server/domain/reconciliation/reconciliation.js";
 import { human, SYSTEM } from "../server/domain/workflow/transitions.js";
 
 const USERS = {
@@ -229,16 +231,118 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
     }
   }
 
-  await backdate(deps.pool, created);
+  await backdate(deps.pool, created, random);
+  Object.assign(summary, await settlePayments(deps, random));
+  // Counted from the audit trail rather than tallied in the loop above, which
+  // is why this line read 0 for as long as it existed.
+  const { rows: [straight] } = await deps.pool.query(
+    "select count(distinct invoice_id)::int as n from finops.audit_events where action = 'auto_approved'",
+  );
+  summary.auto = straight.n;
   return summary;
+}
+
+/** The four transactions that belong to the hand-written fixtures A and G. */
+const FIXTURE_TRANSACTIONS = [
+  { external_id: "TX-2026-09-0001", value_date: "2026-09-20", amount: "-1240.00", currency: "EUR",
+    counterparty_name: "Berliner Buerobedarf GmbH", counterparty_iban: "DE89370400440532013000",
+    reference: "Rechnung INV-2026-00421 Nordwerk GmbH Kd-Nr 4471" },
+  { external_id: "TX-2026-09-0002", value_date: "2026-09-21", amount: "-380.00", currency: "EUR",
+    counterparty_name: "Berliner Buerobedarf GmbH", counterparty_iban: "DE89370400440532013000",
+    reference: "Sammelzahlung September ohne Einzelbeleg" },
+  { external_id: "TX-2026-09-0003", value_date: "2026-09-22", amount: "-350.00", currency: "EUR",
+    counterparty_name: "Berliner Buerobedarf GmbH", counterparty_iban: "DE89370400440532013000",
+    reference: "Teilzahlung zu INV-2026-00433" },
+  { external_id: "TX-2026-09-0004", value_date: "2026-09-23", amount: "-980.00", currency: "EUR",
+    counterparty_name: "Unbekannter Absender", counterparty_iban: "DE02300209000106531065",
+    reference: "Gutschrift ohne Zuordnung" },
+];
+
+/**
+ * Builds the bank statement that answers the demo's own payments, imports it
+ * and reconciles it.
+ *
+ * Without this the demo could not show the last stage of its own process: the
+ * shipped statement names the fixture invoices, so against a generated
+ * population every line stayed unmatched and nothing ever reached RECONCILED.
+ *
+ * The statement is deliberately imperfect. A month of bank lines that all match
+ * would demonstrate nothing: the point of the stage is what happens when one
+ * does not.
+ */
+async function settlePayments(deps, random) {
+  const { rows: payments } = await deps.pool.query(
+    `select p.reference, p.amount, p.currency, p.creditor_iban, p.creditor_name, i.updated_at
+     from finops.payment_instructions p
+     join finops.invoices i on i.id = p.invoice_id
+     where i.state = 'PAID'
+     order by p.reference`,
+  );
+
+  const transactions = [];
+  const valueDate = (row, days) => iso(new Date(new Date(row.updated_at).getTime() + days * 86400000));
+  let n = 0;
+  const id = () => `TX-DEMO-${String((n += 1)).padStart(4, "0")}`;
+
+  payments.forEach((payment, index) => {
+    // Three payments the bank has not reported yet: a statement is a snapshot,
+    // not a complete ledger.
+    if (index % 17 === 5) return;
+
+    const base = {
+      external_id: id(),
+      value_date: valueDate(payment, 1 + Math.floor(random() * 3)),
+      currency: payment.currency,
+      counterparty_name: payment.creditor_name,
+      counterparty_iban: payment.creditor_iban,
+      reference: `Rechnung ${payment.reference}`,
+    };
+
+    if (index % 23 === 7) {
+      // Short payment: the reference is right, the amount is not.
+      transactions.push({ ...base, amount: `-${(Number(payment.amount) - 40).toFixed(2)}`, reference: `Teilzahlung ${payment.reference}` });
+      return;
+    }
+    if (index % 29 === 11) {
+      // Paid to an account that is not the one on the instruction.
+      transactions.push({ ...base, amount: `-${payment.amount}`, counterparty_iban: "DE02300209000106531065", counterparty_name: "Abweichendes Konto" });
+      return;
+    }
+    if (index % 31 === 13) {
+      // Right amount, no invoice named: amount alone must never be enough.
+      transactions.push({ ...base, amount: `-${payment.amount}`, reference: "Sammelzahlung September ohne Einzelbeleg" });
+      return;
+    }
+    transactions.push({ ...base, amount: `-${payment.amount}` });
+  });
+
+  const statement = {
+    account_iban: "DE02100500000012345678",
+    account_holder: "Nordwerk GmbH",
+    statement_period: "2026-09",
+    note: "Synthetischer Kontoauszug, erzeugt von scripts/demo-data.js",
+    transactions: [...FIXTURE_TRANSACTIONS, ...transactions],
+  };
+  await writeFile(
+    new URL("../client/public/demo/statement_2026-09.json", import.meta.url),
+    `${JSON.stringify(statement, null, 2)}\n`,
+  );
+
+  await importStatement(deps, { statement });
+  const result = await runReconciliation(deps, { actor: human(USERS.finance) });
+  return { statement_lines: statement.transactions.length, reconciled: result.matched, bank_exceptions: result.exceptions };
 }
 
 /**
  * Shifts each invoice's timeline into the past, preserving event order and
  * inserting plausible gaps between stages. Without this every cycle-time
  * measurement is a fraction of a second.
+ *
+ * Uses the seeded generator, not Math.random: the timings decide the statement
+ * value dates, and a demo the module calls reproducible must not rewrite a
+ * committed file on every run.
  */
-async function backdate(pool, created) {
+async function backdate(pool, created, random) {
   for (const { id, receivedAt } of created) {
     const { rows: events } = await pool.query(
       "select id, action from finops.audit_events where invoice_id = $1 order by occurred_at, id", [id],
@@ -257,12 +361,12 @@ async function backdate(pool, created) {
         auto_approved: 0.1,
         technical_validation_failed: 0.1,
         duplicate_file_detected: 0.1,
-        review_accepted: 60 * (4 + Math.random() * 40),
-        approval_step_approved: 60 * (6 + Math.random() * 48),
-        approved: 60 * (6 + Math.random() * 48),
-        accounting_record_created: 60 * (2 + Math.random() * 20),
-        payment_instructed: 60 * (12 + Math.random() * 36),
-        payment_confirmed: 60 * (12 + Math.random() * 24),
+        review_accepted: 60 * (4 + random() * 40),
+        approval_step_approved: 60 * (6 + random() * 48),
+        approved: 60 * (6 + random() * 48),
+        accounting_record_created: 60 * (2 + random() * 20),
+        payment_instructed: 60 * (12 + random() * 36),
+        payment_confirmed: 60 * (12 + random() * 24),
       }[event.action] ?? 30;
       cursor = new Date(cursor.getTime() + gapMinutes * 60000);
       await pool.query("update finops.audit_events set occurred_at = $2 where id = $1", [event.id, cursor]);

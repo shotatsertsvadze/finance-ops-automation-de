@@ -166,7 +166,15 @@ npm run db:reset && npm run db:demo   # a month of synthetic invoices
 
 `npm run db:demo` pushes every generated invoice through the real pipeline and
 then shifts the timestamps into the past, so the cycle-time figures are
-meaningful rather than sub-second. The data is synthetic.
+meaningful rather than sub-second. It also writes the bank statement that
+answers its own payments to `client/public/demo/`, imports it and reconciles
+it, so the last stage of the process has something to show. That statement is
+deliberately imperfect: a short payment, a payment to the wrong account, one
+with no invoice named and a few payments the bank has not reported yet. A month
+of lines that all matched would demonstrate nothing.
+
+The run is reproducible: the same seed produces the same invoices, timings and
+statement. The data is synthetic.
 
 Every dashboard figure is computed from the invoices and their audit events.
 There is no counter to drift. The savings estimate is a scenario shown together

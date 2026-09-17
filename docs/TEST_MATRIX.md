@@ -301,6 +301,8 @@ findings themselves.
 | R4 | The test-database guard must not be defeated by an equivalent URL | identity, not string equality | MANUAL | 2026-09-17: `postgresql://127.0.0.1:5432/finops` against `postgresql://localhost/finops` refused before `reset()`; dev database intact |
 | R5 | KPI definition changes recorded as decisions | an ADR per changed definition | DOC | ADR-039 |
 | R6 | The README's no-enumeration claim matched to the evidence | wording and timing both covered | DOC | README, ADR-040 |
+| R7 | The demo can demonstrate its own reconciliation | matched, exception and open lines against the generated invoices | MANUAL | Browser, 2026-09-17: 33 matched, 4 unclear with distinct reasons, 4 open; dashboard shows 3 reconciliation exceptions |
+| R8 | The demo run is reproducible, as the module claims | two full rebuilds produce an identical statement | MANUAL | 2026-09-17: same SHA-256 across two rebuilds after `backdate` stopped using `Math.random` |
 
 | # | Limitation | Why it stays open | Status |
 |---|---|---|---|
