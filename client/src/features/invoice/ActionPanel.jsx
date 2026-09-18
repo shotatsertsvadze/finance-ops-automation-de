@@ -4,6 +4,7 @@ import {
   instructPayment, bookCredit, settleByCredit, reportInfoReceived, reprocessInvoice, resolveReconciliation,
 } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
+import { availableActions } from "./actions.js";
 
 /**
  * What this person can do with this invoice right now, and what the system
@@ -15,8 +16,6 @@ export default function ActionPanel({ invoice, may, onDone }) {
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-
-  const step = invoice.approval_steps.find((s) => s.status === "PENDING");
 
   async function run(fn) {
     setBusy(true);
@@ -37,61 +36,41 @@ export default function ActionPanel({ invoice, may, onDone }) {
   }
 
   const id = invoice.id;
-  const actions = [];
-  let prompt = null;
+  const { prompt: promptSpec, step, actions: available } = availableActions(invoice);
 
-  if (invoice.state === "REVIEW_REQUIRED") {
-    prompt = t("hintReviewStopped");
-    actions.push(
-      { key: "accept", label: t("releaseFromReview"), tone: "ok", needs: "review:decide", run: () => decideReview(id, "accept", comment) },
-      { key: "request-info", label: t("requestInfo"), tone: "", needsComment: true, needs: "review:decide", run: () => decideReview(id, "request-info", comment) },
-      { key: "confirm-duplicate", label: t("confirmDuplicate"), tone: "", needsComment: true, needs: "review:decide", run: () => decideReview(id, "confirm-duplicate", comment) },
-      { key: "reject", label: t("reject"), tone: "high", needsComment: true, needs: "review:decide", run: () => decideReview(id, "reject", comment) },
-      { key: "reprocess", label: t("reprocess"), tone: "", needs: "invoice:reprocess", run: () => reprocessInvoice(id) },
-    );
-  } else if (invoice.state === "READY_FOR_APPROVAL" && step) {
-    prompt = t("stepOf", step.step_no, invoice.approval_steps.length, role(step.required_role));
-    actions.push(
-      { key: "approve", label: t("approve"), tone: "ok", needs: "approval:decide", run: () => decideStep(id, step.step_no, "approve", comment) },
-      { key: "step-reject", label: t("reject"), tone: "high", needsComment: true, needs: "approval:decide", run: () => decideStep(id, step.step_no, "reject", comment) },
-      { key: "request-info", label: t("requestInfo"), tone: "", needsComment: true, needs: "review:decide", run: () => decideReview(id, "request-info", comment) },
-    );
-  } else if (invoice.state === "APPROVED") {
-    prompt = t("hintApproved");
-    actions.push({ key: "accounting", label: t("createBookingRecord"), tone: "ok", needs: "accounting:handoff", run: () => createAccountingRecord(id) });
-  } else if (invoice.state === "ACCOUNTING_READY" && invoice.document_type === "CREDIT_NOTE") {
-    // A credit note is booked, not paid. Offering "instruct payment" here
-    // would offer to send money in the direction the document reverses.
-    prompt = t("hintCreditNoteReady", invoice.accounting_record?.document_no ?? "");
-    actions.push({ key: "credit", label: t("bookCredit"), tone: "ok", needs: "payment:instruct", run: () => bookCredit(id) });
-  } else if (invoice.state === "ACCOUNTING_READY") {
-    // The amount that will actually leave the bank, shown before the decision
-    // rather than discovered afterwards.
-    const credit = Number(invoice.open_credit_amount ?? 0);
-    const gross = Number(invoice.gross_amount ?? 0);
-    if (credit >= gross && gross > 0) {
-      prompt = t("hintFullyCredited", invoice.accounting_record?.document_no ?? "");
-      actions.push({ key: "settle", label: t("settleByCredit"), tone: "ok", needs: "payment:instruct", run: () => settleByCredit(id) });
-    } else if (credit > 0) {
-      prompt = t("hintNetted", invoice.accounting_record?.document_no ?? "");
-      actions.push({ key: "pay", label: t("instructPayment"), tone: "ok", needs: "payment:instruct", run: () => instructPayment(id) });
-    } else {
-      prompt = t("hintAccountingReady", invoice.accounting_record?.document_no ?? "");
-      actions.push({ key: "pay", label: t("instructPayment"), tone: "ok", needs: "payment:instruct", run: () => instructPayment(id) });
-    }
-  } else if (invoice.state === "PAYMENT_PENDING") {
-    prompt = t("hintPaymentPending");
-    actions.push({ key: "confirm", label: t("confirmPayment"), tone: "ok", needs: "payment:confirm", run: () => confirmPayment(id) });
-  } else if (invoice.state === "RECONCILIATION_EXCEPTION") {
-    prompt = t("hintReconciliationException");
-    actions.push({ key: "resolve", label: t("closeReconciliation"), tone: "ok", needsComment: true, needs: "reconciliation:resolve", run: () => resolveReconciliation(id, comment) });
-  } else if (invoice.state === "INFO_REQUESTED") {
-    prompt = t("hintInfoRequested");
-    actions.push(
-      { key: "info-received", label: t("infoReceived"), tone: "ok", needs: "review:decide", run: () => reportInfoReceived(id, comment) },
-      { key: "reject", label: t("reject"), tone: "high", needsComment: true, needs: "review:decide", run: () => decideReview(id, "reject", comment) },
-    );
-  }
+  // key -> what pressing it does. The decision of which keys to offer is in
+  // actions.js; this is only the wiring.
+  const handlers = {
+    accept: () => decideReview(id, "accept", comment),
+    "request-info": () => decideReview(id, "request-info", comment),
+    "confirm-duplicate": () => decideReview(id, "confirm-duplicate", comment),
+    reject: () => decideReview(id, "reject", comment),
+    reprocess: () => reprocessInvoice(id),
+    approve: () => decideStep(id, step.step_no, "approve", comment),
+    "step-reject": () => decideStep(id, step.step_no, "reject", comment),
+    accounting: () => createAccountingRecord(id),
+    credit: () => bookCredit(id),
+    settle: () => settleByCredit(id),
+    pay: () => instructPayment(id),
+    confirm: () => confirmPayment(id),
+    resolve: () => resolveReconciliation(id, comment),
+    "info-received": () => reportInfoReceived(id, comment),
+  };
+  const LABELS = {
+    accept: "releaseFromReview", "request-info": "requestInfo", "confirm-duplicate": "confirmDuplicate",
+    reject: "reject", reprocess: "reprocess", approve: "approve", "step-reject": "reject",
+    accounting: "createBookingRecord", credit: "bookCredit", settle: "settleByCredit",
+    pay: "instructPayment", confirm: "confirmPayment", resolve: "closeReconciliation",
+    "info-received": "infoReceived",
+  };
+
+  const actions = available.map((a) => ({ ...a, label: t(LABELS[a.key]), run: handlers[a.key] }));
+  // The step prompt names a role, which has its own dictionary.
+  const prompt = promptSpec
+    ? (promptSpec.key === "stepOf"
+      ? t("stepOf", promptSpec.args[0], promptSpec.args[1], role(promptSpec.args[2]))
+      : t(promptSpec.key, ...promptSpec.args))
+    : null;
 
   // Hide what this role may not do. The server refuses it regardless; this
   // only avoids offering a button that always fails.

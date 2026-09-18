@@ -10,8 +10,11 @@ cases go to humans; nothing is approved by default.
 
 Demo company: Nordwerk GmbH (fictional). All data is synthetic.
 
-Status: Phases 1-3 built; control review completed and remediated. See
-`docs/IMPLEMENTATION_PLAN.md` and `docs/PHASE_0_INDEPENDENT_REVIEW.md`.
+Status: intake through reconciliation and the operational metrics are built;
+two independent control reviews are remediated in full. The reasoning behind
+every decision is in `docs/DECISIONS.md`; what is deliberately not built is
+under "Known limits" below. See `docs/IMPLEMENTATION_PLAN.md` and
+`docs/PHASE_0_INDEPENDENT_REVIEW.md`.
 
 ![The operational metrics view, showing straight-through processing rate, exception reasons, cycle times, risk signals and the work queue](docs/screenshots/dashboard.png)
 
@@ -72,7 +75,8 @@ npm test
 
 ## Try it
 
-Upload a fixture from `fixtures/xrechnung/` in the UI, or:
+`docs/DEMO.md` walks through the system in ten minutes. To try a single
+document, upload a fixture from `fixtures/xrechnung/` in the UI, or:
 
 ```bash
 curl -F file=@fixtures/xrechnung/A_clean_1240.xml http://localhost:4400/api/invoices
@@ -99,6 +103,7 @@ curl -F file=@fixtures/xrechnung/A_clean_1240.xml http://localhost:4400/api/invo
 - `docs/IST_PROCESS.md`, `docs/SOLL_PROCESS.md` - current vs. target process
 - `docs/BUSINESS_CASE.md` - demo assumptions
 - `docs/TEST_MATRIX.md` - what is verified and how
+- `docs/DEMO.md` - a ten-minute walkthrough, in order
 - `docs/REFERENCE_AUDIT.md` - audit of the two reference repositories
 
 ## Known limits

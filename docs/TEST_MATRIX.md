@@ -296,6 +296,21 @@ described as working.
 
 ## UI
 
+The action panel and the progress spine decide what a person is offered. That
+logic lives in `client/src/features/invoice/actions.js` as plain functions, so
+it is checked by `npm test` rather than by opening a browser.
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| U10 | Which actions each state offers | the keys for that state, in order | AUTO | `actions.test.js` |
+| U11 | A booked credit note | offers the credit, never the payment | AUTO | `actions.test.js` |
+| U12 | A partly credited invoice | offers payment, prompt states the netting | AUTO | `actions.test.js` |
+| U13 | An invoice its credits cover | offers settlement, not payment | AUTO | `actions.test.js` |
+| U14 | An approval with no pending step | offers nothing | AUTO | `actions.test.js` |
+| U15 | Every action names a permission | no button that always fails | AUTO | `actions.test.js` |
+| U16 | The progress path per document | credit notes and settled invoices never show payment stages | AUTO | `actions.test.js` |
+| U17 | Role filtering in the browser | a cost-centre manager sees only the approval actions | MANUAL | Two-role probe, 2026-09-18 |
+
 | # | Case | Expected | Status | Evidence |
 |---|---|---|---|---|
 | U1 | Inbox shows the blocking reason per row | reason visible without opening the invoice | MANUAL | Browser, 2026-09-17 |

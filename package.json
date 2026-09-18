@@ -17,7 +17,7 @@
     "db:seed": "node --env-file=.env scripts/seed.js",
     "db:reset": "node --env-file=.env scripts/reset.js",
     "db:demo": "node --env-file=.env scripts/demo-data.js",
-    "test": "node --env-file=.env --test --test-concurrency=1 \"server/**/*.test.js\" \"browser/**/*.test.js\"",
+    "test": "node --env-file=.env --test --test-concurrency=1 \"server/**/*.test.js\" \"client/**/*.test.js\" \"browser/**/*.test.js\"",
     "test:browser": "node --env-file=.env --test --test-concurrency=1 \"browser/**/*.test.js\""
   },
   "dependencies": {

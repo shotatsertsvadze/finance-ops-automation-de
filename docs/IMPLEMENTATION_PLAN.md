@@ -62,9 +62,20 @@ is a stat tile or a table. The status palette was validated for contrast,
 lightness and colour-vision separation; the green was re-stepped to
 `#0F7B4F` after failing the chroma floor.
 
-## Phase 5 - Hardening
+## Phase 5 - Hardening (done 2026-09-18)
 
 Edge cases, idempotency tests, security review, final README, demo script.
+
+- Edge cases and idempotency: replay cases for the accounting handoff, payment,
+  confirmation, statement import and reconciliation run; concurrency on the
+  purchase-order ledger, mutation-checked.
+- Security review: two independent reviews, both remediated in full. See
+  `docs/PHASE_0_INDEPENDENT_REVIEW.md` and `docs/PROJECT_REVIEW_2026-09-17.md`.
+- README: what the system does and the decisions worth noticing, with the
+  limits listed rather than left to be found.
+- Demo script: `docs/DEMO.md`, ten minutes in order, every figure in it checked
+  against a fresh `npm run db:demo`.
+- CI runs the suite against a real Postgres and builds the client.
 
 ## Phase 1 status (2026-09-17)
 

@@ -62,3 +62,7 @@ jobs:
       - run: npx playwright install --with-deps chromium
 
       - run: npm test
+
+      # The suite never imports the client's entry point, so a broken build
+      # would ship with this badge still green.
+      - run: npm run build
