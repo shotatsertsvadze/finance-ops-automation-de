@@ -11,6 +11,31 @@ Demo company: Nordwerk GmbH (fictional). All data is synthetic.
 Status: Phases 1-3 built; control review completed and remediated. See
 `docs/IMPLEMENTATION_PLAN.md` and `docs/PHASE_0_INDEPENDENT_REVIEW.md`.
 
+## What is worth looking at
+
+- **One way to change state.** `invoices.state` moves only through `transition()`
+  in `server/domain/workflow/transitions.js`, which writes the audit event in the
+  same transaction. No route, script or SQL trigger writes it directly, and the
+  legal transitions are a declared table rather than scattered conditions.
+- **Checks produce evidence, not verdicts.** Every check returns `check, status,
+  severity, expected, actual, reason, recommended_action`, so a reviewer is shown
+  what was expected and what the document actually carried, with the differing
+  characters marked for things like a changed IBAN.
+- **Fail closed.** Missing, malformed or uncertain data routes to review, never to
+  approval. A few checks cannot be overridden at all: a reviewer is there to judge
+  business facts, not to supply arithmetic the document never did.
+- **Amounts are recomputed, not read.** Discounts, surcharges and prepayments are
+  computed along EN 16931's calculation chain, and every line is recomputed from
+  its quantity and unit price - exactly, not in floating point, because the
+  tolerance is one cent (ADR-047, ADR-048).
+- **Nothing is inferred.** Routing is a pure function of the check results and the
+  amount policy. No model decides anything, and none sits anywhere near the
+  payment path.
+
+The reasoning behind each decision is in `docs/DECISIONS.md`, every behaviour has
+a row in `docs/TEST_MATRIX.md`, and what the system does *not* do is listed under
+"Known limits" below rather than left to be discovered.
+
 ## Setup
 
 Requires Node.js 22+ and PostgreSQL 14+.
