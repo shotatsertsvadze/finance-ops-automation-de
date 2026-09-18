@@ -50,6 +50,30 @@ test("the English check dictionary has no entries for checks that do not exist",
   assert.deepEqual(stale, [], `these no longer exist and should be removed: ${stale.join(", ")}`);
 });
 
+/**
+ * Routing names a review after the check that led to it, upper-cased
+ * (`decide.js`). Every HIGH or MEDIUM business failure can therefore become a
+ * review reason, and a missing label shows the reviewer a bare code in the
+ * panel that is supposed to tell them what stopped the invoice. Adding a check
+ * without adding its reason is easy to miss, so it is scanned rather than
+ * remembered.
+ */
+function leadingChecks() {
+  const text = source("./business-checks.js");
+  return [...new Set(
+    [...text.matchAll(/\bfailed\("([a-z_]+)", SEVERITY\.(?:HIGH|MEDIUM)/g)].map(([, code]) => code.toUpperCase()),
+  )].sort();
+}
+
+test("every check that can stop an invoice has a review reason in both languages", () => {
+  const codes = leadingChecks();
+  assert.ok(codes.length > 5, `the scan found the checks at all: ${codes.length}`);
+  for (const [lang, dict] of Object.entries(DICTIONARIES)) {
+    const missing = codes.filter((code) => !dict.reviewReason[code]);
+    assert.deepEqual(missing, [], `${lang} is missing review reasons: ${missing.join(", ")}`);
+  }
+});
+
 test("every invoice state has a label in both languages", () => {
   for (const [lang, dict] of Object.entries(DICTIONARIES)) {
     const missing = STATES.filter((state) => !dict.state[state]);
@@ -151,11 +175,17 @@ test("the totals chain reads in English, link by link", () => {
     "Beträge nicht lesbar: Anzahlung, Rundung",
     "2 Betrag/Beträge ohne Kennzeichen (cbc:ChargeIndicator)",
     "1000.00 Positionen - 200.00 Nachlässe + 152.00 Steuer = 952.00 Zahlbetrag",
+    "Menge x Einzelpreis - Nachlässe + Zuschläge = Positionsbetrag",
+    "Position 1: 10000.00 != 1000.00; Position 2: 950.00 != 1000.00",
+    "Position 1: Betrag ohne Kennzeichen (cbc:ChargeIndicator)",
+    "Position 3: Menge oder Einzelpreis nicht lesbar",
+    "4 Positionen nachgerechnet",
+    "1 Position nachgerechnet",
   ];
   for (const text of evidence) {
     const english = translateTerms(DICTIONARIES.en, text);
     assert.ok(!/[äöüßÄÖÜ]/.test(english), `still German: ${english}`);
-    assert.ok(!/\b(Positionen|Nachl|Zuschl|Netto|Steuer|Anzahlung|Rundung|Zahlbetrag|Betr)/.test(english),
+    assert.ok(!/\b(Positionen?|Nachl|Zuschl|Netto|Steuer|Anzahlung|Rundung|Zahlbetrag|Betr|Menge|Einzelpreis|nachgerechnet)/.test(english),
       `untranslated term: ${english}`);
   }
 });

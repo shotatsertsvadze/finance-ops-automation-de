@@ -76,6 +76,14 @@ test("a line-level allowance is read on its line", () => {
   assert.equal(line.allowanceCharges[0].reason, "Mengenrabatt");
 });
 
+test("a base quantity is read, because it changes what the price means", () => {
+  // A price stated per 1000 pieces is not a price per piece.
+  const xml = buildInvoiceXml({ number: "ALW-4", netCents: 100000 })
+    .replace("<cac:Price>", '<cac:Price><cbc:BaseQuantity unitCode="C62">1000</cbc:BaseQuantity>');
+  assert.equal(parseInvoiceXml(xml).lines[0].baseQuantity, "1000");
+  assert.equal(parse({}).lines[0].baseQuantity, null, "absent when the document does not say");
+});
+
 test("nothing is reported as unsupported any more", () => {
   assert.equal(parse({ allowances: [{ amountCents: 20000 }], prepaidCents: 100 }).unsupported, undefined);
 });

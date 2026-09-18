@@ -889,3 +889,40 @@ supplier's own arithmetic error inside a line.
 - "Prevent duplicate approval": interpreted as (a) an approval step can be
   decided once, (b) the same user cannot decide two steps of one invoice,
   (c) a finalised invoice rejects any approval call.
+
+## ADR-048 A line amount is recomputed, not taken on trust
+
+Completes ADR-047 and closes the last of L3's totals half.
+
+ADR-047 verifies the chain from the line total to the amount due, and that
+chain sums the net amount each line declares. Those declared amounts were the
+one set of numbers nothing derived. A line reading
+
+    quantity 10, unit price 5.00, line amount 500.00
+
+leaves every total in the document consistent with every other, passes the
+whole chain, and overpays by a factor of ten. The header arithmetic cannot see
+it, because the header arithmetic is built from it.
+
+Decision: every line is recomputed as
+`quantity x unit price / base quantity - allowances + charges` and compared
+with the amount it declares, as `line_amounts_consistent`. Base quantity
+matters and is read: a price stated per 1000 pieces is not a price per piece,
+and treating it as one would fail every such line.
+
+Severity is HIGH, because this is the only check anchoring a declared amount to
+what was ordered. It is deliberately **not** in `NON_OVERRIDABLE_CHECKS`,
+unlike `totals_consistent`. The difference is what a reviewer can actually
+judge: a document whose totals do not add up cannot be made to add up by a
+person, but a line whose price differs from the order is exactly the business
+fact a reviewer reads the order to settle.
+
+Two supporting decisions:
+
+- A mixture of lines that agree and lines that could not be recomputed is
+  reported SKIPPED, not PASSED. Passing would claim every line was verified.
+- The product is computed exactly, in `productToCents`, rather than with
+  floating point. A price may carry four decimals and a quantity may be
+  fractional, the tolerance is one cent, and a one-cent rounding error would
+  refuse a correct invoice. Truncating instead of rounding a half is caught by
+  its own test.

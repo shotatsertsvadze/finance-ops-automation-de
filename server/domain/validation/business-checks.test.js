@@ -5,6 +5,13 @@ import { runTechnicalValidation } from "../invoice/technical-validation.js";
 import { runBusinessChecks } from "./business-checks.js";
 import { loadPolicy } from "../../config/policy.js";
 import { loadCompany } from "../../config/company.js";
+import { payableBlockers } from "../workflow/eligibility.js";
+
+/** An invoice row that carries everything a payable state requires. */
+const PAYABLE_INVOICE = {
+  invoice_number: "RE-1", gross_amount: "1190.00", supplier_id: "s1",
+  issue_date: "2026-09-15", currency: "EUR",
+};
 
 const policy = loadPolicy({});
 const company = loadCompany({});
@@ -228,4 +235,102 @@ test("the blanket refusal of these documents is gone", () => {
   const r = runXml(invoice({ allowances: [{ amountCents: 20000 }] }));
   assert.equal(check(r, "document_features_supported"), undefined,
     "the parts it named are computed now, so the check has nothing left to refuse");
+});
+
+// ------------------------------------ the line's own arithmetic ------------
+
+/**
+ * The header chain closes over the line amounts a document declares, so it
+ * cannot see a line whose declared amount has nothing to do with its quantity
+ * and price. A line reading "10 x 5.00 = 500.00" leaves every total
+ * consistent and overpays by a factor of ten.
+ *
+ * This is the only check that anchors a declared line amount to what was
+ * actually ordered, so it is HIGH. It stays overridable: a reviewer can read
+ * the order and judge whether the price is the one agreed (ADR-048).
+ */
+const lines = (r) => check(r, "line_amounts_consistent");
+const withLine = (replacements) => {
+  let xml = invoice({});
+  for (const [from, to] of replacements) {
+    assert.ok(xml.includes(from), `the fixture no longer contains: ${from}`);
+    xml = xml.replace(from, to);
+  }
+  return xml;
+};
+
+test("an ordinary line is recomputed and agrees", () => {
+  const c = lines(runXml(invoice({})));
+  assert.equal(c.status, "PASSED");
+  assert.equal(c.actual, "1 Position nachgerechnet", "one line, singular");
+});
+
+test("a line amount that does not follow from quantity and price is caught", () => {
+  // Every total still adds up: this is what the header chain cannot see.
+  const r = runXml(withLine([['<cbc:InvoicedQuantity unitCode="C62">1</cbc:InvoicedQuantity>',
+                              '<cbc:InvoicedQuantity unitCode="C62">10</cbc:InvoicedQuantity>']]));
+  assert.equal(totals(r).status, "PASSED", "the declared totals are consistent with each other");
+  const c = lines(r);
+  assert.equal(c.status, "FAILED");
+  assert.equal(c.severity, "HIGH");
+  assert.match(c.actual, /Position 1: 10000\.00 != 1000\.00/);
+});
+
+test("a price stated per base quantity is not a price per piece", () => {
+  const r = runXml(withLine([
+    ['<cbc:InvoicedQuantity unitCode="C62">1</cbc:InvoicedQuantity>',
+     '<cbc:InvoicedQuantity unitCode="C62">10</cbc:InvoicedQuantity>'],
+    ["<cac:Price>", '<cac:Price><cbc:BaseQuantity unitCode="C62">10</cbc:BaseQuantity>'],
+  ]));
+  assert.equal(lines(r).status, "PASSED", "10 pieces at 1000.00 per 10 is 1000.00");
+});
+
+test("a line discount the line amount reflects is accepted", () => {
+  const r = runXml(withLine([
+    ['<cac:Price><cbc:PriceAmount currencyID="EUR">1000.00</cbc:PriceAmount>',
+     '<cac:Price><cbc:PriceAmount currencyID="EUR">1050.00</cbc:PriceAmount>'],
+    ["<cac:Item>", `<cac:AllowanceCharge>
+      <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+      <cbc:AllowanceChargeReason>Mengenrabatt</cbc:AllowanceChargeReason>
+      <cbc:Amount currencyID="EUR">50.00</cbc:Amount>
+    </cac:AllowanceCharge>
+    <cac:Item>`],
+  ]));
+  assert.equal(lines(r).status, "PASSED", "1050.00 less 50.00 is the declared 1000.00");
+});
+
+test("a line discount the line amount ignores is caught", () => {
+  const r = runXml(withLine([["<cac:Item>", `<cac:AllowanceCharge>
+      <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+      <cbc:Amount currencyID="EUR">50.00</cbc:Amount>
+    </cac:AllowanceCharge>
+    <cac:Item>`]]));
+  const c = lines(r);
+  assert.equal(c.status, "FAILED");
+  assert.match(c.actual, /950\.00 != 1000\.00/);
+});
+
+test("a line charge with no indicator is not guessed at either", () => {
+  const r = runXml(withLine([["<cac:Item>", `<cac:AllowanceCharge>
+      <cbc:ChargeIndicator>weder-noch</cbc:ChargeIndicator>
+      <cbc:Amount currencyID="EUR">50.00</cbc:Amount>
+    </cac:AllowanceCharge>
+    <cac:Item>`]]));
+  assert.equal(lines(r).status, "FAILED");
+  assert.match(lines(r).actual, /Kennzeichen/);
+});
+
+test("a line with no price is reported as unchecked, not as correct", () => {
+  const r = runXml(withLine([['<cac:Price><cbc:PriceAmount currencyID="EUR">1000.00</cbc:PriceAmount></cac:Price>',
+                              "<cac:Price></cac:Price>"]]));
+  const c = lines(r);
+  assert.equal(c.status, "SKIPPED");
+  assert.match(c.actual, /Position 1/);
+});
+
+test("a reviewer may accept a line the supplier miscalculated", () => {
+  // Unlike the totals chain, this is a business fact a person can judge
+  // against the order, so it is not a blocker on its own.
+  assert.deepEqual(payableBlockers(PAYABLE_INVOICE, ["line_amounts_consistent"]), []);
+  assert.deepEqual(payableBlockers(PAYABLE_INVOICE, ["totals_consistent"]), ["totals_consistent"]);
 });

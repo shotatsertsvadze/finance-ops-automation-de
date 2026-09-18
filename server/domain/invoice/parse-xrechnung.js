@@ -109,6 +109,9 @@ export function parseInvoiceXml(xmlText) {
     quantity: str(line, "InvoicedQuantity"),
     unitCode: get(line, "InvoicedQuantity.@_unitCode") ?? null,
     unitPrice: str(line, "Price.PriceAmount"),
+    // The quantity the price applies to. Absent means one; a price stated per
+    // 1000 pieces is not a price per piece.
+    baseQuantity: str(line, "Price.BaseQuantity"),
     lineNet: str(line, "LineExtensionAmount"),
     allowanceCharges: (line.AllowanceCharge ?? []).map(allowanceCharge),
   }));

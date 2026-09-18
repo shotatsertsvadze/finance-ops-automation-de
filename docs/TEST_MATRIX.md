@@ -69,6 +69,7 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | T7 | A charge indicator that says neither is read as neither | `isCharge` null, not defaulted | AUTO | `allowances.test.js` |
 | T8 | Prepayment and rounding are read | `prepaid`, `rounding`, amount due after them | AUTO | `allowances.test.js` |
 | T9 | A line-level allowance is read on its line | `lines[].allowanceCharges` | AUTO | `allowances.test.js` |
+| T9a | A base quantity is read | `lines[].baseQuantity` | AUTO | `allowances.test.js` |
 | T10 | Official EN 16931 / KoSIT validation | not implemented, adapter boundary only | OPEN | Deliberate, see ADR-008 |
 
 ## Business checks
@@ -86,6 +87,12 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | B11 | An allowance with no charge indicator | `totals_consistent` HIGH, not guessed either way | AUTO | `business-checks.test.js` |
 | B12 | A stated amount that cannot be read is not zero | `totals_consistent` HIGH | AUTO | `business-checks.test.js` |
 | B13 | Nothing left to pay after a discount or prepayment | REVIEW_REQUIRED, `NOTHING_TO_PAY` | AUTO | `decide.test.js` |
+| B14 | A line amount that does not follow from quantity and price | `line_amounts_consistent` HIGH, totals still PASSED | AUTO | `business-checks.test.js` |
+| B15 | A price stated per base quantity | PASSED; the base quantity divides the price | AUTO | `business-checks.test.js` |
+| B16 | A line discount the line amount reflects, and one it ignores | PASSED, then FAILED | AUTO | `business-checks.test.js` |
+| B17 | A line that cannot be recomputed | SKIPPED, not PASSED | AUTO | `business-checks.test.js` |
+| B18 | A reviewer may accept a miscalculated line | not in payableBlockers, unlike `totals_consistent` | AUTO | `business-checks.test.js` |
+| B19 | Quantity times price is exact, not floating point | half a cent rounds away from zero; no precision lost on large lines | AUTO | `money.test.js` |
 | B6 | Unknown PO reference | `po_exists` HIGH | AUTO | `business-checks.test.js` |
 | B7 | Missing PO above the policy threshold | MEDIUM | AUTO | `business-checks.test.js` |
 
@@ -144,7 +151,7 @@ described as working.
 |---|---|---|---|
 | ~~L1 (R07)~~ | ~~Cumulative PO overrun is not prevented~~ | **Fixed 2026-09-17**: capacity is a commitment ledger; the original reproduction now stops the second invoice. See ADR-032 and the table below. | CLOSED |
 | ~~L2 (R08)~~ | ~~A stranded intake could only be rescued by an operator~~ | **Fixed 2026-09-17**: sending the same file again resumes an invoice whose first run never finished. See ADR-044 and the table below. | CLOSED |
-| L3 (R10, partly closed) | The recognised XML subset is narrow. **Fixed 2026-09-17**: the root namespace is now required. **Fixed 2026-09-18**: allowances, charges and prepayments are computed along the EN 16931 chain rather than refused, so a discounted invoice is payable (ADR-047 supersedes ADR-043). Still narrow: only UBL syntax is read, CII remains an adapter boundary, and a line's own net amount is taken as declared. | Upload a CII document | OPEN |
+| L3 (R10, partly closed) | The recognised XML subset is narrow. **Fixed 2026-09-17**: the root namespace is now required. **Fixed 2026-09-18**: allowances, charges and prepayments are computed along the EN 16931 chain rather than refused, so a discounted invoice is payable (ADR-047 supersedes ADR-043). **Also 2026-09-18**: each line is recomputed from quantity, unit price and base quantity, so a declared line amount is no longer taken on trust (ADR-048). Still narrow: only UBL syntax is read, and CII remains an adapter boundary. | Upload a CII document | OPEN |
 | ~~L4 (R11)~~ | ~~Decisions are not bound to a document hash or validation-run identifier~~ | **Fixed 2026-09-17**: each decision records the document, the validation run and the amount, and two gates refuse a mismatch. See ADR-033 and the table below. | CLOSED |
 | ~~L8~~ | ~~Server refusals stay German in English mode~~ | **Fixed 2026-09-17**: every refusal carries a code and its parameters; the client renders it in the chosen language and falls back to the server's sentence. See ADR-042 and the table below. | CLOSED |
 | ~~L7~~ | ~~Business checks are not re-run at the final approval gate~~ | **Fixed 2026-09-17**: the gate re-checks business facts against current master data and returns the invoice to review when one has newly failed. See ADR-041 and the table below. | CLOSED |
@@ -327,7 +334,8 @@ Found while verifying the above, not in the report:
 | K9 | A resumed invoice keeps its intake facts | received_at, filename, channel unchanged | AUTO | `recovery.test.js` |
 | K10 | The resumption is on the audit trail | `intake_resumed` recorded | AUTO | `recovery.test.js` |
 | K11 | A file sent again after processing is still a duplicate | DUPLICATE | AUTO | `recovery.test.js` |
-| K12a | Allowance evidence reads in English, link by link | no German left | AUTO | `dictionaries.test.js` |
+| K6a | A miscalculated line is caught although every total agrees | `line_amounts_consistent` FAILED, `totals_consistent` PASSED | AUTO | `business-checks.test.js`; the header chain cannot see this |
+| K12a | Allowance and line evidence read in English | no German left | AUTO | `dictionaries.test.js` |
 | K12 | The machine export returns identifiers unaltered | `=1+1` survives | AUTO | `csv-export.test.js`, `moneypath.test.js` |
 | K13 | The spreadsheet export makes such a cell inert | prefixed, value intact | AUTO | `csv-export.test.js` |
 | K14 | The two exports are told apart by filename | different Content-Disposition | AUTO | `moneypath.test.js` |
