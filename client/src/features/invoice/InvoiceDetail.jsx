@@ -35,6 +35,14 @@ export default function InvoiceDetail({ may, onChanged }) {
   const statedReasons = (isCharge) => (invoice.parsed?.allowanceCharges ?? [])
     .filter((a) => a.isCharge === isCharge).map((a) => a.reason).filter(Boolean).join(", ");
   const adjusted = Boolean(totals.allowanceTotal || totals.chargeTotal);
+  // Capacity left on the order, or the amount by which reviewers have taken it
+  // past its value. The second is a real state, not an error, so it is named.
+  const poCapacity = (available) => {
+    const cents = Number(available);
+    return cents < 0
+      ? t("poOvercommitted", formatMoney(Math.abs(cents)))
+      : t("poAvailable", formatMoney(available));
+  };
   const withReasons = (amount, isCharge) => {
     const reasons = statedReasons(isCharge);
     return reasons ? `${amount} · ${reasons}` : amount;
@@ -90,7 +98,7 @@ export default function InvoiceDetail({ may, onChanged }) {
                   label={t("fieldOrder")}
                   value={
                     invoice.po_number
-                      ? `${invoice.po_number} · ${t("poAvailable", formatMoney(invoice.po_available_amount))}`
+                      ? `${invoice.po_number} · ${poCapacity(invoice.po_available_amount)}`
                       : invoice.po_reference_raw ?? "—"
                   }
                   mono

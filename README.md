@@ -38,6 +38,12 @@ The interface is German by default and switches to English.
   amount policy. No model decides anything, and none sits anywhere near the
   payment path.
 
+![An invoice stopped for review: the decision panel, what is blocking, and the two failed checks with their expected and found values](docs/screenshots/invoice.png)
+
+An invoice the system stopped, because the purchase order named on it belongs
+to a different supplier. The reviewer is shown each failed check with what was
+expected and what the document actually carried, and decides from there.
+
 The reasoning behind each decision is in `docs/DECISIONS.md`, every behaviour has
 a row in `docs/TEST_MATRIX.md`, and what the system does *not* do is listed under
 "Known limits" below rather than left to be discovered.

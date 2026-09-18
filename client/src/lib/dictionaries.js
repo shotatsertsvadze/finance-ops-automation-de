@@ -106,6 +106,9 @@ const de = {
     fieldTaxKey: "Steuerschlüssel",
     viewOriginalXml: "Original-XML ansehen",
     poAvailable: (amount) => `verfügbar ${amount}`,
+    // An order can be over-committed: reviewers accepted invoices beyond its
+    // value. "verfügbar -1.900,00" is not how anyone says that.
+    poOvercommitted: (amount) => `${amount} überbucht`,
 
     yourDecision: "Ihre Entscheidung",
     status: "Status",
@@ -448,6 +451,7 @@ const en = {
     fieldTaxKey: "Tax key",
     viewOriginalXml: "View original XML",
     poAvailable: (amount) => `${amount} available`,
+    poOvercommitted: (amount) => `${amount} over-committed`,
 
     yourDecision: "Your decision",
     status: "Status",

@@ -140,6 +140,7 @@ commitments is 510,00.
 | P9 | Two simultaneous uploads | exactly one proceeds. Mutation-checked: removing the row lock breaks it | AUTO | "two invoices arriving at the same time" |
 | P10 | A different order | unaffected | AUTO | "an invoice against a different order is unaffected" |
 | P11 | Invoice detail | reports available capacity, excluding the invoice's own hold | AUTO | "the invoice detail reports available capacity" |
+| P11a | An order taken past its value by reviewers | shown as over-committed, not as a negative availability | MANUAL | Invoice detail, DEMO-PO-KLEIN in the demo run |
 | P12 | Original R07 reproduction | no longer reproduces | MANUAL | Probe against a fresh database, 2026-09-17 |
 | P13 | Partial deliveries, credit notes, order closure | not modelled | OPEN | Deliberate, see ADR-032 |
 
