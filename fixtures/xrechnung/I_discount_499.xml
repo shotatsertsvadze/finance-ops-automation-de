@@ -32,31 +32,31 @@
   <cac:AllowanceCharge>
     <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
     <cbc:AllowanceChargeReasonCode>95</cbc:AllowanceChargeReasonCode>
-    <cbc:AllowanceChargeReason>Skonto 3 % bei Zahlung innerhalb von 14 Tagen</cbc:AllowanceChargeReason>
-    <cbc:Amount currencyID="EUR">36.00</cbc:Amount>
+    <cbc:AllowanceChargeReason>Skonto laut Rahmenvereinbarung</cbc:AllowanceChargeReason>
+    <cbc:Amount currencyID="EUR">30.00</cbc:Amount>
     <cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>19</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
   </cac:AllowanceCharge>
-  <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">221.16</cbc:TaxAmount>
-    <cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">1164.00</cbc:TaxableAmount>
-      <cbc:TaxAmount currencyID="EUR">221.16</cbc:TaxAmount>
+  <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">79.80</cbc:TaxAmount>
+    <cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">420.00</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">79.80</cbc:TaxAmount>
       <cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>19</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
     </cac:TaxSubtotal>
   </cac:TaxTotal>
   <cac:LegalMonetaryTotal>
-    <cbc:LineExtensionAmount currencyID="EUR">1200.00</cbc:LineExtensionAmount>
-    <cbc:TaxExclusiveAmount currencyID="EUR">1164.00</cbc:TaxExclusiveAmount>
-    <cbc:TaxInclusiveAmount currencyID="EUR">1385.16</cbc:TaxInclusiveAmount>
-    <cbc:AllowanceTotalAmount currencyID="EUR">36.00</cbc:AllowanceTotalAmount>
+    <cbc:LineExtensionAmount currencyID="EUR">450.00</cbc:LineExtensionAmount>
+    <cbc:TaxExclusiveAmount currencyID="EUR">420.00</cbc:TaxExclusiveAmount>
+    <cbc:TaxInclusiveAmount currencyID="EUR">499.80</cbc:TaxInclusiveAmount>
+    <cbc:AllowanceTotalAmount currencyID="EUR">30.00</cbc:AllowanceTotalAmount>
     
     
     
-    <cbc:PayableAmount currencyID="EUR">1385.16</cbc:PayableAmount>
+    <cbc:PayableAmount currencyID="EUR">499.80</cbc:PayableAmount>
   </cac:LegalMonetaryTotal>
   <cac:InvoiceLine>
     <cbc:ID>1</cbc:ID>
     <cbc:InvoicedQuantity unitCode="C62">1</cbc:InvoicedQuantity>
-    <cbc:LineExtensionAmount currencyID="EUR">1200.00</cbc:LineExtensionAmount>
+    <cbc:LineExtensionAmount currencyID="EUR">450.00</cbc:LineExtensionAmount>
     <cac:Item><cbc:Name>Leistung laut Bestellung PO-2026-0102</cbc:Name></cac:Item>
-    <cac:Price><cbc:PriceAmount currencyID="EUR">1200.00</cbc:PriceAmount></cac:Price>
+    <cac:Price><cbc:PriceAmount currencyID="EUR">450.00</cbc:PriceAmount></cac:Price>
   </cac:InvoiceLine>
 </ubl:Invoice>

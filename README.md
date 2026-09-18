@@ -48,6 +48,8 @@ curl -F file=@fixtures/xrechnung/A_clean_1240.xml http://localhost:4400/api/invo
 | E | clean, 30 000 EUR | manager + finance + CFO |
 | F | malformed | review, technical failure |
 | G | clean, 380 EUR | approved automatically |
+| H | IBAN differs, 380 EUR | review, HIGH; a small amount is no reason to skip the check |
+| I | 3 % discount: 450 EUR of lines, 30 EUR off, 499.80 EUR due | approved automatically; without the discount 535.50 EUR would need a manager |
 
 ## Documentation
 

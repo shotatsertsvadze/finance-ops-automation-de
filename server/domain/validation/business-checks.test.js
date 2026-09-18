@@ -6,6 +6,7 @@ import { runBusinessChecks } from "./business-checks.js";
 import { loadPolicy } from "../../config/policy.js";
 import { loadCompany } from "../../config/company.js";
 import { payableBlockers } from "../workflow/eligibility.js";
+import { requiredApprovalSteps } from "../../config/policy.js";
 
 /** An invoice row that carries everything a payable state requires. */
 const PAYABLE_INVOICE = {
@@ -333,4 +334,23 @@ test("a reviewer may accept a line the supplier miscalculated", () => {
   // against the order, so it is not a blocker on its own.
   assert.deepEqual(payableBlockers(PAYABLE_INVOICE, ["line_amounts_consistent"]), []);
   assert.deepEqual(payableBlockers(PAYABLE_INVOICE, ["totals_consistent"]), ["totals_consistent"]);
+});
+
+test("fixture I behaves as the README says it does", () => {
+  // The README tells a reader what to expect when they upload it, and a
+  // fixture is easy to change without noticing what the table promised.
+  const parsed = parse("I_discount_499.xml");
+  const r = runBusinessChecks(parsed, {
+    supplier: S1, bankAccounts: S1_ACCOUNTS, existingSameNumber: [],
+    purchaseOrder: { id: "po2", po_number: "PO-2026-0102", supplier_id: "s1", remaining_amount: "500.00", status: "OPEN" },
+  }, policy, company);
+
+  assert.deepEqual(r.checks.filter((c) => c.status === "FAILED"), []);
+  assert.equal(parsed.totals.lineExtension, "450.00");
+  assert.equal(parsed.totals.allowanceTotal, "30.00");
+  assert.equal(r.grossCents, 49980, "450.00 less 30.00, plus 19 %");
+
+  assert.deepEqual(requiredApprovalSteps(policy, r.grossCents), [], "approved automatically");
+  assert.deepEqual(requiredApprovalSteps(policy, 53550).map((s) => s.required_role), ["MANAGER"],
+    "and would not be, at the 535.50 the same invoice would come to without the discount");
 });
