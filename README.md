@@ -1,5 +1,7 @@
 # Finance Operations Automation (DE) - E-Invoice to Payment
 
+[![tests](https://github.com/shotatsertsvadze/finance-ops-automation-de/actions/workflows/ci.yml/badge.svg)](https://github.com/shotatsertsvadze/finance-ops-automation-de/actions/workflows/ci.yml)
+
 Proof of concept for German SMEs: an XRechnung arrives, the system validates it
 technically and against the company's own master data, routes it
 deterministically, gets the right people to approve it, hands it to accounting,
@@ -230,3 +232,7 @@ shifts them and rewrites the committed statement. The data is synthetic.
 Every dashboard figure is computed from the invoices and their audit events.
 There is no counter to drift. The savings estimate is a scenario shown together
 with the assumptions that produce it, not a measured benefit.
+
+## Licence
+
+MIT, see `LICENSE`. The data, the company and the figures are invented.

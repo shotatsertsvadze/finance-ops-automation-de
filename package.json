@@ -4,6 +4,7 @@
   "private": true,
   "type": "module",
   "description": "German finance operations PoC: XRechnung intake to payment with deterministic validation, routing, approvals, audit trail and KPIs.",
+  "license": "MIT",
   "engines": {
     "node": ">=22"
   },

@@ -1,0 +1,64 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # The suite is mostly integration tests against a real database: the
+    # transition table, the commitment ledger and the partial unique indexes
+    # are Postgres behaviour, and mocking them would test the mock.
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Two databases, not one. `testDeps()` drops and rebuilds the schema, and
+      # refuses to do so if TEST_DATABASE_URL and DATABASE_URL reach the same
+      # database - so running with both set exercises that guard rather than
+      # skipping it.
+      - name: Create the databases
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -U postgres -c 'create database finops'
+          psql -h localhost -U postgres -c 'create database finops_test'
+
+      # `npm test` passes --env-file, so the file has to exist. This is the
+      # `cp .env.example .env` step from the README, with CI's own values.
+      - name: Write .env
+        run: |
+          cat > .env <<'ENV'
+          DATABASE_URL=postgresql://postgres:postgres@localhost:5432/finops
+          TEST_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/finops_test
+          STORAGE_DIR=./storage
+          ENV
+
+      # Without it the six browser tests skip, and the two things only a
+      # browser can answer - that a stored document does not execute, and that
+      # the accessibility rules take effect - would go unchecked here.
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm test
