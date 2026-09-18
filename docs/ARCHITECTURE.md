@@ -174,25 +174,32 @@ stateDiagram-v2
     APPROVED --> ACCOUNTING_READY: accounting record created
     ACCOUNTING_READY --> PAYMENT_PENDING: payment instruction created
     ACCOUNTING_READY --> CREDITED: credit note booked, never paid
+    ACCOUNTING_READY --> SETTLED_BY_CREDIT: open credits cover the invoice
     PAYMENT_PENDING --> PAID: payment confirmed
     PAID --> RECONCILED: bank record matched
     PAID --> RECONCILIATION_EXCEPTION: no or ambiguous match
     RECONCILIATION_EXCEPTION --> RECONCILED: manual match
     RECONCILED --> [*]
     CREDITED --> [*]
+    SETTLED_BY_CREDIT --> [*]
     REJECTED --> [*]
     DUPLICATE --> [*]
 ```
 
 Rules:
 
-- Terminal states: `RECONCILED`, `CREDITED`, `REJECTED`, `DUPLICATE`. No transition leaves them.
+- Terminal states: `RECONCILED`, `CREDITED`, `SETTLED_BY_CREDIT`, `REJECTED`, `DUPLICATE`. No transition leaves them.
 - Payable states (money may move): `APPROVED`, `ACCOUNTING_READY`,
   `PAYMENT_PENDING`, `PAID`, `RECONCILED`.
 - A credit note (`document_type = 'CREDIT_NOTE'`, UNTDID 1001 code 381) shares
   every state up to `ACCOUNTING_READY` and then ends in `CREDITED`. The payment
   route refuses it, its booking record carries the amounts negated, and its
   claim on a purchase order is negative, so it gives capacity back (ADR-049).
+- A booked credit reduces the next payment to the same supplier. What was
+  applied is recorded in `credit_applications`; the payment instruction carries
+  the netted amount, and reconciliation compares the bank line with that
+  instruction, so it needed no change. An invoice the credits cover entirely
+  reaches `SETTLED_BY_CREDIT` without a payment (ADR-050).
 - A human review never ends in `APPROVED` directly. It ends in
   `READY_FOR_APPROVAL` with at least one approval step, and the reviewer cannot
   take that step (configurable four-eyes after review).
@@ -269,6 +276,7 @@ invoice above the auto limit.
 | POST | `/api/invoices/:id/accounting-record` | 3 | APPROVED to ACCOUNTING_READY, creates the booking record |
 | POST | `/api/invoices/:id/payment` | 3 | creates the payment instruction, ACCOUNTING_READY to PAYMENT_PENDING; refuses a credit note |
 | POST | `/api/invoices/:id/credit` | 3 | books a credit note, ACCOUNTING_READY to CREDITED; refuses an invoice |
+| POST | `/api/invoices/:id/settle-by-credit` | 3 | ACCOUNTING_READY to SETTLED_BY_CREDIT when open credits cover the invoice; refuses a remainder |
 | POST | `/api/invoices/:id/payment/confirm` | 3 | simulated provider confirmation, PAYMENT_PENDING to PAID |
 | POST | `/api/invoices/:id/reconciliation/resolve` | 3 | closes a reconciliation exception, reason required |
 | GET | `/api/accounting/export` | 3 | CSV of all booking records |

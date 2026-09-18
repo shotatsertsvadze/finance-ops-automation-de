@@ -21,6 +21,7 @@ import { decideApprovalStep, decideReview } from "../server/domain/approvals/app
 import { createAccountingRecord } from "../server/domain/accounting/accounting.js";
 import { confirmPayment, createPaymentInstruction } from "../server/domain/payments/payments.js";
 import { bookCredit } from "../server/domain/accounting/credit-notes.js";
+import { settleByCredit } from "../server/domain/accounting/netting.js";
 import { importStatement, runReconciliation } from "../server/domain/reconciliation/reconciliation.js";
 import { human, SYSTEM } from "../server/domain/workflow/transitions.js";
 
@@ -162,7 +163,7 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
   const random = rng(seed);
   await seedDemoOrders(deps.pool);
   const today = new Date();
-  const summary = { created: 0, auto: 0, approved: 0, exceptions: 0, paid: 0, reconciled: 0, credited: 0 };
+  const summary = { created: 0, auto: 0, approved: 0, exceptions: 0, paid: 0, reconciled: 0, credited: 0, netted: 0 };
   const created = [];
 
   for (let i = 0; i < count; i += 1) {
@@ -261,13 +262,35 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
       } else if (random() > 0.25) {
         await createAccountingRecord(deps, { invoiceId: id, actor: human(USERS.finance) });
         if (random() > 0.2) {
-          await createPaymentInstruction(deps, { invoiceId: id, actor: human(USERS.finance) });
-          await confirmPayment(deps, { invoiceId: id, actor: human(USERS.finance), providerRef: null });
-          summary.paid += 1;
+          // The supplier's open credits may cover this invoice entirely, in
+          // which case there is nothing to send and it is settled instead.
+          const { rows: [state] } = await deps.pool.query(
+            `select (i.gross_amount <= coalesce((
+               select sum(c.gross_amount - coalesce((
+                 select sum(a.amount) from finops.credit_applications a where a.credit_note_id = c.id
+               ), 0))
+               from finops.invoices c
+               where c.supplier_id = i.supplier_id and c.document_type = 'CREDIT_NOTE' and c.state = 'CREDITED'
+             ), 0)) as covered
+             from finops.invoices i where i.id = $1`, [id],
+          );
+          if (state.covered) {
+            await settleByCredit(deps, { invoiceId: id, actor: human(USERS.finance) });
+          } else {
+            await createPaymentInstruction(deps, { invoiceId: id, actor: human(USERS.finance) });
+            await confirmPayment(deps, { invoiceId: id, actor: human(USERS.finance), providerRef: null });
+            summary.paid += 1;
+          }
         }
       }
     }
   }
+
+  const { rows: [netting] } = await deps.pool.query(
+    "select count(distinct invoice_id)::int as invoices, coalesce(sum(amount), 0)::text as total from finops.credit_applications",
+  );
+  summary.netted = netting.invoices;
+  summary.netted_amount = netting.total;
 
   await backdate(deps.pool, created, random);
   Object.assign(summary, await settlePayments(deps, random));

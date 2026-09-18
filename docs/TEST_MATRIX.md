@@ -105,6 +105,7 @@ browser).
 | B22 | A credit note naming nothing | `credit_note_reference` MEDIUM | AUTO | `business-checks.test.js` |
 | B23 | An invoice is not asked what it credits | the check is absent, not SKIPPED | AUTO | `business-checks.test.js` |
 | B24 | A credit note larger than the order | `po_amount_within_tolerance` SKIPPED, no failure | AUTO | `business-checks.test.js` |
+| B25 | An unreadable credit balance | not netted against, not treated as zero | AUTO | `netting.test.js` |
 | B6 | Unknown PO reference | `po_exists` HIGH | AUTO | `business-checks.test.js` |
 | B7 | Missing PO above the policy threshold | MEDIUM | AUTO | `business-checks.test.js` |
 
@@ -241,6 +242,16 @@ described as working.
 | M14 | Booking a credit twice | 409 `NOT_READY_TO_CREDIT` | AUTO | `moneypath.test.js` |
 | M15 | A clerk booking a credit | 403 | AUTO | `moneypath.test.js` |
 | M16 | The booking record of a credit note | net, tax and gross negated | AUTO | `credit-note-path.test.js` |
+| M17 | An open credit reduces what is sent to the bank | instruction 476.00 for a 595.00 invoice | AUTO | `netting-path.test.js` |
+| M18 | Netting order | oldest credit first, ties by number; independent of row order | AUTO | `netting.test.js` |
+| M19 | A credit of another supplier | not applied | AUTO | `netting-path.test.js` |
+| M20 | A credit note not yet booked | not available for netting | AUTO | `netting-path.test.js` |
+| M21 | An invoice the credits cover entirely | 409 `FULLY_CREDITED`; settles through its own action | AUTO | `netting-path.test.js` |
+| M22 | Settling an invoice with a remainder | 409 `NOT_FULLY_CREDITED`, nothing consumed | AUTO | `netting-path.test.js` |
+| M23 | A credit applied twice to one invoice | refused by the unique index | AUTO | `netting-path.test.js` |
+| M24 | What was applied is on the audit trail | gross, amount applied and the credit notes used | AUTO | `netting-path.test.js` |
+| M25 | A netted payment reconciles | bank line -476.00 matched against the instruction, no rule changed | MANUAL | End-to-end probe, 2026-09-18: imported, matched, RECONCILED |
+| M26 | A partly used credit keeps its remainder | 476.00 credit, 119.00 applied, 357.00 left | AUTO | `netting-path.test.js` |
 | M11 | Reference and amount agree | RECONCILED, transaction MATCHED | AUTO | `moneypath.test.js` |
 | M12 | Reference names the invoice, amount differs | exception on that invoice, AMOUNT_MISMATCH | AUTO | `moneypath.test.js` |
 | M13 | Transaction matching nothing | stays UNMATCHED, no invoice touched | AUTO | `moneypath.test.js` |

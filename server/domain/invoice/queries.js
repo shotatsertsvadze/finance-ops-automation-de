@@ -23,6 +23,24 @@ export async function getInvoiceDetail(pool, id) {
     `select i.*, s.supplier_no, s.legal_name as supplier_name, s.status as supplier_status, s.default_cost_center,
             p.po_number, p.remaining_amount as po_remaining_amount, p.approved_amount as po_approved_amount, p.cost_center as po_cost_center,
             d.invoice_number as duplicate_of_number,
+            -- Booked credits of this supplier that still have something left.
+            -- Shown before the decision, so the amount that will actually be
+            -- sent is visible rather than discovered afterwards.
+            coalesce((
+              select sum(c.gross_amount - coalesce((
+                select sum(a.amount) from finops.credit_applications a where a.credit_note_id = c.id
+              ), 0))
+              from finops.invoices c
+              where c.supplier_id = i.supplier_id
+                and c.document_type = 'CREDIT_NOTE'
+                and c.state = 'CREDITED'
+                and c.id <> i.id
+            ), 0) as open_credit_amount,
+            -- What this document has had applied to it, either way round.
+            coalesce((
+              select sum(a.amount) from finops.credit_applications a
+              where a.invoice_id = i.id or a.credit_note_id = i.id
+            ), 0) as credit_applied_amount,
             -- Available capacity, not the opening balance: other live invoices
             -- may already hold part of this order.
             (p.remaining_amount - coalesce((

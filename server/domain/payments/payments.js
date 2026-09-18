@@ -1,6 +1,8 @@
 import { withTransaction } from "../../db.js";
 import { NotFoundError, TransitionError, transition } from "../workflow/transitions.js";
 import { RuleError } from "../approvals/approvals.js";
+import { applyCredits, openCreditsFor, planNetting } from "../accounting/netting.js";
+import { centsToDecimal } from "../money.js";
 
 /**
  * Simulated payment. No money moves: this records the instruction a bank
@@ -36,21 +38,51 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
     }
     if (!invoice.supplier_iban_raw) throw new RuleError(422, "NO_IBAN", "Ohne IBAN kann keine Zahlung angewiesen werden");
 
+    // Booked credits of the same supplier reduce what leaves the bank. Read
+    // and locked inside this transaction, so two payments to one supplier
+    // cannot both spend the same credit (ADR-050).
+    const credits = await openCreditsFor(client, invoice.supplier_id, invoice.currency ?? "EUR", invoiceId);
+    const plan = planNetting(invoice.gross_amount, credits);
+    if (plan.payableCents === null) {
+      throw new RuleError(422, "AMOUNTS_INCOMPLETE", "Beträge der Rechnung sind unvollständig, Zahlung nicht anweisbar");
+    }
+    // An instruction for 0.00 is not a payment. The invoice stops here for a
+    // person rather than being sent to the bank as nothing.
+    if (plan.payableCents === 0) {
+      throw new RuleError(409, "FULLY_CREDITED",
+        "Die offenen Gutschriften decken den Rechnungsbetrag vollständig; die Rechnung wird ausgeglichen statt bezahlt");
+    }
+    const payable = centsToDecimal(plan.payableCents);
+    const appliedCents = plan.applications.reduce((sum, a) => sum + a.amountCents, 0);
+
     const key = idempotencyKey(invoice);
     const inserted = await client.query(
       `insert into finops.payment_instructions
          (invoice_id, idempotency_key, amount, currency, creditor_iban, creditor_name, reference)
        values ($1,$2,$3,$4,$5,$6,$7)
        on conflict (idempotency_key) do nothing`,
-      [invoiceId, key, invoice.gross_amount, invoice.currency ?? "EUR", invoice.supplier_iban_raw,
+      [invoiceId, key, payable, invoice.currency ?? "EUR", invoice.supplier_iban_raw,
         invoice.supplier_name ?? invoice.supplier_name_raw ?? "", invoice.invoice_number ?? ""],
     );
     if (inserted.rowCount === 0) throw new RuleError(409, "PAYMENT_ALREADY_INSTRUCTED", "Für diese Rechnung besteht bereits eine Zahlungsanweisung");
 
+    // Written after the instruction, in the same transaction: the unique index
+    // on (credit_note_id, invoice_id) is the second lock on the same door, so
+    // a replay can consume nothing even if it got past the first.
+    await applyCredits(client, invoiceId, plan.applications);
+
     await transition(client, {
       invoiceId, to: "PAYMENT_PENDING", actor, action: "payment_instructed",
-      reason: `Zahlung ${invoice.gross_amount} ${invoice.currency ?? "EUR"} angewiesen`,
-      evidence: { idempotency_key: key, creditor_iban: invoice.supplier_iban_raw },
+      reason: `Zahlung ${payable} ${invoice.currency ?? "EUR"} angewiesen`,
+      evidence: {
+        idempotency_key: key,
+        creditor_iban: invoice.supplier_iban_raw,
+        gross_amount: invoice.gross_amount,
+        // Stated even when nothing was applied: "0.00" is an answer, and its
+        // absence would be ambiguous between "no credits" and "not checked".
+        credit_applied: centsToDecimal(appliedCents),
+        credit_notes: plan.applications.map((a) => a.creditNoteId),
+      },
     });
   });
 }

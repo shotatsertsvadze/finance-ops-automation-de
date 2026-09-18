@@ -11,6 +11,9 @@ const INVOICE_PATH = ["RECEIVED", "VALIDATING", "READY_FOR_APPROVAL", "APPROVED"
 // the invoice path would promise a payment that is never coming, and leave the
 // state it actually reaches off the spine altogether.
 const CREDIT_NOTE_PATH = ["RECEIVED", "VALIDATING", "READY_FOR_APPROVAL", "APPROVED", "ACCOUNTING_READY", "CREDITED"];
+// An invoice its open credits covered entirely. It leaves the path at the same
+// point, and no money moves, so the payment stages never apply to it.
+const SETTLED_PATH = ["RECEIVED", "VALIDATING", "READY_FOR_APPROVAL", "APPROVED", "ACCOUNTING_READY", "SETTLED_BY_CREDIT"];
 
 const OFF_PATH = {
   REVIEW_REQUIRED: { after: "VALIDATING", tone: "blocked" },
@@ -22,7 +25,9 @@ const OFF_PATH = {
 
 export default function StateSpine({ state, reviewReason, pendingRole, documentType = "INVOICE" }) {
   const { t, state: stateLabel, reviewReason: reasonLabel, role } = useI18n();
-  const PATH = documentType === "CREDIT_NOTE" ? CREDIT_NOTE_PATH : INVOICE_PATH;
+  const PATH = state === "SETTLED_BY_CREDIT" ? SETTLED_PATH
+    : documentType === "CREDIT_NOTE" ? CREDIT_NOTE_PATH
+    : INVOICE_PATH;
   const off = OFF_PATH[state];
   const reachedIndex = off ? PATH.indexOf(off.after) : PATH.indexOf(state);
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   confirmPayment, createAccountingRecord, decideReview, decideStep,
-  instructPayment, bookCredit, reportInfoReceived, reprocessInvoice, resolveReconciliation,
+  instructPayment, bookCredit, settleByCredit, reportInfoReceived, reprocessInvoice, resolveReconciliation,
 } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
 
@@ -65,8 +65,20 @@ export default function ActionPanel({ invoice, may, onDone }) {
     prompt = t("hintCreditNoteReady", invoice.accounting_record?.document_no ?? "");
     actions.push({ key: "credit", label: t("bookCredit"), tone: "ok", needs: "payment:instruct", run: () => bookCredit(id) });
   } else if (invoice.state === "ACCOUNTING_READY") {
-    prompt = t("hintAccountingReady", invoice.accounting_record?.document_no ?? "");
-    actions.push({ key: "pay", label: t("instructPayment"), tone: "ok", needs: "payment:instruct", run: () => instructPayment(id) });
+    // The amount that will actually leave the bank, shown before the decision
+    // rather than discovered afterwards.
+    const credit = Number(invoice.open_credit_amount ?? 0);
+    const gross = Number(invoice.gross_amount ?? 0);
+    if (credit >= gross && gross > 0) {
+      prompt = t("hintFullyCredited", invoice.accounting_record?.document_no ?? "");
+      actions.push({ key: "settle", label: t("settleByCredit"), tone: "ok", needs: "payment:instruct", run: () => settleByCredit(id) });
+    } else if (credit > 0) {
+      prompt = t("hintNetted", invoice.accounting_record?.document_no ?? "");
+      actions.push({ key: "pay", label: t("instructPayment"), tone: "ok", needs: "payment:instruct", run: () => instructPayment(id) });
+    } else {
+      prompt = t("hintAccountingReady", invoice.accounting_record?.document_no ?? "");
+      actions.push({ key: "pay", label: t("instructPayment"), tone: "ok", needs: "payment:instruct", run: () => instructPayment(id) });
+    }
   } else if (invoice.state === "PAYMENT_PENDING") {
     prompt = t("hintPaymentPending");
     actions.push({ key: "confirm", label: t("confirmPayment"), tone: "ok", needs: "payment:confirm", run: () => confirmPayment(id) });

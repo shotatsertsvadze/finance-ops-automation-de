@@ -91,6 +91,10 @@ export default function InvoiceDetail({ may, onChanged }) {
                   <Fact label={t("fieldNet")} value={formatMoney(invoice.net_amount)} mono />
                   <Fact label={t("fieldVat")} value={formatMoney(invoice.vat_amount)} mono />
                 </div>
+                {Number(invoice.open_credit_amount ?? 0) > 0 && invoice.state === "ACCOUNTING_READY"
+                  && invoice.document_type !== "CREDIT_NOTE"
+                  ? <Fact label={t("fieldOpenCredit")} value={`− ${formatMoney(invoice.open_credit_amount)}`} mono />
+                  : null}
                 {invoice.credits_invoice_raw
                   ? <Fact label={t("fieldCredits")} value={invoice.credits_invoice_raw} mono />
                   : null}

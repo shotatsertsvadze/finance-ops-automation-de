@@ -109,10 +109,11 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
 - **A purchase order is a single balance, not a line-by-line receipt.**
   Capacity is committed, released and given back by a credit note, but partial
   deliveries and order closure are not modelled.
-- **A credit note is booked, not settled.** It runs the same checks, reduces
-  the order and reaches a terminal state, and it is never paid. Whether the
-  balance comes back as a refund or as a deduction from the next payment run
-  happens outside this system.
+- **A credit note is applied to the next payment, not to the invoice it
+  names.** It runs the same checks, reduces the order, is never paid, and its
+  open balance offsets the next payment to that supplier - oldest credit first.
+  The reference to the invoice being credited is read and shown, but does not
+  steer which payment it reduces.
 - **Reconciliation matches one statement line to one invoice.** Part payments
   and collective payments covering several invoices are not modelled; each
   becomes an exception for a person to resolve.

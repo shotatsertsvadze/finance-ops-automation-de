@@ -982,3 +982,53 @@ payment would mean an open-credit ledger, partial consumption, and a bank
 transaction that no longer matches any single invoice's amount - which reopens
 reconciliation, the part of the system with the most safety rules in it. That
 is a larger piece of work and is named here rather than half-built.
+
+## ADR-050 A booked credit reduces the next payment, and the ledger says which
+
+Completes ADR-049, which booked credit notes and left settlement outside the
+system. A credit note now offsets the next payment to the same supplier.
+
+The part that turned out not to need changing is the part I expected to:
+reconciliation. `matching.js` has always compared a bank line with the payment
+instruction rather than with the invoice, and its own comment says why - "they
+agree today, and when they stop agreeing the instruction is the one the bank
+acted on". Netting is exactly that case. The instruction carries the netted
+amount, the bank line matches it, and no reconciliation rule moved.
+
+**The ledger, not a balance.** `credit_applications` records each amount of a
+credit note applied to an invoice. A credit note's open balance is its gross
+amount minus the sum of its applications. An append-only record answers "why
+was this payment 476.00 and not 595.00" months later; a decremented counter
+cannot. A unique index on (credit_note_id, invoice_id) means a replay can
+consume nothing, and the credits are read `for update` inside the payment's own
+transaction, so two payments to one supplier cannot both spend the same credit.
+
+**The order is part of the rule.** Oldest credit first, ties broken by document
+number. Without a total order the same invoice could be paid a different amount
+depending on the order rows came back in, which is not something a payment
+system may leave to chance.
+
+**Two endings, kept apart.** Credits that cover an invoice entirely leave
+nothing to send, and an instruction for 0.00 is not a payment. The first design
+refused that case, which stranded the invoice with no way out and, worse, made
+partial consumption of a credit impossible: a credit is only ever used in part
+when it exceeds the invoice, which was the refused case. So an invoice its
+credits cover reaches `SETTLED_BY_CREDIT` through its own action. A person
+decides to settle rather than to pay, and the audit trail says which they did.
+`createPaymentInstruction` refuses a fully credited invoice (`FULLY_CREDITED`)
+and `settleByCredit` refuses one with a remainder (`NOT_FULLY_CREDITED`), so
+neither action can quietly do the other's job.
+
+**Shown before the decision, not after.** The invoice detail reports the
+supplier's open credits while the invoice waits at `ACCOUNTING_READY`, and the
+action panel offers either "instruct payment" with the netting stated, or
+"settle against credits" when they cover it. The audit event records the gross
+amount, the amount applied and which credit notes were used, so the reduction
+is never only visible as a smaller number.
+
+**Still not modelled**, and named rather than half-built: a credit note is
+applied to whichever invoices come next, not to the one it names. `BillingReference`
+is read, stored and displayed, but it does not steer the netting. Honouring it
+would mean deciding what happens when the named invoice is already paid, or
+belongs to another period, and that is a question about someone's accounting
+policy rather than about this code.
