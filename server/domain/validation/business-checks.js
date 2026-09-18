@@ -10,6 +10,7 @@ import { approvalTierLabel } from "../../config/policy.js";
 export function runBusinessChecks(parsed, master, policy, company) {
   const checks = [];
   const { supplier, matchedBy = null, bankAccounts = [], purchaseOrder, existingSameNumber = [] } = master;
+  const isCreditNote = parsed.documentType === "CREDIT_NOTE";
   const netCents = toCents(parsed.totals.taxExclusive);
   const vatCents = toCents(parsed.totals.taxAmount);
   const grossCents = toCents(parsed.totals.payable);
@@ -69,6 +70,24 @@ export function runBusinessChecks(parsed, master, policy, company) {
     checks.push(passed("duplicate_invoice_number", SEVERITY.HIGH, { expected: "keine", actual: "keine", reason: "Rechnungsnummer für diesen Lieferanten neu" }));
   }
 
+  // Asked only of a credit note. On an invoice it would be SKIPPED every time,
+  // which is noise in the one panel a reviewer actually reads.
+  if (isCreditNote) {
+    if (parsed.creditedInvoice) {
+      checks.push(passed("credit_note_reference", SEVERITY.MEDIUM, {
+        expected: "Bezug auf die gutgeschriebene Rechnung",
+        actual: parsed.creditedInvoice,
+        reason: "Die Gutschrift nennt die Rechnung, auf die sie sich bezieht",
+      }));
+    } else {
+      checks.push(failed("credit_note_reference", SEVERITY.MEDIUM, {
+        expected: "Bezug auf die gutgeschriebene Rechnung",
+        actual: "(keiner)",
+        reason: "Die Gutschrift nennt keine Rechnung; welche Verbindlichkeit sie mindert, ist offen",
+      }));
+    }
+  }
+
   const poRequired = grossCents !== null && grossCents > policy.poRequiredAboveCents;
   if (parsed.poReference) {
     checks.push(passed("po_reference_present", SEVERITY.MEDIUM, { expected: "Bestellreferenz", actual: parsed.poReference, reason: "Bestellreferenz vorhanden" }));
@@ -110,7 +129,15 @@ export function runBusinessChecks(parsed, master, policy, company) {
     const committedCents = openingCents - availableCents;
     const held = committedCents > 0 ? `, davon ${centsToDecimal(committedCents)} EUR durch andere Rechnungen gebunden` : "";
 
-    if (netCents === null) {
+    if (isCreditNote) {
+      // It gives capacity back rather than taking it, so measuring it against
+      // the ceiling would refuse exactly the credit notes that matter most.
+      checks.push(skipped("po_amount_within_tolerance", {
+        expected: `verfügbar ${centsToDecimal(availableCents)} EUR`,
+        actual: `${centsToDecimal(netCents ?? 0)} EUR Gutschrift`,
+        reason: "Eine Gutschrift verbraucht die Bestellung nicht, sondern gibt Betrag frei",
+      }));
+    } else if (netCents === null) {
       checks.push(skipped("po_amount_within_tolerance", { reason: "Nettobetrag nicht lesbar" }));
     } else if (netCents <= ceilingCents) {
       checks.push(passed("po_amount_within_tolerance", SEVERITY.HIGH, {

@@ -86,7 +86,9 @@ export function runTechnicalValidation(buffer) {
     }));
   }
 
-  if (parsed.typeCode && parsed.typeCode !== "380") {
+  // 380 is an invoice and 381 a credit note; both are documents this system
+  // models, so neither is an anomaly. Anything else still is.
+  if (parsed.typeCode && !["380", "381"].includes(parsed.typeCode)) {
     checks.push(warning("invoice_type_code", { expected: "380 (Rechnung)", actual: parsed.typeCode, reason: "Abweichender Rechnungstyp, wird als Hinweis geführt" }));
   }
 

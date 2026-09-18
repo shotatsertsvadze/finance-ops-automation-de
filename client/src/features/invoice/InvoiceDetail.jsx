@@ -55,6 +55,7 @@ export default function InvoiceDetail({ may, onChanged }) {
         <div>
           <h1 className="mono">{invoice.invoice_number ?? invoice.original_filename}</h1>
           <p>
+            {invoice.document_type === "CREDIT_NOTE" ? `${t("documentCreditNote")} · ` : ""}
             {invoice.supplier_name ?? invoice.supplier_name_raw ?? "Lieferant nicht zugeordnet"}
             {invoice.supplier_no ? ` · ${invoice.supplier_no}` : ""}
           </p>
@@ -67,7 +68,7 @@ export default function InvoiceDetail({ may, onChanged }) {
           <section className="panel">
             <div className="panel-head"><span className="label">{t("panelProgress")}</span></div>
             <div className="panel-body">
-              <StateSpine state={invoice.state} reviewReason={invoice.review_reason} pendingRole={pendingRole} />
+              <StateSpine state={invoice.state} reviewReason={invoice.review_reason} pendingRole={pendingRole} documentType={invoice.document_type} />
             </div>
           </section>
 
@@ -90,8 +91,11 @@ export default function InvoiceDetail({ may, onChanged }) {
                   <Fact label={t("fieldNet")} value={formatMoney(invoice.net_amount)} mono />
                   <Fact label={t("fieldVat")} value={formatMoney(invoice.vat_amount)} mono />
                 </div>
+                {invoice.credits_invoice_raw
+                  ? <Fact label={t("fieldCredits")} value={invoice.credits_invoice_raw} mono />
+                  : null}
                 {totals.prepaid ? <Fact label={t("fieldPrepaid")} value={`− ${formatMoney(totals.prepaid)}`} mono /> : null}
-                <Fact label={t("fieldAmountDue")} value={formatMoney(invoice.gross_amount)} mono />
+                <Fact label={t(invoice.document_type === "CREDIT_NOTE" ? "fieldCreditAmount" : "fieldAmountDue")} value={formatMoney(invoice.gross_amount)} mono />
                 <Fact label={t("fieldIban")} value={groupIban(invoice.supplier_iban_raw) || "—"} mono />
                 <Fact label={t("fieldVatId")} value={invoice.supplier_vat_id_raw ?? "—"} mono />
                 <Fact

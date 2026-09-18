@@ -20,7 +20,7 @@ const parser = new XMLParser({
   parseTagValue: false,
   parseAttributeValue: false,
   trimValues: true,
-  isArray: (name) => ["InvoiceLine", "TaxSubtotal", "PaymentMeans", "AllowanceCharge"].includes(name),
+  isArray: (name) => ["InvoiceLine", "TaxSubtotal", "PaymentMeans", "AllowanceCharge", "CreditNoteLine"].includes(name),
 });
 
 const text = (node) => {
@@ -52,6 +52,9 @@ const allowanceCharge = (node) => {
 };
 
 const UBL_INVOICE_NS = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
+const UBL_CREDITNOTE_NS = "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2";
+/** UNTDID 1001: the document says we are owed, not that we owe. */
+const CREDIT_NOTE_TYPE = "381";
 const CII_NS_PREFIX = "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice";
 
 /**
@@ -81,6 +84,7 @@ export function rootNamespace(xmlText) {
 /** The format a document declares itself to be, by namespace and root element. */
 export function detectFormat(doc, namespace) {
   if (doc.Invoice && namespace === UBL_INVOICE_NS) return "XRECHNUNG_UBL";
+  if (doc.CreditNote && namespace === UBL_CREDITNOTE_NS) return "XRECHNUNG_UBL";
   if (doc.CrossIndustryInvoice && (namespace ?? "").startsWith(CII_NS_PREFIX)) return "CII";
   return "UNKNOWN";
 }
@@ -99,15 +103,21 @@ export function parseInvoiceXml(xmlText) {
         : `Kein UBL-Invoice-Dokument (Namensraum: ${namespace ?? "keiner"})`,
     );
   }
-  const inv = doc.Invoice;
+  // One structure for both: a UBL credit note is the same document under
+  // different element names, and the rest of this adapter should not care.
+  const inv = doc.Invoice ?? doc.CreditNote;
+  const typeCode = str(inv, "InvoiceTypeCode") ?? str(inv, "CreditNoteTypeCode");
+  // Either shape means the same thing: a CreditNote document, or an Invoice
+  // document whose type code says 381.
+  const documentType = doc.CreditNote || typeCode === CREDIT_NOTE_TYPE ? "CREDIT_NOTE" : "INVOICE";
   const supplier = get(inv, "AccountingSupplierParty.Party") ?? {};
   const buyer = get(inv, "AccountingCustomerParty.Party") ?? {};
   const paymentMeans = (inv.PaymentMeans ?? [])[0] ?? {};
-  const lines = (inv.InvoiceLine ?? []).map((line, i) => ({
+  const lines = (inv.InvoiceLine ?? inv.CreditNoteLine ?? []).map((line, i) => ({
     lineNo: str(line, "ID") ?? String(i + 1),
     description: str(line, "Item.Name"),
-    quantity: str(line, "InvoicedQuantity"),
-    unitCode: get(line, "InvoicedQuantity.@_unitCode") ?? null,
+    quantity: str(line, "InvoicedQuantity") ?? str(line, "CreditedQuantity"),
+    unitCode: get(line, "InvoicedQuantity.@_unitCode") ?? get(line, "CreditedQuantity.@_unitCode") ?? null,
     unitPrice: str(line, "Price.PriceAmount"),
     // The quantity the price applies to. Absent means one; a price stated per
     // 1000 pieces is not a price per piece.
@@ -117,12 +127,15 @@ export function parseInvoiceXml(xmlText) {
   }));
   return {
     format,
+    documentType,
+    // The invoice this credit note refers to, if it names one.
+    creditedInvoice: str(inv, "BillingReference.InvoiceDocumentReference.ID"),
     customizationId: str(inv, "CustomizationID"),
     profileId: str(inv, "ProfileID"),
     invoiceNumber: str(inv, "ID"),
     issueDate: str(inv, "IssueDate"),
     dueDate: str(inv, "DueDate"),
-    typeCode: str(inv, "InvoiceTypeCode"),
+    typeCode,
     currency: str(inv, "DocumentCurrencyCode"),
     buyerReference: str(inv, "BuyerReference"),
     poReference: str(inv, "OrderReference.ID"),

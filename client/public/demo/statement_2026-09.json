@@ -42,120 +42,120 @@
     },
     {
       "external_id": "TX-DEMO-0001",
-      "value_date": "2026-09-04",
+      "value_date": "2026-09-05",
+      "currency": "EUR",
+      "counterparty_name": "Havel Logistik GmbH",
+      "counterparty_iban": "DE02120300000000202051",
+      "reference": "Rechnung DEMO-2026-01000",
+      "amount": "-4298.66"
+    },
+    {
+      "external_id": "TX-DEMO-0002",
+      "value_date": "2026-09-16",
+      "currency": "EUR",
+      "counterparty_name": "Spree IT-Systeme AG",
+      "counterparty_iban": "DE02500105170137075030",
+      "reference": "Rechnung DEMO-2026-01003",
+      "amount": "-5139.75"
+    },
+    {
+      "external_id": "TX-DEMO-0003",
+      "value_date": "2026-09-11",
+      "currency": "EUR",
+      "counterparty_name": "Havel Logistik GmbH",
+      "counterparty_iban": "DE02120300000000202051",
+      "reference": "Rechnung DEMO-2026-01004",
+      "amount": "-287.48"
+    },
+    {
+      "external_id": "TX-DEMO-0004",
+      "value_date": "2026-09-22",
+      "currency": "EUR",
+      "counterparty_name": "Havel Logistik GmbH",
+      "counterparty_iban": "DE02120300000000202051",
+      "reference": "Rechnung DEMO-2026-01005",
+      "amount": "-3933.91"
+    },
+    {
+      "external_id": "TX-DEMO-0005",
+      "value_date": "2026-09-17",
       "currency": "EUR",
       "counterparty_name": "Spree IT-Systeme AG",
       "counterparty_iban": "DE02500105170137075030",
       "reference": "Rechnung DEMO-2026-01006",
-      "amount": "-1754.50"
-    },
-    {
-      "external_id": "TX-DEMO-0002",
-      "value_date": "2026-08-25",
-      "currency": "EUR",
-      "counterparty_name": "Berliner Bürobedarf GmbH",
-      "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01007",
-      "amount": "-101.90"
-    },
-    {
-      "external_id": "TX-DEMO-0003",
-      "value_date": "2026-09-18",
-      "currency": "EUR",
-      "counterparty_name": "Spree IT-Systeme AG",
-      "counterparty_iban": "DE02500105170137075030",
-      "reference": "Rechnung DEMO-2026-01008",
-      "amount": "-329.11"
-    },
-    {
-      "external_id": "TX-DEMO-0004",
-      "value_date": "2026-08-30",
-      "currency": "EUR",
-      "counterparty_name": "Havel Logistik GmbH",
-      "counterparty_iban": "DE02120300000000202051",
-      "reference": "Rechnung DEMO-2026-01009",
-      "amount": "-197.79"
-    },
-    {
-      "external_id": "TX-DEMO-0005",
-      "value_date": "2026-08-25",
-      "currency": "EUR",
-      "counterparty_name": "Berliner Bürobedarf GmbH",
-      "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01010",
-      "amount": "-255.91"
+      "amount": "-1428.00"
     },
     {
       "external_id": "TX-DEMO-0006",
+      "value_date": "2026-09-15",
+      "currency": "EUR",
+      "counterparty_name": "Berliner Bürobedarf GmbH",
+      "counterparty_iban": "DE75512108001245126199",
+      "reference": "Rechnung DEMO-2026-01009",
+      "amount": "-1021.89"
+    },
+    {
+      "external_id": "TX-DEMO-0007",
       "value_date": "2026-09-10",
       "currency": "EUR",
       "counterparty_name": "Havel Logistik GmbH",
       "counterparty_iban": "DE02120300000000202051",
-      "reference": "Rechnung DEMO-2026-01012",
-      "amount": "-383.49"
-    },
-    {
-      "external_id": "TX-DEMO-0007",
-      "value_date": "2026-09-03",
-      "currency": "EUR",
-      "counterparty_name": "Berliner Bürobedarf GmbH",
-      "counterparty_iban": "DE89370400440532013000",
-      "reference": "Teilzahlung DEMO-2026-01015",
-      "amount": "-281.91"
+      "reference": "Teilzahlung DEMO-2026-01011",
+      "amount": "-2652.46"
     },
     {
       "external_id": "TX-DEMO-0008",
-      "value_date": "2026-09-26",
+      "value_date": "2026-08-31",
       "currency": "EUR",
-      "counterparty_name": "Spree IT-Systeme AG",
-      "counterparty_iban": "DE02500105170137075030",
-      "reference": "Rechnung DEMO-2026-01019",
-      "amount": "-3670.53"
+      "counterparty_name": "Havel Logistik GmbH",
+      "counterparty_iban": "DE75512108001245126199",
+      "reference": "Rechnung DEMO-2026-01014",
+      "amount": "-1639.07"
     },
     {
       "external_id": "TX-DEMO-0009",
-      "value_date": "2026-09-21",
+      "value_date": "2026-09-19",
       "currency": "EUR",
       "counterparty_name": "Berliner Bürobedarf GmbH",
       "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01023",
-      "amount": "-187.06"
+      "reference": "Rechnung DEMO-2026-01015",
+      "amount": "-2928.11"
     },
     {
       "external_id": "TX-DEMO-0010",
-      "value_date": "2026-09-20",
+      "value_date": "2026-08-23",
       "currency": "EUR",
-      "counterparty_name": "Berliner Bürobedarf GmbH",
-      "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01024",
-      "amount": "-406.72"
+      "counterparty_name": "Havel Logistik GmbH",
+      "counterparty_iban": "DE02120300000000202051",
+      "reference": "Rechnung DEMO-2026-01018",
+      "amount": "-270.62"
     },
     {
       "external_id": "TX-DEMO-0011",
-      "value_date": "2026-09-19",
+      "value_date": "2026-08-30",
       "currency": "EUR",
       "counterparty_name": "Abweichendes Konto",
       "counterparty_iban": "DE02300209000106531065",
-      "reference": "Rechnung DEMO-2026-01025",
-      "amount": "-2228.47"
+      "reference": "Rechnung DEMO-2026-01020",
+      "amount": "-303.18"
     },
     {
       "external_id": "TX-DEMO-0012",
-      "value_date": "2026-08-31",
+      "value_date": "2026-08-30",
       "currency": "EUR",
-      "counterparty_name": "Spree IT-Systeme AG",
-      "counterparty_iban": "DE02500105170137075030",
-      "reference": "Rechnung DEMO-2026-01027",
-      "amount": "-119.26"
+      "counterparty_name": "Berliner Bürobedarf GmbH",
+      "counterparty_iban": "DE89370400440532013000",
+      "reference": "Rechnung DEMO-2026-01022",
+      "amount": "-218.71"
     },
     {
       "external_id": "TX-DEMO-0013",
-      "value_date": "2026-09-05",
+      "value_date": "2026-08-27",
       "currency": "EUR",
-      "counterparty_name": "Spree IT-Systeme AG",
-      "counterparty_iban": "DE02500105170137075030",
+      "counterparty_name": "Berliner Bürobedarf GmbH",
+      "counterparty_iban": "DE89370400440532013000",
       "reference": "Sammelzahlung September ohne Einzelbeleg",
-      "amount": "-4839.08"
+      "amount": "-391.75"
     },
     {
       "external_id": "TX-DEMO-0014",
@@ -163,7 +163,7 @@
       "currency": "EUR",
       "counterparty_name": "Berliner Bürobedarf GmbH",
       "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01029",
+      "reference": "Rechnung DEMO-2026-01027",
       "amount": "-3526.85"
     },
     {
@@ -172,188 +172,170 @@
       "currency": "EUR",
       "counterparty_name": "Berliner Bürobedarf GmbH",
       "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01030",
+      "reference": "Rechnung DEMO-2026-01028",
       "amount": "-212.21"
     },
     {
       "external_id": "TX-DEMO-0016",
-      "value_date": "2026-09-22",
-      "currency": "EUR",
-      "counterparty_name": "Berliner Bürobedarf GmbH",
-      "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01031",
-      "amount": "-157.37"
-    },
-    {
-      "external_id": "TX-DEMO-0017",
-      "value_date": "2026-09-20",
-      "currency": "EUR",
-      "counterparty_name": "Berliner Bürobedarf GmbH",
-      "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01034",
-      "amount": "-293.19"
-    },
-    {
-      "external_id": "TX-DEMO-0018",
-      "value_date": "2026-09-03",
-      "currency": "EUR",
-      "counterparty_name": "Havel Logistik GmbH",
-      "counterparty_iban": "DE02120300000000202051",
-      "reference": "Rechnung DEMO-2026-01035",
-      "amount": "-255.06"
-    },
-    {
-      "external_id": "TX-DEMO-0019",
-      "value_date": "2026-08-25",
-      "currency": "EUR",
-      "counterparty_name": "Berliner Bürobedarf GmbH",
-      "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01038",
-      "amount": "-209.83"
-    },
-    {
-      "external_id": "TX-DEMO-0020",
-      "value_date": "2026-09-04",
-      "currency": "EUR",
-      "counterparty_name": "Berliner Bürobedarf GmbH",
-      "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01039",
-      "amount": "-256.85"
-    },
-    {
-      "external_id": "TX-DEMO-0021",
-      "value_date": "2026-08-25",
-      "currency": "EUR",
-      "counterparty_name": "Berliner Bürobedarf GmbH",
-      "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01042",
-      "amount": "-441.23"
-    },
-    {
-      "external_id": "TX-DEMO-0022",
-      "value_date": "2026-09-20",
-      "currency": "EUR",
-      "counterparty_name": "Havel Logistik GmbH",
-      "counterparty_iban": "DE02120300000000202051",
-      "reference": "Rechnung DEMO-2026-01045",
-      "amount": "-4275.17"
-    },
-    {
-      "external_id": "TX-DEMO-0023",
-      "value_date": "2026-09-10",
-      "currency": "EUR",
-      "counterparty_name": "Berliner Bürobedarf GmbH",
-      "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01047",
-      "amount": "-291.51"
-    },
-    {
-      "external_id": "TX-DEMO-0024",
-      "value_date": "2026-08-31",
-      "currency": "EUR",
-      "counterparty_name": "Spree IT-Systeme AG",
-      "counterparty_iban": "DE02500105170137075030",
-      "reference": "Rechnung DEMO-2026-01049",
-      "amount": "-208.92"
-    },
-    {
-      "external_id": "TX-DEMO-0025",
-      "value_date": "2026-08-29",
-      "currency": "EUR",
-      "counterparty_name": "Berliner Bürobedarf GmbH",
-      "counterparty_iban": "DE75512108001245126199",
-      "reference": "Rechnung DEMO-2026-01050",
-      "amount": "-1048.91"
-    },
-    {
-      "external_id": "TX-DEMO-0026",
-      "value_date": "2026-09-01",
-      "currency": "EUR",
-      "counterparty_name": "Spree IT-Systeme AG",
-      "counterparty_iban": "DE75512108001245126199",
-      "reference": "Rechnung DEMO-2026-01053",
-      "amount": "-1200.54"
-    },
-    {
-      "external_id": "TX-DEMO-0027",
-      "value_date": "2026-09-05",
-      "currency": "EUR",
-      "counterparty_name": "Havel Logistik GmbH",
-      "counterparty_iban": "DE02120300000000202051",
-      "reference": "Rechnung DEMO-2026-01054",
-      "amount": "-139.62"
-    },
-    {
-      "external_id": "TX-DEMO-0028",
-      "value_date": "2026-09-21",
-      "currency": "EUR",
-      "counterparty_name": "Havel Logistik GmbH",
-      "counterparty_iban": "DE02120300000000202051",
-      "reference": "Rechnung DEMO-2026-01055",
-      "amount": "-378.97"
-    },
-    {
-      "external_id": "TX-DEMO-0029",
-      "value_date": "2026-09-07",
-      "currency": "EUR",
-      "counterparty_name": "Spree IT-Systeme AG",
-      "counterparty_iban": "DE02500105170137075030",
-      "reference": "Teilzahlung DEMO-2026-01057",
-      "amount": "-174.26"
-    },
-    {
-      "external_id": "TX-DEMO-0030",
-      "value_date": "2026-08-30",
-      "currency": "EUR",
-      "counterparty_name": "Berliner Bürobedarf GmbH",
-      "counterparty_iban": "DE75512108001245126199",
-      "reference": "Rechnung DEMO-2026-01059",
-      "amount": "-1991.68"
-    },
-    {
-      "external_id": "TX-DEMO-0031",
-      "value_date": "2026-08-26",
-      "currency": "EUR",
-      "counterparty_name": "Havel Logistik GmbH",
-      "counterparty_iban": "DE02120300000000202051",
-      "reference": "Rechnung DEMO-2026-01060",
-      "amount": "-99.04"
-    },
-    {
-      "external_id": "TX-DEMO-0032",
-      "value_date": "2026-08-24",
-      "currency": "EUR",
-      "counterparty_name": "Havel Logistik GmbH",
-      "counterparty_iban": "DE02120300000000202051",
-      "reference": "Rechnung DEMO-2026-01065",
-      "amount": "-1428.00"
-    },
-    {
-      "external_id": "TX-DEMO-0033",
       "value_date": "2026-09-16",
       "currency": "EUR",
       "counterparty_name": "Spree IT-Systeme AG",
       "counterparty_iban": "DE02500105170137075030",
-      "reference": "Rechnung DEMO-2026-01067",
-      "amount": "-197.96"
+      "reference": "Rechnung DEMO-2026-01029",
+      "amount": "-356.70"
     },
     {
-      "external_id": "TX-DEMO-0034",
-      "value_date": "2026-09-03",
+      "external_id": "TX-DEMO-0017",
+      "value_date": "2026-09-16",
+      "currency": "EUR",
+      "counterparty_name": "Spree IT-Systeme AG",
+      "counterparty_iban": "DE02500105170137075030",
+      "reference": "Rechnung DEMO-2026-01030",
+      "amount": "-240.08"
+    },
+    {
+      "external_id": "TX-DEMO-0018",
+      "value_date": "2026-08-28",
       "currency": "EUR",
       "counterparty_name": "Havel Logistik GmbH",
       "counterparty_iban": "DE02120300000000202051",
-      "reference": "Rechnung DEMO-2026-01068",
-      "amount": "-418.51"
+      "reference": "Rechnung DEMO-2026-01031",
+      "amount": "-112.32"
     },
     {
-      "external_id": "TX-DEMO-0035",
+      "external_id": "TX-DEMO-0019",
+      "value_date": "2026-09-16",
+      "currency": "EUR",
+      "counterparty_name": "Spree IT-Systeme AG",
+      "counterparty_iban": "DE02500105170137075030",
+      "reference": "Rechnung DEMO-2026-01032",
+      "amount": "-130.91"
+    },
+    {
+      "external_id": "TX-DEMO-0020",
+      "value_date": "2026-09-19",
+      "currency": "EUR",
+      "counterparty_name": "Havel Logistik GmbH",
+      "counterparty_iban": "DE02120300000000202051",
+      "reference": "Rechnung DEMO-2026-01033",
+      "amount": "-429.95"
+    },
+    {
+      "external_id": "TX-DEMO-0021",
+      "value_date": "2026-08-24",
+      "currency": "EUR",
+      "counterparty_name": "Havel Logistik GmbH",
+      "counterparty_iban": "DE02120300000000202051",
+      "reference": "Rechnung DEMO-2026-01034",
+      "amount": "-306.79"
+    },
+    {
+      "external_id": "TX-DEMO-0022",
+      "value_date": "2026-09-01",
+      "currency": "EUR",
+      "counterparty_name": "Havel Logistik GmbH",
+      "counterparty_iban": "DE02120300000000202051",
+      "reference": "Rechnung DEMO-2026-01041",
+      "amount": "-335.26"
+    },
+    {
+      "external_id": "TX-DEMO-0023",
+      "value_date": "2026-08-27",
+      "currency": "EUR",
+      "counterparty_name": "Havel Logistik GmbH",
+      "counterparty_iban": "DE02120300000000202051",
+      "reference": "Rechnung DEMO-2026-01043",
+      "amount": "-203.50"
+    },
+    {
+      "external_id": "TX-DEMO-0024",
+      "value_date": "2026-09-12",
+      "currency": "EUR",
+      "counterparty_name": "Berliner Bürobedarf GmbH",
+      "counterparty_iban": "DE89370400440532013000",
+      "reference": "Rechnung DEMO-2026-01044",
+      "amount": "-116.58"
+    },
+    {
+      "external_id": "TX-DEMO-0025",
+      "value_date": "2026-09-01",
+      "currency": "EUR",
+      "counterparty_name": "Spree IT-Systeme AG",
+      "counterparty_iban": "DE02500105170137075030",
+      "reference": "Rechnung DEMO-2026-01045",
+      "amount": "-195.74"
+    },
+    {
+      "external_id": "TX-DEMO-0026",
+      "value_date": "2026-09-14",
+      "currency": "EUR",
+      "counterparty_name": "Spree IT-Systeme AG",
+      "counterparty_iban": "DE02500105170137075030",
+      "reference": "Rechnung DEMO-2026-01046",
+      "amount": "-424.62"
+    },
+    {
+      "external_id": "TX-DEMO-0027",
+      "value_date": "2026-08-26",
+      "currency": "EUR",
+      "counterparty_name": "Berliner Bürobedarf GmbH",
+      "counterparty_iban": "DE89370400440532013000",
+      "reference": "Rechnung DEMO-2026-01047",
+      "amount": "-387.38"
+    },
+    {
+      "external_id": "TX-DEMO-0028",
+      "value_date": "2026-09-12",
+      "currency": "EUR",
+      "counterparty_name": "Havel Logistik GmbH",
+      "counterparty_iban": "DE02120300000000202051",
+      "reference": "Rechnung DEMO-2026-01049",
+      "amount": "-232.05"
+    },
+    {
+      "external_id": "TX-DEMO-0029",
+      "value_date": "2026-09-21",
+      "currency": "EUR",
+      "counterparty_name": "Havel Logistik GmbH",
+      "counterparty_iban": "DE02120300000000202051",
+      "reference": "Teilzahlung DEMO-2026-01054",
+      "amount": "-1976.53"
+    },
+    {
+      "external_id": "TX-DEMO-0030",
+      "value_date": "2026-08-27",
+      "currency": "EUR",
+      "counterparty_name": "Spree IT-Systeme AG",
+      "counterparty_iban": "DE02500105170137075030",
+      "reference": "Rechnung DEMO-2026-01058",
+      "amount": "-2313.73"
+    },
+    {
+      "external_id": "TX-DEMO-0031",
+      "value_date": "2026-09-08",
+      "currency": "EUR",
+      "counterparty_name": "Havel Logistik GmbH",
+      "counterparty_iban": "DE02120300000000202051",
+      "reference": "Rechnung DEMO-2026-01061",
+      "amount": "-459.33"
+    },
+    {
+      "external_id": "TX-DEMO-0032",
+      "value_date": "2026-08-25",
+      "currency": "EUR",
+      "counterparty_name": "Spree IT-Systeme AG",
+      "counterparty_iban": "DE02500105170137075030",
+      "reference": "Rechnung DEMO-2026-01062",
+      "amount": "-2767.23"
+    },
+    {
+      "external_id": "TX-DEMO-0033",
       "value_date": "2026-09-10",
       "currency": "EUR",
       "counterparty_name": "Berliner Bürobedarf GmbH",
       "counterparty_iban": "DE89370400440532013000",
-      "reference": "Rechnung DEMO-2026-01069",
-      "amount": "-152.28"
+      "reference": "Rechnung DEMO-2026-01063",
+      "amount": "-272.18"
     }
   ]
 }

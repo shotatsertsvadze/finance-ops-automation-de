@@ -168,12 +168,13 @@ async function saveExtractedFields(client, invoiceId, parsed) {
   await client.query(
     `update finops.invoices set format = $2, invoice_number = $3, issue_date = $4, due_date = $5, supplier_name_raw = $6,
        supplier_vat_id_raw = $7, supplier_iban_raw = $8, buyer_name_raw = $9, buyer_reference = $10, po_reference_raw = $11,
-       currency = $12, net_amount = $13, vat_amount = $14, gross_amount = $15, payment_terms_raw = $16, parsed = $17, updated_at = now()
+       currency = $12, net_amount = $13, vat_amount = $14, gross_amount = $15, payment_terms_raw = $16, parsed = $17,
+       document_type = $18, credits_invoice_raw = $19, updated_at = now()
      where id = $1`,
     [invoiceId, parsed.format, parsed.invoiceNumber, date(parsed.issueDate), date(parsed.dueDate), parsed.supplier.name,
       parsed.supplier.vatId, parsed.payment.iban, parsed.buyer.name, parsed.buyerReference, parsed.poReference,
       parsed.currency, amount(parsed.totals.taxExclusive), amount(parsed.totals.taxAmount), amount(parsed.totals.payable),
-      parsed.payment.terms, JSON.stringify(parsed)],
+      parsed.payment.terms, JSON.stringify(parsed), parsed.documentType ?? "INVOICE", parsed.creditedInvoice ?? null],
   );
   await client.query("delete from finops.invoice_lines where invoice_id = $1", [invoiceId]);
   const numeric = (value) => (/^-?\d+(\.\d+)?$/.test(value ?? "") ? value : null);

@@ -173,20 +173,26 @@ stateDiagram-v2
     READY_FOR_APPROVAL --> INFO_REQUESTED: approver requests correction
     APPROVED --> ACCOUNTING_READY: accounting record created
     ACCOUNTING_READY --> PAYMENT_PENDING: payment instruction created
+    ACCOUNTING_READY --> CREDITED: credit note booked, never paid
     PAYMENT_PENDING --> PAID: payment confirmed
     PAID --> RECONCILED: bank record matched
     PAID --> RECONCILIATION_EXCEPTION: no or ambiguous match
     RECONCILIATION_EXCEPTION --> RECONCILED: manual match
     RECONCILED --> [*]
+    CREDITED --> [*]
     REJECTED --> [*]
     DUPLICATE --> [*]
 ```
 
 Rules:
 
-- Terminal states: `RECONCILED`, `REJECTED`, `DUPLICATE`. No transition leaves them.
+- Terminal states: `RECONCILED`, `CREDITED`, `REJECTED`, `DUPLICATE`. No transition leaves them.
 - Payable states (money may move): `APPROVED`, `ACCOUNTING_READY`,
   `PAYMENT_PENDING`, `PAID`, `RECONCILED`.
+- A credit note (`document_type = 'CREDIT_NOTE'`, UNTDID 1001 code 381) shares
+  every state up to `ACCOUNTING_READY` and then ends in `CREDITED`. The payment
+  route refuses it, its booking record carries the amounts negated, and its
+  claim on a purchase order is negative, so it gives capacity back (ADR-049).
 - A human review never ends in `APPROVED` directly. It ends in
   `READY_FOR_APPROVAL` with at least one approval step, and the reviewer cannot
   take that step (configurable four-eyes after review).
@@ -225,6 +231,7 @@ invoice make sense for Nordwerk":
 | `po_supplier_match` | HIGH | PO belongs to another supplier |
 | `po_amount_within_tolerance` | HIGH | net amount exceeds PO remaining amount by more than tolerance |
 | `line_amounts_consistent` | HIGH | a line's declared amount differs from quantity x unit price / base quantity - allowances + charges by more than 0.01; overridable, unlike the totals chain |
+| `credit_note_reference` | MEDIUM | a credit note names no invoice (asked only of credit notes) |
 | `totals_consistent` | HIGH | any link of the EN 16931 chain is off by more than 0.01: lines vs. declared line total, allowances and charges vs. their totals, lines - allowances + charges vs. net, net + VAT vs. gross, gross - prepaid + rounding vs. the amount due |
 | `currency_expected` | MEDIUM | currency not in the allowed list |
 | `required_fields_complete` | MEDIUM | due date, IBAN, buyer reference missing |
@@ -260,7 +267,8 @@ invoice above the auto limit.
 | POST | `/api/invoices/:id/info-received` | 2 | INFO_REQUESTED back to REVIEW_REQUIRED |
 | POST | `/api/invoices/:id/approvals/:stepNo/approve\|reject` | 2 | approver actions |
 | POST | `/api/invoices/:id/accounting-record` | 3 | APPROVED to ACCOUNTING_READY, creates the booking record |
-| POST | `/api/invoices/:id/payment` | 3 | creates the payment instruction, ACCOUNTING_READY to PAYMENT_PENDING |
+| POST | `/api/invoices/:id/payment` | 3 | creates the payment instruction, ACCOUNTING_READY to PAYMENT_PENDING; refuses a credit note |
+| POST | `/api/invoices/:id/credit` | 3 | books a credit note, ACCOUNTING_READY to CREDITED; refuses an invoice |
 | POST | `/api/invoices/:id/payment/confirm` | 3 | simulated provider confirmation, PAYMENT_PENDING to PAID |
 | POST | `/api/invoices/:id/reconciliation/resolve` | 3 | closes a reconciliation exception, reason required |
 | GET | `/api/accounting/export` | 3 | CSV of all booking records |

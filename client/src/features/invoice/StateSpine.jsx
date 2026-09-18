@@ -6,7 +6,11 @@ import { useI18n } from "../../lib/i18n.js";
  * Off-path states (review, rejection, duplicate) are shown inline at the
  * stage where the invoice actually stopped.
  */
-const PATH = ["RECEIVED", "VALIDATING", "READY_FOR_APPROVAL", "APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED"];
+const INVOICE_PATH = ["RECEIVED", "VALIDATING", "READY_FOR_APPROVAL", "APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED"];
+// A credit note shares the path up to the booking and then ends. Showing it
+// the invoice path would promise a payment that is never coming, and leave the
+// state it actually reaches off the spine altogether.
+const CREDIT_NOTE_PATH = ["RECEIVED", "VALIDATING", "READY_FOR_APPROVAL", "APPROVED", "ACCOUNTING_READY", "CREDITED"];
 
 const OFF_PATH = {
   REVIEW_REQUIRED: { after: "VALIDATING", tone: "blocked" },
@@ -16,8 +20,9 @@ const OFF_PATH = {
   RECONCILIATION_EXCEPTION: { after: "PAID", tone: "blocked" },
 };
 
-export default function StateSpine({ state, reviewReason, pendingRole }) {
+export default function StateSpine({ state, reviewReason, pendingRole, documentType = "INVOICE" }) {
   const { t, state: stateLabel, reviewReason: reasonLabel, role } = useI18n();
+  const PATH = documentType === "CREDIT_NOTE" ? CREDIT_NOTE_PATH : INVOICE_PATH;
   const off = OFF_PATH[state];
   const reachedIndex = off ? PATH.indexOf(off.after) : PATH.indexOf(state);
 

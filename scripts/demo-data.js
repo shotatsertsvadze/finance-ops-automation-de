@@ -20,6 +20,7 @@ import { handleUpload } from "../server/domain/intake/intake.js";
 import { decideApprovalStep, decideReview } from "../server/domain/approvals/approvals.js";
 import { createAccountingRecord } from "../server/domain/accounting/accounting.js";
 import { confirmPayment, createPaymentInstruction } from "../server/domain/payments/payments.js";
+import { bookCredit } from "../server/domain/accounting/credit-notes.js";
 import { importStatement, runReconciliation } from "../server/domain/reconciliation/reconciliation.js";
 import { human, SYSTEM } from "../server/domain/workflow/transitions.js";
 
@@ -71,22 +72,31 @@ const WRONG_IBAN = "DE75512108001245126199";
 const pad = (n, w = 5) => String(n).padStart(w, "0");
 const money = (cents) => (cents / 100).toFixed(2);
 
-function invoiceXml({ number, issueDate, dueDate, supplier, iban, netCents, po, discountCents = 0 }) {
+function invoiceXml({ number, issueDate, dueDate, supplier, iban, netCents, po, discountCents = 0, creditNote = false, credits = null }) {
+  const root = creditNote ? "CreditNote" : "Invoice";
+  const rootNs = `urn:oasis:names:specification:ubl:schema:xsd:${root}-2`;
+  const lineTag = creditNote ? "CreditNoteLine" : "InvoiceLine";
+  const quantityTag = creditNote ? "CreditedQuantity" : "InvoicedQuantity";
+  const typeTag = creditNote ? "CreditNoteTypeCode" : "InvoiceTypeCode";
+  const billingReference = credits
+    ? `<cac:BillingReference><cac:InvoiceDocumentReference><cbc:ID>${credits}</cbc:ID></cac:InvoiceDocumentReference></cac:BillingReference>`
+    : "";
   const net = netCents - discountCents;
   const vat = Math.round(net * 0.19);
   const gross = net + vat;
   return `<?xml version="1.0" encoding="UTF-8"?>
-<ubl:Invoice xmlns:ubl="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
+<ubl:${root} xmlns:ubl="${rootNs}"
              xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
              xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
   <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0</cbc:CustomizationID>
   <cbc:ID>${number}</cbc:ID>
   <cbc:IssueDate>${issueDate}</cbc:IssueDate>
   <cbc:DueDate>${dueDate}</cbc:DueDate>
-  <cbc:InvoiceTypeCode>380</cbc:InvoiceTypeCode>
+  <cbc:${typeTag}>${creditNote ? "381" : "380"}</cbc:${typeTag}>
   <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
   <cbc:BuyerReference>NORDWERK-EINKAUF-01</cbc:BuyerReference>
   <cac:OrderReference><cbc:ID>${po}</cbc:ID></cac:OrderReference>
+  ${billingReference}
   <cac:AccountingSupplierParty><cac:Party>
     <cac:PartyName><cbc:Name>${supplier.name}</cbc:Name></cac:PartyName>
     <cac:PostalAddress><cbc:CityName>Berlin</cbc:CityName><cac:Country><cbc:IdentificationCode>DE</cbc:IdentificationCode></cac:Country></cac:PostalAddress>
@@ -126,14 +136,14 @@ function invoiceXml({ number, issueDate, dueDate, supplier, iban, netCents, po, 
     ${discountCents ? `<cbc:AllowanceTotalAmount currencyID="EUR">${money(discountCents)}</cbc:AllowanceTotalAmount>` : ""}
     <cbc:PayableAmount currencyID="EUR">${money(gross)}</cbc:PayableAmount>
   </cac:LegalMonetaryTotal>
-  <cac:InvoiceLine>
+  <cac:${lineTag}>
     <cbc:ID>1</cbc:ID>
-    <cbc:InvoicedQuantity unitCode="C62">1</cbc:InvoicedQuantity>
+    <cbc:${quantityTag} unitCode="C62">1</cbc:${quantityTag}>
     <cbc:LineExtensionAmount currencyID="EUR">${money(netCents)}</cbc:LineExtensionAmount>
     <cac:Item><cbc:Name>Leistung laut Bestellung ${po}</cbc:Name></cac:Item>
     <cac:Price><cbc:PriceAmount currencyID="EUR">${money(netCents)}</cbc:PriceAmount></cac:Price>
-  </cac:InvoiceLine>
-</ubl:Invoice>
+  </cac:${lineTag}>
+</ubl:${root}>
 `;
 }
 
@@ -152,7 +162,7 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
   const random = rng(seed);
   await seedDemoOrders(deps.pool);
   const today = new Date();
-  const summary = { created: 0, auto: 0, approved: 0, exceptions: 0, paid: 0, reconciled: 0 };
+  const summary = { created: 0, auto: 0, approved: 0, exceptions: 0, paid: 0, reconciled: 0, credited: 0 };
   const created = [];
 
   for (let i = 0; i < count; i += 1) {
@@ -175,6 +185,10 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
       : scenario === "po_overrun" ? 120000
       : 50000 + Math.floor(random() * 150000);
 
+    // A supplier who over-charged sends a credit note. It runs the same checks
+    // and is booked rather than paid.
+    const isCreditNote = scenario === "auto" && random() > 0.85;
+
     // A discount is ordinary commercial practice, not an exception: these
     // should pass every check and flow through like any other invoice.
     const discountCents = scenario === "auto" || scenario === "approval"
@@ -191,6 +205,7 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
           number, issueDate, dueDate, supplier,
           iban: scenario === "iban" ? WRONG_IBAN : supplier.iban,
           netCents, discountCents, po: scenario === "po_overrun" ? SMALL_ORDER : order,
+          creditNote: isCreditNote, credits: isCreditNote ? `DEMO-2026-${pad(1000 + Math.max(0, i - 3))}` : null,
         });
 
     const received = await handleUpload(deps, {
@@ -235,7 +250,15 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
     const { rows: [afterApproval] } = await deps.pool.query("select state from finops.invoices where id = $1", [id]);
     if (afterApproval.state === "APPROVED") {
       summary.approved += 1;
-      if (random() > 0.25) {
+      const { rows: [doc] } = await deps.pool.query("select document_type from finops.invoices where id = $1", [id]);
+      // A credit note always runs to the end. Leaving it to the same dice as
+      // an invoice would mostly show one stranded before the booking, which is
+      // not what the path looks like.
+      if (doc.document_type === "CREDIT_NOTE") {
+        await createAccountingRecord(deps, { invoiceId: id, actor: human(USERS.finance) });
+        await bookCredit(deps, { invoiceId: id, actor: human(USERS.finance) });
+        summary.credited += 1;
+      } else if (random() > 0.25) {
         await createAccountingRecord(deps, { invoiceId: id, actor: human(USERS.finance) });
         if (random() > 0.2) {
           await createPaymentInstruction(deps, { invoiceId: id, actor: human(USERS.finance) });

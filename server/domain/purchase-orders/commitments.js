@@ -1,4 +1,4 @@
-import { toCents } from "../money.js";
+import { centsToDecimal, toCents } from "../money.js";
 
 /**
  * A purchase order is a spending limit, so what matters is the sum of every
@@ -12,6 +12,10 @@ import { toCents } from "../money.js";
 const HOLDS_CAPACITY = new Set([
   "READY_FOR_APPROVAL", "APPROVED", "ACCOUNTING_READY",
   "PAYMENT_PENDING", "PAID", "RECONCILED", "RECONCILIATION_EXCEPTION",
+  // A booked credit note is as final as a reconciled invoice. Leaving it out
+  // would release its negative claim and undo the capacity it gave back, at
+  // the moment the credit becomes final.
+  "CREDITED",
 ]);
 
 /**
@@ -41,7 +45,7 @@ export async function availableCents(client, purchaseOrderId, excludeInvoiceId =
  */
 export async function syncCommitment(client, invoiceId, toState) {
   const { rows: [invoice] } = await client.query(
-    "select purchase_order_id, net_amount from finops.invoices where id = $1",
+    "select purchase_order_id, net_amount, document_type from finops.invoices where id = $1",
     [invoiceId],
   );
   if (!invoice?.purchase_order_id) return;
@@ -51,18 +55,21 @@ export async function syncCommitment(client, invoiceId, toState) {
     return;
   }
 
-  const amount = toCents(invoice.net_amount);
-  if (amount === null) return;
+  const net = toCents(invoice.net_amount);
+  if (net === null) return;
+  // A credit note un-spends the order: its claim is negative, so capacity goes
+  // back rather than being taken (ADR-049).
+  const amount = centsToDecimal(invoice.document_type === "CREDIT_NOTE" ? -net : net);
 
   const { rowCount } = await client.query(
     `update finops.po_commitments set amount = $3
      where invoice_id = $1 and purchase_order_id = $2 and status = 'ACTIVE'`,
-    [invoiceId, invoice.purchase_order_id, invoice.net_amount],
+    [invoiceId, invoice.purchase_order_id, amount],
   );
   if (rowCount === 0) {
     await client.query(
       "insert into finops.po_commitments (purchase_order_id, invoice_id, amount) values ($1, $2, $3)",
-      [invoice.purchase_order_id, invoiceId, invoice.net_amount],
+      [invoice.purchase_order_id, invoiceId, amount],
     );
   }
 }

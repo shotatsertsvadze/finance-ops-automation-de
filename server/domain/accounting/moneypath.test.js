@@ -350,3 +350,48 @@ test("an invoice number that a spreadsheet would execute reaches the machine exp
   assert.ok(!sheet.includes(";=1+1"), "and the spreadsheet does not execute it");
   assert.ok(sheet.includes("'=1+1"), `the value still reads: ${sheet.split("\n").at(-2)}`);
 });
+
+// ------------------------------------------- credit notes over HTTP --------
+
+test("a credit note runs the pipeline and ends credited, over the API", async () => {
+  const note = await upload("J_credit_note_214.xml");
+  assert.equal(note.state, "APPROVED");
+  assert.equal(note.document_type, "CREDIT_NOTE");
+
+  await post(`/api/invoices/${note.id}/accounting-record`, { actor: clients.finance });
+  const booked = await get(note.id);
+  assert.equal(booked.accounting_record.gross_amount, "-214.20", "accounting sees a reversal");
+
+  const paying = await post(`/api/invoices/${note.id}/payment`, { actor: clients.finance });
+  assert.equal(paying.status, 422);
+  assert.equal((await paying.json()).code, "CREDIT_NOTE_NOT_PAYABLE");
+
+  const credited = await post(`/api/invoices/${note.id}/credit`, { actor: clients.finance });
+  assert.equal(credited.status, 200);
+  assert.equal((await credited.json()).state, "CREDITED");
+});
+
+test("booking a credit twice is refused", async () => {
+  const note = await upload("J_credit_note_214.xml");
+  await post(`/api/invoices/${note.id}/accounting-record`, { actor: clients.finance });
+  await post(`/api/invoices/${note.id}/credit`, { actor: clients.finance });
+
+  const again = await post(`/api/invoices/${note.id}/credit`, { actor: clients.finance });
+  assert.equal(again.status, 409);
+  assert.equal((await again.json()).code, "NOT_READY_TO_CREDIT");
+});
+
+test("an invoice cannot be closed through the credit route", async () => {
+  const invoice = await approved();
+  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
+  const res = await post(`/api/invoices/${invoice.id}/credit`, { actor: clients.finance });
+  assert.equal(res.status, 409);
+  assert.equal((await res.json()).code, "NOT_A_CREDIT_NOTE");
+});
+
+test("a clerk may not book a credit", async () => {
+  const note = await upload("J_credit_note_214.xml");
+  await post(`/api/invoices/${note.id}/accounting-record`, { actor: clients.finance });
+  const res = await post(`/api/invoices/${note.id}/credit`, { actor: clients.clerk });
+  assert.equal(res.status, 403);
+});

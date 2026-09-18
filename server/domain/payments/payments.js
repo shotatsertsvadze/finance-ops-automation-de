@@ -25,6 +25,12 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
        where i.id = $1`,
       [invoiceId],
     );
+    // Checked before the state, so the reason given is the real one: a credit
+    // note is not a payment waiting for the right status.
+    if (invoice.document_type === "CREDIT_NOTE") {
+      throw new RuleError(422, "CREDIT_NOTE_NOT_PAYABLE",
+        "Eine Gutschrift wird nicht bezahlt: sie mindert die Verbindlichkeit");
+    }
     if (invoice.state !== "ACCOUNTING_READY") {
       throw new TransitionError("NOT_READY_FOR_PAYMENT", `Rechnung im Status ${invoice.state} kann nicht zur Zahlung gegeben werden`, { state: invoice.state });
     }

@@ -92,7 +92,8 @@ test("every role has a label in both languages", () => {
 test("every audit action the server writes has a label in both languages", () => {
   const files = [
     "../workflow/transitions.js", "../intake/intake.js", "../approvals/approvals.js",
-    "../accounting/accounting.js", "../payments/payments.js", "../reconciliation/reconciliation.js",
+    "../accounting/accounting.js", "../accounting/credit-notes.js",
+    "../payments/payments.js", "../reconciliation/reconciliation.js",
   ];
   const actions = new Set();
   for (const path of files) {
@@ -237,7 +238,8 @@ function emittedErrorCodes() {
     "../../routes/invoices.js", "../../routes/auth.js", "../../routes/session.js", "../../routes/money.js",
     "../../app.js", "../../auth/authorize.js",
     "../workflow/transitions.js", "../intake/intake.js", "../approvals/approvals.js",
-    "../accounting/accounting.js", "../payments/payments.js", "../reconciliation/reconciliation.js",
+    "../accounting/accounting.js", "../accounting/credit-notes.js",
+    "../payments/payments.js", "../reconciliation/reconciliation.js",
   ];
   const codes = new Set();
   for (const path of files) {

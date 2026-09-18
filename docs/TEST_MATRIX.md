@@ -42,8 +42,9 @@ Run: `npm test` (165 tests, all passing as of 2026-09-17). Database tests need
 
 ## Fixtures
 
-All seven run through the real pipeline in `intake.test.js` and were also
-uploaded through the running UI on 2026-09-17 (MANUAL, browser).
+They run through the real pipeline in `intake.test.js`; A-G were also uploaded
+through the running UI on 2026-09-17, and I and J on 2026-09-18 (MANUAL,
+browser).
 
 | Fixture | Scenario | Expected state | Status | Evidence |
 |---|---|---|---|---|
@@ -55,6 +56,8 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | F | malformed | REVIEW_REQUIRED, TECHNICAL_VALIDATION_FAILED | AUTO | `intake.test.js` "F:" |
 | G | clean, 380 EUR | APPROVED by SYSTEM, no steps | AUTO | `intake.test.js` "G:" |
 | H | 380 EUR with a changed IBAN | REVIEW_REQUIRED; accepting it still needs one approval | AUTO | `approvals.test.js` "a review of a small invoice" |
+| I | 3 % discount, 499.80 EUR due | APPROVED, no steps; 535.50 without the discount would need one | AUTO | `business-checks.test.js` "fixture I behaves as the README says" |
+| J | credit note, 214.20 EUR, crediting RE-2026-4471 | APPROVED, booked negative, CREDITED, never paid | AUTO | `moneypath.test.js` "a credit note runs the pipeline" |
 
 ## Parsing and technical validation
 
@@ -70,6 +73,10 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | T8 | Prepayment and rounding are read | `prepaid`, `rounding`, amount due after them | AUTO | `allowances.test.js` |
 | T9 | A line-level allowance is read on its line | `lines[].allowanceCharges` | AUTO | `allowances.test.js` |
 | T9a | A base quantity is read | `lines[].baseQuantity` | AUTO | `allowances.test.js` |
+| T9b | A UBL CreditNote document is read as a credit note | `documentType`, lines under CreditNoteLine/CreditedQuantity | AUTO | `credit-notes.test.js` |
+| T9c | An Invoice document with type code 381 is one too | `documentType` CREDIT_NOTE | AUTO | `credit-notes.test.js` |
+| T9d | A CreditNote root in another namespace | refused | AUTO | `credit-notes.test.js` |
+| T9e | 380 and 381 are both known types | no `invoice_type_code` warning | AUTO | `credit-notes.test.js` |
 | T10 | Official EN 16931 / KoSIT validation | not implemented, adapter boundary only | OPEN | Deliberate, see ADR-008 |
 
 ## Business checks
@@ -94,6 +101,10 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | B18 | A reviewer may accept a miscalculated line | not in payableBlockers, unlike `totals_consistent` | AUTO | `business-checks.test.js` |
 | B19 | Quantity times price is exact, not floating point | half a cent rounds away from zero; no precision lost on large lines | AUTO | `money.test.js` |
 | B20 | Fixture I behaves as the README table promises | no FAILED check, 499.80 EUR due, approved automatically | AUTO | `business-checks.test.js` |
+| B21 | A credit note naming the invoice it credits | `credit_note_reference` PASSED | AUTO | `business-checks.test.js` |
+| B22 | A credit note naming nothing | `credit_note_reference` MEDIUM | AUTO | `business-checks.test.js` |
+| B23 | An invoice is not asked what it credits | the check is absent, not SKIPPED | AUTO | `business-checks.test.js` |
+| B24 | A credit note larger than the order | `po_amount_within_tolerance` SKIPPED, no failure | AUTO | `business-checks.test.js` |
 | B6 | Unknown PO reference | `po_exists` HIGH | AUTO | `business-checks.test.js` |
 | B7 | Missing PO above the policy threshold | MEDIUM | AUTO | `business-checks.test.js` |
 
@@ -140,9 +151,11 @@ commitments is 510,00.
 | P9 | Two simultaneous uploads | exactly one proceeds. Mutation-checked: removing the row lock breaks it | AUTO | "two invoices arriving at the same time" |
 | P10 | A different order | unaffected | AUTO | "an invoice against a different order is unaffected" |
 | P11 | Invoice detail | reports available capacity, excluding the invoice's own hold | AUTO | "the invoice detail reports available capacity" |
+| P11b | A credit note gives capacity back | negative claim, order shows the amount free again | AUTO | `credit-note-path.test.js` |
+| P11c | A booked credit note keeps its claim | capacity stays back after CREDITED | AUTO | `credit-note-path.test.js`; releasing it undid the credit |
 | P11a | An order taken past its value by reviewers | shown as over-committed, not as a negative availability | MANUAL | Invoice detail, DEMO-PO-KLEIN in the demo run |
 | P12 | Original R07 reproduction | no longer reproduces | MANUAL | Probe against a fresh database, 2026-09-17 |
-| P13 | Partial deliveries, credit notes, order closure | not modelled | OPEN | Deliberate, see ADR-032 |
+| P13 | Partial deliveries and order closure | not modelled | OPEN | Deliberate, see ADR-032; credit notes returning capacity are modelled, see ADR-049 |
 
 ## Known limitations, confirmed by reproduction
 
@@ -222,6 +235,12 @@ described as working.
 | M8 | Repeated confirmation | 409, state unchanged | AUTO | `moneypath.test.js` |
 | M9 | Payment cannot skip the accounting handoff | 409 | AUTO | `moneypath.test.js` |
 | M10 | Statement imported twice | each transaction once | AUTO | `moneypath.test.js` |
+| M11 | A credit note over the API | APPROVED, booking -214.20, CREDITED | AUTO | `moneypath.test.js` |
+| M12 | Paying a credit note | 422 `CREDIT_NOTE_NOT_PAYABLE`, nothing written | AUTO | `moneypath.test.js`, `credit-note-path.test.js` |
+| M13 | Closing an invoice as a credit | 409 `NOT_A_CREDIT_NOTE` | AUTO | `moneypath.test.js` |
+| M14 | Booking a credit twice | 409 `NOT_READY_TO_CREDIT` | AUTO | `moneypath.test.js` |
+| M15 | A clerk booking a credit | 403 | AUTO | `moneypath.test.js` |
+| M16 | The booking record of a credit note | net, tax and gross negated | AUTO | `credit-note-path.test.js` |
 | M11 | Reference and amount agree | RECONCILED, transaction MATCHED | AUTO | `moneypath.test.js` |
 | M12 | Reference names the invoice, amount differs | exception on that invoice, AMOUNT_MISMATCH | AUTO | `moneypath.test.js` |
 | M13 | Transaction matching nothing | stays UNMATCHED, no invoice touched | AUTO | `moneypath.test.js` |

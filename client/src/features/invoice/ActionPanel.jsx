@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   confirmPayment, createAccountingRecord, decideReview, decideStep,
-  instructPayment, reportInfoReceived, reprocessInvoice, resolveReconciliation,
+  instructPayment, bookCredit, reportInfoReceived, reprocessInvoice, resolveReconciliation,
 } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
 
@@ -59,6 +59,11 @@ export default function ActionPanel({ invoice, may, onDone }) {
   } else if (invoice.state === "APPROVED") {
     prompt = t("hintApproved");
     actions.push({ key: "accounting", label: t("createBookingRecord"), tone: "ok", needs: "accounting:handoff", run: () => createAccountingRecord(id) });
+  } else if (invoice.state === "ACCOUNTING_READY" && invoice.document_type === "CREDIT_NOTE") {
+    // A credit note is booked, not paid. Offering "instruct payment" here
+    // would offer to send money in the direction the document reverses.
+    prompt = t("hintCreditNoteReady", invoice.accounting_record?.document_no ?? "");
+    actions.push({ key: "credit", label: t("bookCredit"), tone: "ok", needs: "payment:instruct", run: () => bookCredit(id) });
   } else if (invoice.state === "ACCOUNTING_READY") {
     prompt = t("hintAccountingReady", invoice.accounting_record?.document_no ?? "");
     actions.push({ key: "pay", label: t("instructPayment"), tone: "ok", needs: "payment:instruct", run: () => instructPayment(id) });

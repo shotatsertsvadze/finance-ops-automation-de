@@ -8,11 +8,13 @@ export const TRANSITIONS = {
   // while the invoice waited for a signature (ADR-041).
   READY_FOR_APPROVAL: ["APPROVED", "REJECTED", "INFO_REQUESTED", "REVIEW_REQUIRED"],
   APPROVED: ["ACCOUNTING_READY"],
-  ACCOUNTING_READY: ["PAYMENT_PENDING"],
+  // A credit note leaves the money path here: it is booked, and never paid.
+  ACCOUNTING_READY: ["PAYMENT_PENDING", "CREDITED"],
   PAYMENT_PENDING: ["PAID"],
   PAID: ["RECONCILED", "RECONCILIATION_EXCEPTION"],
   RECONCILIATION_EXCEPTION: ["RECONCILED"],
   RECONCILED: [],
+  CREDITED: [],
   REJECTED: [],
   DUPLICATE: [],
 };
@@ -38,6 +40,7 @@ export const STATE_LABELS = {
   PAID: "Bezahlt",
   RECONCILED: "Abgeglichen",
   RECONCILIATION_EXCEPTION: "Abgleich unklar",
+  CREDITED: "Gutgeschrieben",
   REJECTED: "Abgelehnt",
   DUPLICATE: "Duplikat",
 };

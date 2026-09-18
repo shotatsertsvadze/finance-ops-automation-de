@@ -26,6 +26,9 @@ export function buildAccountingRecord(invoice, { documentNo, bookingDate }) {
     throw new RuleError(422, "AMOUNTS_INCOMPLETE", "Beträge der Rechnung sind unvollständig, Buchungssatz nicht erzeugbar");
   }
   const ratePercent = netCents === 0 ? 0 : Math.round((vatCents / netCents) * 100);
+  // The document states positive amounts either way; the booking is where the
+  // direction belongs, because that is what accounting reads.
+  const sign = invoice.document_type === "CREDIT_NOTE" ? -1 : 1;
   const costCenter = invoice.po_cost_center ?? invoice.default_cost_center ?? null;
 
   return {
@@ -36,9 +39,9 @@ export function buildAccountingRecord(invoice, { documentNo, bookingDate }) {
     expense_account: EXPENSE_ACCOUNT_BY_COST_CENTER[costCenter] ?? DEFAULT_EXPENSE_ACCOUNT,
     cost_center: costCenter,
     tax_key: TAX_KEY_BY_RATE[ratePercent] ?? "0",
-    net_amount: centsToDecimal(netCents),
-    vat_amount: centsToDecimal(vatCents),
-    gross_amount: centsToDecimal(grossCents),
+    net_amount: centsToDecimal(sign * netCents),
+    vat_amount: centsToDecimal(sign * vatCents),
+    gross_amount: centsToDecimal(sign * grossCents),
     currency: invoice.currency ?? "EUR",
     reference: invoice.invoice_number,
   };

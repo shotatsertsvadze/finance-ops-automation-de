@@ -8,6 +8,7 @@ import { decideApprovalStep, decideReview, requestInfoFromApproval } from "../do
 import { requirePermission } from "../auth/authorize.js";
 import { createAccountingRecord } from "../domain/accounting/accounting.js";
 import { confirmPayment, createPaymentInstruction } from "../domain/payments/payments.js";
+import { bookCredit } from "../domain/accounting/credit-notes.js";
 import { resolveReconciliation } from "../domain/reconciliation/reconciliation.js";
 
 const upload = multer({
@@ -146,6 +147,16 @@ export function invoicesRouter(deps) {
   router.post("/:id/accounting-record", requirePermission("accounting:handoff"), async (req, res, next) => {
     try {
       await createAccountingRecord(deps, { invoiceId: req.params.id, actor: req.actor });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // What a credit note has instead of a payment instruction.
+  router.post("/:id/credit", requirePermission("payment:instruct"), async (req, res, next) => {
+    try {
+      await bookCredit(deps, { invoiceId: req.params.id, actor: req.actor });
       res.json(await getInvoiceDetail(deps.pool, req.params.id));
     } catch (error) {
       next(error);

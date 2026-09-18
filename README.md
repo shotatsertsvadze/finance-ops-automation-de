@@ -89,6 +89,7 @@ curl -F file=@fixtures/xrechnung/A_clean_1240.xml http://localhost:4400/api/invo
 | G | clean, 380 EUR | approved automatically |
 | H | IBAN differs, 380 EUR | review, HIGH; a small amount is no reason to skip the check |
 | I | 3 % discount: 450 EUR of lines, 30 EUR off, 499.80 EUR due | approved automatically; without the discount 535.50 EUR would need a manager |
+| J | credit note for 214.20 EUR, crediting RE-2026-4471 | approved, booked as a negative record, closed as credited, never paid |
 
 ## Documentation
 
@@ -106,11 +107,15 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
 `docs/TEST_MATRIX.md` under "Known limitations".
 
 - **A purchase order is a single balance, not a line-by-line receipt.**
-  Capacity is committed and released correctly, but partial deliveries, credit
-  notes returning capacity, and order closure are not modelled.
-- **Reconciliation matches one statement line to one invoice.** Part payments,
-  collective payments covering several invoices and credit notes are not
-  modelled; each becomes an exception for a person to resolve.
+  Capacity is committed, released and given back by a credit note, but partial
+  deliveries and order closure are not modelled.
+- **A credit note is booked, not settled.** It runs the same checks, reduces
+  the order and reaches a terminal state, and it is never paid. Whether the
+  balance comes back as a refund or as a deduction from the next payment run
+  happens outside this system.
+- **Reconciliation matches one statement line to one invoice.** Part payments
+  and collective payments covering several invoices are not modelled; each
+  becomes an exception for a person to resolve.
 - **Authentication is demo-grade.** Real password login, sessions and a role
   matrix, but no password reset, no second factor and no SSO. Accounts are
   seeded with a shared, documented password.

@@ -354,3 +354,58 @@ test("fixture I behaves as the README says it does", () => {
   assert.deepEqual(requiredApprovalSteps(policy, 53550).map((s) => s.required_role), ["MANAGER"],
     "and would not be, at the 535.50 the same invoice would come to without the discount");
 });
+
+// ------------------------------------------- credit notes ------------------
+
+/**
+ * A credit note asks most of the same questions as an invoice, and two
+ * different ones: what does it credit, and what does it do to the order.
+ */
+const creditNote = (options) => buildInvoiceXml({
+  number: "GS-1", netCents: 20000, creditNote: true, po: "PO-2026-0102", ...options,
+});
+const smallOrder = {
+  supplier: S1, bankAccounts: S1_ACCOUNTS, existingSameNumber: [],
+  purchaseOrder: { id: "po2", po_number: "PO-2026-0102", supplier_id: "s1", remaining_amount: "500.00", status: "OPEN" },
+};
+const runAs = (xml, master) => {
+  const technical = runTechnicalValidation(Buffer.from(xml, "utf8"));
+  assert.equal(technical.passed, true, "the document is technically readable");
+  return runBusinessChecks(technical.parsed, master, policy, company);
+};
+
+test("a credit note naming the invoice it credits passes", () => {
+  const r = runAs(creditNote({ credits: "RE-2026-4471" }), smallOrder);
+  assert.deepEqual(r.checks.filter((c) => c.status === "FAILED"), []);
+  const c = check(r, "credit_note_reference");
+  assert.equal(c.status, "PASSED");
+  assert.equal(c.actual, "RE-2026-4471");
+});
+
+test("a credit note naming nothing is a MEDIUM failure", () => {
+  const c = check(runAs(creditNote({}), smallOrder), "credit_note_reference");
+  assert.equal(c.status, "FAILED");
+  assert.equal(c.severity, "MEDIUM");
+});
+
+test("an invoice is not asked what it credits", () => {
+  // The check would be SKIPPED on every invoice ever processed, which is noise
+  // in the one panel a reviewer reads.
+  const r = runAs(buildInvoiceXml({ number: "RE-1", netCents: 20000, po: "PO-2026-0102" }), smallOrder);
+  assert.equal(check(r, "credit_note_reference"), undefined);
+});
+
+test("a credit note larger than the order is not an overrun", () => {
+  // It returns capacity rather than consuming it, so measuring it against the
+  // ceiling would refuse exactly the credit notes that matter most.
+  const r = runAs(creditNote({ netCents: 400000, credits: "RE-1" }), smallOrder);
+  const c = check(r, "po_amount_within_tolerance");
+  assert.equal(c.status, "SKIPPED");
+  assert.match(c.reason, /Gutschrift/);
+  assert.deepEqual(r.checks.filter((x) => x.status === "FAILED"), []);
+});
+
+test("an invoice larger than the order still is an overrun", () => {
+  const r = runAs(buildInvoiceXml({ number: "RE-2", netCents: 400000, po: "PO-2026-0102" }), smallOrder);
+  assert.equal(check(r, "po_amount_within_tolerance").status, "FAILED");
+});

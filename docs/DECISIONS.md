@@ -926,3 +926,59 @@ Two supporting decisions:
   fractional, the tolerance is one cent, and a one-cent rounding error would
   refuse a correct invoice. Truncating instead of rounding a half is caught by
   its own test.
+
+## ADR-049 A credit note is the same pipeline with a different ending
+
+Closes the credit-note half of the purchase-order limitation.
+
+UNTDID 1001 code 381 was a warning, and the document then took the ordinary
+payable path: a document saying the supplier owes us could be approved, booked
+and paid, sending money in the direction the document reverses. Nothing caught
+it, because every check upstream asks questions that are just as valid for a
+credit note - is this supplier known, is it addressed to us, do the totals add
+up - and answers them the same way.
+
+Decision: a credit note is an invoice row with `document_type = 'CREDIT_NOTE'`,
+not a separate entity. It reuses intake, validation, routing, approval and the
+accounting handoff, and parts company at the money.
+
+Four consequences, each of them a decision in its own right:
+
+- **Amounts stay positive, as the document states them.** The direction is
+  carried by the type. Storing it as a sign would push the question into the
+  totals chain, the approval tiers and every check that reads an amount, and
+  each of those would have to be right about it.
+- **The booking record carries the sign.** `buildAccountingRecord` negates net,
+  tax and gross for a credit note, because that is what accounting reads and
+  where a reversal belongs.
+- **The payable path is closed.** `createPaymentInstruction` refuses a credit
+  note before it looks at the state, so the refusal names the real reason
+  rather than a status. `bookCredit` moves ACCOUNTING_READY to CREDITED, and
+  refuses an invoice - otherwise an invoice could reach a terminal state
+  without ever being paid and would leave the payment queue as if it had been.
+- **It gives purchase-order capacity back.** Its claim in the ledger is
+  negative. `CREDITED` is in the set of states that hold a claim, alongside
+  `RECONCILED`: a booked credit note is as final as a reconciled invoice, and
+  leaving it out released the negative claim and undid the capacity at the
+  moment the credit became final. That was a real bug, found by extending the
+  test past the state it originally stopped at.
+
+Two checks behave differently for a credit note. `credit_note_reference` (the
+invoice it credits) is asked only of credit notes, because an invoice would
+report it SKIPPED every time and that is noise in the one panel a reviewer
+reads. `po_amount_within_tolerance` is skipped, because a credit note does not
+consume the order - measuring it against the ceiling would refuse exactly the
+credit notes that matter most.
+
+Both document shapes are accepted: a UBL `CreditNote` in its own namespace,
+and a UBL `Invoice` whose type code is 381. Which one XRechnung requires is not
+asserted here, because this project does not make standards claims it has not
+verified (ADR-008).
+
+**What is deliberately not modelled**: settlement. A credit note is booked and
+closed, and whether the balance comes back as a refund or as a deduction from
+the next payment run happens outside this system. Netting it against a later
+payment would mean an open-credit ledger, partial consumption, and a bank
+transaction that no longer matches any single invoice's amount - which reopens
+reconciliation, the part of the system with the most safety rules in it. That
+is a larger piece of work and is named here rather than half-built.

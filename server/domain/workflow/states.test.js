@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { PAYABLE_STATES, STATES, TERMINAL_STATES, TRANSITIONS, canTransition } from "./states.js";
 
 test("terminal states have no outgoing transitions", () => {
-  assert.deepEqual(TERMINAL_STATES.sort(), ["DUPLICATE", "RECONCILED", "REJECTED"]);
+  assert.deepEqual(TERMINAL_STATES.sort(), ["CREDITED", "DUPLICATE", "RECONCILED", "REJECTED"]);
   for (const s of TERMINAL_STATES) assert.deepEqual(TRANSITIONS[s], []);
 });
 
@@ -17,7 +17,9 @@ test("every non-initial state is reachable", () => {
 });
 
 test("nothing leaves a payable state except forward in the money path or reconciliation", () => {
-  const allowed = new Set(["ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED", "RECONCILIATION_EXCEPTION"]);
+  // CREDITED is on the list because a credit note shares the states up to the
+  // accounting handoff and then leaves the money path instead of being paid.
+  const allowed = new Set(["ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED", "RECONCILIATION_EXCEPTION", "CREDITED"]);
   for (const s of PAYABLE_STATES) for (const to of TRANSITIONS[s]) assert.ok(allowed.has(to), `${s} -> ${to}`);
 });
 
@@ -31,4 +33,15 @@ test("rejected and duplicate cannot come back", () => {
     assert.equal(canTransition("REJECTED", to), false);
     assert.equal(canTransition("DUPLICATE", to), false);
   }
+});
+
+test("a booked credit note is finished, and was never paid", () => {
+  // A credit note says the supplier owes us. Paying it would send the money
+  // twice in the same direction, so the payable path is not open to it.
+  assert.equal(canTransition("ACCOUNTING_READY", "CREDITED"), true);
+  assert.deepEqual(TRANSITIONS.CREDITED, []);
+  for (const from of ["PAYMENT_PENDING", "PAID", "RECONCILED"]) {
+    assert.equal(canTransition(from, "CREDITED"), false, `${from} -> CREDITED`);
+  }
+  assert.equal(canTransition("CREDITED", "PAYMENT_PENDING"), false);
 });
