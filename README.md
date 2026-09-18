@@ -2,19 +2,41 @@
 
 [![tests](https://github.com/shotatsertsvadze/finance-ops-automation-de/actions/workflows/ci.yml/badge.svg)](https://github.com/shotatsertsvadze/finance-ops-automation-de/actions/workflows/ci.yml)
 
-Proof of concept for German SMEs: an XRechnung arrives, the system validates it
-technically and against the company's own master data, routes it
-deterministically, gets the right people to approve it, hands it to accounting,
-tracks payment and reconciles it. Every state change is audited. Uncertain
-cases go to humans; nothing is approved by default.
+## Why this exists
+
+The opportunity is not parsing an e-invoice; it is automating the finance
+operations that begin once an invoice becomes machine-readable. Reading an
+XRechnung is a solved problem, and this project treats it as a starting point
+rather than the product.
+
+What still costs a German SME real hours is the operational work around the
+document: validating it against supplier, IBAN and purchase-order master data,
+routing exceptions to the right person, collecting approvals, handing a booking
+record to accounting, tracking payment status, reconciling the bank statement,
+and knowing what any of it cost. That is the workflow this PoC implements, for
+the German B2B market.
+
+Concretely: an XRechnung arrives, the system validates it technically and
+against the company's own master data, routes it deterministically, gets the
+right people to approve it, hands it to accounting, tracks payment and
+reconciles it. Every state change is audited. Uncertain cases go to humans;
+nothing is approved by default.
 
 Demo company: Nordwerk GmbH (fictional). All data is synthetic.
 
-Status: intake through reconciliation and the operational metrics are built;
-two independent control reviews are remediated in full. The reasoning behind
-every decision is in `docs/DECISIONS.md`; what is deliberately not built is
-under "Known limits" below. See `docs/IMPLEMENTATION_PLAN.md` and
-`docs/PHASE_0_INDEPENDENT_REVIEW.md`.
+## Status
+
+A working, portfolio-grade proof of concept. The invoice workflow runs end to
+end - intake, validation, deterministic controls, approvals, exception
+handling, accounting handoff, payment status, reconciliation and operational
+KPIs - on synthetic demo data only.
+
+It is not production software, and it is not a claim of legal, EN 16931 or
+GoBD compliance. What it deliberately does not do is listed under
+"Known limits" below; the reasoning behind every decision is in
+`docs/DECISIONS.md`, and two independent control reviews and their remediation
+are recorded in `docs/PHASE_0_INDEPENDENT_REVIEW.md` and
+`docs/PROJECT_REVIEW_2026-09-17.md`.
 
 ![The operational metrics view, showing straight-through processing rate, exception reasons, cycle times, risk signals and the work queue](docs/screenshots/dashboard.png)
 
@@ -103,6 +125,7 @@ curl -F file=@fixtures/xrechnung/A_clean_1240.xml http://localhost:4400/api/invo
 - `docs/IST_PROCESS.md`, `docs/SOLL_PROCESS.md` - current vs. target process
 - `docs/BUSINESS_CASE.md` - demo assumptions
 - `docs/TEST_MATRIX.md` - what is verified and how
+- `docs/IMPLEMENTATION_PLAN.md` - what was built in which order
 - `docs/DEMO.md` - a ten-minute walkthrough, in order
 - `docs/REFERENCE_AUDIT.md` - audit of the two reference repositories
 
