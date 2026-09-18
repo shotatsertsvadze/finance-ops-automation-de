@@ -127,6 +127,7 @@ curl -F file=@fixtures/xrechnung/A_clean_1240.xml http://localhost:4400/api/invo
 - `docs/TEST_MATRIX.md` - what is verified and how
 - `docs/IMPLEMENTATION_PLAN.md` - what was built in which order
 - `docs/DEMO.md` - a ten-minute walkthrough, in order
+- `docs/DEMO_VIDEO.md` - three-minute video storyboard and narration
 - `docs/REFERENCE_AUDIT.md` - audit of the two reference repositories
 
 ## Known limits

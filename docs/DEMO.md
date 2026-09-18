@@ -1,8 +1,10 @@
 # Demo walkthrough
 
-Ten minutes, in order. Every figure below comes from `npm run db:demo` with its
-default seed, which is reproducible: the invoice numbers named here are the
-ones you will see.
+Ten minutes, in order. For the three-minute video cut, with narration and
+recording instructions, see `docs/DEMO_VIDEO.md`.
+
+Every figure below comes from `npm run db:demo` with its default seed, which is
+reproducible: the invoice numbers named here are the ones you will see.
 
 Nothing in this system pays anyone. The bank, the accounting handoff and the
 payment provider are simulated, and all data is synthetic.
