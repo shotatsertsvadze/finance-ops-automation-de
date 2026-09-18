@@ -20,8 +20,21 @@ const MIGRATIONS = path.join(path.dirname(fileURLToPath(import.meta.url)), "..",
 const SEED = path.join(MIGRATIONS, "..", "seed", "master_data.sql");
 
 const NAME = "finops_upgrade_test";
-const ADMIN_URL = process.env.UPGRADE_TEST_ADMIN_URL ?? "postgresql://localhost/postgres";
-const URL = `postgresql://localhost/${NAME}`;
+/**
+ * The same server as the rest of the suite, a different database. Taken from
+ * TEST_DATABASE_URL rather than hardcoded to localhost, so host, port and
+ * credentials follow wherever the suite is pointed: a local socket that wants
+ * no password, or a CI container that insists on one.
+ */
+const on = (database) => {
+  const base = process.env.TEST_DATABASE_URL;
+  if (!base) return `postgresql://localhost/${database}`;
+  const url = new globalThis.URL(base);
+  url.pathname = `/${database}`;
+  return url.toString();
+};
+const ADMIN_URL = process.env.UPGRADE_TEST_ADMIN_URL ?? on("postgres");
+const TARGET_URL = on(NAME);
 
 const PO = "PO-2026-0102";            // opens with 500,00
 const SUPPLIER = "10000000-0000-0000-0000-000000000001";
@@ -48,7 +61,7 @@ before(async () => {
   await admin.query(`create database ${NAME}`);
   await admin.end();
 
-  pool = new pg.Pool({ connectionString: URL });
+  pool = new pg.Pool({ connectionString: TARGET_URL });
   await pool.query("create schema if not exists finops");
   await apply(pool, "0005_auth.sql");
   await pool.query(await readFile(SEED, "utf8"));
