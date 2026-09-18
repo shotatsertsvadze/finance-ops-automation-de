@@ -11,6 +11,12 @@ Demo company: Nordwerk GmbH (fictional). All data is synthetic.
 Status: Phases 1-3 built; control review completed and remediated. See
 `docs/IMPLEMENTATION_PLAN.md` and `docs/PHASE_0_INDEPENDENT_REVIEW.md`.
 
+![The operational metrics view, showing straight-through processing rate, exception reasons, cycle times, risk signals and the work queue](docs/screenshots/dashboard.png)
+
+The metrics view after a demo run of 70 synthetic invoices. Every figure is
+derived from the invoices and their check trail rather than counted separately.
+The interface is German by default and switches to English.
+
 ## What is worth looking at
 
 - **One way to change state.** `invoices.state` moves only through `transition()`

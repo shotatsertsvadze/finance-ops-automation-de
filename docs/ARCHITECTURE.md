@@ -57,6 +57,7 @@ finance-ops-automation-de/
   README.md  AGENTS.md  CLAUDE.md  .env.example  package.json
   docs/                    PRODUCT, ARCHITECTURE, IST/SOLL process, BUSINESS_CASE,
                            DECISIONS, TEST_MATRIX, REFERENCE_AUDIT, IMPLEMENTATION_PLAN
+  docs/screenshots/        images used by README.md
   fixtures/xrechnung/      demo invoices A-I (synthetic UBL 2.1 / XRechnung 3.0 profile)
   db/migrations/           append-only SQL, applied by scripts/migrate.js
   db/seed/                 synthetic master data (users, suppliers, IBANs, POs)
