@@ -222,7 +222,7 @@ invoice make sense for Nordwerk":
 | `po_exists` | HIGH | PO reference present but unknown |
 | `po_supplier_match` | HIGH | PO belongs to another supplier |
 | `po_amount_within_tolerance` | HIGH | net amount exceeds PO remaining amount by more than tolerance |
-| `totals_consistent` | HIGH | lines vs. net, net + VAT vs. gross differ by more than 0.01 |
+| `totals_consistent` | HIGH | any link of the EN 16931 chain is off by more than 0.01: lines vs. declared line total, allowances and charges vs. their totals, lines - allowances + charges vs. net, net + VAT vs. gross, gross - prepaid + rounding vs. the amount due |
 | `currency_expected` | MEDIUM | currency not in the allowed list |
 | `required_fields_complete` | MEDIUM | due date, IBAN, buyer reference missing |
 | `payment_terms_match` | LOW | payment terms differ from supplier master (warning only) |

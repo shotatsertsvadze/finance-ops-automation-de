@@ -67,10 +67,11 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
 - **A purchase order is a single balance, not a line-by-line receipt.**
   Capacity is committed and released correctly, but partial deliveries, credit
   notes returning capacity, and order closure are not modelled.
-- **Allowances, charges and prepayments are not modelled.** An invoice using
-  them is refused by name and can reach review but never approval: its payable
-  amount cannot be recomputed from what this adapter reads. In practice that
-  makes any invoice carrying a discount line unpayable here.
+- **A line's own net amount is taken as declared.** Document-level allowances,
+  charges and prepayments are computed along the EN 16931 chain, so a
+  discounted invoice is verified and payable. What is not checked is a single
+  line whose stated discount does not match its stated net; the header chain
+  closes over the declared line amounts, so this cannot change the amount paid.
 - **Reconciliation matches one statement line to one invoice.** Part payments,
   collective payments covering several invoices and credit notes are not
   modelled; each becomes an exception for a person to resolve.

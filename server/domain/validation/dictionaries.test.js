@@ -140,6 +140,26 @@ test("German connecting words inside expected and actual are translated", () => 
   assert.match(actual, /committed by other invoices/);
 });
 
+test("the totals chain reads in English, link by link", () => {
+  // The evidence a reviewer needs most: which link of the calculation broke.
+  const evidence = [
+    "Positionen - Nachlässe + Zuschläge = Netto; Netto + Steuer - Anzahlung = Zahlbetrag",
+    "Positionen = Summe der Positionen: 1000.00 != 900.00",
+    "Nachlässe einzeln = Nachlässe gesamt: 200.00 != 0.00",
+    "Zuschläge einzeln = Zuschläge gesamt: 50.00 != 0.00",
+    "Bruttobetrag - Anzahlung + Rundung = Zahlbetrag: 1000.01 != 1190.00",
+    "Beträge nicht lesbar: Anzahlung, Rundung",
+    "2 Betrag/Beträge ohne Kennzeichen (cbc:ChargeIndicator)",
+    "1000.00 Positionen - 200.00 Nachlässe + 152.00 Steuer = 952.00 Zahlbetrag",
+  ];
+  for (const text of evidence) {
+    const english = translateTerms(DICTIONARIES.en, text);
+    assert.ok(!/[äöüßÄÖÜ]/.test(english), `still German: ${english}`);
+    assert.ok(!/\b(Positionen|Nachl|Zuschl|Netto|Steuer|Anzahlung|Rundung|Zahlbetrag|Betr)/.test(english),
+      `untranslated term: ${english}`);
+  }
+});
+
 test("German mode leaves the server's text alone", () => {
   const text = "Nettobetrag überschreitet den offenen Bestellwert";
   assert.equal(translateTerms(DICTIONARIES.de, text), text);

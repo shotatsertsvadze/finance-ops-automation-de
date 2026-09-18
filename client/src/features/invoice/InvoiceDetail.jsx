@@ -29,6 +29,17 @@ export default function InvoiceDetail({ may, onChanged }) {
   const rest = results.filter((r) => r.status !== "FAILED");
   const pendingRole = invoice.approval_steps.find((s) => s.status === "PENDING")?.required_role;
 
+  // How the amount due was arrived at. Shown only when the document says
+  // something beyond lines and tax, so an ordinary invoice stays a short list.
+  const totals = invoice.parsed?.totals ?? {};
+  const statedReasons = (isCharge) => (invoice.parsed?.allowanceCharges ?? [])
+    .filter((a) => a.isCharge === isCharge).map((a) => a.reason).filter(Boolean).join(", ");
+  const adjusted = Boolean(totals.allowanceTotal || totals.chargeTotal);
+  const withReasons = (amount, isCharge) => {
+    const reasons = statedReasons(isCharge);
+    return reasons ? `${amount} · ${reasons}` : amount;
+  };
+
   return (
     <>
       <Link to="/" className="back">{t("backToInbox")}</Link>
@@ -59,10 +70,20 @@ export default function InvoiceDetail({ may, onChanged }) {
                 <div className="facts facts-split">
                   <Fact label={t("fieldIssueDate")} value={formatDate(invoice.issue_date)} mono />
                   <Fact label={t("fieldDueDate")} value={formatDate(invoice.due_date)} mono />
+                </div>
+                {adjusted ? <Fact label={t("fieldLineTotal")} value={formatMoney(totals.lineExtension)} mono /> : null}
+                {totals.allowanceTotal
+                  ? <Fact label={t("fieldAllowances")} value={withReasons(`− ${formatMoney(totals.allowanceTotal)}`, false)} mono />
+                  : null}
+                {totals.chargeTotal
+                  ? <Fact label={t("fieldCharges")} value={withReasons(`+ ${formatMoney(totals.chargeTotal)}`, true)} mono />
+                  : null}
+                <div className="facts facts-split">
                   <Fact label={t("fieldNet")} value={formatMoney(invoice.net_amount)} mono />
                   <Fact label={t("fieldVat")} value={formatMoney(invoice.vat_amount)} mono />
                 </div>
-                <Fact label={t("fieldGross")} value={formatMoney(invoice.gross_amount)} mono />
+                {totals.prepaid ? <Fact label={t("fieldPrepaid")} value={`− ${formatMoney(totals.prepaid)}`} mono /> : null}
+                <Fact label={t("fieldAmountDue")} value={formatMoney(invoice.gross_amount)} mono />
                 <Fact label={t("fieldIban")} value={groupIban(invoice.supplier_iban_raw) || "—"} mono />
                 <Fact label={t("fieldVatId")} value={invoice.supplier_vat_id_raw ?? "—"} mono />
                 <Fact

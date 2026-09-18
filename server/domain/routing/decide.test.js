@@ -57,6 +57,24 @@ test("unknown amount never auto-approves", () => {
   assert.equal(d.reviewReason, "AMOUNT_UNKNOWN");
 });
 
+/**
+ * Allowances make a zero payable amount reachable: a discount covering the
+ * line total, or a prepayment covering the gross. Zero is a known amount, so
+ * it passed the unknown-amount guard and could auto-approve — a payment run
+ * for nothing, approved by nobody.
+ */
+test("there is nothing to pay, so nobody approves it", () => {
+  const d = decide({ technicalChecks: ok, businessChecks: ok, grossCents: 0, policy });
+  assert.equal(d.targetState, "REVIEW_REQUIRED");
+  assert.equal(d.reviewReason, "NOTHING_TO_PAY");
+});
+
+test("a negative payable amount is not an unknown one", () => {
+  const d = decide({ technicalChecks: ok, businessChecks: ok, grossCents: -100, policy });
+  assert.equal(d.targetState, "REVIEW_REQUIRED");
+  assert.equal(d.reviewReason, "NOTHING_TO_PAY", "a credit is a document to look at, not an unreadable one");
+});
+
 test("policy overrides from env change the tiers", () => {
   const strict = loadPolicy({ POLICY_AUTO_APPROVE_LIMIT: "0", POLICY_TIER_1_LIMIT: "1000" });
   assert.deepEqual(requiredApprovalSteps(strict, 38000).map((s) => s.required_role), ["MANAGER"]);

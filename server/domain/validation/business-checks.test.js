@@ -116,12 +116,20 @@ test("a purchase order belonging to another supplier names that supplier, not an
   assert.ok(!/[0-9a-f]{8}-[0-9a-f]{4}/.test(c.actual), `no raw identifier in the evidence: ${c.actual}`);
 });
 
-// ------------------------------------- parts of UBL this adapter skips -----
+
+// ------------------------------------ the EN 16931 calculation chain -------
 
 /**
- * L3: allowances, charges and prepayments were "not modelled", which meant
- * three different outcomes depending on how the document was written. One of
- * them was a silent pass.
+ * L3: allowances, charges and prepayments are not exotic parts of UBL. They
+ * are the middle of the chain that leads from the line total to the amount
+ * actually due, and a supplier granting a discount uses them routinely.
+ *
+ * They used to be refused outright, because a total we cannot reconstruct
+ * must not look like one we checked. Now the chain is computed, so the same
+ * documents are verified end to end instead (ADR-047):
+ *
+ *   lines - allowances + charges = net, net + tax = gross,
+ *   gross - prepaid + rounding  = payable
  */
 import { buildInvoiceXml } from "../../test-support/invoice-xml.js";
 
@@ -131,42 +139,93 @@ const runXml = (xml) => {
   assert.equal(technical.passed, true, "the document is technically readable");
   return runBusinessChecks(technical.parsed, MASTER, policy, company);
 };
-const plain = () => buildInvoiceXml({ number: "FEAT-1", netCents: 100000 });
+const invoice = (options) => buildInvoiceXml({ number: "CHAIN-1", netCents: 100000, ...options });
+const totals = (r) => check(r, "totals_consistent");
 
-test("an invoice without those parts is unaffected", () => {
-  const r = runXml(plain());
-  assert.equal(check(r, "document_features_supported").status, "PASSED");
-  assert.equal(check(r, "totals_consistent").status, "PASSED");
+test("an invoice without allowances is unaffected", () => {
+  assert.equal(totals(runXml(invoice({}))).status, "PASSED");
 });
 
-test("a discount the totals already absorb is not waved through", () => {
-  // The dangerous case: internally consistent, so nothing else notices it.
-  const xml = plain().replace("<cac:LegalMonetaryTotal>", `<cac:AllowanceCharge>
-     <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
-     <cbc:Amount currencyID="EUR">200.00</cbc:Amount>
-   </cac:AllowanceCharge>
-   <cac:LegalMonetaryTotal>`);
-  const c = check(runXml(xml), "document_features_supported");
+test("a discounted invoice is verified rather than refused", () => {
+  // The headline of this change: before it, every invoice carrying a discount
+  // was unpayable, however correctly it was written.
+  const r = runXml(invoice({ allowances: [{ amountCents: 20000, reason: "Skonto" }] }));
+  assert.deepEqual(r.checks.filter((c) => c.status === "FAILED"), []);
+  assert.equal(totals(r).status, "PASSED");
+  assert.equal(r.grossCents, 95200, "800.00 net + 19 % = 952.00 payable");
+});
+
+test("a surcharge is added, not subtracted", () => {
+  const r = runXml(invoice({ allowances: [{ amountCents: 5000, charge: true, reason: "Versandkosten" }] }));
+  assert.equal(totals(r).status, "PASSED");
+  assert.equal(r.grossCents, 124950, "1050.00 net + 19 %");
+});
+
+test("a prepayment reduces what we owe, and that is the amount carried forward", () => {
+  const r = runXml(invoice({ prepaidCents: 19000 }));
+  assert.equal(totals(r).status, "PASSED");
+  assert.equal(r.grossCents, 100000, "1190.00 gross less 190.00 already paid");
+});
+
+test("a discount the document does not declare in its totals is caught", () => {
+  // The silent pass this replaces: allowances present, no AllowanceTotalAmount,
+  // and every other total internally consistent.
+  const xml = invoice({}).replace("<cac:TaxTotal>", `<cac:AllowanceCharge>
+    <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+    <cbc:Amount currencyID="EUR">200.00</cbc:Amount>
+  </cac:AllowanceCharge>
+  <cac:TaxTotal>`);
+  const c = totals(runXml(xml));
   assert.equal(c.status, "FAILED");
-  assert.match(c.actual, /AllowanceCharge/);
+  assert.equal(c.severity, "HIGH");
+  assert.match(c.actual, /Nachlässe/);
 });
 
-test("a prepayment is named for what it is, not called inconsistent totals", () => {
-  const xml = plain().replace(
-    /<cbc:PayableAmount currencyID="EUR">[\d.]+<\/cbc:PayableAmount>/,
-    '<cbc:PrepaidAmount currencyID="EUR">190.00</cbc:PrepaidAmount><cbc:PayableAmount currencyID="EUR">1000.00</cbc:PayableAmount>',
-  );
-  const r = runXml(xml);
-  assert.equal(check(r, "document_features_supported").status, "FAILED");
-  assert.match(check(r, "document_features_supported").actual, /Anzahlungen/);
-  assert.equal(check(r, "totals_consistent").status, "SKIPPED",
-    "a rule that does not apply is neither passed nor failed");
+test("a declared allowance total that does not match its allowances is caught", () => {
+  const xml = invoice({ allowances: [{ amountCents: 20000 }] })
+    .replace('<cbc:Amount currencyID="EUR">200.00</cbc:Amount>', '<cbc:Amount currencyID="EUR">150.00</cbc:Amount>');
+  assert.equal(totals(runXml(xml)).status, "FAILED");
 });
 
-test("the totals rule is skipped rather than failed, and says why", () => {
-  const xml = plain().replace("<cac:LegalMonetaryTotal>",
-    '<cac:LegalMonetaryTotal><cbc:AllowanceTotalAmount currencyID="EUR">200.00</cbc:AllowanceTotalAmount>');
-  const c = check(runXml(xml), "totals_consistent");
-  assert.equal(c.status, "SKIPPED");
-  assert.match(c.reason, /nicht nachrechenbar/);
+test("an allowance the net amount does not reflect is caught", () => {
+  const xml = invoice({ allowances: [{ amountCents: 20000 }] })
+    .replace('<cbc:TaxExclusiveAmount currencyID="EUR">800.00</cbc:TaxExclusiveAmount>',
+             '<cbc:TaxExclusiveAmount currencyID="EUR">1000.00</cbc:TaxExclusiveAmount>');
+  const c = totals(runXml(xml));
+  assert.equal(c.status, "FAILED");
+  assert.match(c.actual, /Netto/);
+});
+
+test("a prepayment the payable amount does not reflect is caught", () => {
+  const xml = invoice({ prepaidCents: 19000 })
+    .replace('<cbc:PayableAmount currencyID="EUR">1000.00</cbc:PayableAmount>',
+             '<cbc:PayableAmount currencyID="EUR">1190.00</cbc:PayableAmount>');
+  const c = totals(runXml(xml));
+  assert.equal(c.status, "FAILED");
+  assert.match(c.actual, /Anzahlung/);
+});
+
+test("an allowance that says neither discount nor surcharge is not guessed at", () => {
+  const xml = invoice({ allowances: [{ amountCents: 20000 }] })
+    .replace("<cbc:ChargeIndicator>false</cbc:ChargeIndicator>", "<cbc:ChargeIndicator>vielleicht</cbc:ChargeIndicator>");
+  const c = totals(runXml(xml));
+  assert.equal(c.status, "FAILED");
+  assert.match(c.reason, /Nachlass oder Zuschlag/);
+});
+
+test("an amount the document states but we cannot read is not treated as zero", () => {
+  // The dangerous shape: a prepayment of "zweihundert" read as nothing due
+  // would leave the whole gross amount to pay, twice.
+  const xml = invoice({ prepaidCents: 19000 })
+    .replace('<cbc:PrepaidAmount currencyID="EUR">190.00</cbc:PrepaidAmount>',
+             '<cbc:PrepaidAmount currencyID="EUR">zweihundert</cbc:PrepaidAmount>');
+  const c = totals(runXml(xml));
+  assert.equal(c.status, "FAILED");
+  assert.match(c.actual, /nicht lesbar: Anzahlung/);
+});
+
+test("the blanket refusal of these documents is gone", () => {
+  const r = runXml(invoice({ allowances: [{ amountCents: 20000 }] }));
+  assert.equal(check(r, "document_features_supported"), undefined,
+    "the parts it named are computed now, so the check has nothing left to refuse");
 });

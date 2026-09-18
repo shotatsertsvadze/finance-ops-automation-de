@@ -71,9 +71,10 @@ const WRONG_IBAN = "DE75512108001245126199";
 const pad = (n, w = 5) => String(n).padStart(w, "0");
 const money = (cents) => (cents / 100).toFixed(2);
 
-function invoiceXml({ number, issueDate, dueDate, supplier, iban, netCents, po }) {
-  const vat = Math.round(netCents * 0.19);
-  const gross = netCents + vat;
+function invoiceXml({ number, issueDate, dueDate, supplier, iban, netCents, po, discountCents = 0 }) {
+  const net = netCents - discountCents;
+  const vat = Math.round(net * 0.19);
+  const gross = net + vat;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <ubl:Invoice xmlns:ubl="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
              xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
@@ -105,16 +106,24 @@ function invoiceXml({ number, issueDate, dueDate, supplier, iban, netCents, po }
     </cac:PayeeFinancialAccount>
   </cac:PaymentMeans>
   <cac:PaymentTerms><cbc:Note>Zahlbar innerhalb von 30 Tagen ohne Abzug</cbc:Note></cac:PaymentTerms>
+  ${discountCents ? `<cac:AllowanceCharge>
+    <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
+    <cbc:AllowanceChargeReasonCode>95</cbc:AllowanceChargeReasonCode>
+    <cbc:AllowanceChargeReason>Skonto laut Rahmenvereinbarung</cbc:AllowanceChargeReason>
+    <cbc:Amount currencyID="EUR">${money(discountCents)}</cbc:Amount>
+    <cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>19</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
+  </cac:AllowanceCharge>` : ""}
   <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">${money(vat)}</cbc:TaxAmount>
-    <cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${money(netCents)}</cbc:TaxableAmount>
+    <cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${money(net)}</cbc:TaxableAmount>
       <cbc:TaxAmount currencyID="EUR">${money(vat)}</cbc:TaxAmount>
       <cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>19</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
     </cac:TaxSubtotal>
   </cac:TaxTotal>
   <cac:LegalMonetaryTotal>
     <cbc:LineExtensionAmount currencyID="EUR">${money(netCents)}</cbc:LineExtensionAmount>
-    <cbc:TaxExclusiveAmount currencyID="EUR">${money(netCents)}</cbc:TaxExclusiveAmount>
+    <cbc:TaxExclusiveAmount currencyID="EUR">${money(net)}</cbc:TaxExclusiveAmount>
     <cbc:TaxInclusiveAmount currencyID="EUR">${money(gross)}</cbc:TaxInclusiveAmount>
+    ${discountCents ? `<cbc:AllowanceTotalAmount currencyID="EUR">${money(discountCents)}</cbc:AllowanceTotalAmount>` : ""}
     <cbc:PayableAmount currencyID="EUR">${money(gross)}</cbc:PayableAmount>
   </cac:LegalMonetaryTotal>
   <cac:InvoiceLine>
@@ -166,6 +175,12 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
       : scenario === "po_overrun" ? 120000
       : 50000 + Math.floor(random() * 150000);
 
+    // A discount is ordinary commercial practice, not an exception: these
+    // should pass every check and flow through like any other invoice.
+    const discountCents = scenario === "auto" || scenario === "approval"
+      ? (random() > 0.8 ? Math.round(netCents * 0.03) : 0)
+      : 0;
+
     const number = `DEMO-2026-${pad(1000 + i)}`;
     const issueDate = iso(new Date(receivedAt.getTime() - 86400000));
     const dueDate = iso(new Date(receivedAt.getTime() + 30 * 86400000));
@@ -175,7 +190,7 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
       : invoiceXml({
           number, issueDate, dueDate, supplier,
           iban: scenario === "iban" ? WRONG_IBAN : supplier.iban,
-          netCents, po: scenario === "po_overrun" ? SMALL_ORDER : order,
+          netCents, discountCents, po: scenario === "po_overrun" ? SMALL_ORDER : order,
         });
 
     const received = await handleUpload(deps, {

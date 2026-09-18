@@ -20,7 +20,7 @@ const parser = new XMLParser({
   parseTagValue: false,
   parseAttributeValue: false,
   trimValues: true,
-  isArray: (name) => ["InvoiceLine", "TaxSubtotal", "PaymentMeans"].includes(name),
+  isArray: (name) => ["InvoiceLine", "TaxSubtotal", "PaymentMeans", "AllowanceCharge"].includes(name),
 });
 
 const text = (node) => {
@@ -31,6 +31,25 @@ const text = (node) => {
 };
 const get = (obj, path) => path.split(".").reduce((o, key) => (o && o[key] !== undefined ? o[key] : undefined), obj);
 const str = (obj, path) => text(get(obj, path));
+
+/**
+ * One allowance or charge, at document or line level. The indicator decides
+ * the sign, so a value that is neither "true" nor "false" is reported as
+ * unknown rather than assumed: defaulting it would let a surcharge be
+ * subtracted from the amount due.
+ */
+const allowanceCharge = (node) => {
+  const indicator = str(node, "ChargeIndicator");
+  return {
+    isCharge: indicator === "true" ? true : indicator === "false" ? false : null,
+    amount: str(node, "Amount"),
+    baseAmount: str(node, "BaseAmount"),
+    multiplier: str(node, "MultiplierFactorNumeric"),
+    reason: str(node, "AllowanceChargeReason"),
+    reasonCode: str(node, "AllowanceChargeReasonCode"),
+    taxPercent: str(node, "TaxCategory.Percent"),
+  };
+};
 
 const UBL_INVOICE_NS = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
 const CII_NS_PREFIX = "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice";
@@ -91,6 +110,7 @@ export function parseInvoiceXml(xmlText) {
     unitCode: get(line, "InvoicedQuantity.@_unitCode") ?? null,
     unitPrice: str(line, "Price.PriceAmount"),
     lineNet: str(line, "LineExtensionAmount"),
+    allowanceCharges: (line.AllowanceCharge ?? []).map(allowanceCharge),
   }));
   return {
     format,
@@ -121,22 +141,21 @@ export function parseInvoiceXml(xmlText) {
       reference: str(paymentMeans, "PaymentID"),
       terms: str(inv, "PaymentTerms.Note"),
     },
+    // The whole of LegalMonetaryTotal, in the order EN 16931 chains it:
+    // lines - allowances + charges = net, net + tax = gross,
+    // gross - prepaid + rounding = payable.
     totals: {
       lineExtension: str(inv, "LegalMonetaryTotal.LineExtensionAmount"),
+      allowanceTotal: str(inv, "LegalMonetaryTotal.AllowanceTotalAmount"),
+      chargeTotal: str(inv, "LegalMonetaryTotal.ChargeTotalAmount"),
       taxExclusive: str(inv, "LegalMonetaryTotal.TaxExclusiveAmount"),
       taxAmount: str(inv, "TaxTotal.TaxAmount"),
       taxInclusive: str(inv, "LegalMonetaryTotal.TaxInclusiveAmount"),
+      prepaid: str(inv, "LegalMonetaryTotal.PrepaidAmount"),
+      rounding: str(inv, "LegalMonetaryTotal.PayableRoundingAmount"),
       payable: str(inv, "LegalMonetaryTotal.PayableAmount"),
     },
-    // Parts of UBL this adapter does not model. Reported rather than ignored:
-    // an invoice whose total we cannot reconstruct must not look like one we
-    // checked. See ADR-043.
-    unsupported: {
-      allowanceTotal: str(inv, "LegalMonetaryTotal.AllowanceTotalAmount"),
-      chargeTotal: str(inv, "LegalMonetaryTotal.ChargeTotalAmount"),
-      prepaidAmount: str(inv, "LegalMonetaryTotal.PrepaidAmount"),
-      allowanceCharges: inv.AllowanceCharge ? 1 : 0,
-    },
+    allowanceCharges: (inv.AllowanceCharge ?? []).map(allowanceCharge),
     lines,
   };
 }

@@ -129,66 +129,88 @@ export function runBusinessChecks(parsed, master, policy, company) {
     }
   }
 
-  // Parts of UBL this adapter does not model. Their presence means the total
-  // cannot be reconstructed from what is read, so the document is reported as
-  // unsupported instead of being measured against a rule that does not apply
-  // to it. Before this, a correctly formed invoice carrying a discount was
-  // refused for "inconsistent totals", which was not true of the document.
-  const unsupported = parsed.unsupported ?? {};
-  const unsupportedFeatures = [
-    [unsupported.allowanceTotal, "Nachlässe (AllowanceTotalAmount)"],
-    [unsupported.chargeTotal, "Zuschläge (ChargeTotalAmount)"],
-    [unsupported.prepaidAmount, "Anzahlungen (PrepaidAmount)"],
-    [unsupported.allowanceCharges ? "1" : null, "Positionsnachlässe (AllowanceCharge)"],
-  ].filter(([value]) => value !== null && value !== undefined && value !== "").map(([, label]) => label);
+  // EN 16931 chains the declared totals from the line amounts to the amount
+  // due, and every link is checked. A document can declare a plausible payable
+  // amount over lines, discounts or a prepayment that do not produce it, so
+  // checking only neighbouring pairs is not enough (ADR-047).
+  const sumOf = (values) => values.reduce((sum, v) => {
+    const cents = toCents(v);
+    return sum === null || cents === null ? null : sum + cents;
+  }, 0);
+  // An amount the document leaves out is zero. One it states but we cannot
+  // read is unknown, and unknown is not zero.
+  const optional = (value) => (value === null || value === undefined || value === "" ? 0 : toCents(value));
 
-  if (unsupportedFeatures.length) {
-    checks.push(failed("document_features_supported", SEVERITY.HIGH, {
-      expected: "Rechnung ohne Nachlässe, Zuschläge oder Anzahlungen",
-      actual: unsupportedFeatures.join(", "),
-      reason: "Das Dokument nutzt Bestandteile, die dieser Prototyp nicht abbildet; der Zahlbetrag ist damit nicht nachrechenbar",
-    }));
-  } else {
-    checks.push(passed("document_features_supported", SEVERITY.HIGH, {
-      expected: "Rechnung ohne Nachlässe, Zuschläge oder Anzahlungen",
-      actual: "keine",
-      reason: "Das Dokument nutzt nur abgebildete Bestandteile",
-    }));
-  }
-
-  const lineSum = parsed.lines.reduce((sum, l) => (sum === null ? null : (toCents(l.lineNet) === null ? null : sum + toCents(l.lineNet))), 0);
+  const entries = parsed.allowanceCharges ?? [];
+  const undecided = entries.filter((a) => a.isCharge === null).length;
+  const allowanceSum = sumOf(entries.filter((a) => a.isCharge === false).map((a) => a.amount));
+  const chargeSum = sumOf(entries.filter((a) => a.isCharge === true).map((a) => a.amount));
+  const lineSum = sumOf(parsed.lines.map((l) => l.lineNet));
   const lineExtensionCents = toCents(parsed.totals.lineExtension);
   const taxInclusiveCents = toCents(parsed.totals.taxInclusive);
-  const inconsistencies = [];
-  if (netCents === null || vatCents === null || grossCents === null || lineSum === null) inconsistencies.push("Beträge nicht lesbar");
-  else {
-    // Every declared total is chained to the next. Checking only neighbouring
-    // pairs let a document declare a consistent header over unrelated lines.
-    if (lineExtensionCents !== null && Math.abs(lineSum - lineExtensionCents) > policy.totalsToleranceCents) {
-      inconsistencies.push(`Positionen ${centsToDecimal(lineSum)} != Summe Positionen ${centsToDecimal(lineExtensionCents)}`);
-    }
-    if (Math.abs(lineSum - netCents) > policy.totalsToleranceCents) {
-      inconsistencies.push(`Positionen ${centsToDecimal(lineSum)} != Netto ${centsToDecimal(netCents)}`);
-    }
-    if (Math.abs(netCents + vatCents - grossCents) > policy.totalsToleranceCents) {
-      inconsistencies.push(`Netto ${centsToDecimal(netCents)} + Steuer ${centsToDecimal(vatCents)} != Brutto ${centsToDecimal(grossCents)}`);
-    }
-    if (taxInclusiveCents !== null && Math.abs(taxInclusiveCents - grossCents) > policy.totalsToleranceCents) {
-      inconsistencies.push(`Bruttobetrag ${centsToDecimal(taxInclusiveCents)} != Zahlbetrag ${centsToDecimal(grossCents)}`);
-    }
-  }
-  if (unsupportedFeatures.length) {
-    // Not a pass and not a failure: the rule does not apply to this document,
-    // and claiming either would be a statement we cannot support.
-    checks.push(skipped("totals_consistent", {
-      expected: "Positionen = Netto; Netto + Steuer = Brutto",
-      actual: unsupportedFeatures.join(", "),
-      reason: "Summen nicht nachrechenbar, solange diese Bestandteile nicht abgebildet sind",
+  const allowanceTotalCents = optional(parsed.totals.allowanceTotal);
+  const chargeTotalCents = optional(parsed.totals.chargeTotal);
+  const prepaidCents = optional(parsed.totals.prepaid);
+  const roundingCents = optional(parsed.totals.rounding);
+
+  // Listed as pairs rather than an object: an allowance total and the
+  // individual allowances are both reported as "Nachlässe" when unreadable,
+  // which a key can only say once.
+  const known = [
+    ["Positionen", lineSum], ["Netto", netCents], ["Steuer", vatCents], ["Zahlbetrag", grossCents],
+    ["Nachlässe", allowanceTotalCents], ["Nachlässe", allowanceSum],
+    ["Zuschläge", chargeTotalCents], ["Zuschläge", chargeSum],
+    ["Anzahlung", prepaidCents], ["Rundung", roundingCents],
+  ];
+  const unreadable = [...new Set(known.filter(([, v]) => v === null).map(([label]) => label))];
+
+  const chain = "Positionen - Nachlässe + Zuschläge = Netto; Netto + Steuer - Anzahlung = Zahlbetrag";
+  if (unreadable.length) {
+    checks.push(failed("totals_consistent", SEVERITY.HIGH, {
+      expected: chain,
+      actual: `Beträge nicht lesbar: ${unreadable.join(", ")}`,
+      reason: "Summen sind rechnerisch nicht konsistent",
     }));
-  } else if (inconsistencies.length) {
-    checks.push(failed("totals_consistent", SEVERITY.HIGH, { expected: "Positionen = Netto; Netto + Steuer = Brutto", actual: inconsistencies.join("; "), reason: "Summen sind rechnerisch nicht konsistent" }));
+  } else if (undecided > 0) {
+    // The indicator decides whether an amount is added or subtracted.
+    // Guessing it would be guessing at the amount due.
+    checks.push(failed("totals_consistent", SEVERITY.HIGH, {
+      expected: chain,
+      actual: `${undecided} Betrag/Beträge ohne Kennzeichen (cbc:ChargeIndicator)`,
+      reason: "Ein Betrag ist weder als Nachlass oder Zuschlag gekennzeichnet; die Summen sind damit nicht nachrechenbar",
+    }));
   } else {
-    checks.push(passed("totals_consistent", SEVERITY.HIGH, { expected: "Positionen = Netto; Netto + Steuer = Brutto", actual: `${centsToDecimal(netCents)} + ${centsToDecimal(vatCents)} = ${centsToDecimal(grossCents)}`, reason: "Summen sind rechnerisch konsistent" }));
+    const grossComputed = netCents + vatCents;
+    const inconsistencies = [];
+    const link = (label, computed, declared) => {
+      if (declared === null) return;
+      if (Math.abs(computed - declared) > policy.totalsToleranceCents) {
+        inconsistencies.push(`${label}: ${centsToDecimal(computed)} != ${centsToDecimal(declared)}`);
+      }
+    };
+    link("Positionen = Summe der Positionen", lineSum, lineExtensionCents);
+    link("Nachlässe einzeln = Nachlässe gesamt", allowanceSum, allowanceTotalCents);
+    link("Zuschläge einzeln = Zuschläge gesamt", chargeSum, chargeTotalCents);
+    link("Positionen - Nachlässe + Zuschläge = Netto",
+      (lineExtensionCents ?? lineSum) - allowanceTotalCents + chargeTotalCents, netCents);
+    link("Netto + Steuer = Bruttobetrag", grossComputed, taxInclusiveCents);
+    link("Bruttobetrag - Anzahlung + Rundung = Zahlbetrag",
+      (taxInclusiveCents ?? grossComputed) - prepaidCents + roundingCents, grossCents);
+
+    if (inconsistencies.length) {
+      checks.push(failed("totals_consistent", SEVERITY.HIGH, { expected: chain, actual: inconsistencies.join("; "), reason: "Summen sind rechnerisch nicht konsistent" }));
+    } else {
+      const parts = [`${centsToDecimal(lineSum)} Positionen`];
+      if (allowanceTotalCents) parts.push(`- ${centsToDecimal(allowanceTotalCents)} Nachlässe`);
+      if (chargeTotalCents) parts.push(`+ ${centsToDecimal(chargeTotalCents)} Zuschläge`);
+      parts.push(`+ ${centsToDecimal(vatCents)} Steuer`);
+      if (prepaidCents) parts.push(`- ${centsToDecimal(prepaidCents)} Anzahlung`);
+      checks.push(passed("totals_consistent", SEVERITY.HIGH, {
+        expected: chain,
+        actual: `${parts.join(" ")} = ${centsToDecimal(grossCents)} Zahlbetrag`,
+        reason: "Summen sind rechnerisch konsistent",
+      }));
+    }
   }
 
   if (policy.allowedCurrencies.includes(parsed.currency)) {

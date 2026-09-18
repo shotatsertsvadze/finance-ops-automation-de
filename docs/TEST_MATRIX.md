@@ -65,7 +65,11 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | T3 | CII (ZUGFeRD syntax) | `format_recognised` FAILED, reported as unsupported, not a crash | AUTO | `technical-validation.test.js` |
 | T4 | Missing XRechnung CustomizationID | MEDIUM failure | AUTO | `technical-validation.test.js` |
 | T5 | Non-numeric amounts or quantities | `amounts_numeric` FAILED | AUTO | `technical-validation.test.js` |
-| T6 | Official EN 16931 / KoSIT validation | not implemented, adapter boundary only | OPEN | Deliberate, see ADR-008 |
+| T6 | Document-level allowances and charges are read with amount and reason | `allowanceCharges`, `allowanceTotal`, `chargeTotal` | AUTO | `allowances.test.js` |
+| T7 | A charge indicator that says neither is read as neither | `isCharge` null, not defaulted | AUTO | `allowances.test.js` |
+| T8 | Prepayment and rounding are read | `prepaid`, `rounding`, amount due after them | AUTO | `allowances.test.js` |
+| T9 | A line-level allowance is read on its line | `lines[].allowanceCharges` | AUTO | `allowances.test.js` |
+| T10 | Official EN 16931 / KoSIT validation | not implemented, adapter boundary only | OPEN | Deliberate, see ADR-008 |
 
 ## Business checks
 
@@ -76,6 +80,12 @@ uploaded through the running UI on 2026-09-17 (MANUAL, browser).
 | B3 | Blocked supplier | `supplier_active` HIGH | AUTO | `business-checks.test.js` |
 | B4 | Amount within PO tolerance | PASSED | AUTO | `business-checks.test.js` |
 | B5 | Inconsistent totals | `totals_consistent` HIGH | AUTO | `business-checks.test.js` |
+| B8 | A discounted invoice is verified, not refused | no FAILED check; net and amount due are after the discount | AUTO | `business-checks.test.js` |
+| B9 | A surcharge is added, a prepayment subtracted | `totals_consistent` PASSED at the right amount | AUTO | `business-checks.test.js` |
+| B10 | A discount the totals do not declare | `totals_consistent` HIGH naming the link | AUTO | `business-checks.test.js` |
+| B11 | An allowance with no charge indicator | `totals_consistent` HIGH, not guessed either way | AUTO | `business-checks.test.js` |
+| B12 | A stated amount that cannot be read is not zero | `totals_consistent` HIGH | AUTO | `business-checks.test.js` |
+| B13 | Nothing left to pay after a discount or prepayment | REVIEW_REQUIRED, `NOTHING_TO_PAY` | AUTO | `decide.test.js` |
 | B6 | Unknown PO reference | `po_exists` HIGH | AUTO | `business-checks.test.js` |
 | B7 | Missing PO above the policy threshold | MEDIUM | AUTO | `business-checks.test.js` |
 
@@ -134,7 +144,7 @@ described as working.
 |---|---|---|---|
 | ~~L1 (R07)~~ | ~~Cumulative PO overrun is not prevented~~ | **Fixed 2026-09-17**: capacity is a commitment ledger; the original reproduction now stops the second invoice. See ADR-032 and the table below. | CLOSED |
 | ~~L2 (R08)~~ | ~~A stranded intake could only be rescued by an operator~~ | **Fixed 2026-09-17**: sending the same file again resumes an invoice whose first run never finished. See ADR-044 and the table below. | CLOSED |
-| L3 (R10, partly closed) | The recognised XML subset is narrow. **Fixed 2026-09-17**: the root namespace is now required, and allowances, charges and prepayments are refused by name instead of being ignored or mis-reported (ADR-043, ADR-044). Still narrow: only UBL syntax is read, and CII remains an adapter boundary. | Upload a CII document | OPEN |
+| L3 (R10, partly closed) | The recognised XML subset is narrow. **Fixed 2026-09-17**: the root namespace is now required. **Fixed 2026-09-18**: allowances, charges and prepayments are computed along the EN 16931 chain rather than refused, so a discounted invoice is payable (ADR-047 supersedes ADR-043). Still narrow: only UBL syntax is read, CII remains an adapter boundary, and a line's own net amount is taken as declared. | Upload a CII document | OPEN |
 | ~~L4 (R11)~~ | ~~Decisions are not bound to a document hash or validation-run identifier~~ | **Fixed 2026-09-17**: each decision records the document, the validation run and the amount, and two gates refuse a mismatch. See ADR-033 and the table below. | CLOSED |
 | ~~L8~~ | ~~Server refusals stay German in English mode~~ | **Fixed 2026-09-17**: every refusal carries a code and its parameters; the client renders it in the chosen language and falls back to the server's sentence. See ADR-042 and the table below. | CLOSED |
 | ~~L7~~ | ~~Business checks are not re-run at the final approval gate~~ | **Fixed 2026-09-17**: the gate re-checks business facts against current master data and returns the invoice to review when one has newly failed. See ADR-041 and the table below. | CLOSED |
@@ -309,14 +319,15 @@ Found while verifying the above, not in the report:
 | K1 | A document rooted in another namespace is not an XRechnung | format_recognised FAILED | AUTO | `technical-validation.test.js` |
 | K2 | The default namespace counts as much as a prefixed one | PASSED | AUTO | `technical-validation.test.js` |
 | K3 | An unqualified `Invoice` root is refused | FAILED | AUTO | `technical-validation.test.js` |
-| K4 | A discount the totals already absorb is not waved through | document_features_supported FAILED | AUTO | `business-checks.test.js`; this case passed every check before |
-| K5 | A prepayment is named, not called inconsistent totals | FAILED naming Anzahlungen; totals SKIPPED | AUTO | `business-checks.test.js` |
-| K6 | An unmodelled document cannot be approved | listed in payableBlockers | AUTO | `eligibility` non-overridable checks |
+| K4 | A discount the totals do not declare is caught by the chain | totals_consistent FAILED | AUTO | `business-checks.test.js`; this case passed every check before ADR-043, and was refused wholesale under it |
+| K5 | A discounted invoice reaches approval | no FAILED check, amount due after the discount | AUTO | `business-checks.test.js`; impossible under ADR-043 |
+| K6 | A document whose totals do not add up cannot be approved | `totals_consistent` in payableBlockers | AUTO | `eligibility` non-overridable checks |
 | K7 | A failed first run leaves the receipt on the record | one invoice, RECEIVED | AUTO | `recovery.test.js` |
 | K8 | Sending the same file again resumes it | same invoice id, processed, no second row | AUTO | `recovery.test.js` |
 | K9 | A resumed invoice keeps its intake facts | received_at, filename, channel unchanged | AUTO | `recovery.test.js` |
 | K10 | The resumption is on the audit trail | `intake_resumed` recorded | AUTO | `recovery.test.js` |
 | K11 | A file sent again after processing is still a duplicate | DUPLICATE | AUTO | `recovery.test.js` |
+| K12a | Allowance evidence reads in English, link by link | no German left | AUTO | `dictionaries.test.js` |
 | K12 | The machine export returns identifiers unaltered | `=1+1` survives | AUTO | `csv-export.test.js`, `moneypath.test.js` |
 | K13 | The spreadsheet export makes such a cell inert | prefixed, value intact | AUTO | `csv-export.test.js` |
 | K14 | The two exports are told apart by filename | different Content-Disposition | AUTO | `moneypath.test.js` |

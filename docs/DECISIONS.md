@@ -716,6 +716,9 @@ what it does.
 
 ## ADR-043 A document built from parts we do not model is refused, not measured
 
+**Superseded by ADR-047.** Allowances, charges and prepayments are computed
+now, and the blanket refusal this records is gone. Kept for the reasoning.
+
 Closes half of L3. The adapter reads lines and totals. UBL also has allowances,
 charges and prepayments, and an invoice using them behaves three different ways
 depending on how it is written: a prepayment failed `totals_consistent`, a
@@ -816,6 +819,53 @@ build, so they need no `npm run build` first and exercise the file the project
 edits. One of them clicks the control with a mouse and asserts the ring does
 *not* appear: without it, a plain `:focus` rule would pass and the point of
 `:focus-visible` would go untested.
+
+
+## ADR-047 Allowances are arithmetic, so the arithmetic is done
+
+Supersedes ADR-043, and closes the rest of L3's totals half.
+
+ADR-043 refused any document carrying an allowance, a charge or a prepayment,
+because the payable amount could not be reconstructed from what the adapter
+read. The reasoning was sound and the cost was stated plainly: a correctly
+written invoice granting a discount was unpayable here. That cost turned out to
+be the wrong trade, because a discount is ordinary commercial practice rather
+than an exotic corner of UBL, and because the parts being refused are not
+features at all. They are the middle of EN 16931's calculation chain:
+
+    lines - allowances + charges = net       (BR-CO-10, 11, 12, 13)
+    net + tax                   = gross      (BR-CO-15)
+    gross - prepaid + rounding  = payable    (BR-CO-16)
+
+Decision: the adapter reads the whole of `LegalMonetaryTotal` and every
+`AllowanceCharge`, at document and line level, and `totals_consistent` checks
+every link of that chain instead of the three it checked before. The feature
+blacklist `document_features_supported` is deleted; the arithmetic is what
+fails closed now, and it is the stronger guard, because it also catches a
+document that uses a part we did read and still does not add up.
+
+The fail-closed property is unchanged, and rests on three rules:
+
+- An amount the document omits is zero. One it states but we cannot read is
+  unknown, and unknown is never treated as zero: a prepayment of "zweihundert"
+  read as nothing due would leave the whole gross amount to pay a second time.
+- `cbc:ChargeIndicator` decides whether an amount is added or subtracted. A
+  value that is neither `true` nor `false` is reported as neither, and the
+  document is refused, rather than defaulting to one and moving money.
+- `totals_consistent` stays non-overridable. A reviewer judges business facts;
+  they cannot supply a total the document never added up.
+
+One consequence had to be handled separately. Allowances make a zero payable
+amount reachable — a discount covering the line total, or a prepayment covering
+the gross — and zero is a known amount, so it passed the unknown-amount guard
+in routing and could auto-approve a payment run for nothing. Routing now sends
+any payable amount at or below zero to review as `NOTHING_TO_PAY`.
+
+What is still not modelled is named rather than implied: a line's own net
+amount is taken as declared and summed, so a line whose stated discount does
+not match its stated net is not caught. The header chain closes over the
+declared line amounts, so this cannot move the amount paid; it can only hide a
+supplier's own arithmetic error inside a line.
 
 ## Assumptions and contradictions found in the brief
 

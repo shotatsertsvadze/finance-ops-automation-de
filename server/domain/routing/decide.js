@@ -17,8 +17,14 @@ export function decide({ technicalChecks, businessChecks, grossCents, policy, ha
     const lead = high[0] ?? medium[0];
     return review(lead.check.toUpperCase(), [...high, ...medium]);
   }
-  if (grossCents === null || grossCents < 0) {
+  if (grossCents === null) {
     return review("AMOUNT_UNKNOWN", [{ check: "gross_amount", reason: "Bruttobetrag nicht bestimmbar" }]);
+  }
+  // A discount covering the line total, or a prepayment covering the gross,
+  // leaves nothing to pay. Zero is a known amount, so it would otherwise pass
+  // the guard above and auto-approve a payment run for nothing.
+  if (grossCents <= 0) {
+    return review("NOTHING_TO_PAY", [{ check: "gross_amount", reason: "Zahlbetrag ist null oder negativ" }]);
   }
   const requiredSteps = requiredApprovalSteps(policy, grossCents);
   // A document that was ever an exception does not become straight-through
