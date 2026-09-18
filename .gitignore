@@ -1,6 +1,8 @@
 node_modules/
 dist/
-storage/
+# Anchored to the repository root: an unanchored `storage/` also matched
+# server/storage/, which is source, and kept it out of the repository.
+/storage/
 .env
 .env.*
 !.env.example
