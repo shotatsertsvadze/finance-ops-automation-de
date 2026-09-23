@@ -13,7 +13,10 @@ export const TRANSITIONS = {
   // Two ways to leave without a payment: a credit note is booked, and an
   // invoice its open credits cover entirely is settled against them.
   ACCOUNTING_READY: ["PAYMENT_PENDING", "CREDITED", "SETTLED_BY_CREDIT", "CANCELLED"],
-  PAYMENT_PENDING: ["PAID"],
+  // A payment the bank did not carry out, or a recall it confirmed, fails; it
+  // is then instructed again from the booking, or stopped (ADR-055).
+  PAYMENT_PENDING: ["PAID", "PAYMENT_FAILED"],
+  PAYMENT_FAILED: ["ACCOUNTING_READY", "CANCELLED"],
   PAID: ["RECONCILED", "RECONCILIATION_EXCEPTION"],
   RECONCILIATION_EXCEPTION: ["RECONCILED"],
   RECONCILED: [],
@@ -49,6 +52,7 @@ export const PHASE = {
   APPROVED: "COMMITTED",
   ACCOUNTING_READY: "COMMITTED",
   PAYMENT_PENDING: "COMMITTED",
+  PAYMENT_FAILED: "COMMITTED",
   PAID: "SETTLED",
   RECONCILED: "SETTLED",
   RECONCILIATION_EXCEPTION: "SETTLED",
@@ -84,6 +88,7 @@ export const STATE_LABELS = {
   APPROVED: "Freigegeben",
   ACCOUNTING_READY: "Buchungsreif",
   PAYMENT_PENDING: "Zahlung angestoßen",
+  PAYMENT_FAILED: "Zahlung fehlgeschlagen",
   PAID: "Bezahlt",
   RECONCILED: "Abgeglichen",
   RECONCILIATION_EXCEPTION: "Abgleich unklar",

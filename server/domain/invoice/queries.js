@@ -30,7 +30,7 @@ export async function getInvoiceDetail(pool, id) {
             -- What this document has had applied to it, either way round.
             coalesce((
               select sum(a.amount) from finops.credit_applications a
-              where a.invoice_id = i.id or a.credit_note_id = i.id
+              where (a.invoice_id = i.id or a.credit_note_id = i.id) and a.released_at is null
             ), 0) as credit_applied_amount
      from finops.invoices i
      left join finops.suppliers s on s.id = i.supplier_id
@@ -57,7 +57,8 @@ export async function getInvoiceDetail(pool, id) {
        where e.invoice_id = $1 order by e.occurred_at, e.id`, [id],
     ),
     pool.query("select * from finops.accounting_records where invoice_id = $1 order by reverses_document_no nulls first, tax_key", [id]),
-    pool.query("select * from finops.payment_instructions where invoice_id = $1", [id]),
+    // The latest attempt: a failed one stays on record, a retry supersedes it (ADR-055).
+    pool.query("select * from finops.payment_instructions where invoice_id = $1 order by created_at desc limit 1", [id]),
     pool.query("select * from finops.bank_transactions where matched_invoice_id = $1 order by value_date", [id]),
     openCreditCents(pool, invoice),
     invoice.purchase_order_id ? availableCents(pool, invoice.purchase_order_id, id, { lock: false }) : null,

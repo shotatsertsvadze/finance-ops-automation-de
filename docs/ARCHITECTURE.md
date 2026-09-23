@@ -188,6 +188,9 @@ stateDiagram-v2
     ACCOUNTING_READY --> CREDITED: credit note booked, never paid
     ACCOUNTING_READY --> SETTLED_BY_CREDIT: open credits cover the invoice
     PAYMENT_PENDING --> PAID: payment confirmed
+    PAYMENT_PENDING --> PAYMENT_FAILED: bank rejected, returned or recalled it
+    PAYMENT_FAILED --> ACCOUNTING_READY: instructed again
+    PAYMENT_FAILED --> CANCELLED: stopped, booking reversed
     PAID --> RECONCILED: bank record matched
     PAID --> RECONCILIATION_EXCEPTION: no or ambiguous match
     RECONCILIATION_EXCEPTION --> RECONCILED: manual match
@@ -206,6 +209,13 @@ Rules:
   `ACCOUNTING_READY` to `CANCELLED`, finance only, with a reason. A booked
   invoice is reversed in the same transaction: the same lines, sign turned,
   under a new document number naming the original (ADR-054).
+- A payment the bank did not carry out goes to `PAYMENT_FAILED`: the
+  instruction is marked FAILED and the credits it spent are released
+  (`credit_applications.released_at`). From there it is instructed again,
+  as a new attempt with its own idempotency key, or stopped. At most one
+  instruction per invoice is live (pending or executed), enforced by a
+  partial unique index; a pending payment is stopped by failing first
+  (ADR-055).
 - Every state has one phase in `states.js` (ADR-051), and every list of states
   the code filters on is derived from it:
 
@@ -213,7 +223,7 @@ Rules:
   |---|---|---|---|---|
   | OPEN | RECEIVED, VALIDATING, REVIEW_REQUIRED, INFO_REQUESTED | | | yes |
   | AWAITING_APPROVAL | READY_FOR_APPROVAL | | yes | yes |
-  | COMMITTED | APPROVED, ACCOUNTING_READY, PAYMENT_PENDING | yes | yes | yes |
+  | COMMITTED | APPROVED, ACCOUNTING_READY, PAYMENT_PENDING, PAYMENT_FAILED | yes | yes | yes |
   | SETTLED | PAID, RECONCILED, RECONCILIATION_EXCEPTION, CREDITED, SETTLED_BY_CREDIT | yes | yes | |
   | DISCARDED | REJECTED, DUPLICATE, CANCELLED | | | |
 - A credit note (`document_type = 'CREDIT_NOTE'`, UNTDID 1001 code 381) shares
@@ -308,7 +318,9 @@ invoice above the auto limit.
 | POST | `/api/invoices/:id/credit` | 3 | books a credit note, ACCOUNTING_READY to CREDITED; refuses an invoice |
 | POST | `/api/invoices/:id/settle-by-credit` | 3 | ACCOUNTING_READY to SETTLED_BY_CREDIT when open credits cover the invoice; refuses a remainder |
 | POST | `/api/invoices/:id/payment/confirm` | 3 | simulated provider confirmation, PAYMENT_PENDING to PAID |
-| POST | `/api/invoices/:id/cancel` | 3 | stops an APPROVED or ACCOUNTING_READY invoice, reason required; reverses a booking |
+| POST | `/api/invoices/:id/payment/fail` | 3 | the bank did not carry the payment out, reason required; PAYMENT_PENDING to PAYMENT_FAILED |
+| POST | `/api/invoices/:id/payment/retry` | 3 | PAYMENT_FAILED back to ACCOUNTING_READY, to instruct or settle again |
+| POST | `/api/invoices/:id/cancel` | 3 | stops an APPROVED, ACCOUNTING_READY or PAYMENT_FAILED invoice, reason required; reverses a booking |
 | POST | `/api/invoices/:id/reconciliation/resolve` | 3 | closes a reconciliation exception, reason required |
 | GET | `/api/accounting/export` | 3 | CSV of all booking lines; `?profile=spreadsheet` neutralises formula cells (ADR-045) |
 | POST | `/api/bank/import` | 3 | imports a synthetic statement, idempotent on `external_id` |

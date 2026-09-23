@@ -80,8 +80,8 @@ test("a zero invoice is not settled by a zero credit", () => {
   assert.deepEqual(keys(invoice({ gross_amount: "0.00", open_credit_amount: "0" })), ["pay", "cancel"]);
 });
 
-test("the later money states offer their own single action", () => {
-  assert.deepEqual(keys(invoice({ state: "PAYMENT_PENDING" })), ["confirm"]);
+test("the later money states offer their own actions", () => {
+  assert.deepEqual(keys(invoice({ state: "PAYMENT_PENDING" })), ["confirm", "fail"]);
   assert.deepEqual(keys(invoice({ state: "RECONCILIATION_EXCEPTION" })), ["resolve"]);
   assert.deepEqual(keys(invoice({ state: "INFO_REQUESTED" })), ["info-received", "reject"]);
 });
@@ -149,4 +149,17 @@ test("an approved or booked invoice can be stopped, by finance, with a reason", 
 
 test("a payment on its way offers no cancel", () => {
   assert.ok(!keys(invoice({ state: "PAYMENT_PENDING" })).includes("cancel"));
+});
+
+test("a payment on its way can be reported as failed, with a reason", () => {
+  // ADR-055: the bank rejected it, returned it, or confirmed a recall.
+  const fail = availableActions(invoice({ state: "PAYMENT_PENDING" })).actions.find((a) => a.key === "fail");
+  assert.equal(fail.needs, "payment:confirm");
+  assert.equal(fail.needsComment, true);
+});
+
+test("a failed payment is instructed again or stopped", () => {
+  const result = availableActions(invoice({ state: "PAYMENT_FAILED" }));
+  assert.deepEqual(result.actions.map((a) => a.key), ["retry", "cancel"]);
+  assert.equal(result.prompt.key, "hintPaymentFailed");
 });

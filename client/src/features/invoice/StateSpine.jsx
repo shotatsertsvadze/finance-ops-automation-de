@@ -14,6 +14,7 @@ const OFF_PATH = {
   DUPLICATE: { after: "RECEIVED", tone: "blocked" },
   RECONCILIATION_EXCEPTION: { after: "PAID", tone: "blocked" },
   CANCELLED: { after: "APPROVED", tone: "blocked" },
+  PAYMENT_FAILED: { after: "PAYMENT_PENDING", tone: "blocked" },
 };
 
 export default function StateSpine({ state, reviewReason, pendingRole, documentType = "INVOICE" }) {

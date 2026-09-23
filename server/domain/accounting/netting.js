@@ -60,7 +60,8 @@ export async function openCreditsFor(client, supplierId, currency = "EUR", exclu
   const { rows } = await client.query(
     `select i.id, i.invoice_number, i.issue_date,
             (i.gross_amount - coalesce((
-              select sum(a.amount) from finops.credit_applications a where a.credit_note_id = i.id
+              select sum(a.amount) from finops.credit_applications a
+              where a.credit_note_id = i.id and a.released_at is null
             ), 0))::text as open_amount
      from finops.invoices i
      where i.supplier_id = $1

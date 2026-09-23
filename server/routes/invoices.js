@@ -7,7 +7,7 @@ import { STATES } from "../domain/workflow/states.js";
 import { decideApprovalStep, decideReview, requestInfoFromApproval } from "../domain/approvals/approvals.js";
 import { requirePermission } from "../auth/authorize.js";
 import { createAccountingRecord } from "../domain/accounting/accounting.js";
-import { confirmPayment, createPaymentInstruction } from "../domain/payments/payments.js";
+import { confirmPayment, createPaymentInstruction, failPayment, retryPayment } from "../domain/payments/payments.js";
 import { bookCredit } from "../domain/accounting/credit-notes.js";
 import { settleByCredit } from "../domain/accounting/netting.js";
 import { resolveReconciliation } from "../domain/reconciliation/reconciliation.js";
@@ -206,6 +206,25 @@ export function invoicesRouter(deps) {
   router.post("/:id/cancel", requirePermission("invoice:cancel"), async (req, res, next) => {
     try {
       await cancelInvoice(deps, { invoiceId: req.params.id, actor: req.actor, comment: req.body?.comment });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // The bank did not carry the payment out (ADR-055).
+  router.post("/:id/payment/fail", requirePermission("payment:confirm"), async (req, res, next) => {
+    try {
+      await failPayment(deps, { invoiceId: req.params.id, actor: req.actor, comment: req.body?.comment });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/payment/retry", requirePermission("payment:instruct"), async (req, res, next) => {
+    try {
+      await retryPayment(deps, { invoiceId: req.params.id, actor: req.actor });
       res.json(await getInvoiceDetail(deps.pool, req.params.id));
     } catch (error) {
       next(error);

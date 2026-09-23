@@ -108,6 +108,13 @@ browser).
 | C4 | Stopping before approval or once payment is instructed | 409 `NOT_CANCELLABLE` | AUTO | `cancellation/cancel.test.js`; `states.test.js` |
 | C5 | The client offers stopping only where the server allows it | APPROVED and every booked variant, finance, reason required | AUTO | `actions.test.js` |
 | C6 | Every server module is scanned for refusal codes | a new folder cannot slip past the dictionary guard | AUTO | `dictionaries.test.js` |
+| C7 | A payment the bank did not carry out | PAYMENT_FAILED with a reason; instruction FAILED | AUTO | `payments/payment-failure.test.js` |
+| C8 | Reporting a failure without a reason, or after confirmation | 400 `REASON_REQUIRED`; 409 | AUTO | `payments/payment-failure.test.js` |
+| C9 | Retry | back to ACCOUNTING_READY; the next instruction is a new attempt with its own key; confirmation pays that one | AUTO | `payments/payment-failure.test.js` |
+| C10 | Credits spent on a failed payment | released, open again, applied to the retry | AUTO | `payments/payment-failure.test.js` |
+| C11 | A failed payment is stopped | CANCELLED, booking reversed | AUTO | `payments/payment-failure.test.js` |
+| C12 | Two live instructions for one invoice | impossible, partial unique index | AUTO | `payments/payment-failure.test.js` |
+| C13 | Fail, then retry, in the browser | state, hint and both ways out shown; retry offers payment again | MANUAL | Browser, 2026-09-23, test database |
 | B12 | A stated amount that cannot be read is not zero | `totals_consistent` HIGH | AUTO | `business-checks.test.js` |
 | B13 | Nothing left to pay after a discount or prepayment | REVIEW_REQUIRED, `NOTHING_TO_PAY` | AUTO | `decide.test.js` |
 | B14 | A line amount that does not follow from quantity and price | `line_amounts_consistent` HIGH, totals still PASSED | AUTO | `business-checks.test.js` |

@@ -13,8 +13,16 @@ export const mockProvider = {
   submit: ({ idempotencyKey }) => ({ providerRef: `MOCK-${idempotencyKey.slice(0, 12)}`, accepted: true }),
 };
 
-/** The instruction is keyed by invoice, so a replay cannot pay twice. */
-const idempotencyKey = (invoice) => `pay:${invoice.id}`;
+/**
+ * One key per attempt. A replay of the same attempt cannot pay twice, and at
+ * most one instruction per invoice is live at a time (ADR-055).
+ */
+async function idempotencyKey(client, invoiceId) {
+  const { rows: [row] } = await client.query(
+    "select count(*)::int as attempts from finops.payment_instructions where invoice_id = $1", [invoiceId],
+  );
+  return `pay:${invoiceId}:${row.attempts + 1}`;
+}
 
 export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
   return withTransaction(pool, async (client) => {
@@ -56,12 +64,12 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
     const payable = centsToDecimal(plan.payableCents);
     const appliedCents = plan.applications.reduce((sum, a) => sum + a.amountCents, 0);
 
-    const key = idempotencyKey(invoice);
+    const key = await idempotencyKey(client, invoiceId);
     const inserted = await client.query(
       `insert into finops.payment_instructions
          (invoice_id, idempotency_key, amount, currency, creditor_iban, creditor_name, reference)
        values ($1,$2,$3,$4,$5,$6,$7)
-       on conflict (idempotency_key) do nothing`,
+       on conflict do nothing`,
       [invoiceId, key, payable, invoice.currency ?? "EUR", creditorIban,
         invoice.supplier_name ?? invoice.supplier_name_raw ?? "", invoice.invoice_number ?? ""],
     );
@@ -123,7 +131,7 @@ export async function confirmPayment({ pool }, { invoiceId, actor, providerRef }
     }
 
     const { rows: [instruction] } = await client.query(
-      "select * from finops.payment_instructions where invoice_id = $1 for update", [invoiceId],
+      "select * from finops.payment_instructions where invoice_id = $1 and status = 'PENDING' for update", [invoiceId],
     );
     if (!instruction) throw new NotFoundError("PAYMENT_INSTRUCTION_NOT_FOUND", "Keine Zahlungsanweisung vorhanden");
 
@@ -137,5 +145,46 @@ export async function confirmPayment({ pool }, { invoiceId, actor, providerRef }
       reason: `Zahlung bestätigt (${ref})`,
       evidence: { provider_ref: ref, amount: instruction.amount },
     });
+  });
+}
+
+/**
+ * The bank did not carry the payment out: rejected, returned, or recalled on
+ * request. The instruction fails and the credits it spent are released, so the
+ * next attempt nets them again (ADR-055). What a provider webhook would call.
+ */
+export async function failPayment({ pool }, { invoiceId, actor, comment }) {
+  const reason = (comment ?? "").trim();
+  if (!reason) throw new RuleError(400, "REASON_REQUIRED", "Für eine fehlgeschlagene Zahlung ist eine Begründung erforderlich");
+  return withTransaction(pool, async (client) => {
+    const { rows: [invoice] } = await client.query("select state from finops.invoices where id = $1 for update", [invoiceId]);
+    if (!invoice) throw new NotFoundError("INVOICE_NOT_FOUND", "Rechnung nicht gefunden");
+    if (invoice.state !== "PAYMENT_PENDING") {
+      throw new TransitionError("NOT_AWAITING_PAYMENT_CONFIRMATION", `Rechnung im Status ${invoice.state} wartet nicht auf eine Zahlungsbestätigung`, { state: invoice.state });
+    }
+    const { rows: [instruction] } = await client.query(
+      "update finops.payment_instructions set status = 'FAILED' where invoice_id = $1 and status = 'PENDING' returning idempotency_key, amount",
+      [invoiceId],
+    );
+    const { rows: released } = await client.query(
+      "update finops.credit_applications set released_at = now() where invoice_id = $1 and released_at is null returning credit_note_id",
+      [invoiceId],
+    );
+    await transition(client, {
+      invoiceId, to: "PAYMENT_FAILED", actor, action: "payment_failed", reason,
+      evidence: { idempotency_key: instruction?.idempotency_key, amount: instruction?.amount, released_credit_notes: released.map((r) => r.credit_note_id) },
+    });
+  });
+}
+
+/** A failed payment goes back to its booking, to be instructed or settled again. */
+export async function retryPayment({ pool }, { invoiceId, actor }) {
+  return withTransaction(pool, async (client) => {
+    const { rows: [invoice] } = await client.query("select state from finops.invoices where id = $1 for update", [invoiceId]);
+    if (!invoice) throw new NotFoundError("INVOICE_NOT_FOUND", "Rechnung nicht gefunden");
+    if (invoice.state !== "PAYMENT_FAILED") {
+      throw new TransitionError("NOT_A_FAILED_PAYMENT", `Rechnung im Status ${invoice.state} hat keine fehlgeschlagene Zahlung`, { state: invoice.state });
+    }
+    await transition(client, { invoiceId, to: "ACCOUNTING_READY", actor, action: "payment_reopened" });
   });
 }

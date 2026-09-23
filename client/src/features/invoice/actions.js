@@ -61,7 +61,17 @@ export function availableActions(invoice) {
     case "PAYMENT_PENDING":
       return {
         prompt: prompt("hintPaymentPending"), step,
-        actions: [action("confirm", "payment:confirm", { tone: "ok" })],
+        actions: [
+          action("confirm", "payment:confirm", { tone: "ok" }),
+          // The bank rejected or returned it, or confirmed a recall (ADR-055).
+          action("fail", "payment:confirm", { tone: "high", needsComment: true }),
+        ],
+      };
+
+    case "PAYMENT_FAILED":
+      return {
+        prompt: prompt("hintPaymentFailed"), step,
+        actions: [action("retry", "payment:instruct", { tone: "ok" }), cancel()],
       };
 
     case "RECONCILIATION_EXCEPTION":

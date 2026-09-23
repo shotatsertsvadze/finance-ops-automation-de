@@ -3,8 +3,8 @@ import { NotFoundError, TransitionError, transition } from "../workflow/transiti
 import { RuleError } from "../approvals/approvals.js";
 import { reverseBooking } from "../accounting/accounting.js";
 
-/** States from which an invoice can be stopped: approved, money not yet on its way. */
-const CANCELLABLE = ["APPROVED", "ACCOUNTING_READY"];
+/** States from which an invoice can be stopped: approved, money not on its way (any more). */
+const CANCELLABLE = ["APPROVED", "ACCOUNTING_READY", "PAYMENT_FAILED"];
 
 /**
  * Stops an approved invoice before money moves (ADR-054). A booked invoice is

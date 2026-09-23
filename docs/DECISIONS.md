@@ -1160,3 +1160,35 @@ does not allow a value to be used in the transaction that adds it. The
 dictionary guard now scans every server module for refusal codes; its
 hand-kept list had missed the new folder and would have passed for the wrong
 reason.
+
+## ADR-055 A payment the bank did not carry out fails, and is tried again or stopped
+
+Completes ADR-054. Supersedes the part of ADR-017 that keyed the payment
+instruction once per invoice.
+
+Context: `PAYMENT_PENDING` could only become `PAID`. A transfer the bank
+rejected or returned had no state, and a second attempt was impossible: the
+instruction's idempotency key was `pay:<invoice>`, so the only instruction an
+invoice could ever have was the one that failed.
+
+Decision:
+- `PAYMENT_PENDING -> PAYMENT_FAILED`, reason required, through
+  `POST /api/invoices/:id/payment/fail` - what a bank adapter's webhook would
+  call. A recall is modelled as a failure the bank confirms, so a pending
+  payment is never cancelled directly.
+- `PAYMENT_FAILED` is in the COMMITTED phase (ADR-051): still owed, still
+  payable, still holding its purchase-order claim. From it the invoice goes
+  back to `ACCOUNTING_READY` (`/payment/retry`), to be instructed or settled
+  again, or is stopped (ADR-054), which reverses its booking.
+- Idempotency is per attempt: the key is `pay:<invoice>:<attempt>`, and a
+  partial unique index allows at most one live (pending or executed)
+  instruction per invoice, so a replay still cannot pay twice. Confirmation
+  and reconciliation read only the live instruction; the invoice detail shows
+  the latest attempt.
+- Credits applied to the failed attempt are released - `released_at` on
+  `credit_applications`, not a delete - so the ledger keeps the record and the
+  next attempt nets them again (ADR-050).
+
+Consequences: two enum and schema migrations (0017, 0018). The dictionary,
+state and schema guards each flagged the new state until it was placed, which
+is what ADR-051 set them up to do.

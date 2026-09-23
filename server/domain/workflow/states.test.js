@@ -68,7 +68,7 @@ test("every non-initial state is reachable", () => {
 test("nothing leaves a payable state except forward in the money path or reconciliation", () => {
   // CREDITED is on the list because a credit note shares the states up to the
   // accounting handoff and then leaves the money path instead of being paid.
-  const allowed = new Set(["ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED", "RECONCILIATION_EXCEPTION", "CREDITED", "SETTLED_BY_CREDIT", "CANCELLED"]);
+  const allowed = new Set(["ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED", "RECONCILIATION_EXCEPTION", "CREDITED", "SETTLED_BY_CREDIT", "CANCELLED", "PAYMENT_FAILED"]);
   for (const s of PAYABLE_STATES) for (const to of TRANSITIONS[s]) assert.ok(allowed.has(to), `${s} -> ${to}`);
 });
 
@@ -102,4 +102,14 @@ test("an invoice covered by credits ends without a payment", () => {
   for (const from of ["PAYMENT_PENDING", "PAID", "RECONCILED"]) {
     assert.equal(canTransition(from, "SETTLED_BY_CREDIT"), false, from);
   }
+});
+
+test("a payment the bank did not carry out fails, then is retried or stopped", () => {
+  // ADR-055. A recall is a failure the bank confirms, so a payment on its way
+  // is stopped by failing first, never cancelled directly.
+  assert.deepEqual([...TRANSITIONS.PAYMENT_PENDING].sort(), ["PAID", "PAYMENT_FAILED"]);
+  assert.deepEqual([...TRANSITIONS.PAYMENT_FAILED].sort(), ["ACCOUNTING_READY", "CANCELLED"]);
+  assert.equal(PHASE.PAYMENT_FAILED, "COMMITTED", "still owed, still holding its order");
+  assert.ok(PAYABLE_STATES.includes("PAYMENT_FAILED"));
+  assert.ok(OUTSTANDING_STATES.includes("PAYMENT_FAILED"));
 });
