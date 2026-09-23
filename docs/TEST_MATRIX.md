@@ -253,6 +253,7 @@ described as working.
 | K4 | Risk signals | count the invoices that raised them | AUTO | `kpi.test.js` |
 | K5 | Exception reasons | ranked, biggest first | AUTO | `kpi.test.js` |
 | K6 | Workload | counts what waits for a person now | AUTO | `kpi.test.js` |
+| K6a | A failed payment on the dashboard | counted under "Zahlungen fehlgeschlagen" as work for finance | AUTO | `kpi.test.js` "a payment the bank did not carry out is waiting for finance" |
 | K7 | Approval time | measured release to approval | AUTO | `kpi.test.js` |
 | K8 | Stage with no data | null, not zero | AUTO | `kpi.test.js` |
 | K9 | Processing time split by path | touched path has its own median | AUTO | `kpi.test.js` |
@@ -523,3 +524,5 @@ findings themselves.
 | O27 | `db:grant` and `npm start` end to end | grant sets the rights and refuses an unsafe role name; start as the owner refused naming update, delete, truncate and invoice delete; start as the granted role listens | MANUAL | Probe, 2026-09-23, against the test database |
 | O28 | The detail says whether review may release the invoice | `payable_blockers`: a changed IBAN is named, the same answer the release gives; a PO overrun blocks nothing | AUTO | `releasable.test.js` (ADR-071) |
 | O29 | A review with a blocker | "Zur Freigabe geben" not offered, the prompt says why; the other decisions stay | AUTO | client `actions.test.js` |
+| O30 | Earlier approval rounds on the invoice screen | round, step, role, signer and time, marked cancelled, under the live steps | MANUAL | Browser, 2026-09-23: E after a question and a second release |
+| O31 | The three follow-ups together in the browser | B offers no release and says why; E lists its first round; dashboard shows one failed payment | MANUAL | Browser, 2026-09-23 |

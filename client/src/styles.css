@@ -364,6 +364,9 @@ select {
 .steps li { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .step-line { display: flex; align-items: center; gap: 8px; }
 .step-binding { padding-left: 24px; font-size: 11px; }
+.step-history { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.step-history ul { margin: 6px 0 0; padding-left: 18px; }
+.step-history li { font-size: 12px; margin-bottom: 2px; }
 .step-no { font-family: var(--mono); font-size: 11px; color: var(--ink-3); width: 16px; }
 
 .toast {

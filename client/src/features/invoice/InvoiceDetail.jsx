@@ -231,6 +231,22 @@ export default function InvoiceDetail({ may, onChanged }) {
                     </li>
                   ))}
                 </ol>
+                {(invoice.approval_history ?? []).length > 0 && (
+                  // Rounds cancelled by a question or a re-check, kept as the
+                  // record of who had signed what (ADR-067).
+                  <div className="step-history">
+                    <div className="label">{t("earlierRounds")}</div>
+                    <ul>
+                      {invoice.approval_history.map((step) => (
+                        <li key={step.id} className="hint">
+                          {t("roundStep", step.round, step.step_no, role(step.required_role))}
+                          {step.actor_name && ` · ${step.actor_name}, ${formatDateTime(step.decided_at)}`}
+                          {` · ${t("stepCancelled")}`}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </section>
           )}
