@@ -1095,3 +1095,38 @@ for a call-back, and the four-eyes beat uses fixture C (a PO overrun, still a
 judgement call). Tests that used B as "an exception a reviewer accepts" now use
 C or a built invoice against an unknown order. Master data has no write API in
 this PoC, so adding a verified account is done outside the application.
+
+## ADR-053 A booking has one line per tax rate, taken from the document
+
+Refines ADR-018, whose account and key assignments remain demo values.
+
+Context: the booking record carried one tax key, derived from total VAT divided
+by total net. A mixed invoice - 7 % food and 19 % other goods is ordinary in
+Germany - produced a ratio matching no real rate, and the lookup then fell back
+to key "0", tax-free, without a word. An unrecognised rate did the same. That
+is a wrong booking made silently, against the fail-closed rule. The document
+states its rates itself, one `TaxSubtotal` each, but the parser never read them.
+
+Decision:
+- The parser reads each `TaxSubtotal` (base, tax, VAT category, rate).
+- A new business check, `tax_breakdown_bookable` (HIGH), requires a breakdown;
+  a tax key for every category and rate in `config/tax-keys.js`; each rate's
+  tax equal to base x rate within the totals tolerance; and the breakdown
+  summing exactly to the declared net and VAT, as EN 16931 defines those
+  sums. It is not overridable: a reviewer cannot supply a rate mapping or
+  arithmetic, as with `totals_consistent` (ADR-047).
+- Keys are mapped by category and rate, not rate alone. Reverse charge (AE) is
+  0 % and is not tax-free; it has no key, so it stops rather than being booked
+  as key "0".
+- The handoff writes one booking line per rate under one document number. Each
+  line's gross is its base plus its tax, so the lines sum to the tax-inclusive
+  total; a prepayment on the document was booked when it was made and is not
+  part of this booking. Migration 0014 moves uniqueness to (invoice, tax key)
+  and (document number, tax key).
+- The handoff runs the same check again and refuses with 422 rather than
+  trusting validation alone. An invoice parsed before the breakdown was read
+  has none stored; its original is an intake fact and is parsed again.
+
+Consequences: every invoice shows one more check (22, not 21). The CSV export
+has one row per line, and the invoice detail lists every line's tax key.
+Mapping a new rate is one entry in `config/tax-keys.js`.

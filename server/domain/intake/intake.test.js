@@ -1,10 +1,12 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { testDeps } from "../../test-support/db.js";
+import { USERS, testDeps } from "../../test-support/db.js";
+import { buildInvoiceXml } from "../../test-support/invoice-xml.js";
 import { handleUpload, processInvoice, receiveInvoice } from "./intake.js";
 import { getInvoiceDetail } from "../invoice/queries.js";
-import { SYSTEM, TransitionError, transition } from "../workflow/transitions.js";
+import { decideReview } from "../approvals/approvals.js";
+import { SYSTEM, TransitionError, human, transition } from "../workflow/transitions.js";
 import { withTransaction } from "../../db.js";
 
 const fixture = (name) => readFileSync(new URL(`../../../fixtures/xrechnung/${name}`, import.meta.url));
@@ -59,6 +61,31 @@ test("C: PO overrun goes to review", async () => {
   const d = await detail(id);
   assert.equal(d.state, "REVIEW_REQUIRED");
   assert.equal(d.review_reason, "PO_AMOUNT_WITHIN_TOLERANCE");
+});
+
+// --- the tax breakdown (ADR-053) ---------------------------------------------
+
+const uploadXml = (xml, name) =>
+  handleUpload(deps, { buffer: Buffer.from(xml, "utf8"), originalFilename: name, sourceChannel: "UPLOAD", actor: SYSTEM });
+const checkOf = (d, code) => d.validation.business.find((c) => c.check_code === code);
+
+test("an invoice at two rates that add up is processed like any clean invoice", async () => {
+  const { id } = await uploadXml(buildInvoiceXml({ number: "TAX-MIXED-1", netCents: 5000, reducedNetCents: 5000, po: "PO-2026-0101" }), "mixed.xml");
+  const d = await detail(id);
+  assert.equal(checkOf(d, "tax_breakdown_bookable")?.status, "PASSED");
+  assert.equal(d.state, "APPROVED", "113.00 is under the auto-approve limit");
+});
+
+test("a rate with no tax key stops the invoice, and review cannot release it", async () => {
+  const xml = buildInvoiceXml({ number: "TAX-16-1", netCents: 5000, reducedNetCents: 5000, reducedPercent: 16, po: "PO-2026-0101" });
+  const { id } = await uploadXml(xml, "rate16.xml");
+  const d = await detail(id);
+  assert.equal(d.state, "REVIEW_REQUIRED");
+  assert.equal(d.review_reason, "TAX_BREAKDOWN_BOOKABLE");
+  await assert.rejects(
+    () => decideReview(deps, { invoiceId: id, action: "accept", actor: human(USERS.clerk), comment: "passt" }),
+    (error) => error.code === "NOT_PAYABLE_ELIGIBLE" && error.details.blockers.includes("tax_breakdown_bookable"),
+  );
 });
 
 test("D: same supplier and number in a different file is flagged, not processed", async () => {

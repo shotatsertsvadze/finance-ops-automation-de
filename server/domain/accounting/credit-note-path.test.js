@@ -13,7 +13,7 @@ import { testDeps, USERS } from "../../test-support/db.js";
 import { handleUpload } from "../intake/intake.js";
 import { SYSTEM, human } from "../workflow/transitions.js";
 import { buildInvoiceXml } from "../../test-support/invoice-xml.js";
-import { createAccountingRecord, buildAccountingRecord } from "./accounting.js";
+import { createAccountingRecord, buildBookingLines } from "./accounting.js";
 import { createPaymentInstruction } from "../payments/payments.js";
 import { bookCredit } from "./credit-notes.js";
 
@@ -51,22 +51,25 @@ test("an ordinary invoice is still an invoice", async () => {
 });
 
 test("the booking record carries the sign, so accounting sees a reversal", () => {
-  const record = buildAccountingRecord(
-    { document_type: "CREDIT_NOTE", net_amount: "200.00", vat_amount: "38.00", gross_amount: "238.00", supplier_no: "S-1001", invoice_number: "GS-1", currency: "EUR" },
+  const [line] = buildBookingLines(
+    { document_type: "CREDIT_NOTE", supplier_no: "S-1001", invoice_number: "GS-1", currency: "EUR",
+      parsed: { taxSubtotals: [{ category: "S", percent: "19", taxable: "200.00", amount: "38.00" }] } },
     { documentNo: "BELEG-1", bookingDate: "2026-09-18" },
   );
-  assert.equal(record.net_amount, "-200.00");
-  assert.equal(record.vat_amount, "-38.00");
-  assert.equal(record.gross_amount, "-238.00");
+  assert.equal(line.net_amount, "-200.00");
+  assert.equal(line.vat_amount, "-38.00");
+  assert.equal(line.gross_amount, "-238.00");
 });
 
 test("an invoice's booking record is unchanged", () => {
-  const record = buildAccountingRecord(
-    { document_type: "INVOICE", net_amount: "200.00", vat_amount: "38.00", gross_amount: "238.00", supplier_no: "S-1001", invoice_number: "RE-1", currency: "EUR" },
+  const [line] = buildBookingLines(
+    { document_type: "INVOICE", supplier_no: "S-1001", invoice_number: "RE-1", currency: "EUR",
+      parsed: { taxSubtotals: [{ category: "S", percent: "19", taxable: "200.00", amount: "38.00" }] } },
     { documentNo: "BELEG-1", bookingDate: "2026-09-18" },
   );
-  assert.equal(record.net_amount, "200.00");
-  assert.equal(record.gross_amount, "238.00");
+  assert.equal(line.net_amount, "200.00");
+  assert.equal(line.gross_amount, "238.00");
+  assert.equal(line.tax_key, "9");
 });
 
 test("a credit note cannot be paid", async () => {

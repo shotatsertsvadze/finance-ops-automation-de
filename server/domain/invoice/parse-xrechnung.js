@@ -171,6 +171,14 @@ export function parseInvoiceXml(xmlText) {
       rounding: str(inv, "LegalMonetaryTotal.PayableRoundingAmount"),
       payable: str(inv, "LegalMonetaryTotal.PayableAmount"),
     },
+    // One entry per rate, as the document states it. The first TaxTotal is
+    // the one in document currency; a second, if present, is in tax currency.
+    taxSubtotals: ([inv.TaxTotal].flat()[0]?.TaxSubtotal ?? []).map((sub) => ({
+      taxable: str(sub, "TaxableAmount"),
+      amount: str(sub, "TaxAmount"),
+      category: str(sub, "TaxCategory.ID"),
+      percent: str(sub, "TaxCategory.Percent"),
+    })),
     allowanceCharges: (inv.AllowanceCharge ?? []).map(allowanceCharge),
     lines,
   };

@@ -3,6 +3,9 @@ import { NotFoundError, TransitionError, transition } from "../workflow/transiti
 import { RuleError } from "../approvals/approvals.js";
 import { bindingDrift, bindingOf, latestRunNo } from "../approvals/binding.js";
 import { centsToDecimal, toCents } from "../money.js";
+import { taxKeyFor } from "../../config/tax-keys.js";
+import { checkTaxBreakdown } from "../validation/tax-breakdown.js";
+import { parseInvoiceXml } from "../invoice/parse-xrechnung.js";
 
 /**
  * Demo account assignments. A real installation maps these from its own chart
@@ -15,40 +18,40 @@ const EXPENSE_ACCOUNT_BY_COST_CENTER = {
   "CC-400": "6820",
 };
 const DEFAULT_EXPENSE_ACCOUNT = "6300";
-const TAX_KEY_BY_RATE = { 19: "9", 7: "8", 0: "0" };
 
-/** Vendor-neutral booking record. A DATEV or SAP adapter formats this. */
-export function buildAccountingRecord(invoice, { documentNo, bookingDate }) {
-  const netCents = toCents(invoice.net_amount);
-  const vatCents = toCents(invoice.vat_amount);
-  const grossCents = toCents(invoice.gross_amount);
-  if (netCents === null || vatCents === null || grossCents === null) {
-    throw new RuleError(422, "AMOUNTS_INCOMPLETE", "Beträge der Rechnung sind unvollständig, Buchungssatz nicht erzeugbar");
-  }
-  const ratePercent = netCents === 0 ? 0 : Math.round((vatCents / netCents) * 100);
+/**
+ * Vendor-neutral booking lines, one per tax rate, under one document number.
+ * A DATEV or SAP adapter formats these. The amounts are the document's own
+ * breakdown, so each line's tax key names a rate the document states rather
+ * than one inferred from its totals (ADR-053).
+ */
+export function buildBookingLines(invoice, { documentNo, bookingDate }) {
   // The document states positive amounts either way; the booking is where the
   // direction belongs, because that is what accounting reads.
   const sign = invoice.document_type === "CREDIT_NOTE" ? -1 : 1;
   const costCenter = invoice.po_cost_center ?? invoice.default_cost_center ?? null;
-
-  return {
-    document_no: documentNo,
-    booking_date: bookingDate,
-    supplier_no: invoice.supplier_no,
-    creditor_account: `70${String(invoice.supplier_no ?? "").replace(/\D/g, "").padStart(3, "0").slice(-3)}`,
-    expense_account: EXPENSE_ACCOUNT_BY_COST_CENTER[costCenter] ?? DEFAULT_EXPENSE_ACCOUNT,
-    cost_center: costCenter,
-    tax_key: TAX_KEY_BY_RATE[ratePercent] ?? "0",
-    net_amount: centsToDecimal(sign * netCents),
-    vat_amount: centsToDecimal(sign * vatCents),
-    gross_amount: centsToDecimal(sign * grossCents),
-    currency: invoice.currency ?? "EUR",
-    reference: invoice.invoice_number,
-  };
+  return invoice.parsed.taxSubtotals.map((subtotal) => {
+    const net = toCents(subtotal.taxable);
+    const vat = toCents(subtotal.amount);
+    return {
+      document_no: documentNo,
+      booking_date: bookingDate,
+      supplier_no: invoice.supplier_no,
+      creditor_account: `70${String(invoice.supplier_no ?? "").replace(/\D/g, "").padStart(3, "0").slice(-3)}`,
+      expense_account: EXPENSE_ACCOUNT_BY_COST_CENTER[costCenter] ?? DEFAULT_EXPENSE_ACCOUNT,
+      cost_center: costCenter,
+      tax_key: taxKeyFor(subtotal.category, subtotal.percent),
+      net_amount: centsToDecimal(sign * net),
+      vat_amount: centsToDecimal(sign * vat),
+      gross_amount: centsToDecimal(sign * (net + vat)),
+      currency: invoice.currency ?? "EUR",
+      reference: invoice.invoice_number,
+    };
+  });
 }
 
-/** APPROVED to ACCOUNTING_READY, creating exactly one booking record. */
-export async function createAccountingRecord({ pool }, { invoiceId, actor }) {
+/** APPROVED to ACCOUNTING_READY, creating one booking line per tax rate. */
+export async function createAccountingRecord({ pool, storage, policy }, { invoiceId, actor }) {
   return withTransaction(pool, async (client) => {
     // Lock the invoice row on its own: Postgres refuses FOR UPDATE on a query
     // whose outer joins may produce null rows.
@@ -76,27 +79,49 @@ export async function createAccountingRecord({ pool }, { invoiceId, actor }) {
       throw new RuleError(409, "CHANGED_SINCE_APPROVAL", "Rechnung hat sich seit der Freigabe geändert und kann nicht gebucht werden", { drift });
     }
 
+    const parsed = await withTaxBreakdown(invoice, storage);
+    const check = checkTaxBreakdown(parsed, policy);
+    if (check.status !== "PASSED") {
+      throw new RuleError(422, "TAX_BREAKDOWN_NOT_BOOKABLE", "Steueraufschlüsselung ist nicht buchbar, kein Buchungssatz erzeugt", { reason: check.reason });
+    }
+
     const { rows: [seq] } = await client.query("select nextval('finops.accounting_document_seq') as n");
     const documentNo = `BELEG-${new Date().getUTCFullYear()}-${String(seq.n).padStart(5, "0")}`;
-    const record = buildAccountingRecord(invoice, { documentNo, bookingDate: new Date().toISOString().slice(0, 10) });
+    const lines = buildBookingLines({ ...invoice, parsed }, { documentNo, bookingDate: new Date().toISOString().slice(0, 10) });
 
-    await client.query(
-      `insert into finops.accounting_records
-         (invoice_id, document_no, booking_date, supplier_no, creditor_account, expense_account,
-          cost_center, tax_key, net_amount, vat_amount, gross_amount, currency, reference)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-      [invoiceId, record.document_no, record.booking_date, record.supplier_no, record.creditor_account,
-        record.expense_account, record.cost_center, record.tax_key, record.net_amount, record.vat_amount,
-        record.gross_amount, record.currency, record.reference],
-    );
+    for (const line of lines) {
+      await client.query(
+        `insert into finops.accounting_records
+           (invoice_id, document_no, booking_date, supplier_no, creditor_account, expense_account,
+            cost_center, tax_key, net_amount, vat_amount, gross_amount, currency, reference)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+        [invoiceId, line.document_no, line.booking_date, line.supplier_no, line.creditor_account,
+          line.expense_account, line.cost_center, line.tax_key, line.net_amount, line.vat_amount,
+          line.gross_amount, line.currency, line.reference],
+      );
+    }
 
     await transition(client, {
       invoiceId, to: "ACCOUNTING_READY", actor, action: "accounting_record_created",
-      reason: `Buchungssatz ${record.document_no}`,
-      evidence: { document_no: record.document_no, creditor_account: record.creditor_account, expense_account: record.expense_account, tax_key: record.tax_key },
+      reason: `Buchungssatz ${documentNo}`,
+      evidence: {
+        document_no: documentNo, creditor_account: lines[0].creditor_account, expense_account: lines[0].expense_account,
+        tax_keys: lines.map((l) => l.tax_key),
+      },
     });
-    return record;
+    return lines;
   });
+}
+
+/**
+ * The parse with its tax breakdown. An invoice parsed before the breakdown was
+ * read has none stored; the original is an intake fact and cannot have
+ * changed, so it is read again rather than the breakdown being guessed.
+ */
+async function withTaxBreakdown(invoice, storage) {
+  if (invoice.parsed?.taxSubtotals) return invoice.parsed;
+  const original = await storage.read(invoice.file_path);
+  return { ...invoice.parsed, taxSubtotals: parseInvoiceXml(original.toString("utf8")).taxSubtotals };
 }
 
 const CSV_COLUMNS = [
@@ -131,7 +156,7 @@ export const EXPORT_PROFILES = ["machine", "spreadsheet"];
 /** Neutral CSV handoff. A vendor adapter would replace this formatter only. */
 export async function exportAccountingCsv({ pool }, profile = "machine") {
   const { rows } = await pool.query(
-    `select ${CSV_COLUMNS.join(", ")} from finops.accounting_records order by document_no`,
+    `select ${CSV_COLUMNS.join(", ")} from finops.accounting_records order by document_no, tax_key`,
   );
   const lines = [CSV_COLUMNS.join(";")];
   for (const row of rows) lines.push(CSV_COLUMNS.map((c) => csvCell(row[c], profile)).join(";"));

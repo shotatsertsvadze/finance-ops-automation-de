@@ -46,7 +46,7 @@ reason `SUPPLIER_IBAN_MATCH`.
 
 ## 3. The evidence — 2 minutes, the heart of it
 
-On that invoice, the check trail shows **1 of 21 checks failed**, with:
+On that invoice, the check trail shows **1 of 22 checks failed**, with:
 
 ```
 EXPECTED   DE02 1203 0000 0000 2020 51
@@ -60,7 +60,7 @@ The differing characters are marked.
 > of comparing an IBAN by eye. Every check works this way — that is the whole
 > product."
 
-Press **Show all 20 passed checks**: the ones that passed are there too, so a
+Press **Show all 21 passed checks**: the ones that passed are there too, so a
 reviewer can see what was *not* a problem.
 
 ## 4. Fail closed — 30 seconds

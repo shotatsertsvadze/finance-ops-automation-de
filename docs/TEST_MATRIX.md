@@ -96,6 +96,12 @@ browser).
 | B9 | A surcharge is added, a prepayment subtracted | `totals_consistent` PASSED at the right amount | AUTO | `business-checks.test.js` |
 | B10 | A discount the totals do not declare | `totals_consistent` HIGH naming the link | AUTO | `business-checks.test.js` |
 | B11 | An allowance with no charge indicator | `totals_consistent` HIGH, not guessed either way | AUTO | `business-checks.test.js` |
+| B12 | Tax breakdown per rate | read from each TaxSubtotal; absent means none, not a guess | AUTO | `invoice/tax-breakdown.test.js` |
+| B13 | A breakdown that cannot be booked | `tax_breakdown_bookable` HIGH for a missing breakdown, an unmapped rate, reverse charge, a rate's tax off, or sums off | AUTO | `validation/tax-breakdown.test.js` |
+| B14 | An unbookable breakdown in review | REVIEW_REQUIRED, and review cannot release it | AUTO | `intake.test.js` "a rate with no tax key stops the invoice" |
+| B15 | A mixed-rate invoice | processed like a clean one; booked as one line per rate under one document number, one CSV row per line | AUTO | `intake.test.js`; `booking-lines.test.js` |
+| B16 | An invoice parsed before the breakdown was read | booked from its stored original, not guessed | AUTO | `booking-lines.test.js` |
+| B17 | The handoff does not trust validation alone | 422 `TAX_BREAKDOWN_NOT_BOOKABLE`, no line written | AUTO | `booking-lines.test.js` |
 | B12 | A stated amount that cannot be read is not zero | `totals_consistent` HIGH | AUTO | `business-checks.test.js` |
 | B13 | Nothing left to pay after a discount or prepayment | REVIEW_REQUIRED, `NOTHING_TO_PAY` | AUTO | `decide.test.js` |
 | B14 | A line amount that does not follow from quantity and price | `line_amounts_consistent` HIGH, totals still PASSED | AUTO | `business-checks.test.js` |

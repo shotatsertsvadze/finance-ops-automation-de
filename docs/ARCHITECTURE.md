@@ -254,6 +254,7 @@ invoice make sense for Nordwerk":
 | `line_amounts_consistent` | HIGH | a line's declared amount differs from quantity x unit price / base quantity - allowances + charges by more than 0.01; overridable, unlike the totals chain |
 | `credit_note_reference` | MEDIUM | a credit note names no invoice (asked only of credit notes) |
 | `totals_consistent` | HIGH | any link of the EN 16931 chain is off by more than 0.01: lines vs. declared line total, allowances and charges vs. their totals, lines - allowances + charges vs. net, net + VAT vs. gross, gross - prepaid + rounding vs. the amount due |
+| `tax_breakdown_bookable` | HIGH | no per-rate breakdown, a rate without a tax key (e.g. reverse charge), a rate's tax not base x rate within 0.01, or the breakdown not summing exactly to net and VAT; not overridable (ADR-053) |
 | `currency_expected` | MEDIUM | currency not in the allowed list |
 | `required_fields_complete` | MEDIUM | due date, IBAN, buyer reference missing |
 | `payment_terms_match` | LOW | payment terms differ from supplier master (warning only) |
@@ -312,9 +313,11 @@ actor on a human action → 400. This is an MVP boundary, not authentication
   official EN 16931 / XRechnung validator (e.g. the KoSIT validator). Until it is
   wired, the system reports "profile declared" and "structure checked", never
   "compliant".
-- `domain/accounting/accounting.js` builds a vendor-neutral booking record;
-  `exportAccountingCsv()` is one formatter over it, and a DATEV or SAP adapter
-  would be another. Account numbers and tax keys are demo assignments (ADR-018).
+- `domain/accounting/accounting.js` builds vendor-neutral booking lines, one
+  per tax rate of the document, under one document number (ADR-053);
+  `exportAccountingCsv()` is one formatter over them, and a DATEV or SAP
+  adapter would be another. Account numbers and tax keys are demo assignments
+  (ADR-018), mapped by VAT category and rate in `config/tax-keys.js`.
 - `domain/payments/payments.js` holds `mockProvider`; a bank API adapter
   replaces that object and nothing else.
 - `domain/reconciliation/matching.js` is a pure function, so the matching policy

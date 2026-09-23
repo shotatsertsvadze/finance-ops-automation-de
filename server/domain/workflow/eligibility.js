@@ -23,6 +23,9 @@ export const NON_OVERRIDABLE_CHECKS = [
   // only once master data holds it, after a call-back to the supplier, and a
   // re-validation confirms the match (ADR-052).
   "supplier_iban_match",
+  // The booking is built from the breakdown per rate; one that does not add
+  // up, or names a rate without a tax key, would be booked on a guess (ADR-053).
+  "tax_breakdown_bookable",
 ];
 
 /** Returns the reasons this invoice may not become payable. Empty means eligible. */

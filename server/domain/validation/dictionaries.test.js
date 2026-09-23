@@ -15,6 +15,9 @@ import { STATES } from "../workflow/states.js";
 import { PERMISSIONS } from "../../auth/authorize.js";
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+// Every module that emits business checks. A check kept in its own module is
+// still a check, and a scan that misses it passes for the wrong reason.
+const businessCheckSources = () => [source("./business-checks.js"), source("./tax-breakdown.js")].join("\n");
 
 /**
  * Every `passed("code", …)` / `failed(…)` / … the checks can emit, including
@@ -24,7 +27,7 @@ const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
  * Missing that form would have wrongly reported a correct entry as stale.
  */
 function emittedChecks() {
-  const files = [source("./business-checks.js"), source("../invoice/technical-validation.js")];
+  const files = [businessCheckSources(), source("../invoice/technical-validation.js")];
   const pairs = new Set();
   for (const text of files) {
     for (const [, fn, code] of text.matchAll(/\b(passed|failed|warning|skipped|info)\("([a-z_]+)"/g)) {
@@ -59,7 +62,7 @@ test("the English check dictionary has no entries for checks that do not exist",
  * remembered.
  */
 function leadingChecks() {
-  const text = source("./business-checks.js");
+  const text = businessCheckSources();
   return [...new Set(
     [...text.matchAll(/\bfailed\("([a-z_]+)", SEVERITY\.(?:HIGH|MEDIUM)/g)].map(([, code]) => code.toUpperCase()),
   )].sort();
