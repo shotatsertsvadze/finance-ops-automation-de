@@ -1,4 +1,5 @@
 import { fileURLToPath } from "node:url";
+import { envNumber } from "./config/env.js";
 import { createApp } from "./app.js";
 import { createPool } from "./db.js";
 import { createStorage } from "./storage/files.js";
@@ -10,7 +11,7 @@ import { log } from "./log.js";
 // API_PORT, not PORT: the UI dev server and some hosts set PORT for
 // themselves, and an ambient PORT overrides --env-file. Sharing the name made
 // the API bind to the UI's port.
-const port = Number(process.env.API_PORT ?? 4400);
+const port = envNumber("API_PORT", 4400, { max: 65535 });
 const deps = {
   pool: createPool(),
   storage: createStorage(process.env.STORAGE_DIR ?? "./storage"),

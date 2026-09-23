@@ -400,6 +400,10 @@ expired, and signing in again stays on the same page (ADR-057).
   to the audit trail but not update, delete or truncate it, and may not delete
   invoices, whose deletion would cascade to their trail. A production start
   refuses a connection that could (ADR-068).
+- Input is checked before it reaches the database: statement lines field by
+  field (400 `TRANSACTION_INVALID` naming each bad line, nothing imported),
+  every `comment` as text of at most 1000 characters (`COMMENT_INVALID`),
+  malformed JSON (`INVALID_JSON`), and numeric settings at startup (ADR-073).
 - Original files are immutable; deletion is not exposed by the API.
   An intake that fails before its transaction commits removes the file it
   wrote, since no row can refer to it (ADR-062).

@@ -527,3 +527,7 @@ findings themselves.
 | O30 | Earlier approval rounds on the invoice screen | round, step, role, signer and time, marked cancelled, under the live steps | MANUAL | Browser, 2026-09-23: E after a question and a second release |
 | O31 | The three follow-ups together in the browser | B offers no release and says why; E lists its first round; dashboard shows one failed payment | MANUAL | Browser, 2026-09-23 |
 | O32 | The business date around midnight in Germany | 01:30 CEST books the new day; 00:30 CET on 1 January books the new year; 23:59 CEST stays on the same day | AUTO | `server/domain/dates.test.js` (ADR-072) |
+| O33 | A statement line with a malformed amount, date or currency | 400 `TRANSACTION_INVALID` naming line and field; nothing imported. Before: 500 | AUTO | `server/input-validation.test.js` (ADR-073) |
+| O34 | A comment that is not text or longer than 1000 characters | 400 `COMMENT_INVALID`; exactly 1000 is accepted. Before: a number gave 500, 900 KB was stored | AUTO | `server/input-validation.test.js` |
+| O35 | A body that is not JSON | 400 `INVALID_JSON` | AUTO | `server/input-validation.test.js` |
+| O36 | A numeric setting that is not a number in range | the start stops, naming the setting. Before: `SESSION_HOURS=zwoelf` started and every sign-in failed | AUTO | `server/config/env.test.js` |

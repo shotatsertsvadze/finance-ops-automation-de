@@ -1,10 +1,11 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { envNumber } from "../config/env.js";
 
 export const SESSION_COOKIE = "finops_session";
 export const CSRF_COOKIE = "finops_csrf";
 export const CSRF_HEADER = "x-csrf-token";
 
-const SESSION_HOURS = Number(process.env.SESSION_HOURS ?? 12);
+const SESSION_HOURS = envNumber("SESSION_HOURS", 12, { max: 168 });
 
 /** Only the hash is stored, so a dump of the table yields no usable session. */
 const hashToken = (token) => createHash("sha256").update(token).digest("hex");

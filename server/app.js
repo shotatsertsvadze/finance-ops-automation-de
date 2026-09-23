@@ -27,6 +27,21 @@ function corsOptions() {
   };
 }
 
+const MAX_COMMENT = 1000;
+
+/**
+ * Every decision's reason arrives as `comment` and ends up in the audit trail,
+ * so it is checked once here: text, and short enough to read (ADR-073).
+ */
+function commentGuard(req, res, next) {
+  const comment = req.body?.comment;
+  if (comment === undefined || comment === null) return next();
+  if (typeof comment !== "string" || comment.length > MAX_COMMENT) {
+    return res.status(400).json({ error: `Begründung muss Text mit höchstens ${MAX_COMMENT} Zeichen sein`, code: "COMMENT_INVALID", details: { max: MAX_COMMENT } });
+  }
+  next();
+}
+
 /**
  * The built client, when there is one. Any GET outside /api gets index.html,
  * so a route the browser reloads (`/rechnung/:id`) reaches the client router.
@@ -60,6 +75,7 @@ export function createApp(deps, { clientDir } = {}) {
   });
   app.use(cors(corsOptions()));
   app.use(express.json({ limit: "1mb" }));
+  app.use(commentGuard);
 
   app.use("/api/health", healthRouter(deps));
 
@@ -79,6 +95,8 @@ export function createApp(deps, { clientDir } = {}) {
   if (clientDir) serveClient(app, clientDir);
 
   app.use((error, req, res, next) => {
+    if (error.type === "entity.parse.failed") return res.status(400).json({ error: "Anfrage ist kein gültiges JSON", code: "INVALID_JSON", details: null });
+    if (error.type === "entity.too.large") return res.status(413).json({ error: "Anfrage ist zu groß", code: "BODY_TOO_LARGE", details: null });
     if (error.status) return res.status(error.status).json({ error: error.message, code: error.code ?? null, details: error.details ?? null });
     if (error.name === "MulterError") return res.status(400).json({ error: error.message, code: "UPLOAD_REJECTED" });
     // The cause stays in the log; the caller gets the id to quote.

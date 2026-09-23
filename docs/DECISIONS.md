@@ -1531,3 +1531,23 @@ figures pass it to SQL instead of reading `current_date`.
 
 Consequences: server and database zones no longer matter for any date the
 business sees. Timestamps (`received_at`, audit times) stay `timestamptz`.
+
+## ADR-073 Bad input is a 400 that says what is wrong
+
+Context: input was checked only where a rule needed it, and the database was
+left to refuse the rest. A statement line with amount "abc" or date "gestern"
+came back as a 500, a numeric comment crashed on `.trim()` with a 500, a 900 KB
+comment was written into the audit trail whole, malformed JSON got the
+parser's English message and no code, and `SESSION_HOURS=zwoelf` started the
+server and failed every sign-in.
+
+Decision:
+- Statement lines are checked field by field before the import; the 400 lists
+  every bad line and field, and nothing of the statement is imported.
+- Every `comment` is checked once at the API boundary: text, at most 1000
+  characters. The form enforces the same limit.
+- Malformed JSON is 400 `INVALID_JSON`, an oversized body 413 `BODY_TOO_LARGE`.
+- Numeric settings go through `envNumber`, which stops the start with the
+  setting's name and allowed range.
+
+Consequences: a 500 now means a fault in the app, not bad input.

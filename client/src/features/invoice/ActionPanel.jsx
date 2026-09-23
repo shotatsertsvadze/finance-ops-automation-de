@@ -110,6 +110,7 @@ export default function ActionPanel({ invoice, may, onDone }) {
             <span className="label">{t("reason")}</span>
             <textarea
               rows={2}
+              maxLength={1000}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder={t("reasonPlaceholder")}
