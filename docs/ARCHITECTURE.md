@@ -60,7 +60,7 @@ finance-ops-automation-de/
   .github/workflows/       CI: the suite against a Postgres service container, then the build
   fixtures/xrechnung/      demo invoices A-J (synthetic UBL 2.1 / XRechnung 3.0 profile)
   fixtures/bank/           synthetic bank statement for the tests
-  db/migrations/           append-only SQL, applied by scripts/migrate.js
+  db/migrations/           append-only SQL, applied by scripts/migrate.js under an advisory lock; an applied file that changed stops the run (ADR-061)
   db/seed/                 synthetic master data (users, suppliers, IBANs, POs)
   scripts/                 migrate.js, seed.js, reset.js, set-password.js, demo-data.js, demo-walkthrough.mjs
   server/

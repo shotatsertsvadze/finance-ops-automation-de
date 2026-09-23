@@ -489,3 +489,12 @@ findings themselves.
 | I22 | An unknown code falls back to the server's sentence | German rather than nothing | AUTO | `dictionaries.test.js` |
 | I23 | The English guard catches German without umlauts | a German word in an English entry fails | MANUAL | Mutation check, 2026-09-17: "Freigabeschritt" passed the old guard, fails the new one |
 | I24 | A refusal is visible in English end to end | sign-in and a business-gate 409 both read in English | MANUAL | Browser, 2026-09-17: "Email address or password is wrong"; "Not approved: a business check has failed since the invoice was submitted" |
+
+## Operations
+
+| ID | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| O1 | Every applied migration carries its file's checksum | sha256 per row in `schema_migrations` | AUTO | `server/migrations.test.js` (ADR-061) |
+| O2 | An applied migration edited afterwards | the run stops and names the file | AUTO | `server/migrations.test.js` |
+| O3 | A database migrated before checksums existed | each row gets its checksum once, nothing re-applied | AUTO | `server/migrations.test.js` |
+| O4 | Two migration runs at once | each file applied exactly once; before the lock, the second crashed on `pgcrypto` | AUTO | `server/migrations.test.js` |

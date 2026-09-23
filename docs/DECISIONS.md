@@ -1318,3 +1318,21 @@ Decision:
 
 Consequences: no log shipping, metrics or tracing across services; a JSON
 line per request is what a collector needs to start.
+
+## ADR-061 The migration runner checks what it applied and runs alone
+
+Context: `schema_migrations` recorded only file names. A migration edited after
+it was applied was skipped without a word, so the change never reached any
+database that already had the file, and two runs at once raced through the
+same files; reproduced on 2026-09-23, the second crashed creating `pgcrypto`.
+
+Decision:
+- Each applied migration is recorded with the sha256 of its file. A run that
+  finds an applied file whose checksum differs stops, naming the file. A row
+  from before checksums existed is given its checksum on the next run.
+- The whole run holds a Postgres advisory lock, so a second run waits and then
+  finds nothing left to do.
+
+Consequences: a checksum covers the bytes, so a line-ending conversion counts
+as an edit. The rule was already append-only (AGENTS.md); now the runner
+enforces it.
