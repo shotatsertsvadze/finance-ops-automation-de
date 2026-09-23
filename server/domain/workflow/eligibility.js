@@ -19,6 +19,10 @@ export const NON_OVERRIDABLE_CHECKS = [
   // never added up. The chain covers discounts, surcharges and prepayments,
   // so an amount nobody could recompute stays unpayable (ADR-047).
   "totals_consistent",
+  // A reviewer's word is not a verified bank account. A changed IBAN clears
+  // only once master data holds it, after a call-back to the supplier, and a
+  // re-validation confirms the match (ADR-052).
+  "supplier_iban_match",
 ];
 
 /** Returns the reasons this invoice may not become payable. Empty means eligible. */

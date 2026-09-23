@@ -132,6 +132,11 @@ Bank transactions carry a status of `UNMATCHED`, `MATCHED`, `EXCEPTION` or
 `RESOLVED`. `RESOLVED` is set when a person closes an exception by hand, in the
 same transaction as the invoice, and never re-enters matching (ADR-036).
 
+A changed IBAN is not overridable: review cannot release it, and the payment
+instruction pays only an ACTIVE master-data account of an ACTIVE supplier,
+checked again at that moment. Whoever submitted an invoice cannot approve it
+(ADR-052).
+
 Before an approval is recorded the business checks run again against current
 master data. A check that was not failing at the last run and is failing now
 sends the invoice back to `REVIEW_REQUIRED` with its steps cancelled; one that
@@ -240,7 +245,7 @@ invoice make sense for Nordwerk":
 |---|---|---|
 | `supplier_known` | HIGH | no supplier matches VAT ID (fallback: exact legal name) |
 | `supplier_active` | HIGH | supplier status is not ACTIVE |
-| `supplier_iban_match` | HIGH | invoice IBAN not among the supplier's ACTIVE accounts |
+| `supplier_iban_match` | HIGH | invoice IBAN not among the supplier's ACTIVE accounts; not overridable (ADR-052) |
 | `duplicate_invoice_number` | HIGH | same supplier + invoice number exists in a non-DUPLICATE, non-REJECTED state |
 | `po_reference_present` | MEDIUM | no PO reference and policy requires one |
 | `po_exists` | HIGH | PO reference present but unknown |

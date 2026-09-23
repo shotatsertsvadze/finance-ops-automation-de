@@ -170,7 +170,7 @@ test("processing time is reported separately for the path a human touched", asyn
 });
 
 test("review dwell time is measured from entering review to release", async () => {
-  const invoice = await upload(fixture("B_iban_changed_2499.xml"), "B.xml");
+  const invoice = await upload(fixture("C_po_overrun_8500.xml"), "C.xml");
   assert.equal(invoice.state, "REVIEW_REQUIRED");
   await post(`/api/invoices/${invoice.id}/review/accept`, clients.clerk, { comment: "geklärt" });
 

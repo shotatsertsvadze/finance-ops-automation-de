@@ -227,7 +227,13 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
     if (invoice.state === "REVIEW_REQUIRED") {
       summary.exceptions += 1;
       // Most exceptions get cleared; some are still open, which is realistic.
-      if (random() > 0.35 && scenario !== "malformed") {
+      const cleared = random() > 0.35;
+      if (cleared && scenario === "iban") {
+        // A changed IBAN cannot be accepted, only verified into master data
+        // (ADR-052). The realistic next step is the call-back.
+        await decideReview(deps, { invoiceId: id, action: "request-info", actor: human(USERS.clerk), comment: "Rückruf beim Lieferanten zur Bankverbindung" });
+        continue;
+      } else if (cleared && scenario !== "malformed") {
         await decideReview(deps, { invoiceId: id, action: "accept", actor: human(USERS.clerk), comment: "Mit Lieferant geklärt" });
       } else {
         continue;

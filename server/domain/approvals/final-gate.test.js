@@ -102,21 +102,23 @@ test("the pending approval steps are cancelled rather than left waiting", async 
 });
 
 test("an exception a reviewer already accepted is still approvable", async () => {
-  // This is what makes the gate non-trivial. B fails supplier_iban_match, a
-  // human looked at it and released it, and that check still fails. Treating
-  // every failure as new would undo the reviewer's decision.
-  const invoice = await upload("B_iban_changed_2499.xml");
+  // This is what makes the gate non-trivial. C overruns its order, a human
+  // looked at it and released it, and that check still fails. Treating every
+  // failure as new would undo the reviewer's decision.
+  const invoice = await upload("C_po_overrun_8500.xml");
   assert.equal(invoice.state, "REVIEW_REQUIRED");
-  assert.equal(invoice.review_reason, "SUPPLIER_IBAN_MATCH");
+  assert.equal(invoice.review_reason, "PO_AMOUNT_WITHIN_TOLERANCE");
 
   const released = await clients.clerk.post(`/api/invoices/${invoice.id}/review/accept`, {
-    comment: "IBAN telefonisch beim Lieferanten bestätigt",
+    comment: "Bestellung wird erhöht",
   });
   assert.equal(released.status, 200);
 
-  const step = await pendingStep(invoice.id);
-  const res = await approve(invoice.id, step.step_no, clients.manager);
-  assert.equal(res.status, 200, await res.text());
+  for (const client of [clients.manager, clients.finance]) {
+    const step = await pendingStep(invoice.id);
+    const res = await approve(invoice.id, step.step_no, client);
+    assert.equal(res.status, 200, await res.text());
+  }
   assert.equal((await get(invoice.id)).state, "APPROVED");
 });
 

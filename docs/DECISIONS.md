@@ -1062,3 +1062,36 @@ per ADR-037, the claims that settlement had already released.
 Consequences: a new state fails `states.test.js` until it is given a phase, and
 placing it is one line. The invariant "once committed, only forward" is now a
 test rather than a property of the table someone has to check by eye.
+
+## ADR-052 A changed IBAN is verified into master data, never waved through
+
+Supersedes the part of ADR-019 and ADR-041 that treated a changed IBAN as a
+business exception a reviewer may accept. Extends ADR-013.
+
+Context: the payment instruction paid the IBAN printed on the invoice. A
+reviewer could release an invoice whose IBAN matched no account of the
+supplier, one approver could sign it, and money went to an account nobody had
+verified — the most common invoice-fraud pattern. Master data was re-checked at
+the signature (ADR-041) but not at payment, so a supplier blocked or an account
+retired between approval and payment was still paid. Separately, managers may
+upload invoices and one-step invoices need only a manager, so one person could
+submit and approve the same invoice.
+
+Decision:
+- `supplier_iban_match` joins `NON_OVERRIDABLE_CHECKS`. Review cannot release
+  an invoice whose IBAN is not an active account of the supplier. The way on is
+  to verify the account (a call-back on a number already in master data), add
+  it to master data, and re-validate; ADR-020 still requires a signature.
+- The payment instruction asks again: the supplier must be ACTIVE and the
+  invoice's IBAN an ACTIVE account of it, or the instruction is refused
+  (`SUPPLIER_NOT_ACTIVE`, `IBAN_NOT_VERIFIED`) and the invoice stays
+  `ACCOUNTING_READY`. The instruction carries the account as master data holds it.
+- `decideApprovalStep` refuses the person who submitted the invoice, read from
+  its `received` audit event (`UPLOADER_CANNOT_APPROVE`). A system channel has
+  no submitter and is unaffected.
+
+Consequences: the demo no longer releases fixture B; it requests information
+for a call-back, and the four-eyes beat uses fixture C (a PO overrun, still a
+judgement call). Tests that used B as "an exception a reviewer accepts" now use
+C or a built invoice against an unknown order. Master data has no write API in
+this PoC, so adding a verified account is done outside the application.

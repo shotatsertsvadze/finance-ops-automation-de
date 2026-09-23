@@ -37,6 +37,7 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
       throw new TransitionError("NOT_READY_FOR_PAYMENT", `Rechnung im Status ${invoice.state} kann nicht zur Zahlung gegeben werden`, { state: invoice.state });
     }
     if (!invoice.supplier_iban_raw) throw new RuleError(422, "NO_IBAN", "Ohne IBAN kann keine Zahlung angewiesen werden");
+    const creditorIban = await verifiedCreditorIban(client, invoice);
 
     // Booked credits of the same supplier reduce what leaves the bank. Read
     // and locked inside this transaction, so two payments to one supplier
@@ -61,7 +62,7 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
          (invoice_id, idempotency_key, amount, currency, creditor_iban, creditor_name, reference)
        values ($1,$2,$3,$4,$5,$6,$7)
        on conflict (idempotency_key) do nothing`,
-      [invoiceId, key, payable, invoice.currency ?? "EUR", invoice.supplier_iban_raw,
+      [invoiceId, key, payable, invoice.currency ?? "EUR", creditorIban,
         invoice.supplier_name ?? invoice.supplier_name_raw ?? "", invoice.invoice_number ?? ""],
     );
     if (inserted.rowCount === 0) throw new RuleError(409, "PAYMENT_ALREADY_INSTRUCTED", "Für diese Rechnung besteht bereits eine Zahlungsanweisung");
@@ -76,7 +77,7 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
       reason: `Zahlung ${payable} ${invoice.currency ?? "EUR"} angewiesen`,
       evidence: {
         idempotency_key: key,
-        creditor_iban: invoice.supplier_iban_raw,
+        creditor_iban: creditorIban,
         gross_amount: invoice.gross_amount,
         // Stated even when nothing was applied: "0.00" is an answer, and its
         // absence would be ambiguous between "no credits" and "not checked".
@@ -85,6 +86,31 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
       },
     });
   });
+}
+
+/**
+ * The account money may go to: the invoice's IBAN, as master data holds it,
+ * for a supplier that is still active. Asked again here because master data
+ * can move between approval and payment, and this is the last moment before
+ * money leaves (ADR-052).
+ */
+async function verifiedCreditorIban(client, invoice) {
+  const { rows: [row] } = await client.query(
+    `select s.status, b.iban
+     from finops.suppliers s
+     left join finops.supplier_bank_accounts b
+       on b.supplier_id = s.id and b.status = 'ACTIVE'
+      and upper(replace(b.iban, ' ', '')) = upper(replace($2, ' ', ''))
+     where s.id = $1`,
+    [invoice.supplier_id, invoice.supplier_iban_raw],
+  );
+  if (row?.status !== "ACTIVE") {
+    throw new RuleError(409, "SUPPLIER_NOT_ACTIVE", "Lieferant ist nicht aktiv: keine Zahlung", { status: row?.status ?? null });
+  }
+  if (!row.iban) {
+    throw new RuleError(409, "IBAN_NOT_VERIFIED", "IBAN ist keine aktive Bankverbindung des Lieferanten: keine Zahlung", { iban: invoice.supplier_iban_raw });
+  }
+  return row.iban;
 }
 
 /** What a provider webhook would call. Safe to replay: the state machine refuses a second confirmation. */

@@ -116,14 +116,14 @@ async function main() {
 
   // --- 1:50 the human decision and the trail -----------------------------
   await page.getByRole("textbox", { name: /reason/i })
-    .fill("Confirmed with supplier by phone; new account verified.");
+    .fill("Call back the supplier on the number in our master data.");
   await beat(page, "A person decides, and states why",
-    "A human judges the business fact. The reason is required, not optional.", 8);
+    "A new bank account cannot be waved through. The way on is a call-back and verified master data.", 8);
 
-  await page.getByRole("button", { name: "Send for approval" }).click();
-  await page.waitForTimeout(1500);
-  await beat(page, "Four eyes — the clerk who cleared it cannot approve it",
-    "She released it; the Approve button is not hers. The server enforces that, not the screen.", 11);
+  await page.getByRole("button", { name: "Request information" }).click();
+  await page.waitForSelector("text=/waiting for an answer/i");
+  await beat(page, "Fail closed on the money",
+    "Verified, it is checked again, needs a second signature, and the payment re-checks the account. Enforced on the server.", 11);
 
   await page.locator(".panel").filter({ hasText: "History" }).first().scrollIntoViewIfNeeded();
   await beat(page, "The audit trail",

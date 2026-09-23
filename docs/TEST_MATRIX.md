@@ -16,6 +16,8 @@ Run: `npm test` (165 tests, all passing as of 2026-09-17). Database tests need
 | # | Risk / behaviour | Expected | Status | Evidence |
 |---|---|---|---|---|
 | R1 | Changed IBAN never auto-passes | HIGH failure, REVIEW_REQUIRED | AUTO | `intake.test.js` "B: changed IBAN never auto-passes"; `business-checks.test.js` also covers a RETIRED account not counting as approved |
+| R1a | A changed IBAN cannot be released from review | 422 `NOT_PAYABLE_ELIGIBLE`, blocker `supplier_iban_match`, stays REVIEW_REQUIRED | AUTO | `approvals.test.js` "a changed IBAN cannot be released from review"; the way on (master data, then re-validation, still one signature) is R06 in `controls.test.js` |
+| R1b | Payment re-checks master data | 409 `IBAN_NOT_VERIFIED` for a retired account, 409 `SUPPLIER_NOT_ACTIVE` for a blocked supplier; nothing instructed | AUTO | `moneypath.test.js` "no payment goes to …" |
 | R2 | Identical file uploaded twice | second is DUPLICATE, not processed, original untouched | AUTO | `intake.test.js` "identical file uploaded again becomes DUPLICATE" |
 | R3 | Same supplier + number, different file | REVIEW_REQUIRED, no payable record | AUTO | `intake.test.js` "D: same supplier and number in a different file" |
 | R4 | Two payable records for one supplier invoice number | impossible, DB rejects with 23505 | AUTO | `intake.test.js` "database forbids two payable records"; partial unique index `invoices_one_payable_per_number`, covering CREDITED and SETTLED_BY_CREDIT since 0013; `schema-states.test.js` compares the index with `PAYABLE_STATES` |
@@ -24,6 +26,7 @@ Run: `npm test` (165 tests, all passing as of 2026-09-17). Database tests need
 | R6 | XML with DOCTYPE or ENTITY | rejected before the parser runs | AUTO | `technical-validation.test.js` "DOCTYPE is rejected before parsing" |
 | R7 | Amount thresholds route to the right tier | 380 auto, 1 240 MANAGER, 30 000 three steps | AUTO | `decide.test.js` (incl. boundary values); `intake.test.js` A, E, G |
 | R8 | Same actor cannot satisfy two approval steps | 409, step stays PENDING, invoice not approved | AUTO | `approvals.test.js` "one actor cannot satisfy two approval steps" |
+| R8a | Whoever submitted an invoice cannot approve it | 409 `UPLOADER_CANNOT_APPROVE`; another manager can | AUTO | `approvals.test.js` "whoever submitted an invoice cannot approve it" |
 | R9 | Reviewer cannot approve what they released from review | 409, another approver succeeds | AUTO | `approvals.test.js` "whoever released an invoice from review cannot also approve it" |
 | R10 | Rejected invoice cannot become approved | 409 at the endpoint, no transition in the machine | AUTO | `approvals.test.js` "a rejected invoice cannot be approved afterwards"; `states.test.js` |
 | R11 | Finalised invoice cannot be processed again | 409, nothing changes | AUTO | `intake.test.js` "reprocess ... refused from APPROVED"; `app.test.js` returns 409 |
