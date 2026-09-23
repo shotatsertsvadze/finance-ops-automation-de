@@ -46,7 +46,7 @@ export async function runReconciliation({ pool }, { actor }) {
     // claimed. An invoice with no instruction was never paid, so an inner join
     // is the rule rather than a convenience.
     const { rows: openPayments } = await client.query(
-      `select i.id as invoice_id, p.reference, p.amount, p.currency, p.creditor_iban
+      `select i.id as invoice_id, p.reference, p.end_to_end_id, p.amount, p.currency, p.creditor_iban
        from finops.invoices i
        join finops.payment_instructions p on p.invoice_id = i.id and p.status = 'EXECUTED'
        where i.state = any($1::finops.invoice_state[])`,

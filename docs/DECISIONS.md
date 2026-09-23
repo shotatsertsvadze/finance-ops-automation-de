@@ -1355,3 +1355,28 @@ leaves a file behind. That is rare, harmless, and the only case left; a sweep
 comparing storage with `invoices.file_path` would find it, and is not built.
 Stored originals stay immutable: only a file no committed row refers to is
 ever removed.
+
+## ADR-063 A payment is known at the bank by an id Nordwerk issues
+
+Context: the reference on a payment instruction was the supplier's invoice
+number. It is chosen by the supplier, is not unique across suppliers, and was
+never held to SEPA's 140 characters or its character set, so a long or odd
+number would have been rejected by a bank. Reconciliation then looked for that
+number in the bank line: a bank line naming only the supplier's number
+reconciled the payment (reproduced on 2026-09-23).
+
+Decision:
+- Each instruction gets an `end_to_end_id`, `NW-P-` and eight digits from a
+  sequence, one per attempt, unique, within SEPA's 35 characters.
+- The reference sent is `<id> RE <invoice number>`, with any character SEPA
+  does not carry replaced by a dot, cut at 140. The database enforces both for
+  every row that has an id.
+- Reconciliation looks for the id. The supplier's number alone identifies
+  nothing. An instruction created before this change has no id and is still
+  recognised by its reference, which was the invoice number, so payments in
+  flight at the migration are not stranded.
+
+Consequences: the bank line must echo the reference Nordwerk sent, which is
+what a bank statement for an outgoing transfer does. Tests that used fixed
+statements now substitute the reference that was sent. The demo generator's
+totals are unchanged; its shipped statement is regenerated in the new format.

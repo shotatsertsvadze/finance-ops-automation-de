@@ -158,3 +158,14 @@ test("a hyphen or slash still joins an invoice number to surrounding text", () =
   const result = matchTransaction(tx("RG-INV-2026-00421/2026", "-1240.00"), OPEN);
   assert.equal(result.outcome, "MATCHED", "a separator is not part of the identifier");
 });
+
+test("a payment with its own id is named by that id, not by the invoice number in its reference", () => {
+  const open = [payment("NW-P-00000007 RE INV-2026-00421", "1240.00", { end_to_end_id: "NW-P-00000007" })];
+  assert.equal(matchTransaction(tx("Zahlung NW-P-00000007 RE INV-2026-00421", "-1240.00"), open).outcome, "MATCHED");
+  assert.equal(matchTransaction(tx("Rechnung INV-2026-00421", "-1240.00"), open).reason, "NO_REFERENCE_MATCH");
+});
+
+test("an instruction from before end-to-end ids is still named by its reference", () => {
+  const legacy = [payment("INV-2026-00421", "1240.00", { end_to_end_id: null })];
+  assert.equal(matchTransaction(tx("Rechnung INV-2026-00421", "-1240.00"), legacy).outcome, "MATCHED");
+});

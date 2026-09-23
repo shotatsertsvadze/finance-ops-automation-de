@@ -500,3 +500,8 @@ findings themselves.
 | O4 | Two migration runs at once | each file applied exactly once; before the lock, the second crashed on `pgcrypto` | AUTO | `server/migrations.test.js` |
 | O5 | An intake that fails after writing its file | no row and no file; before the fix the file stayed, referenced by nothing | AUTO | `orphan-file.test.js` (ADR-062) |
 | O6 | A successful intake keeps its file | `<id>/original.xml` present | AUTO | `orphan-file.test.js` |
+| O7 | Each payment has its own end-to-end id | `NW-P-` and eight digits, unique per attempt; reference is `<id> RE <invoice number>` | AUTO | `payment-reference.test.js` (ADR-063) |
+| O8 | A supplier's invoice number cannot break the reference | 200-character number with `#` and `|`: reference 140 characters at most, SEPA characters only | AUTO | `payment-reference.test.js` |
+| O9 | A bank line naming only the supplier's number | not reconciled; a line naming the payment's id is | AUTO | `payment-reference.test.js`; `matching.test.js` |
+| O10 | An instruction from before end-to-end ids | still recognised by its reference | AUTO | `matching.test.js` |
+| O11 | The demo generator after the change | same totals: 36 paid, 30 matched, 4 exceptions, 4 unmatched | MANUAL | Run against the test database, 2026-09-23 |

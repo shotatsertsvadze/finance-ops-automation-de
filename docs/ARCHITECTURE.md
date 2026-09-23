@@ -237,6 +237,11 @@ Rules:
   the netted amount, and reconciliation compares the bank line with that
   instruction, so it needed no change. An invoice the credits cover entirely
   reaches `SETTLED_BY_CREDIT` without a payment (ADR-050).
+- Each payment instruction carries an `end_to_end_id` Nordwerk issues
+  (`NW-P-` and eight digits, from a sequence, one per attempt) and a reference
+  `<id> RE <invoice number>` in SEPA's characters, 140 at most. Reconciliation
+  looks for the id, never for the supplier's invoice number; an instruction
+  from before the id existed is still recognised by its reference (ADR-063).
 - A human review never ends in `APPROVED` directly. It ends in
   `READY_FOR_APPROVAL` with at least one approval step, and the reviewer cannot
   take that step (configurable four-eyes after review).

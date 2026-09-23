@@ -29,6 +29,22 @@ async function refuseApprover(client, invoiceId, actor) {
   if (rowCount) throw new RuleError(409, "APPROVER_CANNOT_PAY", "Wer die Rechnung freigegeben hat, darf ihre Zahlung weder anweisen noch bestätigen");
 }
 
+/**
+ * The id a payment is known by at the bank, one per attempt, within SEPA's 35
+ * characters. Issued by Nordwerk: the supplier's invoice number is neither
+ * unique nor ours to rely on (ADR-063).
+ */
+async function nextEndToEndId(client) {
+  const { rows: [row] } = await client.query("select nextval('finops.payment_end_to_end_seq') as n");
+  return `NW-P-${String(row.n).padStart(8, "0")}`;
+}
+
+/** Remittance text: our id first, then the invoice number, in SEPA's characters and 140 at most. */
+export function remittanceText(endToEndId, invoiceNumber) {
+  const text = `${endToEndId} RE ${invoiceNumber ?? ""}`.trim();
+  return text.replace(/[^A-Za-z0-9/?:().,'+ -]/g, ".").slice(0, 140);
+}
+
 async function idempotencyKey(client, invoiceId) {
   const { rows: [row] } = await client.query(
     "select count(*)::int as attempts from finops.payment_instructions where invoice_id = $1", [invoiceId],
@@ -78,13 +94,14 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
     const appliedCents = plan.applications.reduce((sum, a) => sum + a.amountCents, 0);
 
     const key = await idempotencyKey(client, invoiceId);
+    const endToEndId = await nextEndToEndId(client);
     const inserted = await client.query(
       `insert into finops.payment_instructions
-         (invoice_id, idempotency_key, amount, currency, creditor_iban, creditor_name, reference)
-       values ($1,$2,$3,$4,$5,$6,$7)
+         (invoice_id, idempotency_key, amount, currency, creditor_iban, creditor_name, reference, end_to_end_id)
+       values ($1,$2,$3,$4,$5,$6,$7,$8)
        on conflict do nothing`,
       [invoiceId, key, payable, invoice.currency ?? "EUR", creditorIban,
-        invoice.supplier_name ?? invoice.supplier_name_raw ?? "", invoice.invoice_number ?? ""],
+        invoice.supplier_name ?? invoice.supplier_name_raw ?? "", remittanceText(endToEndId, invoice.invoice_number), endToEndId],
     );
     if (inserted.rowCount === 0) throw new RuleError(409, "PAYMENT_ALREADY_INSTRUCTED", "Für diese Rechnung besteht bereits eine Zahlungsanweisung");
 
@@ -98,6 +115,7 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
       reason: `Zahlung ${payable} ${invoice.currency ?? "EUR"} angewiesen`,
       evidence: {
         idempotency_key: key,
+        end_to_end_id: endToEndId,
         creditor_iban: creditorIban,
         gross_amount: invoice.gross_amount,
         // Stated even when nothing was applied: "0.00" is an answer, and its
