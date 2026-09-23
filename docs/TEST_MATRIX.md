@@ -498,3 +498,5 @@ findings themselves.
 | O2 | An applied migration edited afterwards | the run stops and names the file | AUTO | `server/migrations.test.js` |
 | O3 | A database migrated before checksums existed | each row gets its checksum once, nothing re-applied | AUTO | `server/migrations.test.js` |
 | O4 | Two migration runs at once | each file applied exactly once; before the lock, the second crashed on `pgcrypto` | AUTO | `server/migrations.test.js` |
+| O5 | An intake that fails after writing its file | no row and no file; before the fix the file stayed, referenced by nothing | AUTO | `orphan-file.test.js` (ADR-062) |
+| O6 | A successful intake keeps its file | `<id>/original.xml` present | AUTO | `orphan-file.test.js` |

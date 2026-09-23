@@ -380,6 +380,8 @@ expired, and signing in again stays on the same page (ADR-057).
   unless `DEMO_MODE=true` (ADR-058). `npm run user:password` replaces a
   password and ends that account's sessions.
 - Original files are immutable; deletion is not exposed by the API.
+  An intake that fails before its transaction commits removes the file it
+  wrote, since no row can refer to it (ADR-062).
 - Logs are one JSON object per line (`LOG_LEVEL`, default `info`). Every
   response carries `X-Request-Id`, kept from a proxy when usable; each request
   logs method, path without query, status, duration and user id, never the

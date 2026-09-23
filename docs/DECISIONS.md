@@ -1336,3 +1336,22 @@ Decision:
 Consequences: a checksum covers the bytes, so a line-ending conversion counts
 as an edit. The rule was already append-only (AGENTS.md); now the runner
 enforces it.
+
+## ADR-062 A failed intake takes its file with it
+
+Context: the original is written inside the intake transaction, before the
+invoice row, so that a row never points at a file that is not there. When a
+later step failed - a concurrent identical upload, any insert error - the
+rollback removed the row and left the file, referenced by nothing. Reproduced
+on 2026-09-23 with a failing insert.
+
+Decision: an error between writing the file and the end of the intake's work
+removes the file (`storage.discardUnreferenced`) before the rollback. A failed
+commit does not: whether the row was committed is then uncertain, and a spare
+file is harmless where a missing original is not.
+
+Consequences: a process that dies between the write and the commit still
+leaves a file behind. That is rare, harmless, and the only case left; a sweep
+comparing storage with `invoices.file_path` would find it, and is not built.
+Stored originals stay immutable: only a file no committed row refers to is
+ever removed.

@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 /** Original files, immutable. Path convention <invoice_id>/original.xml is bucket-compatible. */
@@ -19,6 +19,10 @@ export function createStorage(baseDir) {
     },
     read(relativePath) {
       return readFile(resolve(relativePath));
+    },
+    /** Only for a file no committed row refers to: its intake failed (ADR-062). */
+    discardUnreferenced(invoiceId) {
+      return rm(resolve(invoiceId), { recursive: true, force: true });
     },
   };
 }

@@ -54,27 +54,40 @@ export async function receiveInvoice({ pool, storage }, { buffer, originalFilena
     // Written only once it is clear a row will reference it; a resumption
     // would otherwise leave a second copy of identical bytes behind.
     const filePath = await storage.writeOriginal(id, buffer);
-    const duplicateOf = live?.id ?? null;
-    const state = duplicateOf ? "DUPLICATE" : "RECEIVED";
     try {
-      await client.query(
-        `insert into finops.invoices (id, state, source_channel, original_filename, file_sha256, file_path, file_size_bytes, duplicate_of)
-         values ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [id, state, sourceChannel, originalFilename, fileSha256, filePath, buffer.length, duplicateOf],
-      );
+      return await recordReceipt(client, {
+        id, filePath, duplicateOf: live?.id ?? null, buffer, fileSha256, originalFilename, sourceChannel, actor,
+      });
     } catch (error) {
-      if (error.code !== "23505") throw error;
-      // Lost a race against an identical upload: record this one as the duplicate.
-      throw new TransitionError("CONCURRENT_DUPLICATE", "Gleiche Datei wurde gerade parallel verarbeitet, bitte erneut hochladen");
+      // Nothing committed can refer to the file yet, so it goes with the row.
+      // A failed commit is not caught here: whether the row made it is then
+      // uncertain, and a spare file is better than a lost original (ADR-062).
+      await storage.discardUnreferenced(id);
+      throw error;
     }
-    if (duplicateOf) {
-      await writeEvent(client, { invoiceId: id, actor, action: "duplicate_file_detected", fromState: null, toState: "DUPLICATE", reason: "Identische Datei (SHA-256) bereits vorhanden", evidence: { duplicate_of: duplicateOf, file_sha256: fileSha256 } });
-      await recordEvent(client, { invoiceId: duplicateOf, actor, action: "duplicate_attempt", reason: "Identische Datei erneut hochgeladen", evidence: { duplicate_invoice_id: id } });
-    } else {
-      await writeEvent(client, { invoiceId: id, actor, action: "received", fromState: null, toState: "RECEIVED", reason: `Eingang über ${sourceChannel}`, evidence: { file_sha256: fileSha256, original_filename: originalFilename, size_bytes: buffer.length } });
-    }
-    return { id, state, duplicateOf, resumed: false };
   });
+}
+
+async function recordReceipt(client, { id, filePath, duplicateOf, buffer, fileSha256, originalFilename, sourceChannel, actor }) {
+  const state = duplicateOf ? "DUPLICATE" : "RECEIVED";
+  try {
+    await client.query(
+      `insert into finops.invoices (id, state, source_channel, original_filename, file_sha256, file_path, file_size_bytes, duplicate_of)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [id, state, sourceChannel, originalFilename, fileSha256, filePath, buffer.length, duplicateOf],
+    );
+  } catch (error) {
+    if (error.code !== "23505") throw error;
+    // Lost a race against an identical upload: record this one as the duplicate.
+    throw new TransitionError("CONCURRENT_DUPLICATE", "Gleiche Datei wurde gerade parallel verarbeitet, bitte erneut hochladen");
+  }
+  if (duplicateOf) {
+    await writeEvent(client, { invoiceId: id, actor, action: "duplicate_file_detected", fromState: null, toState: "DUPLICATE", reason: "Identische Datei (SHA-256) bereits vorhanden", evidence: { duplicate_of: duplicateOf, file_sha256: fileSha256 } });
+    await recordEvent(client, { invoiceId: duplicateOf, actor, action: "duplicate_attempt", reason: "Identische Datei erneut hochgeladen", evidence: { duplicate_invoice_id: id } });
+  } else {
+    await writeEvent(client, { invoiceId: id, actor, action: "received", fromState: null, toState: "RECEIVED", reason: `Eingang über ${sourceChannel}`, evidence: { file_sha256: fileSha256, original_filename: originalFilename, size_bytes: buffer.length } });
+  }
+  return { id, state, duplicateOf, resumed: false };
 }
 
 /**
