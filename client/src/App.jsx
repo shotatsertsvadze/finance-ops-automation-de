@@ -11,7 +11,7 @@ import { useI18n } from "./lib/i18n.js";
 import LanguageSwitch from "./components/LanguageSwitch.jsx";
 
 export default function App() {
-  const { user, may, checked, login, logout } = useSession();
+  const { user, may, checked, expired, login, logout } = useSession();
   const { t, role } = useI18n();
   const [counts, setCounts] = useState({ all: 0, REVIEW_REQUIRED: 0, READY_FOR_APPROVAL: 0, APPROVED: 0, openMoney: 0 });
 
@@ -36,7 +36,7 @@ export default function App() {
   }, [user, refresh]);
 
   if (!checked) return <p className="empty">{t("sessionChecking")}</p>;
-  if (!user) return <LoginView onLogin={login} />;
+  if (!user) return <LoginView onLogin={login} expired={expired} />;
 
   return (
     <div className="shell">

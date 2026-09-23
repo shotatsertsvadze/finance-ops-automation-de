@@ -358,6 +358,8 @@ it is checked by `npm test` rather than by opening a browser.
 | U11 | Spine marks the stage an exception branched from as reached | "Bezahlt" filled while the exception is current | MANUAL | Browser, 2026-09-17, fixed after being spotted |
 | U12 | Decided approval step shows what it was signed for | document prefix, validation run and amount under the step; prefix matches the intake SHA-256 | MANUAL | Browser, 2026-09-17: `Beleg 8b48b6eb3f2b · Prüflauf 1 · 4.352,73 €` against file hash `8b48b6eb3f2bf49a…` |
 | U13 | Binding line does not overflow at 375 px | scrollWidth equals clientWidth | MANUAL | Browser, 2026-09-17, measured in page |
+| U14 | A request refused for want of a session signs the client out | `NOT_SIGNED_IN` reports it; a wrong password (`SIGN_IN_REFUSED`) and a 403 do not | AUTO | `client/src/lib/api.test.js` (ADR-057) |
+| U15 | An expired session returns to sign-in, not to empty data | before: payments page showed "0 Umsätze importiert" over 38 lines; after: sign-in with the expiry note, none on a first visit, and signing in again lands on the same page | MANUAL | Browser, 2026-09-23: session expired in the database, then navigated |
 
 ## Independent review 2026-09-17
 

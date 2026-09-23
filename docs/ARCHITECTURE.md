@@ -334,7 +334,9 @@ state-changing request must echo the CSRF token (ADR-029). Everything under
 `/api` except `health` and `auth` requires a session. What a role may do is one
 matrix in `server/auth/authorize.js`, enforced per route and served to the
 client (ADR-030); which role decides an approval step is enforced in the
-approvals domain. An `:id` that is not a UUID is a 404.
+approvals domain. An `:id` that is not a UUID is a 404. A `NOT_SIGNED_IN`
+refusal on any request returns the client to sign-in, saying the session has
+expired, and signing in again stays on the same page (ADR-057).
 
 ## 8. Adapter boundaries
 

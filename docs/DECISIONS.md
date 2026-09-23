@@ -1218,3 +1218,19 @@ Decision:
 Consequences: an invoice with a FINANCE step needs a second finance user to
 pay it; the seed has two (Jonas Weber, Mira Hoffmann). The demo generator lets
 Mira sign and Jonas pay, and the demo script follows.
+
+## ADR-057 An ended session returns the client to sign-in
+
+Context: every page catches its own request errors. When the session expired,
+a page either showed a bare "Nicht angemeldet" or, worse, rendered as empty:
+the payments page read "0 Umsätze importiert" over a statement of 38 lines.
+
+Decision: `request()` reports a refusal with code `NOT_SIGNED_IN` to one
+listener, which `useSession` sets. It keys on the code, not on status 401,
+because a wrong password is also a 401 (`SIGN_IN_REFUSED`). The listener only
+acts when someone was signed in, so the first visit's refused `/auth/me` is
+not called an expiry. The sign-in screen then says the session has expired;
+the URL is kept, so signing in again returns to the same page.
+
+Consequences: nothing a page did before the expiry is retried; the person
+repeats the action after signing in, and the server decides it afresh.
