@@ -1,29 +1,6 @@
 import { canTransition } from "./states.js";
+import { TransitionError } from "../errors.js";
 import { syncCommitment } from "../purchase-orders/commitments.js";
-
-/**
- * A refusal carries a stable `code` as well as its German sentence. The
- * sentence is what the server has always said and what a non-UI caller reads;
- * the code is what lets the client say it in the reader's language, the same
- * way a check is rendered from its check_code (ADR-042).
- */
-export class TransitionError extends Error {
-  constructor(code, message, details = {}) {
-    super(message);
-    this.status = 409;
-    this.code = code;
-    this.details = details;
-  }
-}
-
-export class NotFoundError extends Error {
-  constructor(code, message, details = {}) {
-    super(message);
-    this.status = 404;
-    this.code = code;
-    this.details = details;
-  }
-}
 
 export const SYSTEM = { type: "SYSTEM", id: null };
 export const human = (userId) => ({ type: "HUMAN", id: userId });

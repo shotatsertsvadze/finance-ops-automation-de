@@ -1,6 +1,6 @@
 import { withTransaction } from "../../db.js";
-import { NotFoundError, TransitionError, transition } from "../workflow/transitions.js";
-import { RuleError } from "../approvals/approvals.js";
+import { NotFoundError, RuleError, TransitionError } from "../errors.js";
+import { transition } from "../workflow/transitions.js";
 import { matchTransaction } from "./matching.js";
 import { AWAITING_RECONCILIATION_STATES } from "../workflow/states.js";
 

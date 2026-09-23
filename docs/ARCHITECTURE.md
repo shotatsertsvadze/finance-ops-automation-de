@@ -71,6 +71,7 @@ finance-ops-automation-de/
     auth/                  passwords (scrypt), sessions (cookie + CSRF), authorize (role matrix), set-password
     config/                policy.js, company.js, assumptions.js, tax-keys.js, deployment.js
     domain/
+      errors.js            TransitionError (409), NotFoundError (404), RuleError (own status)
       invoice/             xml-safety.js, parse-xrechnung.js (UBL adapter), technical-validation.js, queries.js
       validation/          business-checks.js, tax-breakdown.js, lookup.js (each check returns a CheckResult)
       routing/             decide.js (pure)

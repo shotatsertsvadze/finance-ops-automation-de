@@ -4,7 +4,7 @@ import { handleUpload, processInvoice } from "../domain/intake/intake.js";
 import { countInvoices, getInvoiceDetail, listInvoices } from "../domain/invoice/queries.js";
 import { MAX_XML_BYTES } from "../domain/invoice/xml-safety.js";
 import { STATES } from "../domain/workflow/states.js";
-import { decideApprovalStep, decideReview, requestInfoFromApproval } from "../domain/approvals/approvals.js";
+import { decideApprovalStep, decideReview } from "../domain/approvals/approvals.js";
 import { requirePermission } from "../auth/authorize.js";
 import { createAccountingRecord } from "../domain/accounting/accounting.js";
 import { confirmPayment, createPaymentInstruction, failPayment, retryPayment } from "../domain/payments/payments.js";
@@ -121,13 +121,7 @@ export function invoicesRouter(deps) {
     try {
       const { action } = req.params;
       if (!REVIEW_ACTIONS.includes(action)) return res.status(400).json({ error: "Unbekannte Entscheidung", code: "UNKNOWN_DECISION" });
-      // Requesting information is also valid while an invoice waits for
-      // approval, and must invalidate approvals already given.
-      const invoiceState = await currentState(deps.pool, req.params.id);
-      const handler =
-        action === "request-info" && invoiceState === "READY_FOR_APPROVAL" ? requestInfoFromApproval : null;
-      if (handler) await handler(deps, { invoiceId: req.params.id, actor: req.actor, comment: req.body?.comment });
-      else await decideReview(deps, { invoiceId: req.params.id, action, actor: req.actor, comment: req.body?.comment });
+      await decideReview(deps, { invoiceId: req.params.id, action, actor: req.actor, comment: req.body?.comment });
       res.json(await getInvoiceDetail(deps.pool, req.params.id));
     } catch (error) {
       next(error);
@@ -255,9 +249,4 @@ export function invoicesRouter(deps) {
   });
 
   return router;
-}
-
-async function currentState(pool, invoiceId) {
-  const { rows: [row] } = await pool.query("select state from finops.invoices where id = $1", [invoiceId]);
-  return row?.state ?? null;
 }

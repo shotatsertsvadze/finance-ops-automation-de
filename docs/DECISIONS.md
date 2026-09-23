@@ -1470,3 +1470,20 @@ migrations and the app's for `npm start`. The owner can still change anything;
 protecting the trail from the database's owner is the database operator's
 concern, outside this app. The cascade from invoices stays in the schema;
 what stops it is that the app role cannot delete an invoice.
+
+## ADR-069 Refusals live in one module, and the domain picks its own handler
+
+Context: `RuleError` was defined in the approvals module and imported by five
+others, and `TransitionError` and `NotFoundError` lived in the state-machine
+module; a module that refused a payment depended on approvals for the class.
+Separately, the review route read the invoice's state to decide which domain
+function should handle "request information", a rule outside the domain.
+
+Decision: the three refusal classes live in `server/domain/errors.js`.
+`decideReview` handles "request information" while the invoice awaits
+approval itself, in the same transaction that locks the invoice; the route
+passes the action through.
+
+Consequences: no behaviour changes. The refusal `NOT_AWAITING_APPROVAL`
+disappears, because the state it guarded is now decided before the call; the
+dictionary guard flagged its text as orphaned.

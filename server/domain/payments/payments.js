@@ -1,6 +1,6 @@
 import { withTransaction } from "../../db.js";
-import { NotFoundError, TransitionError, transition } from "../workflow/transitions.js";
-import { RuleError } from "../approvals/approvals.js";
+import { NotFoundError, RuleError, TransitionError } from "../errors.js";
+import { transition } from "../workflow/transitions.js";
 import { applyCredits, openCreditsFor, planNetting } from "../accounting/netting.js";
 import { centsToDecimal } from "../money.js";
 
@@ -13,10 +13,6 @@ export const mockProvider = {
   submit: ({ idempotencyKey }) => ({ providerRef: `MOCK-${idempotencyKey.slice(0, 12)}`, accepted: true }),
 };
 
-/**
- * One key per attempt. A replay of the same attempt cannot pay twice, and at
- * most one instruction per invoice is live at a time (ADR-055).
- */
 /**
  * Approving and paying are separate hands: whoever signed an approval step of
  * this invoice neither sends its money nor confirms it (ADR-056).
@@ -45,6 +41,10 @@ export function remittanceText(endToEndId, invoiceNumber) {
   return text.replace(/[^A-Za-z0-9/?:().,'+ -]/g, ".").slice(0, 140);
 }
 
+/**
+ * One key per attempt. A replay of the same attempt cannot pay twice, and at
+ * most one instruction per invoice is live at a time (ADR-055).
+ */
 async function idempotencyKey(client, invoiceId) {
   const { rows: [row] } = await client.query(
     "select count(*)::int as attempts from finops.payment_instructions where invoice_id = $1", [invoiceId],
