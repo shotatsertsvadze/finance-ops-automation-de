@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { envNumber } from "./config/env.js";
 import { createApp } from "./app.js";
@@ -23,8 +25,10 @@ const deps = {
 // deliberate act, not the default.
 const host = process.env.API_HOST ?? "127.0.0.1";
 
-// In production the API serves the built client; in development Vite does.
+// The API serves the built client whenever there is one (production requires
+// it); during development Vite serves the source instead (ADR-076).
 const clientDir = fileURLToPath(new URL("../dist", import.meta.url));
+const hasClient = existsSync(path.join(clientDir, "index.html"));
 const production = process.env.NODE_ENV === "production";
 
 const problems = await deploymentProblems({ pool: deps.pool, env: process.env, clientDir });
@@ -33,7 +37,7 @@ if (problems.length) {
   await deps.pool.end();
   process.exitCode = 1;
 } else {
-  const server = createApp(deps, { clientDir: production ? clientDir : undefined })
+  const server = createApp(deps, { clientDir: hasClient ? clientDir : undefined })
     .listen(port, host, () => log("info", `finops api listening on http://${host}:${port}`, { production }));
   server.requestTimeout = 30_000;
   for (const signal of ["SIGTERM", "SIGINT"]) process.once(signal, () => shutDown(server, signal));

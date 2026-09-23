@@ -6,9 +6,10 @@ Legend:
 - **AUTO** verified by an automated test (`npm test`), test file named
 - **MANUAL** verified by hand, date and method named
 - **CODE** inferred from reading the code only, never executed
+- **CI** verified by an automated job in `.github/workflows/ci.yml` outside `npm test`, job named
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (165 tests, all passing as of 2026-09-17). Database tests need
+Run: `npm test` (489 tests, all passing as of 2026-09-23). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
 
 ## High-priority business risks

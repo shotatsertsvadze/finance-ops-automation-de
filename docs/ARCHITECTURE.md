@@ -57,7 +57,8 @@ finance-ops-automation-de/
   README.md  AGENTS.md  CLAUDE.md  .env.example  package.json
   docs/                    PRODUCT, ARCHITECTURE, IST/SOLL process, BUSINESS_CASE,
                            DECISIONS, TEST_MATRIX, DEMO, DEMO_VIDEO, reviews
-  .github/workflows/       CI: the suite against a Postgres service container, then the build
+  .github/workflows/       CI: the suite against a Postgres service container, the build, and the Docker demo
+  Dockerfile, docker-compose.yml   the demo in one command: Postgres plus the app serving the built client
   fixtures/xrechnung/      demo invoices A-J (synthetic UBL 2.1 / XRechnung 3.0 profile)
   fixtures/bank/           synthetic bank statement for the tests
   db/migrations/           append-only SQL, applied by scripts/migrate.js under an advisory lock; an applied file that changed stops the run (ADR-061)

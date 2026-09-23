@@ -1586,3 +1586,21 @@ and exits 0; after 10 s it exits with 1 rather than hang.
 
 Consequences: a slow query now fails with a 500 and a request id instead of
 waiting indefinitely, which is what the logs and readiness check expect.
+
+## ADR-076 The demo runs with one command
+
+Context: this is a portfolio project. Running it needed Node, a local
+Postgres, an `.env` and five commands, and the API served the built client only
+in production, where HTTPS, a separate database role and replaced passwords are
+required (ADR-058, ADR-068). A reviewer had no short way to see it.
+
+Decision: `docker compose up` starts Postgres 14 and the app. The container
+rebuilds the schema, seeds, generates the demo month, publishes the matching
+bank statement and serves the built client on port 4400, as a non-root user.
+The API now serves the built client whenever one exists; production still
+requires it. A CI job builds the stack, waits for readiness and checks that a
+demo account sees the 70 invoices.
+
+Consequences: the Docker demo runs in development mode on plain HTTP, with the
+demo passwords and the owner connection; it is a showcase, not a deployment.
+Production keeps its own checks.

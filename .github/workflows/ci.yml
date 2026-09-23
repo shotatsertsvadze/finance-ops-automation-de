@@ -66,3 +66,36 @@ jobs:
       # The suite never imports the client's entry point, so a broken build
       # would ship with this badge still green.
       - run: npm run build
+
+  # The showcase path: `docker compose up` must give a working demo on a
+  # machine with nothing but Docker (ADR-076).
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: docker compose up -d --build
+
+      - name: Wait until the demo is ready
+        run: |
+          for i in $(seq 1 90); do
+            curl -fs localhost:4400/api/health/ready && exit 0
+            sleep 2
+          done
+          docker compose logs
+          exit 1
+
+      - name: The page is served and a demo account sees the demo month
+        run: |
+          curl -fs localhost:4400/ | grep -q '<div id="root">'
+          jar=$(mktemp)
+          curl -fs -c "$jar" -H 'Content-Type: application/json' \
+            -d '{"email":"jonas.weber@nordwerk.example","password":"nordwerk-demo"}' \
+            localhost:4400/api/auth/login > /dev/null
+          curl -fs -b "$jar" localhost:4400/api/invoices/counts | tee /dev/stderr | grep -q '"total":70'
+
+      - if: failure()
+        run: docker compose logs
+
+      - if: always()
+        run: docker compose down -v

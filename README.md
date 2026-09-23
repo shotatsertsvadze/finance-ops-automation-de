@@ -75,9 +75,20 @@ The reasoning behind each decision is in `docs/DECISIONS.md`, every behaviour ha
 a row in `docs/TEST_MATRIX.md`, and what the system does *not* do is listed under
 "Known limits" below rather than left to be discovered.
 
+## Quick start
+
+With Docker, nothing else to install:
+
+```bash
+docker compose up
+```
+
+Open http://localhost:4400 and sign in with a demo account (below). Every start
+rebuilds a fresh month of synthetic invoices.
+
 ## Setup
 
-Requires Node.js 22+ and PostgreSQL 14+.
+For development, with Node.js 22+ and PostgreSQL 14+:
 
 ```bash
 npm install

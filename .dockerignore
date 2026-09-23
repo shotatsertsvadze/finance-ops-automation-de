@@ -1,0 +1,9 @@
+node_modules
+dist
+storage
+demo-video
+.git
+.github
+.env
+.env.*
+*.log
