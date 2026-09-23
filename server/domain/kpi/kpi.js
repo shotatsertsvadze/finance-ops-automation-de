@@ -1,4 +1,5 @@
 import { loadAssumptions } from "../../config/assumptions.js";
+import { businessDate } from "../dates.js";
 import { OUTSTANDING_STATES } from "../workflow/states.js";
 
 /**
@@ -119,15 +120,15 @@ async function queryWorkload(pool) {
             -- including one whose reconciliation is unclear, is not an unpaid
             -- bill: that is bookkeeping work, counted on its own above.
             count(*) filter (
-              where due_date is not null and due_date <= current_date + 7
+              where due_date is not null and due_date <= $2::date + 7
                 and state = any($1::finops.invoice_state[])
             )::int as due_within_7_days,
             count(*) filter (
-              where due_date is not null and due_date < current_date
+              where due_date is not null and due_date < $2::date
                 and state = any($1::finops.invoice_state[])
             )::int as overdue
      from finops.invoices`,
-    [OUTSTANDING_STATES],
+    [OUTSTANDING_STATES, businessDate()],
   );
   return Object.fromEntries(Object.entries(row).map(([k, v]) => [k, int(v)]));
 }

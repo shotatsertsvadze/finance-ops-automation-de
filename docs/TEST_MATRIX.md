@@ -526,3 +526,4 @@ findings themselves.
 | O29 | A review with a blocker | "Zur Freigabe geben" not offered, the prompt says why; the other decisions stay | AUTO | client `actions.test.js` |
 | O30 | Earlier approval rounds on the invoice screen | round, step, role, signer and time, marked cancelled, under the live steps | MANUAL | Browser, 2026-09-23: E after a question and a second release |
 | O31 | The three follow-ups together in the browser | B offers no release and says why; E lists its first round; dashboard shows one failed payment | MANUAL | Browser, 2026-09-23 |
+| O32 | The business date around midnight in Germany | 01:30 CEST books the new day; 00:30 CET on 1 January books the new year; 23:59 CEST stays on the same day | AUTO | `server/domain/dates.test.js` (ADR-072) |

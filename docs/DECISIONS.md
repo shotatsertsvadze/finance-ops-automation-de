@@ -1516,3 +1516,18 @@ duplicate and checking again remain.
 
 Consequences: the server still refuses on its own; the screen only stops
 offering a button that cannot work.
+
+## ADR-072 One business date, in German time
+
+Context: the booking date was `new Date().toISOString()`, which is UTC, while
+the due-date figures on the dashboard used the database's `current_date`,
+which follows whatever zone the database runs in. Between midnight and 02:00
+German summer time a booking was dated the day before, on New Year's night the
+year before, and a hosted database on UTC would have moved "overdue" as well.
+
+Decision: `businessDate()` in `server/domain/dates.js` gives today's date in
+Europe/Berlin. Bookings, reversals and the due-date figures all use it; the
+figures pass it to SQL instead of reading `current_date`.
+
+Consequences: server and database zones no longer matter for any date the
+business sees. Timestamps (`received_at`, audit times) stay `timestamptz`.
