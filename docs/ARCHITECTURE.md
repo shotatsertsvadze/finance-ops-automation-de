@@ -313,7 +313,8 @@ invoice above the auto limit.
 | GET | `/api/auth/me` | - | the signed-in user and their permissions |
 | GET | `/api/meta/states` | - | state labels, transition table, policy |
 | POST | `/api/invoices` | 1 | multipart upload (`file`, `source_channel`), runs the pipeline, returns the invoice |
-| GET | `/api/invoices` | 1 | list with optional `state` filter |
+| GET | `/api/invoices` | 1 | one page, newest first: optional `state`, `limit` 1-200 (default 50), `offset`; full count in `X-Total-Count` (ADR-066) |
+| GET | `/api/invoices/counts` | 1 | invoices per state and in total, for the navigation |
 | GET | `/api/invoices/:id` | 1 | invoice, lines, latest validation results, routing decision, approval steps, audit events |
 | GET | `/api/invoices/:id/file` | 1 | original XML |
 | POST | `/api/invoices/:id/reprocess` | 1 | re-run validation from RECEIVED/VALIDATING/REVIEW_REQUIRED |

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { NavLink, Route, Routes } from "react-router-dom";
-import { listInvoices } from "./lib/api.js";
+import { countInvoices } from "./lib/api.js";
 import InboxView from "./features/inbox/InboxView.jsx";
 import InvoiceDetail from "./features/invoice/InvoiceDetail.jsx";
 import PaymentsView from "./features/payments/PaymentsView.jsx";
@@ -16,16 +16,16 @@ export default function App() {
   const [counts, setCounts] = useState({ all: 0, REVIEW_REQUIRED: 0, READY_FOR_APPROVAL: 0, APPROVED: 0, openMoney: 0 });
 
   const refresh = useCallback(() => {
-    listInvoices()
-      .then((rows) => {
+    countInvoices()
+      .then(({ total, by_state: n }) => {
+        const of = (state) => n[state] ?? 0;
         setCounts({
-          all: rows.length,
-          REVIEW_REQUIRED: rows.filter((r) => r.state === "REVIEW_REQUIRED").length,
-          READY_FOR_APPROVAL: rows.filter((r) => r.state === "READY_FOR_APPROVAL").length,
-          APPROVED: rows.filter((r) => r.state === "APPROVED").length,
-          openMoney: rows.filter((r) =>
-            ["APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILIATION_EXCEPTION"].includes(r.state),
-          ).length,
+          all: total,
+          REVIEW_REQUIRED: of("REVIEW_REQUIRED"),
+          READY_FOR_APPROVAL: of("READY_FOR_APPROVAL"),
+          APPROVED: of("APPROVED"),
+          openMoney: ["APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILIATION_EXCEPTION"]
+            .reduce((sum, state) => sum + of(state), 0),
         });
       })
       .catch(() => {});

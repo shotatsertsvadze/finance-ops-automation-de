@@ -14,6 +14,11 @@ export function onSignedOut(handler) {
 }
 
 async function request(path, options = {}) {
+  return (await send(path, options)).json();
+}
+
+/** The response itself, for the few callers that read a header as well. */
+async function send(path, options = {}) {
   const mutating = options.method && options.method !== "GET";
   const response = await fetch(`/api${path}`, {
     ...options,
@@ -32,10 +37,15 @@ async function request(path, options = {}) {
     if (error.code === "NOT_SIGNED_IN") signedOut();
     throw error;
   }
-  return response.json();
+  return response;
 }
 
-export const listInvoices = (state) => request(`/invoices${state ? `?state=${state}` : ""}`);
+/** One page of the list, and how many invoices there are in all (ADR-066). */
+export async function listInvoices(state, offset = 0) {
+  const response = await send(`/invoices?offset=${offset}${state ? `&state=${state}` : ""}`);
+  return { rows: await response.json(), total: Number(response.headers.get("X-Total-Count")) };
+}
+export const countInvoices = () => request("/invoices/counts");
 export const getInvoice = (id) => request(`/invoices/${id}`);
 export const getUsers = () => request("/users");
 export const getMeta = () => request("/meta/states");

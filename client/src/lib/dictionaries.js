@@ -67,6 +67,7 @@ const de = {
     leadApproval: "Geprüft und freigabebereit. Die Stufe richtet sich nach dem Bruttobetrag.",
     leadDone: "Automatisch oder durch Freigabe abgeschlossen.",
     invoiceCount: (n) => `${n} ${n === 1 ? "Rechnung" : "Rechnungen"}`,
+    loadMore: (shown, total) => `Weitere laden (${shown} von ${total} angezeigt)`,
     noNumberRead: "keine Nummer gelesen",
     approvalsOpen: (n) => `${n} ${n === 1 ? "Freigabe offen" : "Freigaben offen"}`,
 
@@ -390,6 +391,7 @@ const de = {
     TRANSACTION_INCOMPLETE: "Buchung ohne external_id, Datum oder Betrag",
     FILE_FIELD_MISSING: "Feld 'file' fehlt",
     UNKNOWN_STATE_FILTER: "Unbekannter Status",
+    INVALID_PAGE: "Seitengröße 1 bis 200, Versatz ab 0",
     UNKNOWN_EXPORT_PROFILE: "Unbekanntes Exportprofil",
     UPLOAD_REJECTED: "Datei abgelehnt: nur XML-Dateien werden angenommen",
     INTERNAL_ERROR: ({ request_id }) => (request_id ? `Interner Fehler (Referenz ${request_id})` : "Interner Fehler"),
@@ -451,6 +453,7 @@ const en = {
     leadApproval: "Checked and ready for approval. The tier follows the gross amount.",
     leadDone: "Completed automatically or by approval.",
     invoiceCount: (n) => `${n} ${n === 1 ? "invoice" : "invoices"}`,
+    loadMore: (shown, total) => `Load more (${shown} of ${total} shown)`,
     noNumberRead: "no number read",
     approvalsOpen: (n) => `${n} ${n === 1 ? "approval open" : "approvals open"}`,
 
@@ -766,6 +769,7 @@ const en = {
     TRANSACTION_INCOMPLETE: "A transaction without an external id, date or amount",
     FILE_FIELD_MISSING: "The 'file' field is missing",
     UNKNOWN_STATE_FILTER: "Unknown state",
+    INVALID_PAGE: "Page size 1 to 200, offset from 0",
     UNKNOWN_EXPORT_PROFILE: "Unknown export profile",
     UPLOAD_REJECTED: "File rejected: only XML files are accepted",
     INTERNAL_ERROR: ({ request_id }) => (request_id ? `Internal error (reference ${request_id})` : "Internal error"),

@@ -16,14 +16,17 @@ export default function InboxView({ view, onChanged }) {
   const { t, errorText, formatDate, formatMoney } = useI18n();
   const config = VIEWS[view];
   const [invoices, setInvoices] = useState([]);
+  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState(null);
 
-  const load = () => {
+  // A page at a time (ADR-066); `offset` 0 starts the list again.
+  const fetchPage = (offset) => {
     setStatus("loading");
-    listInvoices(config.state)
-      .then((rows) => {
-        setInvoices(rows);
+    listInvoices(config.state, offset)
+      .then((page) => {
+        setInvoices((shown) => (offset === 0 ? page.rows : [...shown, ...page.rows]));
+        setTotal(page.total);
         setStatus("ready");
       })
       .catch((e) => {
@@ -31,6 +34,7 @@ export default function InboxView({ view, onChanged }) {
         setStatus("error");
       });
   };
+  const load = () => fetchPage(0);
 
   useEffect(load, [view]);
 
@@ -54,7 +58,7 @@ export default function InboxView({ view, onChanged }) {
 
       <div className="panel" style={{ marginTop: view === "inbox" ? 18 : 0 }}>
         <div className="panel-head">
-          <span className="label">{t("invoiceCount", invoices.length)}</span>
+          <span className="label">{t("invoiceCount", total)}</span>
         </div>
         {status === "error" && <p className="empty error">{error}</p>}
         {status === "ready" && invoices.length === 0 && <p className="empty">{t("emptyList")}</p>}
@@ -95,6 +99,14 @@ export default function InboxView({ view, onChanged }) {
               ))}
             </tbody>
           </table>
+          </div>
+        )}
+        {invoices.length < total && (
+          <div className="panel-body">
+            <button className="btn btn-ghost" type="button" disabled={status === "loading"}
+                    onClick={() => fetchPage(invoices.length)}>
+              {t("loadMore", invoices.length, total)}
+            </button>
           </div>
         )}
       </div>

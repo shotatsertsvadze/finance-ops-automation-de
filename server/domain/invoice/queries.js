@@ -3,7 +3,12 @@ import { availableCents } from "../purchase-orders/commitments.js";
 import { centsToDecimal, toCents } from "../money.js";
 
 /** Read models for the API. No business logic here. */
-export async function listInvoices(pool, { state } = {}) {
+/** One page of the list, newest first, and how many there are in all (ADR-066). */
+export async function listInvoices(pool, { state, limit = 50, offset = 0 } = {}) {
+  const { rows: [count] } = await pool.query(
+    "select count(*)::int as total from finops.invoices where ($1::text is null or state = $1::finops.invoice_state)",
+    [state ?? null],
+  );
   const { rows } = await pool.query(
     `select i.id, i.state, i.review_reason, i.received_at, i.source_channel, i.original_filename,
             i.invoice_number, i.issue_date, i.due_date, i.supplier_name_raw, i.gross_amount, i.currency,
@@ -16,10 +21,20 @@ export async function listInvoices(pool, { state } = {}) {
        select action, occurred_at from finops.audit_events e where e.invoice_id = i.id order by occurred_at desc, id desc limit 1
      ) last on true
      where ($1::text is null or i.state = $1::finops.invoice_state)
-     order by i.received_at desc`,
-    [state ?? null],
+     order by i.received_at desc, i.id
+     limit $2 offset $3`,
+    [state ?? null, limit, offset],
   );
-  return rows;
+  return { rows, total: count.total };
+}
+
+/** Invoices per state, for the navigation. */
+export async function countInvoices(pool) {
+  const { rows } = await pool.query("select state, count(*)::int as n from finops.invoices group by state order by state");
+  return {
+    total: rows.reduce((sum, r) => sum + r.n, 0),
+    by_state: Object.fromEntries(rows.map((r) => [r.state, r.n])),
+  };
 }
 
 export async function getInvoiceDetail(pool, id) {

@@ -1412,3 +1412,21 @@ ago; the last day stays, for anyone asking who was signed in when.
 Consequences: `last_seen_at` is accurate to a minute. Clean-up runs only when
 someone signs in, which is often enough for a table that grows only through
 sign-ins; no scheduled job is needed.
+
+## ADR-066 The invoice list comes a page at a time
+
+Context: `GET /api/invoices` returned every invoice in one response, and the
+navigation counted invoices per state by downloading that whole list on every
+change.
+
+Decision: the list takes `limit` (1-200, default 50) and `offset`, sorted by
+receipt newest first with the id as tie-break, and reports the full count in
+`X-Total-Count`. The body stays an array, so callers that read it are
+unchanged. `GET /api/invoices/counts` answers the navigation with one grouped
+query. The inbox shows the true total and loads further pages on request.
+
+Consequences: offset paging can skip or repeat a row when invoices arrive
+between two pages; for a work queue read by people that is acceptable, and
+keyset paging can replace it without changing the client's contract. The KPI
+queries still aggregate whole tables, which is what they are for; an index or
+a summary table is the next step when that becomes slow.

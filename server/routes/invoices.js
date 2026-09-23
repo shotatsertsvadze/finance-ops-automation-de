@@ -1,7 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { handleUpload, processInvoice } from "../domain/intake/intake.js";
-import { getInvoiceDetail, listInvoices } from "../domain/invoice/queries.js";
+import { countInvoices, getInvoiceDetail, listInvoices } from "../domain/invoice/queries.js";
 import { MAX_XML_BYTES } from "../domain/invoice/xml-safety.js";
 import { STATES } from "../domain/workflow/states.js";
 import { decideApprovalStep, decideReview, requestInfoFromApproval } from "../domain/approvals/approvals.js";
@@ -53,7 +53,21 @@ export function invoicesRouter(deps) {
     try {
       const state = req.query.state ? String(req.query.state) : undefined;
       if (state && !STATES.includes(state)) return res.status(400).json({ error: "Unbekannter Status", code: "UNKNOWN_STATE_FILTER" });
-      res.json(await listInvoices(deps.pool, { state }));
+      const limit = Number(req.query.limit ?? 50);
+      const offset = Number(req.query.offset ?? 0);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 200 || !Number.isInteger(offset) || offset < 0) {
+        return res.status(400).json({ error: "Seitengröße 1 bis 200, Versatz ab 0", code: "INVALID_PAGE" });
+      }
+      const { rows, total } = await listInvoices(deps.pool, { state, limit, offset });
+      res.set("X-Total-Count", String(total)).json(rows);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get("/counts", async (req, res, next) => {
+    try {
+      res.json(await countInvoices(deps.pool));
     } catch (error) {
       next(error);
     }

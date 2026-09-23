@@ -510,3 +510,7 @@ findings themselves.
 | O14 | A request within a minute of the last one | `last_seen_at` not written | AUTO | `session-upkeep.test.js` (ADR-065) |
 | O15 | A request after a minute | `last_seen_at` refreshed | AUTO | `session-upkeep.test.js` |
 | O16 | Sessions that ended more than a day ago | deleted at the next sign-in; one that ended an hour ago stays | AUTO | `session-upkeep.test.js` |
+| O17 | The invoice list in pages | `limit` and `offset`, newest first, no invoice twice or missing, full count in `X-Total-Count`, the count follows the state filter | AUTO | `paging.test.js` (ADR-066) |
+| O18 | A page size outside 1-200 or a negative offset | 400 `INVALID_PAGE` | AUTO | `paging.test.js` |
+| O19 | Navigation counts | one grouped query, not the downloaded list | AUTO | `paging.test.js`; client `api.test.js` |
+| O20 | Paging in the inbox | 70 demo invoices: 50 shown with "Weitere laden (50 von 70 angezeigt)", all 70 after one click; nav counts 70 and 6 in review | MANUAL | Browser, 2026-09-23 |
