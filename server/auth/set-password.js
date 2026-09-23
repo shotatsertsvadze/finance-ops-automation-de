@@ -12,8 +12,7 @@ export async function setPassword(pool, email, password) {
   const { hash, salt } = hashPassword(password);
   await withTransaction(pool, async (client) => {
     const { rows: [user] } = await client.query(
-      `update finops.users set password_hash = $2, password_salt = $3, failed_attempts = 0, locked_until = null
-       where lower(email) = lower($1) returning id`,
+      "update finops.users set password_hash = $2, password_salt = $3 where lower(email) = lower($1) returning id",
       [email, hash, salt],
     );
     if (!user) throw new Error(`Kein Konto mit der E-Mail-Adresse ${email}`);

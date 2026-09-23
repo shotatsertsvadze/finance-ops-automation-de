@@ -207,7 +207,11 @@ described as working.
 | S1 | Correct password | 200, user returned, no secret in the body | AUTO | `auth.test.js` |
 | S2 | Session cookie flags | HttpOnly and SameSite=Strict | AUTO | `auth.test.js` |
 | S3 | Wrong password vs unknown address | identical 401 answer, no account enumeration | AUTO | `auth.test.js` |
-| S4 | Repeated failures | account locks, 429 even with the right password | AUTO | `auth.test.js` |
+| S4 | Repeated failures | the address is throttled, 429 `LOGIN_THROTTLED` with `Retry-After` even with the right password (ADR-059) | AUTO | `auth.test.js` "repeated failures stop that address" |
+| S4a | A guesser cannot lock the owner out | six failures from one address; the owner signs in from another | AUTO | `auth.test.js` "someone guessing a password does not lock its owner out" |
+| S4b | Password spraying from one address | twenty failures across accounts, the twenty-first refused; other addresses untouched | AUTO | `auth.test.js` "one address guessing across many accounts is stopped" |
+| S4c | Throttling does not enumerate accounts | a real and an unknown address are throttled with the same answer | AUTO | `auth.test.js` "an unknown address is throttled exactly like a real one" |
+| S4d | A client cannot choose its own address | `X-Forwarded-For` honoured through a loopback proxy, ignored on a direct connection | MANUAL | Probe, 2026-09-23: 1.2.3.4 via 127.0.0.1; the real LAN address when connecting directly |
 | S5 | Successful login | failure counter cleared | AUTO | `auth.test.js` |
 | S6 | No session | 401 on every protected route | AUTO | `auth.test.js` |
 | S7 | Forged session token | 401 | AUTO | `auth.test.js` |
@@ -379,7 +383,7 @@ recorded in the evidence column. The report itself is left as written.
 | F03 | Reference matching selects the wrong invoice | Probe against the real matcher: `INV-10` matched `INV-1`; `"INV-A und INV-LONG"` matched the longer one | Token boundaries; the longest-number tie-break removed; ADR-036 | AUTO `matching.test.js` |
 | F04 | The commitment migration forgets existing claims | Disposable database: 0001-0005, an APPROVED invoice for 319,33, then the rest; availability still reported 500,00 | Backfill migration 0009; ADR-037 | AUTO `upgrade.test.js` |
 | F05 | Manual resolution does not consume the bank evidence | `reconciliation.test.js`: resolved transaction returned to the pool and matched a later invoice | `RESOLVED` status, set in the same transaction; ADR-036 | AUTO `reconciliation.test.js` |
-| F06 | Concurrent login failures bypass the lockout | `auth.test.js`: eight parallel guesses, then a correct password still succeeded | Increment and lock decided in one statement | AUTO `auth.test.js` |
+| F06 | Concurrent login failures bypass the lockout | `auth.test.js`: eight parallel guesses, then a correct password still succeeded | Increment and lock decided in one statement; since ADR-059 each attempt is recorded before its password is checked, twelve at once check at most five | AUTO `auth.test.js` |
 | F07 | Invoice references become spreadsheet formulas in CSV | `csv-export.test.js`: `=1+1` reached the cell unescaped | Formula triggers prefixed, numbers exempt; ADR-038 | AUTO `csv-export.test.js` |
 | F08 | Rejection is offered but refused while information is requested | `approvals.test.js`: 409 from `INFO_REQUESTED` | The declared transition is handled, with the same rules | AUTO `approvals.test.js` |
 | F09 | Review-cycle medians can be negative | `kpi.test.js`: `READY_FOR_APPROVAL -> INFO_REQUESTED -> REVIEW_REQUIRED` gave -1 hours | Each review entry paired with its own exit; open visits excluded | AUTO `kpi.test.js` |
@@ -440,7 +444,7 @@ findings themselves.
 |---|---|---|---|---|
 | R1 | Reconcile against the payment instruction, not the invoice | the bank line is compared with what was sent to the bank | AUTO | `matching.test.js`, `reconciliation.test.js`; inner join on `payment_instructions` |
 | R2 | Login timing must not reveal whether an account exists | comparable time for known and unknown addresses | AUTO | `auth.test.js`; measured 1.1 ms vs 40.4 ms before, 36.3 vs 37.7 after |
-| R3 | Defined behaviour for an expired lock | the attempt count starts again | AUTO | `auth.test.js` |
+| R3 | Defined behaviour for an expired lock | failures older than the window no longer count (ADR-059) | AUTO | `auth.test.js` "failures older than the window no longer count" |
 | R4 | The test-database guard must not be defeated by an equivalent URL | identity, not string equality | MANUAL | 2026-09-17: `postgresql://127.0.0.1:5432/finops` against `postgresql://localhost/finops` refused before `reset()`; dev database intact |
 | R5 | KPI definition changes recorded as decisions | an ADR per changed definition | DOC | ADR-039 |
 | R6 | The README's no-enumeration claim matched to the evidence | wording and timing both covered | DOC | README, ADR-040 |

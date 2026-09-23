@@ -302,7 +302,7 @@ invoice above the auto limit.
 | Method | Path | Phase | Purpose |
 |---|---|---|---|
 | GET | `/api/health` | - | liveness, no session needed |
-| POST | `/api/auth/login`, `/api/auth/logout` | - | session cookie and CSRF cookie; failures lock the account after `LOGIN_MAX_ATTEMPTS` |
+| POST | `/api/auth/login`, `/api/auth/logout` | - | session cookie and CSRF cookie; failures throttle the client address (429 `LOGIN_THROTTLED`), never the account (ADR-059) |
 | GET | `/api/auth/me` | - | the signed-in user and their permissions |
 | GET | `/api/meta/states` | - | state labels, transition table, policy |
 | POST | `/api/invoices` | 1 | multipart upload (`file`, `source_channel`), runs the pipeline, returns the invoice |
@@ -367,7 +367,10 @@ expired, and signing in again stays on the same page (ADR-057).
   rendered, so an uploaded XHTML page cannot run script (ADR-035).
 - Sessions: HttpOnly, SameSite=Strict cookie holding a random token stored as
   a hash; double-submit CSRF token on every mutation; scrypt password hashes;
-  account lock after repeated failures (ADR-029, ADR-040). The demo accounts
+  failed sign-ins throttled per client address, 5 per account and 20 overall
+  in 15 minutes, recorded before the password is checked; the account is
+  never locked, and `X-Forwarded-For` is believed only from a loopback proxy
+  (`login_failures`, ADR-059). The demo accounts
   share one password; that is for a local demo only.
 - Production (`npm start`, `NODE_ENV=production`): the API serves the built
   client from `dist/`, cookies are `Secure`, and the start is refused while

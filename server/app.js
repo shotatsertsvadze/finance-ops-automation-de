@@ -44,6 +44,10 @@ function serveClient(app, clientDir) {
 export function createApp(deps, { clientDir } = {}) {
   const app = express();
   app.disable("x-powered-by");
+  // req.ip is the client, not the reverse proxy in front: X-Forwarded-For is
+  // believed only from a proxy on this host, so a client connecting directly
+  // cannot choose its own address to dodge the login throttle (ADR-059).
+  app.set("trust proxy", "loopback");
   // Content types on this API are declared, never guessed. Without this a
   // browser may sniff bytes back into a renderable type and run them.
   app.use((req, res, next) => {

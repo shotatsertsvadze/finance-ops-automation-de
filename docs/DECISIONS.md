@@ -1259,3 +1259,34 @@ Consequences: checking every account costs one scrypt verification each at
 startup, about 40 ms per account. A password set through `DEMO_PASSWORD` is
 not recognised as a demo password; it is a demo-only knob, documented as such.
 There is still no self-service password change (S24).
+
+## ADR-059 Failed sign-ins throttle the address, never the account
+
+Supersedes the account lock of ADR-029 and the expired-lock rule of ADR-040.
+
+Context: five wrong passwords locked the account itself for fifteen minutes,
+and the lock outlived the right password. Anyone who knew an address, which
+the demo accounts print on the login screen, could shut the CFO out at will,
+from anywhere, again and again. Reproduced on 2026-09-23: six failures from
+one address, then the owner's correct password from another got 429.
+
+Decision:
+- Failures are recorded per client address in `login_failures`. An address
+  gets `LOGIN_MAX_ATTEMPTS` (5) per account and `LOGIN_MAX_ATTEMPTS_PER_IP`
+  (20) across all accounts within `LOGIN_LOCK_MINUTES` (15); beyond that it
+  gets 429 `LOGIN_THROTTLED` with `Retry-After`, even for the right password.
+  The owner, from another address, is not affected.
+- The attempt is written before the password is checked and taken back on
+  success, so simultaneous guesses count one another; the per-account counter
+  of F06 needed a single-statement update for the same reason.
+- The check runs before the account is looked up, so a throttled answer is the
+  same for an address that exists and one that does not (ADR-040 still holds).
+- `trust proxy` is `loopback`: `X-Forwarded-For` is believed only from a proxy
+  on the same host, so a client connecting directly cannot choose its address.
+- `users.failed_attempts` and `users.locked_until` are dropped (0019).
+
+Consequences: an attacker spread over many addresses is not stopped by this;
+each address gets five guesses per account per quarter hour. That, and a
+shared office address throttling colleagues after twenty failures, is the
+trade against a lockout anyone can trigger. A second factor (S24) is the
+answer to distributed guessing and remains out of scope.

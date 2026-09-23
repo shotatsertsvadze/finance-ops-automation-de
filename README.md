@@ -223,8 +223,10 @@ demo; a production start refuses them (see Setup).
 Passwords are hashed with scrypt and a per-user salt. The session is a random
 token in an HttpOnly, SameSite=Strict cookie; only its hash is stored, so a
 database dump yields no usable session. Signing out revokes it server-side.
-State-changing requests carry a CSRF token. Repeated failed logins lock an
-account temporarily; an expired lock starts the count again. A wrong password
+State-changing requests carry a CSRF token. Repeated failed logins throttle
+the client address, never the account, so a guesser cannot lock its owner out.
+Behind a reverse proxy, the proxy must be on the same host and set
+`X-Forwarded-For`. A wrong password
 and an unknown address get the same answer and cost the same work, so neither
 the wording nor the response time says whether the account exists.
 
