@@ -1502,3 +1502,17 @@ Comments about rows written before a column existed stay, since they explain
 current behaviour for old data.
 
 Consequences: six comments rewritten; no code changed.
+
+## ADR-071 The screen does not offer a release the server would refuse
+
+Context: every invoice in review showed "Zur Freigabe geben". For one with a
+failure no reviewer may override, such as a changed IBAN (ADR-052), the
+button always failed with `NOT_PAYABLE_ELIGIBLE`.
+
+Decision: the invoice detail carries `payable_blockers`, computed by the same
+`payableBlockers` the release calls. With any blocker the client leaves the
+release out and says why; asking for information, rejecting, confirming a
+duplicate and checking again remain.
+
+Consequences: the server still refuses on its own; the screen only stops
+offering a button that cannot work.

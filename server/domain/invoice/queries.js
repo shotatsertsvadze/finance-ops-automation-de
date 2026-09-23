@@ -1,8 +1,10 @@
 import { openCreditsFor } from "../accounting/netting.js";
 import { availableCents } from "../purchase-orders/commitments.js";
 import { centsToDecimal, toCents } from "../money.js";
+import { payableBlockers } from "../workflow/eligibility.js";
 
 /** Read models for the API. No business logic here. */
+
 /** One page of the list, newest first, and how many there are in all (ADR-066). */
 export async function listInvoices(pool, { state, limit = 50, offset = 0 } = {}) {
   const { rows: [count] } = await pool.query(
@@ -89,6 +91,8 @@ export async function getInvoiceDetail(pool, id) {
     po_available_amount: centsToDecimal(poAvailable),
     lines: lines.rows,
     validation: { technical: results.rows.filter((r) => r.phase === "TECHNICAL"), business: results.rows.filter((r) => r.phase === "BUSINESS") },
+    // What stops a release from review, as the release itself decides it (ADR-071).
+    payable_blockers: payableBlockers(invoice, results.rows.filter((r) => r.status === "FAILED").map((r) => r.check_code)),
     routing: decision.rows[0] ?? null,
     // The live round; the rounds before it, cancelled, as the record (ADR-067).
     approval_steps: steps.rows.filter((s) => s.round === currentRound(steps.rows)),

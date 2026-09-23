@@ -521,3 +521,5 @@ findings themselves.
 | O25 | That role and the audit trail | update, delete and truncate refused; deleting an invoice refused, so no cascade | AUTO | `audit-role.test.js` |
 | O26 | A production start as a role that could change the trail | refused, naming what it could do; the granted role passes | AUTO | `audit-role.test.js` |
 | O27 | `db:grant` and `npm start` end to end | grant sets the rights and refuses an unsafe role name; start as the owner refused naming update, delete, truncate and invoice delete; start as the granted role listens | MANUAL | Probe, 2026-09-23, against the test database |
+| O28 | The detail says whether review may release the invoice | `payable_blockers`: a changed IBAN is named, the same answer the release gives; a PO overrun blocks nothing | AUTO | `releasable.test.js` (ADR-071) |
+| O29 | A review with a blocker | "Zur Freigabe geben" not offered, the prompt says why; the other decisions stay | AUTO | client `actions.test.js` |

@@ -318,6 +318,11 @@ invoice above the auto limit.
 | POST | `/api/invoices` | 1 | multipart upload (`file`, `source_channel`), runs the pipeline, returns the invoice |
 | GET | `/api/invoices` | 1 | one page, newest first: optional `state`, `limit` 1-200 (default 50), `offset`; full count in `X-Total-Count` (ADR-066) |
 | GET | `/api/invoices/counts` | 1 | invoices per state and in total, for the navigation |
+
+The invoice detail (`GET /api/invoices/:id`) carries the domain's own answers
+where the screen needs them: `open_credit_amount`, `po_available_amount`,
+`payable_blockers` (what stops a release from review, ADR-071) and
+`approval_history` (earlier approval rounds, ADR-067).
 | GET | `/api/invoices/:id` | 1 | invoice, lines, latest validation results, routing decision, approval steps, audit events |
 | GET | `/api/invoices/:id/file` | 1 | original XML |
 | POST | `/api/invoices/:id/reprocess` | 1 | re-run validation from RECEIVED/VALIDATING/REVIEW_REQUIRED |

@@ -144,6 +144,7 @@ const de = {
     cancelInvoice: "Stornieren",
 
     hintReviewStopped: "Die automatische Verarbeitung ist gestoppt. Entscheiden Sie auf Basis der Prüfspur.",
+    hintNotReleasable: "Nicht freigabefähig: Eine fehlgeschlagene Prüfung kann keine Sichtprüfung überstimmen (siehe Prüfspur). Rückfrage stellen, ablehnen oder nach Korrektur der Stammdaten erneut prüfen.",
     hintInfoRequested: "Die Rechnung wartet auf eine Rückmeldung. Sobald sie vorliegt, geht sie zurück in die Sichtprüfung.",
     hintApproved: "Freigegeben. Der Buchungssatz kann an die Buchhaltung übergeben werden.",
     hintPaymentPending: "Zahlung ist angewiesen. Die Bestätigung käme in einem echten System vom Zahlungsdienstleister.",
@@ -527,6 +528,7 @@ const en = {
     cancelInvoice: "Cancel invoice",
 
     hintReviewStopped: "Automatic processing has stopped. Decide on the basis of the check trail.",
+    hintNotReleasable: "Not releasable: a failed check that no review may override (see the check trail). Ask for information, reject, or check again once master data is corrected.",
     hintInfoRequested: "The invoice is waiting for an answer. Once it arrives, the invoice returns to review.",
     hintApproved: "Approved. The booking record can be handed to accounting.",
     hintPaymentPending: "Payment has been instructed. In a real system the confirmation would come from the payment provider.",

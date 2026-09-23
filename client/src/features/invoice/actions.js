@@ -24,17 +24,21 @@ export function availableActions(invoice) {
   const step = (invoice.approval_steps ?? []).find((s) => s.status === "PENDING") ?? null;
 
   switch (invoice.state) {
-    case "REVIEW_REQUIRED":
+    case "REVIEW_REQUIRED": {
+      // A failure no reviewer may override: the server refuses the release,
+      // so it is not offered, and the prompt says why (ADR-071).
+      const releasable = (invoice.payable_blockers ?? []).length === 0;
       return {
-        prompt: prompt("hintReviewStopped"), step,
+        prompt: prompt(releasable ? "hintReviewStopped" : "hintNotReleasable"), step,
         actions: [
-          action("accept", "review:decide", { tone: "ok" }),
+          ...(releasable ? [action("accept", "review:decide", { tone: "ok" })] : []),
           action("request-info", "review:decide", { needsComment: true }),
           action("confirm-duplicate", "review:decide", { needsComment: true }),
           action("reject", "review:decide", { tone: "high", needsComment: true }),
           action("reprocess", "invoice:reprocess"),
         ],
       };
+    }
 
     case "READY_FOR_APPROVAL":
       // The state says waiting and the steps say otherwise: offering "approve"
