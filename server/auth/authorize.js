@@ -19,6 +19,10 @@ export const PERMISSIONS = {
   "bank:import": ["FINANCE", "ADMIN"],
   "reconciliation:run": ["FINANCE", "ADMIN"],
   "reconciliation:resolve": ["FINANCE", "ADMIN"],
+  // Reads that carry bank details or the books (ADR-064).
+  "accounting:export": ["FINANCE", "ADMIN"],
+  "bank:read": ["FINANCE", "ADMIN"],
+  "master-data:read": ["AP_CLERK", "FINANCE", "ADMIN"],
 };
 
 export function may(role, permission) {

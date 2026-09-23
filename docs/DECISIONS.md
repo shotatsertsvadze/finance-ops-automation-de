@@ -1380,3 +1380,21 @@ Consequences: the bank line must echo the reference Nordwerk sent, which is
 what a bank statement for an outgoing transfer does. Tests that used fixed
 statements now substitute the reference that was sent. The demo generator's
 totals are unchanged; its shipped statement is regenerated in the new format.
+
+## ADR-064 Reading bank details and the books needs a permission
+
+Extends ADR-030, which guarded every write but no read.
+
+Context: any signed-in role could read the accounting export, the bank
+transactions and the supplier master data, every IBAN included. A cost-centre
+manager needs none of them to approve an invoice.
+
+Decision: three read permissions. `accounting:export` and `bank:read` for
+finance and admin; `master-data:read` for the AP clerk, finance and admin, since
+the clerk reviews supplier and bank-account questions. The invoice detail still
+shows the invoice's own IBAN to everyone who may see the invoice: the reviewer
+and approvers need it to judge that invoice. The payments page says the area is
+reserved for finance instead of showing an empty statement.
+
+Consequences: `/api/users` stays open to any signed-in user; it holds names and
+roles, which the approval screens show anyway.

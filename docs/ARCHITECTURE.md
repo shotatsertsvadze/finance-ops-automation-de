@@ -317,7 +317,8 @@ invoice above the auto limit.
 | GET | `/api/invoices/:id` | 1 | invoice, lines, latest validation results, routing decision, approval steps, audit events |
 | GET | `/api/invoices/:id/file` | 1 | original XML |
 | POST | `/api/invoices/:id/reprocess` | 1 | re-run validation from RECEIVED/VALIDATING/REVIEW_REQUIRED |
-| GET | `/api/master-data/suppliers`, `/purchase-orders`, `/api/users` | 1 | read-only master data |
+| GET | `/api/master-data/suppliers`, `/purchase-orders` | 1 | read-only master data, IBANs included; `master-data:read` (AP clerk, finance, admin; ADR-064) |
+| GET | `/api/users` | 1 | names and roles, any signed-in user |
 | POST | `/api/invoices/:id/review/accept\|reject\|request-info\|confirm-duplicate` | 2 | reviewer actions; `request-info` is also valid from READY_FOR_APPROVAL |
 | POST | `/api/invoices/:id/info-received` | 2 | INFO_REQUESTED back to REVIEW_REQUIRED |
 | POST | `/api/invoices/:id/approvals/:stepNo/approve\|reject` | 2 | approver actions |
@@ -330,9 +331,9 @@ invoice above the auto limit.
 | POST | `/api/invoices/:id/payment/retry` | 3 | PAYMENT_FAILED back to ACCOUNTING_READY, to instruct or settle again |
 | POST | `/api/invoices/:id/cancel` | 3 | stops an APPROVED, ACCOUNTING_READY or PAYMENT_FAILED invoice, reason required; reverses a booking |
 | POST | `/api/invoices/:id/reconciliation/resolve` | 3 | closes a reconciliation exception, reason required |
-| GET | `/api/accounting/export` | 3 | CSV of all booking lines; `?profile=spreadsheet` neutralises formula cells (ADR-045) |
+| GET | `/api/accounting/export` | 3 | CSV of all booking lines; `?profile=spreadsheet` neutralises formula cells (ADR-045); `accounting:export` (finance, admin) |
 | POST | `/api/bank/import` | 3 | imports a synthetic statement, idempotent on `external_id` |
-| GET | `/api/bank/transactions` | 3 | statement lines with match status and reason |
+| GET | `/api/bank/transactions` | 3 | statement lines with match status and reason; `bank:read` (finance, admin) |
 | POST | `/api/reconciliation/run` | 3 | matches unmatched transactions against paid invoices |
 | GET | `/api/dashboard/kpis` | 4 | operational KPIs |
 

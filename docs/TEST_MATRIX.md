@@ -505,3 +505,5 @@ findings themselves.
 | O9 | A bank line naming only the supplier's number | not reconciled; a line naming the payment's id is | AUTO | `payment-reference.test.js`; `matching.test.js` |
 | O10 | An instruction from before end-to-end ids | still recognised by its reference | AUTO | `matching.test.js` |
 | O11 | The demo generator after the change | same totals: 36 paid, 30 matched, 4 exceptions, 4 unmatched | MANUAL | Run against the test database, 2026-09-23 |
+| O12 | Reads that carry bank details or the books | export and bank transactions: finance and admin only; supplier and PO master data: clerk, finance, admin; every other role 403 | AUTO | `read-permissions.test.js` (ADR-064) |
+| O13 | A role without `bank:read` on the payments page | says the area is reserved for finance, never shows an empty statement; finance sees the statement | MANUAL | Browser, 2026-09-23: manager and finance |

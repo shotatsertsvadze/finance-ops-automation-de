@@ -18,7 +18,8 @@ export default function PaymentsView({ may, onChanged }) {
 
   // The effect must return a cleanup function or nothing; returning the
   // promise makes React try to call it as one.
-  const load = () => listBankTransactions().then(setRows).catch(() => {});
+  const mayRead = may("bank:read");
+  const load = () => (mayRead ? listBankTransactions().then(setRows).catch(() => {}) : Promise.resolve());
   useEffect(() => {
     load();
   }, []);
@@ -43,14 +44,29 @@ export default function PaymentsView({ may, onChanged }) {
     return importBankStatement(statement);
   }
 
+  const head = (
+    <div className="page-head">
+      <div>
+        <h1>{t("paymentsTitle")}</h1>
+        <p>{t("paymentsLead")}</p>
+      </div>
+    </div>
+  );
+
+  // Refused by the server (ADR-064); said here rather than shown as an empty
+  // statement, which would read as "nothing imported".
+  if (!mayRead) {
+    return (
+      <>
+        {head}
+        <p className="empty">{t("bankFinanceOnly")}</p>
+      </>
+    );
+  }
+
   return (
     <>
-      <div className="page-head">
-        <div>
-          <h1>{t("paymentsTitle")}</h1>
-          <p>{t("paymentsLead")}</p>
-        </div>
-      </div>
+      {head}
 
       <div className="panel">
         <div className="panel-head">

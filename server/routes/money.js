@@ -12,7 +12,7 @@ export function accountingRouter(deps) {
    * spreadsheet would execute, at the cost of an apostrophe the importer would
    * then have to strip (ADR-045).
    */
-  router.get("/export", async (req, res, next) => {
+  router.get("/export", requirePermission("accounting:export"), async (req, res, next) => {
     try {
       const profile = req.query.profile ?? "machine";
       if (!EXPORT_PROFILES.includes(profile)) {
@@ -39,7 +39,7 @@ export function bankRouter(deps) {
       next(error);
     }
   });
-  router.get("/transactions", async (req, res, next) => {
+  router.get("/transactions", requirePermission("bank:read"), async (req, res, next) => {
     try {
       res.json(await listBankTransactions(deps.pool));
     } catch (error) {

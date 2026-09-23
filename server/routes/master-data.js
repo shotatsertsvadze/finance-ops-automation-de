@@ -1,7 +1,9 @@
 import { Router } from "express";
+import { requirePermission } from "../auth/authorize.js";
 
 export function masterDataRouter({ pool }) {
   const router = Router();
+  router.use(requirePermission("master-data:read"));
   router.get("/suppliers", async (req, res, next) => {
     try {
       const { rows } = await pool.query(
