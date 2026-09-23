@@ -6,6 +6,8 @@ deliberately does not claim.
 
 The recording runs **2:53**. Every time mark below was measured from a real
 recording, not estimated, so the narration lines up with the footage.
+The 1:40–2:12 beats changed with ADR-052 (a changed IBAN can no longer be
+released from review) and kept their lengths; re-record before publishing.
 
 The most important twenty seconds are **1:22–1:40**: the system stops itself on
 an IBAN mismatch and shows the evidence. Everything else is setup for that.
@@ -64,9 +66,9 @@ every pause if you need more room.
 |---|---|
 | **View** | Invoice detail for INV-2026-00433 |
 | **Click** | the invoice number in the list |
-| **On screen** | Check trail: **21 checks, nothing to report** |
+| **On screen** | Check trail: **22 checks, nothing to report** |
 
-> "Twenty-one checks, and the ones it passed are recorded too, not only the
+> "Twenty-two checks, and the ones it passed are recorded too, not only the
 > failures. Nothing here was approved by default."
 
 ### 0:57 — 1:12  The same control, the opposite outcome (15s)
@@ -111,23 +113,23 @@ every pause if you need more room.
 | | |
 |---|---|
 | **View** | same page, decision panel |
-| **Click** | type into Reason: *Confirmed with supplier by phone; new account verified.* then **Send for approval** |
-| **On screen** | the typed reason, then the state moving to **Awaiting approval** |
+| **Click** | type into Reason: *Call back the supplier on the number in our master data.* then **Request information** |
+| **On screen** | the typed reason, then the state moving to **Awaiting information** |
 
-> "A human judges the business fact, and has to say why. The reason is
-> required, not optional."
+> "A person cannot wave a new bank account through. The way on is a call-back,
+> and the verified account in master data."
 
-### 1:50 — 2:01  Four eyes (11s)
+### 1:50 — 2:01  Fail closed on the money (11s)
 
 | | |
 |---|---|
 | **View** | same page after the decision |
 | **Click** | nothing |
-| **On screen** | "Step 1 of 1: approval by Cost centre manager", **no Approve button**, approval step listed as open |
+| **On screen** | "The invoice is waiting for an answer", progress spine held before approval |
 
-> "She cleared the exception, so she cannot also approve the payment. There is
-> no Approve button for her. That is enforced on the server, not hidden on the
-> screen."
+> "Once the account is verified, the invoice is checked again, still needs a
+> second person's signature, and the payment checks the account once more at
+> the moment money leaves. That is enforced on the server, not on the screen."
 
 ### 2:01 — 2:12  The audit trail (11s)
 
@@ -135,7 +137,7 @@ every pause if you need more room.
 |---|---|
 | **View** | same page, History panel in frame |
 | **Click** | scroll to History |
-| **On screen** | received → checks started → routed to manual review → released from review, with **Anna Berger** and her reason |
+| **On screen** | received → checks started → routed to manual review → information requested, with **Anna Berger** and her reason |
 
 > "Every state change, who made it, and on what grounds. It is written in the
 > same database transaction as the change itself, so the trail cannot drift

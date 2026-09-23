@@ -51,15 +51,28 @@ export function csrfMatches(expected, given) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** Parses the Cookie header. Express does not do this without a dependency. */
+/**
+ * Parses the Cookie header. Express does not do this without a dependency.
+ * A value that does not decode is skipped: the header is caller-supplied, and
+ * a broken cookie is no session rather than a server error.
+ */
 export function parseCookies(header) {
   const out = {};
   for (const part of (header ?? "").split(";")) {
     const idx = part.indexOf("=");
     if (idx < 0) continue;
-    out[part.slice(0, idx).trim()] = decodeURIComponent(part.slice(idx + 1).trim());
+    const value = decodeCookieValue(part.slice(idx + 1).trim());
+    if (value !== null) out[part.slice(0, idx).trim()] = value;
   }
   return out;
+}
+
+function decodeCookieValue(raw) {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
 }
 
 export function sessionCookieOptions(expiresAt) {

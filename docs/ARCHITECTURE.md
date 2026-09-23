@@ -56,32 +56,37 @@ same database transaction.
 finance-ops-automation-de/
   README.md  AGENTS.md  CLAUDE.md  .env.example  package.json
   docs/                    PRODUCT, ARCHITECTURE, IST/SOLL process, BUSINESS_CASE,
-                           DECISIONS, TEST_MATRIX, REFERENCE_AUDIT, IMPLEMENTATION_PLAN
-  docs/screenshots/        images used by README.md
-  .github/workflows/       CI: the suite against a Postgres service container
-  fixtures/xrechnung/      demo invoices A-I (synthetic UBL 2.1 / XRechnung 3.0 profile)
+                           DECISIONS, TEST_MATRIX, DEMO, DEMO_VIDEO, reviews
+  .github/workflows/       CI: the suite against a Postgres service container, then the build
+  fixtures/xrechnung/      demo invoices A-J (synthetic UBL 2.1 / XRechnung 3.0 profile)
+  fixtures/bank/           synthetic bank statement for the tests
   db/migrations/           append-only SQL, applied by scripts/migrate.js
   db/seed/                 synthetic master data (users, suppliers, IBANs, POs)
-  scripts/                 migrate.js, seed.js, create-test-db.js
+  scripts/                 migrate.js, seed.js, reset.js, set-password.js, demo-data.js, demo-walkthrough.mjs
   server/
-    index.js               starts the HTTP server
+    index.js               starts the HTTP server; refuses an unsafe production start
     app.js                 createApp(): express app without listen (used by tests)
     db.js                  pool, withTransaction, type parsers
-    config/policy.js       thresholds and tolerances (env-overridable)
+    log.js request-log.js  JSON log lines; request id and one line per request
+    auth/                  passwords (scrypt), sessions (cookie + CSRF), authorize (role matrix), set-password
+    config/                policy.js, company.js, assumptions.js, tax-keys.js, deployment.js
     domain/
-      invoice/             xml-safety.js, parse-xrechnung.js (UBL adapter), technical-validation.js
-      validation/          business-checks.js (each check returns a CheckResult)
-      routing/             decide.js (pure), policy application
-      workflow/            states.js (state + transition table), transitions.js (transition())
-      audit/               audit.js (writeEvent)
+      invoice/             xml-safety.js, parse-xrechnung.js (UBL adapter), technical-validation.js, queries.js
+      validation/          business-checks.js, tax-breakdown.js, lookup.js (each check returns a CheckResult)
+      routing/             decide.js (pure)
+      workflow/            states.js (transitions and phases), transitions.js (transition(), audit), eligibility.js
       intake/              intake.js (orchestration of one upload)
-      approvals/           Phase 2
-      accounting/ payments/ reconciliation/   Phase 3 (adapter boundaries)
-    routes/                invoices.js, master-data.js, users.js
+      approvals/           review and approval decisions, binding, final re-check
+      purchase-orders/     commitments.js (capacity ledger)
+      accounting/ payments/ reconciliation/ kpi/
+    routes/                auth, session, health, invoices, master-data, money
     storage/               files.js (store/read original file)
+    test-support/          test database, demo users, invoice XML builder
   client/
     index.html  vite.config.js
-    src/                   App.jsx, features/inbox, features/invoice-detail, features/upload, ...
+    src/                   App.jsx, lib/ (api, i18n, dictionaries), features/ (auth, inbox, invoice,
+                           upload, payments, dashboard)
+  browser/                 Playwright tests for what only a browser can show
   storage/                 original files (gitignored)
 ```
 
@@ -132,6 +137,12 @@ Bank transactions carry a status of `UNMATCHED`, `MATCHED`, `EXCEPTION` or
 `RESOLVED`. `RESOLVED` is set when a person closes an exception by hand, in the
 same transaction as the invoice, and never re-enters matching (ADR-036).
 
+A changed IBAN is not overridable: review cannot release it, and the payment
+instruction pays only an ACTIVE master-data account of an ACTIVE supplier,
+checked again at that moment. Whoever submitted an invoice cannot approve it
+(ADR-052), and whoever signed an approval step can neither instruct nor
+confirm its payment (ADR-056).
+
 Before an approval is recorded the business checks run again against current
 master data. A check that was not failing at the last run and is failing now
 sends the invoice back to `REVIEW_REQUIRED` with its steps cancelled; one that
@@ -147,7 +158,8 @@ Database-enforced invariants:
 - `unique (file_sha256) where state <> 'DUPLICATE'`: the same file can exist
   once as a live invoice.
 - `unique (supplier_id, invoice_number) where state in (payable states)`: two
-  payable records for the same supplier invoice number are impossible.
+  payable records for the same supplier invoice number are impossible. The
+  index lists its states in SQL; a test compares them with `PAYABLE_STATES`.
 - `unique (invoice_id, step_no)` on approval steps.
 - `check (actor_type = 'SYSTEM' or actor_id is not null)` on audit events.
 
@@ -172,25 +184,50 @@ stateDiagram-v2
     READY_FOR_APPROVAL --> REJECTED: any approver rejects
     READY_FOR_APPROVAL --> INFO_REQUESTED: approver requests correction
     APPROVED --> ACCOUNTING_READY: accounting record created
+    APPROVED --> CANCELLED: stopped by finance, reason required
+    ACCOUNTING_READY --> CANCELLED: stopped, booking reversed
     ACCOUNTING_READY --> PAYMENT_PENDING: payment instruction created
     ACCOUNTING_READY --> CREDITED: credit note booked, never paid
     ACCOUNTING_READY --> SETTLED_BY_CREDIT: open credits cover the invoice
     PAYMENT_PENDING --> PAID: payment confirmed
+    PAYMENT_PENDING --> PAYMENT_FAILED: bank rejected, returned or recalled it
+    PAYMENT_FAILED --> ACCOUNTING_READY: instructed again
+    PAYMENT_FAILED --> CANCELLED: stopped, booking reversed
     PAID --> RECONCILED: bank record matched
     PAID --> RECONCILIATION_EXCEPTION: no or ambiguous match
     RECONCILIATION_EXCEPTION --> RECONCILED: manual match
     RECONCILED --> [*]
     CREDITED --> [*]
     SETTLED_BY_CREDIT --> [*]
+    CANCELLED --> [*]
     REJECTED --> [*]
     DUPLICATE --> [*]
 ```
 
 Rules:
 
-- Terminal states: `RECONCILED`, `CREDITED`, `SETTLED_BY_CREDIT`, `REJECTED`, `DUPLICATE`. No transition leaves them.
-- Payable states (money may move): `APPROVED`, `ACCOUNTING_READY`,
-  `PAYMENT_PENDING`, `PAID`, `RECONCILED`.
+- Terminal states: `RECONCILED`, `CREDITED`, `SETTLED_BY_CREDIT`, `CANCELLED`, `REJECTED`, `DUPLICATE`. No transition leaves them.
+- An approved invoice can be stopped until money is on its way: `APPROVED` or
+  `ACCOUNTING_READY` to `CANCELLED`, finance only, with a reason. A booked
+  invoice is reversed in the same transaction: the same lines, sign turned,
+  under a new document number naming the original (ADR-054).
+- A payment the bank did not carry out goes to `PAYMENT_FAILED`: the
+  instruction is marked FAILED and the credits it spent are released
+  (`credit_applications.released_at`). From there it is instructed again,
+  as a new attempt with its own idempotency key, or stopped. At most one
+  instruction per invoice is live (pending or executed), enforced by a
+  partial unique index; a pending payment is stopped by failing first
+  (ADR-055).
+- Every state has one phase in `states.js` (ADR-051), and every list of states
+  the code filters on is derived from it:
+
+  | Phase | States | Payable | Holds PO capacity | Outstanding (due/overdue) |
+  |---|---|---|---|---|
+  | OPEN | RECEIVED, VALIDATING, REVIEW_REQUIRED, INFO_REQUESTED | | | yes |
+  | AWAITING_APPROVAL | READY_FOR_APPROVAL | | yes | yes |
+  | COMMITTED | APPROVED, ACCOUNTING_READY, PAYMENT_PENDING, PAYMENT_FAILED | yes | yes | yes |
+  | SETTLED | PAID, RECONCILED, RECONCILIATION_EXCEPTION, CREDITED, SETTLED_BY_CREDIT | yes | yes | |
+  | DISCARDED | REJECTED, DUPLICATE, CANCELLED | | | |
 - A credit note (`document_type = 'CREDIT_NOTE'`, UNTDID 1001 code 381) shares
   every state up to `ACCOUNTING_READY` and then ends in `CREDITED`. The payment
   route refuses it, its booking record carries the amounts negated, and its
@@ -231,7 +268,7 @@ invoice make sense for Nordwerk":
 |---|---|---|
 | `supplier_known` | HIGH | no supplier matches VAT ID (fallback: exact legal name) |
 | `supplier_active` | HIGH | supplier status is not ACTIVE |
-| `supplier_iban_match` | HIGH | invoice IBAN not among the supplier's ACTIVE accounts |
+| `supplier_iban_match` | HIGH | invoice IBAN not among the supplier's ACTIVE accounts; not overridable (ADR-052) |
 | `duplicate_invoice_number` | HIGH | same supplier + invoice number exists in a non-DUPLICATE, non-REJECTED state |
 | `po_reference_present` | MEDIUM | no PO reference and policy requires one |
 | `po_exists` | HIGH | PO reference present but unknown |
@@ -240,6 +277,7 @@ invoice make sense for Nordwerk":
 | `line_amounts_consistent` | HIGH | a line's declared amount differs from quantity x unit price / base quantity - allowances + charges by more than 0.01; overridable, unlike the totals chain |
 | `credit_note_reference` | MEDIUM | a credit note names no invoice (asked only of credit notes) |
 | `totals_consistent` | HIGH | any link of the EN 16931 chain is off by more than 0.01: lines vs. declared line total, allowances and charges vs. their totals, lines - allowances + charges vs. net, net + VAT vs. gross, gross - prepaid + rounding vs. the amount due |
+| `tax_breakdown_bookable` | HIGH | no per-rate breakdown, a rate without a tax key (e.g. reverse charge), a rate's tax not base x rate within 0.01, or the breakdown not summing exactly to net and VAT; not overridable (ADR-053) |
 | `currency_expected` | MEDIUM | currency not in the allowed list |
 | `required_fields_complete` | MEDIUM | due date, IBAN, buyer reference missing |
 | `payment_terms_match` | LOW | payment terms differ from supplier master (warning only) |
@@ -264,6 +302,11 @@ invoice above the auto limit.
 
 | Method | Path | Phase | Purpose |
 |---|---|---|---|
+| GET | `/api/health` | - | liveness, no session needed |
+| GET | `/api/health/ready` | - | readiness: 200 when the database answers `select 1` within 2 s, else 503 (ADR-060) |
+| POST | `/api/auth/login`, `/api/auth/logout` | - | session cookie and CSRF cookie; failures throttle the client address (429 `LOGIN_THROTTLED`), never the account (ADR-059) |
+| GET | `/api/auth/me` | - | the signed-in user and their permissions |
+| GET | `/api/meta/states` | - | state labels, transition table, policy |
 | POST | `/api/invoices` | 1 | multipart upload (`file`, `source_channel`), runs the pipeline, returns the invoice |
 | GET | `/api/invoices` | 1 | list with optional `state` filter |
 | GET | `/api/invoices/:id` | 1 | invoice, lines, latest validation results, routing decision, approval steps, audit events |
@@ -278,29 +321,39 @@ invoice above the auto limit.
 | POST | `/api/invoices/:id/credit` | 3 | books a credit note, ACCOUNTING_READY to CREDITED; refuses an invoice |
 | POST | `/api/invoices/:id/settle-by-credit` | 3 | ACCOUNTING_READY to SETTLED_BY_CREDIT when open credits cover the invoice; refuses a remainder |
 | POST | `/api/invoices/:id/payment/confirm` | 3 | simulated provider confirmation, PAYMENT_PENDING to PAID |
+| POST | `/api/invoices/:id/payment/fail` | 3 | the bank did not carry the payment out, reason required; PAYMENT_PENDING to PAYMENT_FAILED |
+| POST | `/api/invoices/:id/payment/retry` | 3 | PAYMENT_FAILED back to ACCOUNTING_READY, to instruct or settle again |
+| POST | `/api/invoices/:id/cancel` | 3 | stops an APPROVED, ACCOUNTING_READY or PAYMENT_FAILED invoice, reason required; reverses a booking |
 | POST | `/api/invoices/:id/reconciliation/resolve` | 3 | closes a reconciliation exception, reason required |
-| GET | `/api/accounting/export` | 3 | CSV of all booking records |
+| GET | `/api/accounting/export` | 3 | CSV of all booking lines; `?profile=spreadsheet` neutralises formula cells (ADR-045) |
 | POST | `/api/bank/import` | 3 | imports a synthetic statement, idempotent on `external_id` |
 | GET | `/api/bank/transactions` | 3 | statement lines with match status and reason |
 | POST | `/api/reconciliation/run` | 3 | matches unmatched transactions against paid invoices |
 | GET | `/api/dashboard/kpis` | 4 | operational KPIs |
 
-Actor identity: `X-Actor-Id` header resolved against `users`. Missing or unknown
-actor on a human action → 400. This is an MVP boundary, not authentication
-(ADR-005).
+Identity: a session cookie set by `POST /api/auth/login`, stored hashed; every
+state-changing request must echo the CSRF token (ADR-029). Everything under
+`/api` except `health` and `auth` requires a session. What a role may do is one
+matrix in `server/auth/authorize.js`, enforced per route and served to the
+client (ADR-030); which role decides an approval step is enforced in the
+approvals domain. An `:id` that is not a UUID is a 404. A `NOT_SIGNED_IN`
+refusal on any request returns the client to sign-in, saying the session has
+expired, and signing in again stays on the same page (ADR-057).
 
 ## 8. Adapter boundaries
 
 - `domain/invoice/parse-xrechnung.js` exports `parseInvoiceXml(buffer)` returning a
   format-neutral `ParsedInvoice`. A CII/ZUGFeRD parser will implement the same
   output; the detector in `technical-validation.js` chooses the parser.
-- `domain/invoice/external-validator.js` (Phase 5) is a stub interface for an
-  official EN 16931 / XRechnung validator (e.g. the KoSIT validator). Until it is
-  wired, the system reports "profile declared" and "structure checked", never
-  "compliant".
-- `domain/accounting/accounting.js` builds a vendor-neutral booking record;
-  `exportAccountingCsv()` is one formatter over it, and a DATEV or SAP adapter
-  would be another. Account numbers and tax keys are demo assignments (ADR-018).
+- An official EN 16931 / XRechnung validator (e.g. the KoSIT validator) is not
+  wired and has no stub yet; it would sit beside `technical-validation.js`.
+  Until then the system reports "profile declared" and "structure checked",
+  never "compliant".
+- `domain/accounting/accounting.js` builds vendor-neutral booking lines, one
+  per tax rate of the document, under one document number (ADR-053);
+  `exportAccountingCsv()` is one formatter over them, and a DATEV or SAP
+  adapter would be another. Account numbers and tax keys are demo assignments
+  (ADR-018), mapped by VAT category and rate in `config/tax-keys.js`.
 - `domain/payments/payments.js` holds `mockProvider`; a bank API adapter
   replaces that object and nothing else.
 - `domain/reconciliation/matching.js` is a pure function, so the matching policy
@@ -312,7 +365,26 @@ actor on a human action → 400. This is an MVP boundary, not authentication
 - XML parsed with entity and DTD processing disabled; files with `<!DOCTYPE`
   rejected before parsing; 5 MB upload limit; only `.xml` accepted.
 - No secrets in the repository; `.env.example` has placeholders only.
+- Stored originals are served as `text/plain` with a sandboxing CSP, never
+  rendered, so an uploaded XHTML page cannot run script (ADR-035).
+- Sessions: HttpOnly, SameSite=Strict cookie holding a random token stored as
+  a hash; double-submit CSRF token on every mutation; scrypt password hashes;
+  failed sign-ins throttled per client address, 5 per account and 20 overall
+  in 15 minutes, recorded before the password is checked; the account is
+  never locked, and `X-Forwarded-For` is believed only from a loopback proxy
+  (`login_failures`, ADR-059). The demo accounts
+  share one password; that is for a local demo only.
+- Production (`npm start`, `NODE_ENV=production`): the API serves the built
+  client from `dist/`, cookies are `Secure`, and the start is refused while
+  `dist/` is missing or any account still has the published demo password,
+  unless `DEMO_MODE=true` (ADR-058). `npm run user:password` replaces a
+  password and ends that account's sessions.
 - Original files are immutable; deletion is not exposed by the API.
+- Logs are one JSON object per line (`LOG_LEVEL`, default `info`). Every
+  response carries `X-Request-Id`, kept from a proxy when usable; each request
+  logs method, path without query, status, duration and user id, never the
+  body. A 500 logs its stack under the request id and gives the caller only
+  the id to quote (ADR-060).
 - All data is synthetic. Personal data in a real deployment would be limited to
   supplier contact data and approver identities; retention would follow the
   German 8/10-year rules for accounting records (GoBD, HGB/AO), which this MVP

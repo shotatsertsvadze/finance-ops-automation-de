@@ -10,6 +10,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createApp } from "../../app.js";
 import { loginAs, testDeps } from "../../test-support/db.js";
+import { buildInvoiceXml } from "../../test-support/invoice-xml.js";
 
 let deps, server, base, clients;
 
@@ -52,28 +53,31 @@ beforeEach(async () => {
 // ---------------------------------------------------------------- review ---
 
 test("accepting a review moves the invoice to approval and records who accepted", async () => {
-  const invoice = await upload("B_iban_changed_2499.xml");
+  const invoice = await upload("C_po_overrun_8500.xml");
   assert.equal(invoice.state, "REVIEW_REQUIRED");
 
   const res = await post(`/api/invoices/${invoice.id}/review/accept`, {
     actor: clients.clerk,
-    body: { comment: "IBAN telefonisch beim Lieferanten bestätigt" },
+    body: { comment: "Bestellung wird erhöht" },
   });
   assert.equal(res.status, 200);
 
   const after = await get(invoice.id);
   assert.equal(after.state, "READY_FOR_APPROVAL");
   assert.equal(after.review_reason, null);
-  assert.deepEqual(after.approval_steps.map((s) => [s.required_role, s.status]), [["MANAGER", "PENDING"]]);
+  assert.deepEqual(after.approval_steps.map((s) => [s.required_role, s.status]), [["MANAGER", "PENDING"], ["FINANCE", "PENDING"]]);
   const event = after.audit_events.at(-1);
   assert.equal(event.action, "review_accepted");
   assert.equal(event.actor_type, "HUMAN");
   assert.equal(event.actor_name, "Anna Berger");
-  assert.equal(event.reason, "IBAN telefonisch beim Lieferanten bestätigt");
+  assert.equal(event.reason, "Bestellung wird erhöht");
 });
 
 test("a review of a small invoice still requires one approval, never straight-through", async () => {
-  const invoice = await upload("H_small_iban_changed_380.xml");
+  // 380.00 against an order that does not exist: a business exception below
+  // the auto-approve limit.
+  const res = await clients.clerk.upload(buildInvoiceXml({ number: "RE-SMALL-1", netCents: 31933, po: "PO-2026-9999" }), "small.xml");
+  const invoice = await res.json();
   assert.equal(invoice.state, "REVIEW_REQUIRED");
   assert.equal(invoice.gross_amount, "380.00", "below the auto-approve limit");
 
@@ -82,6 +86,20 @@ test("a review of a small invoice still requires one approval, never straight-th
   const after = await get(invoice.id);
   assert.equal(after.state, "READY_FOR_APPROVAL", "must not jump to APPROVED");
   assert.deepEqual(after.approval_steps.map((s) => s.required_role), ["MANAGER"]);
+});
+
+test("a changed IBAN cannot be released from review", async () => {
+  // A reviewer's word is not a verified bank account. The way out is master
+  // data, after a call-back to the supplier, then re-validation (ADR-052).
+  const invoice = await upload("B_iban_changed_2499.xml");
+  const res = await post(`/api/invoices/${invoice.id}/review/accept`, {
+    actor: clients.clerk, body: { comment: "IBAN telefonisch bestätigt" },
+  });
+  assert.equal(res.status, 422);
+  const body = await res.json();
+  assert.equal(body.code, "NOT_PAYABLE_ELIGIBLE");
+  assert.ok(body.details.blockers.includes("supplier_iban_match"), JSON.stringify(body.details));
+  assert.equal((await get(invoice.id)).state, "REVIEW_REQUIRED");
 });
 
 test("a review decision from an unauthenticated caller is refused", async () => {
@@ -248,6 +266,22 @@ test("whoever released an invoice from review cannot also approve it", async () 
   assert.equal((await get(invoice.id)).state, "READY_FOR_APPROVAL");
 
   const other = await post(`/api/invoices/${invoice.id}/approvals/2/approve`, { actor: clients.finance2, body: {} });
+  assert.equal(other.status, 200);
+  assert.equal((await get(invoice.id)).state, "APPROVED");
+});
+
+test("whoever submitted an invoice cannot approve it", async () => {
+  // Managers may upload, and 1 240 EUR needs only a MANAGER signature, so
+  // without this rule one person could submit and approve the same invoice.
+  const invoice = await upload("A_clean_1240.xml", clients.manager);
+  assert.equal(invoice.state, "READY_FOR_APPROVAL");
+
+  const self = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
+  assert.equal(self.status, 409);
+  assert.equal((await self.json()).code, "UPLOADER_CANNOT_APPROVE");
+  assert.equal((await get(invoice.id)).state, "READY_FOR_APPROVAL");
+
+  const other = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager2, body: {} });
   assert.equal(other.status, 200);
   assert.equal((await get(invoice.id)).state, "APPROVED");
 });

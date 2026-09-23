@@ -28,6 +28,14 @@ async function lockInvoice(client, invoiceId) {
   return invoice;
 }
 
+/** The person who submitted the invoice, from its intake event; null for a system channel. */
+async function submittedBy(client, invoiceId) {
+  const { rows: [row] } = await client.query(
+    "select actor_id from finops.audit_events where invoice_id = $1 and action = 'received' limit 1", [invoiceId],
+  );
+  return row?.actor_id ?? null;
+}
+
 const cancelAllSteps = (client, invoiceId) =>
   client.query(
     "update finops.approval_steps set status = 'CANCELLED' where invoice_id = $1 and status in ('PENDING', 'APPROVED')",
@@ -178,6 +186,9 @@ export async function decideApprovalStep({ pool, policy, company }, { invoiceId,
     }
     if (invoice.review_accepted_by === actor.id) {
       throw new RuleError(409, "REVIEWER_CANNOT_APPROVE", "Wer die Rechnung aus der Sichtprüfung freigegeben hat, darf sie nicht auch fachlich freigeben");
+    }
+    if (await submittedBy(client, invoiceId) === actor.id) {
+      throw new RuleError(409, "UPLOADER_CANNOT_APPROVE", "Wer die Rechnung eingereicht hat, darf sie nicht auch freigeben");
     }
 
     // Checked again at the last gate: master data or a re-validation may have

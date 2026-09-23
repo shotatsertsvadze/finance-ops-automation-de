@@ -1,3 +1,4 @@
+import path from "node:path";
 import express from "express";
 import cors from "cors";
 import { invoicesRouter } from "./routes/invoices.js";
@@ -5,7 +6,10 @@ import { masterDataRouter, usersRouter } from "./routes/master-data.js";
 import { accountingRouter, bankRouter, dashboardRouter, reconciliationRouter } from "./routes/money.js";
 import { authRouter } from "./routes/auth.js";
 import { requireSession, sessionMiddleware } from "./routes/session.js";
+import { healthRouter } from "./routes/health.js";
 import { STATE_LABELS, TRANSITIONS } from "./domain/workflow/states.js";
+import { requestLog } from "./request-log.js";
+import { log } from "./log.js";
 
 /**
  * Same-origin only. The UI is served by Vite in development, which proxies
@@ -23,10 +27,31 @@ function corsOptions() {
   };
 }
 
-/** Express app without listen(), so tests can mount it on any port. */
-export function createApp(deps) {
+/**
+ * The built client, when there is one. Any GET outside /api gets index.html,
+ * so a route the browser reloads (`/rechnung/:id`) reaches the client router.
+ */
+function serveClient(app, clientDir) {
+  const index = path.resolve(clientDir, "index.html");
+  app.use(express.static(clientDir, { index: false }));
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api/")) return next();
+    res.sendFile(index);
+  });
+}
+
+/**
+ * Express app without listen(), so tests can mount it on any port.
+ * `clientDir` is the built client (`dist/`); in development Vite serves it.
+ */
+export function createApp(deps, { clientDir } = {}) {
   const app = express();
   app.disable("x-powered-by");
+  // req.ip is the client, not the reverse proxy in front: X-Forwarded-For is
+  // believed only from a proxy on this host, so a client connecting directly
+  // cannot choose its own address to dodge the login throttle (ADR-059).
+  app.set("trust proxy", "loopback");
+  app.use(requestLog);
   // Content types on this API are declared, never guessed. Without this a
   // browser may sniff bytes back into a renderable type and run them.
   app.use((req, res, next) => {
@@ -36,7 +61,7 @@ export function createApp(deps) {
   app.use(cors(corsOptions()));
   app.use(express.json({ limit: "1mb" }));
 
-  app.get("/api/health", (req, res) => res.json({ ok: true }));
+  app.use("/api/health", healthRouter(deps));
 
   app.use("/api", sessionMiddleware(deps.pool));
   app.use("/api/auth", authRouter(deps));
@@ -51,12 +76,14 @@ export function createApp(deps) {
   app.use("/api/bank", bankRouter(deps));
   app.use("/api/reconciliation", reconciliationRouter(deps));
   app.use("/api/dashboard", dashboardRouter(deps));
+  if (clientDir) serveClient(app, clientDir);
 
   app.use((error, req, res, next) => {
     if (error.status) return res.status(error.status).json({ error: error.message, code: error.code ?? null, details: error.details ?? null });
-    if (error.name === "MulterError" || /XML-Dateien/.test(error.message)) return res.status(400).json({ error: error.message, code: "UPLOAD_REJECTED" });
-    console.error(error);
-    res.status(500).json({ error: "Interner Fehler", code: "INTERNAL_ERROR" });
+    if (error.name === "MulterError") return res.status(400).json({ error: error.message, code: "UPLOAD_REJECTED" });
+    // The cause stays in the log; the caller gets the id to quote.
+    log("error", "internal error", { request_id: req.id, error: error.message, stack: error.stack });
+    res.status(500).json({ error: `Interner Fehler (Referenz ${req.id})`, code: "INTERNAL_ERROR", details: { request_id: req.id } });
   });
   return app;
 }

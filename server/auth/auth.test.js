@@ -70,7 +70,7 @@ after(async () => {
 beforeEach(async () => {
   await deps.pool.query("delete from finops.invoices");
   await deps.pool.query("delete from finops.sessions");
-  await deps.pool.query("update finops.users set failed_attempts = 0, locked_until = null");
+  await deps.pool.query("delete from finops.login_failures");
 });
 
 // ---------------------------------------------------------------- hashing ---
@@ -119,20 +119,57 @@ test("a wrong password is refused, and so is an unknown address, with the same a
   assert.deepEqual(await wrong.json(), await unknown.json(), "the answer must not reveal whether the account exists");
 });
 
-test("repeated failures lock the account, and the lock outlives a correct password", async () => {
+test("repeated failures stop that address, even with the right password", async () => {
   for (let i = 0; i < 5; i += 1) {
     await call("/api/auth/login", { method: "POST", body: { email: MANAGER, password: "falsch" } });
   }
   const res = await call("/api/auth/login", { method: "POST", body: { email: MANAGER, password: DEMO_PASSWORD } });
   assert.equal(res.status, 429, "guessing must not stay free");
+  assert.equal((await res.json()).code, "LOGIN_THROTTLED");
+  assert.equal(res.headers.get("retry-after"), "900");
+});
+
+test("an unknown address is throttled exactly like a real one", async () => {
+  // A 429 that only real accounts earned would enumerate them.
+  const guess = (email) => call("/api/auth/login", { method: "POST", body: { email, password: "falsch" } });
+  for (let i = 0; i < 5; i += 1) {
+    await guess(CLERK);
+    await guess("niemand@nordwerk.example");
+  }
+  const known = await guess(CLERK);
+  const unknown = await guess("niemand@nordwerk.example");
+  assert.equal(known.status, 429);
+  assert.equal(unknown.status, 429);
+  assert.deepEqual(await known.json(), await unknown.json());
+});
+
+test("one address guessing across many accounts is stopped", async () => {
+  // Password spraying: one guess per account never reaches the per-account
+  // limit, so the address has a limit of its own.
+  const spray = (i) => call("/api/auth/login", { method: "POST", body: { email: `person${i}@nordwerk.example`, password: "Sommer2026!" } });
+  for (let i = 0; i < 20; i += 1) assert.equal((await spray(i)).status, 401);
+  assert.equal((await spray(20)).status, 429);
+  const elsewhere = await call("/api/auth/login", { method: "POST", body: { email: CLERK, password: DEMO_PASSWORD }, headers: { "X-Forwarded-For": "198.51.100.4" } });
+  assert.equal(elsewhere.status, 200, "other addresses are untouched");
+});
+
+test("someone guessing a password does not lock its owner out", async () => {
+  // Five wrong passwords used to lock the account itself, so anyone who knew
+  // an address could shut the CFO out at will (ADR-059).
+  const from = (ip) => ({ "X-Forwarded-For": ip });
+  for (let i = 0; i < 6; i += 1) {
+    await call("/api/auth/login", { method: "POST", body: { email: MANAGER, password: "falsch" }, headers: from("203.0.113.9") });
+  }
+  const owner = await call("/api/auth/login", { method: "POST", body: { email: MANAGER, password: DEMO_PASSWORD }, headers: from("198.51.100.4") });
+  assert.equal(owner.status, 200, "the owner signs in from their own address");
 });
 
 test("a successful login clears the failure counter", async () => {
   await call("/api/auth/login", { method: "POST", body: { email: FINANCE, password: "falsch" } });
   const { res } = await login(FINANCE);
   assert.equal(res.status, 200);
-  const { rows } = await deps.pool.query("select failed_attempts from finops.users where email = $1", [FINANCE]);
-  assert.equal(rows[0].failed_attempts, 0);
+  const { rows } = await deps.pool.query("select count(*)::int as n from finops.login_failures where email = $1", [FINANCE]);
+  assert.equal(rows[0].n, 0);
 });
 
 // --------------------------------------------------------------- sessions ---
@@ -273,36 +310,26 @@ test("the session reports what the role may do, so the UI need not guess", async
   assert.ok(financeBody.permissions.includes("payment:instruct"));
 });
 
-test("parallel wrong passwords cannot outrun the lockout", () => {
-  // The counter used to be computed in Node from a row read a moment earlier,
-  // so simultaneous attempts overwrote one another and eight guesses counted
-  // as one. Two batches, because one batch of four is under the threshold.
-  return (async () => {
-    const guess = () => call("/api/auth/login", { method: "POST", body: { email: CLERK, password: "falsch" } });
-    for (let batch = 0; batch < 2; batch += 1) {
-      const results = await Promise.all([guess(), guess(), guess(), guess()]);
-      for (const res of results) assert.ok([401, 429].includes(res.status), `unexpected ${res.status}`);
-    }
+test("parallel wrong passwords cannot outrun the throttle", async () => {
+  // Each attempt is recorded before its password is checked, so simultaneous
+  // guesses count one another: of twelve at once, no more than the limit get
+  // as far as a password check.
+  const guess = () => call("/api/auth/login", { method: "POST", body: { email: CLERK, password: "falsch" } });
+  const results = await Promise.all(Array.from({ length: 12 }, guess));
+  const checked = results.filter((r) => r.status === 401).length;
+  assert.ok(results.every((r) => [401, 429].includes(r.status)));
+  assert.ok(checked <= 5, `at most five guesses may be checked, ${checked} were`);
 
-    const { rows } = await deps.pool.query("select failed_attempts, locked_until from finops.users where email = $1", [CLERK]);
-    assert.ok(rows[0].failed_attempts >= 5, `every attempt must count, got ${rows[0].failed_attempts}`);
-    assert.notEqual(rows[0].locked_until, null, "the account is locked");
-
-    const after = await call("/api/auth/login", { method: "POST", body: { email: CLERK, password: DEMO_PASSWORD } });
-    assert.equal(after.status, 429, "guessing in parallel must not stay free");
-  })();
+  const after = await call("/api/auth/login", { method: "POST", body: { email: CLERK, password: DEMO_PASSWORD } });
+  assert.equal(after.status, 429, "guessing in parallel must not stay free");
 });
 
-test("a lock already in force is not cleared by a further failure", async () => {
-  for (let i = 0; i < 5; i += 1) {
+test("a further guess while throttled keeps the address throttled", async () => {
+  for (let i = 0; i < 6; i += 1) {
     await call("/api/auth/login", { method: "POST", body: { email: MANAGER, password: "falsch" } });
   }
-  const { rows: [locked] } = await deps.pool.query("select locked_until from finops.users where email = $1", [MANAGER]);
-  await call("/api/auth/login", { method: "POST", body: { email: MANAGER, password: "falsch" } });
-  const { rows: [still] } = await deps.pool.query("select locked_until from finops.users where email = $1", [MANAGER]);
-
-  assert.notEqual(still.locked_until, null, "a further failure must not unlock the account");
-  assert.ok(still.locked_until >= locked.locked_until, "and must not shorten the lock");
+  const res = await call("/api/auth/login", { method: "POST", body: { email: MANAGER, password: DEMO_PASSWORD } });
+  assert.equal(res.status, 429);
 });
 
 // ------------------------------------------------------- user enumeration ---
@@ -333,7 +360,7 @@ test("a wrong password and an unknown address take comparable time", async () =>
   // Identical wording is not enough: answering an unknown address in a
   // millisecond and a known one in forty enumerates the staff list.
   const attempt = async (email) => {
-    await deps.pool.query("update finops.users set failed_attempts = 0, locked_until = null");
+    await deps.pool.query("delete from finops.login_failures");
     const t0 = process.hrtime.bigint();
     const res = await call("/api/auth/login", { method: "POST", body: { email, password: "definitiv-falsch" } });
     await res.text();
@@ -354,17 +381,15 @@ test("a wrong password and an unknown address take comparable time", async () =>
   assert.ok(ratio < 3, `timing must not reveal whether the account exists: ${ratio.toFixed(2)}x`);
 });
 
-test("a lock that has expired starts the count again", async () => {
-  for (let i = 0; i < 5; i += 1) {
+test("failures older than the window no longer count", async () => {
+  for (let i = 0; i < 6; i += 1) {
     await call("/api/auth/login", { method: "POST", body: { email: FINANCE, password: "falsch" } });
   }
-  // Move the lock into the past, as time would.
-  await deps.pool.query("update finops.users set locked_until = now() - interval '1 minute' where email = $1", [FINANCE]);
+  // Move the failures into the past, as time would.
+  await deps.pool.query("update finops.login_failures set failed_at = now() - interval '16 minutes'");
 
   const one = await call("/api/auth/login", { method: "POST", body: { email: FINANCE, password: "falsch" } });
-  assert.equal(one.status, 401, "the account is usable again");
-
-  const { rows: [user] } = await deps.pool.query("select failed_attempts, locked_until from finops.users where email = $1", [FINANCE]);
-  assert.equal(user.failed_attempts, 1, "the expired attempts are not still counted");
-  assert.equal(user.locked_until, null, "and one wrong attempt does not re-lock immediately");
+  assert.equal(one.status, 401, "the address may try again");
+  const { rows: [left] } = await deps.pool.query("select count(*)::int as n from finops.login_failures");
+  assert.equal(left.n, 1, "the old failures are gone, and one wrong attempt does not throttle again");
 });

@@ -1,4 +1,5 @@
 import { centsToDecimal, toCents } from "../money.js";
+import { HOLDS_CAPACITY_STATES } from "../workflow/states.js";
 
 /**
  * A purchase order is a spending limit, so what matters is the sum of every
@@ -8,25 +9,18 @@ import { centsToDecimal, toCents } from "../money.js";
  * that balance minus the active commitments held by other invoices.
  */
 
-/** States in which an invoice is a claim on the order's capacity. */
-const HOLDS_CAPACITY = new Set([
-  "READY_FOR_APPROVAL", "APPROVED", "ACCOUNTING_READY",
-  "PAYMENT_PENDING", "PAID", "RECONCILED", "RECONCILIATION_EXCEPTION",
-  // A booked credit note is as final as a reconciled invoice. Leaving it out
-  // would release its negative claim and undo the capacity it gave back, at
-  // the moment the credit becomes final.
-  "CREDITED",
-]);
+const HOLDS_CAPACITY = new Set(HOLDS_CAPACITY_STATES);
 
 /**
  * Capacity left on the order, ignoring what this invoice itself holds.
  *
  * Locks the order row: without it two invoices arriving together read the
- * same availability and both commit.
+ * same availability and both commit. The invoice detail reads the same answer
+ * with `lock: false`.
  */
-export async function availableCents(client, purchaseOrderId, excludeInvoiceId = null) {
+export async function availableCents(client, purchaseOrderId, excludeInvoiceId = null, { lock = true } = {}) {
   const { rows: [order] } = await client.query(
-    "select remaining_amount from finops.purchase_orders where id = $1 for update",
+    `select remaining_amount from finops.purchase_orders where id = $1 ${lock ? "for update" : ""}`,
     [purchaseOrderId],
   );
   if (!order) return null;

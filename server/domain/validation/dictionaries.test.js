@@ -9,12 +9,15 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { DICTIONARIES, auditReason, checkSentence, errorText, translateTerms } from "../../../client/src/lib/dictionaries.js";
 import { STATES } from "../workflow/states.js";
 import { PERMISSIONS } from "../../auth/authorize.js";
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
+// Every module that emits business checks. A check kept in its own module is
+// still a check, and a scan that misses it passes for the wrong reason.
+const businessCheckSources = () => [source("./business-checks.js"), source("./tax-breakdown.js")].join("\n");
 
 /**
  * Every `passed("code", …)` / `failed(…)` / … the checks can emit, including
@@ -24,7 +27,7 @@ const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
  * Missing that form would have wrongly reported a correct entry as stale.
  */
 function emittedChecks() {
-  const files = [source("./business-checks.js"), source("../invoice/technical-validation.js")];
+  const files = [businessCheckSources(), source("../invoice/technical-validation.js")];
   const pairs = new Set();
   for (const text of files) {
     for (const [, fn, code] of text.matchAll(/\b(passed|failed|warning|skipped|info)\("([a-z_]+)"/g)) {
@@ -59,7 +62,7 @@ test("the English check dictionary has no entries for checks that do not exist",
  * remembered.
  */
 function leadingChecks() {
-  const text = source("./business-checks.js");
+  const text = businessCheckSources();
   return [...new Set(
     [...text.matchAll(/\bfailed\("([a-z_]+)", SEVERITY\.(?:HIGH|MEDIUM)/g)].map(([, code]) => code.toUpperCase()),
   )].sort();
@@ -229,18 +232,24 @@ test("a comment a person typed is left in their own words", () => {
 // ------------------------------------------------------------- refusals ----
 
 /**
+ * Every server module that could send a refusal: all of server/, minus tests
+ * and test support. Scanned rather than listed, because a hand-kept list
+ * silently misses the next new folder and then passes for the wrong reason.
+ */
+function serverModules() {
+  const root = new URL("../../", import.meta.url);
+  return readdirSync(root, { recursive: true })
+    .filter((f) => f.endsWith(".js") && !f.endsWith(".test.js") && !f.startsWith("test-support"))
+    .map((f) => `../../${f}`);
+}
+
+/**
  * Every refusal code the server can send: the second argument of a RuleError,
  * the first of a TransitionError or NotFoundError, and the `code` field of a
  * refusal a route writes directly.
  */
 function emittedErrorCodes() {
-  const files = [
-    "../../routes/invoices.js", "../../routes/auth.js", "../../routes/session.js", "../../routes/money.js",
-    "../../app.js", "../../auth/authorize.js",
-    "../workflow/transitions.js", "../intake/intake.js", "../approvals/approvals.js",
-    "../accounting/accounting.js", "../accounting/credit-notes.js", "../accounting/netting.js",
-    "../payments/payments.js", "../reconciliation/reconciliation.js",
-  ];
+  const files = serverModules();
   const codes = new Set();
   for (const path of files) {
     const text = source(path);
@@ -274,9 +283,7 @@ test("no refusal text exists for a code the server cannot send", () => {
 test("every refusal is thrown with a code", () => {
   // A refusal without one falls back to German, which is the defect this
   // closes, so the absence has to fail rather than degrade quietly.
-  const domain = ["../workflow/transitions.js", "../intake/intake.js", "../approvals/approvals.js",
-    "../accounting/accounting.js", "../payments/payments.js", "../reconciliation/reconciliation.js"];
-  for (const path of domain) {
+  for (const path of serverModules()) {
     for (const [line] of source(path).matchAll(/throw new (?:RuleError|TransitionError|NotFoundError)\([^\n]*/g)) {
       assert.match(line, /"[A-Z_]{3,}"/, `refusal without a code in ${path}: ${line.trim()}`);
     }
@@ -296,4 +303,10 @@ test("an unknown refusal code falls back to the sentence the server sent", () =>
   const unknown = { code: "ETWAS_NEUES", message: "Serversatz auf Deutsch", details: null };
   assert.equal(errorText(DICTIONARIES.en, unknown), "Serversatz auf Deutsch");
   assert.equal(errorText(DICTIONARIES.en, { message: "ohne Code" }), "ohne Code");
+});
+
+test("an internal error shows the reference the server logged it under", () => {
+  const error = { code: "INTERNAL_ERROR", message: "Interner Fehler (Referenz r-1)", details: { request_id: "r-1" } };
+  assert.equal(errorText(DICTIONARIES.de, error), "Interner Fehler (Referenz r-1)");
+  assert.equal(errorText(DICTIONARIES.en, error), "Internal error (reference r-1)");
 });

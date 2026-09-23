@@ -16,13 +16,18 @@ Run: `npm test` (165 tests, all passing as of 2026-09-17). Database tests need
 | # | Risk / behaviour | Expected | Status | Evidence |
 |---|---|---|---|---|
 | R1 | Changed IBAN never auto-passes | HIGH failure, REVIEW_REQUIRED | AUTO | `intake.test.js` "B: changed IBAN never auto-passes"; `business-checks.test.js` also covers a RETIRED account not counting as approved |
+| R1a | A changed IBAN cannot be released from review | 422 `NOT_PAYABLE_ELIGIBLE`, blocker `supplier_iban_match`, stays REVIEW_REQUIRED | AUTO | `approvals.test.js` "a changed IBAN cannot be released from review"; the way on (master data, then re-validation, still one signature) is R06 in `controls.test.js` |
+| R1b | Payment re-checks master data | 409 `IBAN_NOT_VERIFIED` for a retired account, 409 `SUPPLIER_NOT_ACTIVE` for a blocked supplier; nothing instructed | AUTO | `moneypath.test.js` "no payment goes to …" |
 | R2 | Identical file uploaded twice | second is DUPLICATE, not processed, original untouched | AUTO | `intake.test.js` "identical file uploaded again becomes DUPLICATE" |
 | R3 | Same supplier + number, different file | REVIEW_REQUIRED, no payable record | AUTO | `intake.test.js` "D: same supplier and number in a different file" |
-| R4 | Two payable records for one supplier invoice number | impossible, DB rejects with 23505 | AUTO | `intake.test.js` "database forbids two payable records"; partial unique index `invoices_one_payable_per_number` |
+| R4 | Two payable records for one supplier invoice number | impossible, DB rejects with 23505 | AUTO | `intake.test.js` "database forbids two payable records"; partial unique index `invoices_one_payable_per_number`, covering CREDITED and SETTLED_BY_CREDIT since 0013; `schema-states.test.js` compares the index with `PAYABLE_STATES` |
+| R4a | Every state has exactly one phase, and every state list derives from it | a state without a phase fails the suite; nothing moves backward once committed | AUTO | `states.test.js` (ADR-051) |
 | R5 | Malformed / non-XML input | fail closed to REVIEW_REQUIRED, file kept and readable | AUTO | `intake.test.js` "F: malformed file fails closed", "non-XML bytes fail closed" |
 | R6 | XML with DOCTYPE or ENTITY | rejected before the parser runs | AUTO | `technical-validation.test.js` "DOCTYPE is rejected before parsing" |
 | R7 | Amount thresholds route to the right tier | 380 auto, 1 240 MANAGER, 30 000 three steps | AUTO | `decide.test.js` (incl. boundary values); `intake.test.js` A, E, G |
 | R8 | Same actor cannot satisfy two approval steps | 409, step stays PENDING, invoice not approved | AUTO | `approvals.test.js` "one actor cannot satisfy two approval steps" |
+| R8a | Whoever submitted an invoice cannot approve it | 409 `UPLOADER_CANNOT_APPROVE`; another manager can | AUTO | `approvals.test.js` "whoever submitted an invoice cannot approve it" |
+| R8b | Whoever signed an approval step cannot pay the invoice | 409 `APPROVER_CANNOT_PAY` on instruction and on confirmation, state unchanged; a second finance user can | AUTO | `separation.test.js` (ADR-056) |
 | R9 | Reviewer cannot approve what they released from review | 409, another approver succeeds | AUTO | `approvals.test.js` "whoever released an invoice from review cannot also approve it" |
 | R10 | Rejected invoice cannot become approved | 409 at the endpoint, no transition in the machine | AUTO | `approvals.test.js` "a rejected invoice cannot be approved afterwards"; `states.test.js` |
 | R11 | Finalised invoice cannot be processed again | 409, nothing changes | AUTO | `intake.test.js` "reprocess ... refused from APPROVED"; `app.test.js` returns 409 |
@@ -92,6 +97,25 @@ browser).
 | B9 | A surcharge is added, a prepayment subtracted | `totals_consistent` PASSED at the right amount | AUTO | `business-checks.test.js` |
 | B10 | A discount the totals do not declare | `totals_consistent` HIGH naming the link | AUTO | `business-checks.test.js` |
 | B11 | An allowance with no charge indicator | `totals_consistent` HIGH, not guessed either way | AUTO | `business-checks.test.js` |
+| B12 | Tax breakdown per rate | read from each TaxSubtotal; absent means none, not a guess | AUTO | `invoice/tax-breakdown.test.js` |
+| B13 | A breakdown that cannot be booked | `tax_breakdown_bookable` HIGH for a missing breakdown, an unmapped rate, reverse charge, a rate's tax off, or sums off | AUTO | `validation/tax-breakdown.test.js` |
+| B14 | An unbookable breakdown in review | REVIEW_REQUIRED, and review cannot release it | AUTO | `intake.test.js` "a rate with no tax key stops the invoice" |
+| B15 | A mixed-rate invoice | processed like a clean one; booked as one line per rate under one document number, one CSV row per line | AUTO | `intake.test.js`; `booking-lines.test.js` |
+| B16 | An invoice parsed before the breakdown was read | booked from its stored original, not guessed | AUTO | `booking-lines.test.js` |
+| B17 | The handoff does not trust validation alone | 422 `TAX_BREAKDOWN_NOT_BOOKABLE`, no line written | AUTO | `booking-lines.test.js` |
+| C1 | An approved invoice is stopped | CANCELLED, reason on the audit event, PO claim released | AUTO | `cancellation/cancel.test.js`; browser check 2026-09-23 (MANUAL): spine and history show it |
+| C2 | Stopping without a reason, or by a clerk or manager | 400 `REASON_REQUIRED`; 403 | AUTO | `cancellation/cancel.test.js` |
+| C3 | A booked invoice is stopped | reversal lines: new document number, sign turned, `reverses_document_no` names the booking | AUTO | `cancellation/cancel.test.js` |
+| C4 | Stopping before approval or once payment is instructed | 409 `NOT_CANCELLABLE` | AUTO | `cancellation/cancel.test.js`; `states.test.js` |
+| C5 | The client offers stopping only where the server allows it | APPROVED and every booked variant, finance, reason required | AUTO | `actions.test.js` |
+| C6 | Every server module is scanned for refusal codes | a new folder cannot slip past the dictionary guard | AUTO | `dictionaries.test.js` |
+| C7 | A payment the bank did not carry out | PAYMENT_FAILED with a reason; instruction FAILED | AUTO | `payments/payment-failure.test.js` |
+| C8 | Reporting a failure without a reason, or after confirmation | 400 `REASON_REQUIRED`; 409 | AUTO | `payments/payment-failure.test.js` |
+| C9 | Retry | back to ACCOUNTING_READY; the next instruction is a new attempt with its own key; confirmation pays that one | AUTO | `payments/payment-failure.test.js` |
+| C10 | Credits spent on a failed payment | released, open again, applied to the retry | AUTO | `payments/payment-failure.test.js` |
+| C11 | A failed payment is stopped | CANCELLED, booking reversed | AUTO | `payments/payment-failure.test.js` |
+| C12 | Two live instructions for one invoice | impossible, partial unique index | AUTO | `payments/payment-failure.test.js` |
+| C13 | Fail, then retry, in the browser | state, hint and both ways out shown; retry offers payment again | MANUAL | Browser, 2026-09-23, test database |
 | B12 | A stated amount that cannot be read is not zero | `totals_consistent` HIGH | AUTO | `business-checks.test.js` |
 | B13 | Nothing left to pay after a discount or prepayment | REVIEW_REQUIRED, `NOTHING_TO_PAY` | AUTO | `decide.test.js` |
 | B14 | A line amount that does not follow from quantity and price | `line_amounts_consistent` HIGH, totals still PASSED | AUTO | `business-checks.test.js` |
@@ -154,6 +178,8 @@ commitments is 510,00.
 | P11 | Invoice detail | reports available capacity, excluding the invoice's own hold | AUTO | "the invoice detail reports available capacity" |
 | P11b | A credit note gives capacity back | negative claim, order shows the amount free again | AUTO | `credit-note-path.test.js` |
 | P11c | A booked credit note keeps its claim | capacity stays back after CREDITED | AUTO | `credit-note-path.test.js`; releasing it undid the credit |
+| P11d | An invoice settled by credit keeps its claim | ACTIVE commitment after SETTLED_BY_CREDIT | AUTO | `netting-path.test.js` "a settled invoice keeps its claim" |
+| P11e | Claims released by settlement before 0013 are restored | once, however often the repair runs | AUTO | `upgrade.test.js` "an invoice settled by credit before 0013" |
 | P11a | An order taken past its value by reviewers | shown as over-committed, not as a negative availability | MANUAL | Invoice detail, DEMO-PO-KLEIN in the demo run |
 | P12 | Original R07 reproduction | no longer reproduces | MANUAL | Probe against a fresh database, 2026-09-17 |
 | P13 | Partial deliveries and order closure | not modelled | OPEN | Deliberate, see ADR-032; credit notes returning capacity are modelled, see ADR-049 |
@@ -181,7 +207,11 @@ described as working.
 | S1 | Correct password | 200, user returned, no secret in the body | AUTO | `auth.test.js` |
 | S2 | Session cookie flags | HttpOnly and SameSite=Strict | AUTO | `auth.test.js` |
 | S3 | Wrong password vs unknown address | identical 401 answer, no account enumeration | AUTO | `auth.test.js` |
-| S4 | Repeated failures | account locks, 429 even with the right password | AUTO | `auth.test.js` |
+| S4 | Repeated failures | the address is throttled, 429 `LOGIN_THROTTLED` with `Retry-After` even with the right password (ADR-059) | AUTO | `auth.test.js` "repeated failures stop that address" |
+| S4a | A guesser cannot lock the owner out | six failures from one address; the owner signs in from another | AUTO | `auth.test.js` "someone guessing a password does not lock its owner out" |
+| S4b | Password spraying from one address | twenty failures across accounts, the twenty-first refused; other addresses untouched | AUTO | `auth.test.js` "one address guessing across many accounts is stopped" |
+| S4c | Throttling does not enumerate accounts | a real and an unknown address are throttled with the same answer | AUTO | `auth.test.js` "an unknown address is throttled exactly like a real one" |
+| S4d | A client cannot choose its own address | `X-Forwarded-For` honoured through a loopback proxy, ignored on a direct connection | MANUAL | Probe, 2026-09-23: 1.2.3.4 via 127.0.0.1; the real LAN address when connecting directly |
 | S5 | Successful login | failure counter cleared | AUTO | `auth.test.js` |
 | S6 | No session | 401 on every protected route | AUTO | `auth.test.js` |
 | S7 | Forged session token | 401 | AUTO | `auth.test.js` |
@@ -202,6 +232,16 @@ described as working.
 | S22 | UI hides actions a role may not take | manager sees no review buttons, sees whose step it is | MANUAL | Browser, 2026-09-17 |
 | S23 | Test database safeguard | refuses to run when it equals `DATABASE_URL` | MANUAL | Probe, 2026-09-17 |
 | S24 | No password reset, second factor or SSO | out of scope | OPEN | Deliberate, see ADR-029 |
+| S25 | Production start refuses the published demo password | every such account named, ADMIN included; an account with its own password is not; `DEMO_MODE=true` allows it; development never refused | AUTO | `server/config/deployment.test.js` (ADR-058) |
+| S26 | Production start refuses a missing client build | names `npm run build` | AUTO | `server/config/deployment.test.js` |
+| S27 | Replacing a password ends the old sessions | old session 401, demo password 401, new password signs in; short password and unknown account refused | AUTO | `server/auth/set-password.test.js` |
+| S28 | The API serves the built client | page, assets, a reloaded client route gets the page; an unknown `/api` path stays a JSON 401 | AUTO | `server/client-serving.test.js` |
+| S30 | Every response names its request | `X-Request-Id` set; a usable inbound id kept, an unusable one replaced | AUTO | `server/observability.test.js` (ADR-060) |
+| S31 | One JSON log line per request | method, path, status, ms, user; no password, no query string | AUTO | `server/observability.test.js` |
+| S32 | An internal error is traceable, not exposed | logged with request id and stack; the caller gets the id, not the cause; the client shows it as the reference | AUTO | `server/observability.test.js`; `dictionaries.test.js` |
+| S33 | Readiness asks the database | 200 when it answers; 503 within the 2 s timeout when it hangs | AUTO | `server/observability.test.js` |
+| S34 | Logs from a running server | startup, health, readiness and a refused request each one JSON line; the test run writes none | MANUAL | Probe, 2026-09-23 |
+| S29 | `npm start` end to end | refused with exit 1 on demo passwords and no build; in demo mode serves the UI with `Secure` cookies, sign-in and reload work in chromium; after `user:password` for every account it starts and the demo password gets 401 | MANUAL | Probe, 2026-09-23, against the test database |
 
 ## Operational KPIs
 
@@ -219,6 +259,7 @@ described as working.
 | K10 | Review dwell time | measured entering review to release | AUTO | `kpi.test.js` |
 | K11 | Savings estimate | derived from the stated assumptions and real volume | AUTO | `kpi.test.js` |
 | K12 | API serves the same figures | 200 with the computed values | AUTO | `kpi.test.js` |
+| K12a | Credited and settled documents are not overdue | overdue and due-soon count only OUTSTANDING_STATES | AUTO | `kpi.test.js` "no settled document is overdue" |
 | K13 | Dashboard renders over demo data | all panels, German number format, no page overflow | MANUAL | Browser, 2026-09-17, 1400 px and 375 px |
 | K14 | Release-time measurement is sound | reviewed invoices show 17,9 h to release, non-reviewed 0,005 h | MANUAL | SQL check against demo data, 2026-09-17 |
 
@@ -245,6 +286,7 @@ described as working.
 | M17 | An open credit reduces what is sent to the bank | instruction 476.00 for a 595.00 invoice | AUTO | `netting-path.test.js` |
 | M18 | Netting order | oldest credit first, ties by number; independent of row order | AUTO | `netting.test.js` |
 | M19 | A credit of another supplier | not applied | AUTO | `netting-path.test.js` |
+| M19a | The open credit on the invoice detail | the netting's own figure: same supplier, same currency, drives pay vs. settle | AUTO | `netting-path.test.js` "the invoice detail shows the credit the payment would apply"; PO availability likewise comes from `availableCents` |
 | M20 | A credit note not yet booked | not available for netting | AUTO | `netting-path.test.js` |
 | M21 | An invoice the credits cover entirely | 409 `FULLY_CREDITED`; settles through its own action | AUTO | `netting-path.test.js` |
 | M22 | Settling an invoice with a remainder | 409 `NOT_FULLY_CREDITED`, nothing consumed | AUTO | `netting-path.test.js` |
@@ -293,6 +335,10 @@ described as working.
 | A4 | Non-XML upload | 400 | AUTO | `app.test.js` |
 | A5 | Original file download | byte-identical | AUTO | `app.test.js` |
 | A6 | Unknown invoice | 404 | AUTO | `app.test.js` |
+| A6a | An id that is not a UUID | 404 `INVOICE_NOT_FOUND` on reads and actions, not 500 | AUTO | `app.test.js` |
+| A6b | A malformed cookie | 401 like no session, not 500 | AUTO | `app.test.js` |
+| A6c | A refused upload | 400 with code `UPLOAD_REJECTED`, set where it is thrown | AUTO | `app.test.js` |
+| A6d | A dropped idle database connection | logged; the process keeps running | AUTO | `db.test.js` |
 
 ## UI
 
@@ -326,6 +372,8 @@ it is checked by `npm test` rather than by opening a browser.
 | U11 | Spine marks the stage an exception branched from as reached | "Bezahlt" filled while the exception is current | MANUAL | Browser, 2026-09-17, fixed after being spotted |
 | U12 | Decided approval step shows what it was signed for | document prefix, validation run and amount under the step; prefix matches the intake SHA-256 | MANUAL | Browser, 2026-09-17: `Beleg 8b48b6eb3f2b · Prüflauf 1 · 4.352,73 €` against file hash `8b48b6eb3f2bf49a…` |
 | U13 | Binding line does not overflow at 375 px | scrollWidth equals clientWidth | MANUAL | Browser, 2026-09-17, measured in page |
+| U14 | A request refused for want of a session signs the client out | `NOT_SIGNED_IN` reports it; a wrong password (`SIGN_IN_REFUSED`) and a 403 do not | AUTO | `client/src/lib/api.test.js` (ADR-057) |
+| U15 | An expired session returns to sign-in, not to empty data | before: payments page showed "0 Umsätze importiert" over 38 lines; after: sign-in with the expiry note, none on a first visit, and signing in again lands on the same page | MANUAL | Browser, 2026-09-23: session expired in the database, then navigated |
 
 ## Independent review 2026-09-17
 
@@ -340,7 +388,7 @@ recorded in the evidence column. The report itself is left as written.
 | F03 | Reference matching selects the wrong invoice | Probe against the real matcher: `INV-10` matched `INV-1`; `"INV-A und INV-LONG"` matched the longer one | Token boundaries; the longest-number tie-break removed; ADR-036 | AUTO `matching.test.js` |
 | F04 | The commitment migration forgets existing claims | Disposable database: 0001-0005, an APPROVED invoice for 319,33, then the rest; availability still reported 500,00 | Backfill migration 0009; ADR-037 | AUTO `upgrade.test.js` |
 | F05 | Manual resolution does not consume the bank evidence | `reconciliation.test.js`: resolved transaction returned to the pool and matched a later invoice | `RESOLVED` status, set in the same transaction; ADR-036 | AUTO `reconciliation.test.js` |
-| F06 | Concurrent login failures bypass the lockout | `auth.test.js`: eight parallel guesses, then a correct password still succeeded | Increment and lock decided in one statement | AUTO `auth.test.js` |
+| F06 | Concurrent login failures bypass the lockout | `auth.test.js`: eight parallel guesses, then a correct password still succeeded | Increment and lock decided in one statement; since ADR-059 each attempt is recorded before its password is checked, twelve at once check at most five | AUTO `auth.test.js` |
 | F07 | Invoice references become spreadsheet formulas in CSV | `csv-export.test.js`: `=1+1` reached the cell unescaped | Formula triggers prefixed, numbers exempt; ADR-038 | AUTO `csv-export.test.js` |
 | F08 | Rejection is offered but refused while information is requested | `approvals.test.js`: 409 from `INFO_REQUESTED` | The declared transition is handled, with the same rules | AUTO `approvals.test.js` |
 | F09 | Review-cycle medians can be negative | `kpi.test.js`: `READY_FOR_APPROVAL -> INFO_REQUESTED -> REVIEW_REQUIRED` gave -1 hours | Each review entry paired with its own exit; open visits excluded | AUTO `kpi.test.js` |
@@ -401,7 +449,7 @@ findings themselves.
 |---|---|---|---|---|
 | R1 | Reconcile against the payment instruction, not the invoice | the bank line is compared with what was sent to the bank | AUTO | `matching.test.js`, `reconciliation.test.js`; inner join on `payment_instructions` |
 | R2 | Login timing must not reveal whether an account exists | comparable time for known and unknown addresses | AUTO | `auth.test.js`; measured 1.1 ms vs 40.4 ms before, 36.3 vs 37.7 after |
-| R3 | Defined behaviour for an expired lock | the attempt count starts again | AUTO | `auth.test.js` |
+| R3 | Defined behaviour for an expired lock | failures older than the window no longer count (ADR-059) | AUTO | `auth.test.js` "failures older than the window no longer count" |
 | R4 | The test-database guard must not be defeated by an equivalent URL | identity, not string equality | MANUAL | 2026-09-17: `postgresql://127.0.0.1:5432/finops` against `postgresql://localhost/finops` refused before `reset()`; dev database intact |
 | R5 | KPI definition changes recorded as decisions | an ADR per changed definition | DOC | ADR-039 |
 | R6 | The README's no-enumeration claim matched to the evidence | wording and timing both covered | DOC | README, ADR-040 |

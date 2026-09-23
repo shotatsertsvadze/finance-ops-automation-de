@@ -9,7 +9,7 @@ const DEMO_ACCOUNTS = [
   { email: "sabine.vogt@nordwerk.example", role: "CFO" },
 ];
 
-export default function LoginView({ onLogin }) {
+export default function LoginView({ onLogin, expired }) {
   const { t, errorText, role } = useI18n();
   const [email, setEmail] = useState(DEMO_ACCOUNTS[0].email);
   const [password, setPassword] = useState("");
@@ -50,6 +50,7 @@ export default function LoginView({ onLogin }) {
                    onChange={(e) => setPassword(e.target.value)} />
           </label>
 
+          {expired && !error && <div className="toast" role="status">{t("sessionExpired")}</div>}
           {error && <div className="toast is-error" role="alert">{error}</div>}
 
           <button className="btn login-submit" type="submit" disabled={busy}>

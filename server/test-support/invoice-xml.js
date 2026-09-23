@@ -28,14 +28,24 @@ export function buildInvoiceXml({
   iban = "DE89370400440532013000",
   issueDate = "2026-09-15",
   dueDate = "2026-10-15",
+  // A second line at a reduced rate, 7 % unless stated, with its own subtotal.
+  reducedNetCents = 0,
+  reducedPercent = 7,
 }) {
   const total = (charge) => allowances.filter((a) => Boolean(a.charge) === charge)
     .reduce((sum, a) => sum + a.amountCents, 0);
   const allowanceTotal = total(false);
   const chargeTotal = total(true);
-  const net = netCents - allowanceTotal + chargeTotal;
-  const vat = Math.round(net * 0.19);
+  const standardNet = netCents - allowanceTotal + chargeTotal;
+  const standardVat = Math.round(standardNet * 0.19);
+  const reducedVat = Math.round(reducedNetCents * reducedPercent / 100);
+  const net = standardNet + reducedNetCents;
+  const vat = standardVat + reducedVat;
   const gross = net + vat;
+  const reducedSubtotal = reducedNetCents ? `<cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${money(reducedNetCents)}</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">${money(reducedVat)}</cbc:TaxAmount>
+      <cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>${reducedPercent}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
+    </cac:TaxSubtotal>` : "";
   const payable = gross - prepaidCents + roundingCents;
   const allowanceCharges = allowances.map((a) => `<cac:AllowanceCharge>
     <cbc:ChargeIndicator>${a.charge ? "true" : "false"}</cbc:ChargeIndicator>
@@ -89,13 +99,14 @@ export function buildInvoiceXml({
   <cac:PaymentTerms><cbc:Note>Zahlbar innerhalb von 30 Tagen ohne Abzug</cbc:Note></cac:PaymentTerms>
   ${allowanceCharges}
   <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">${money(vat)}</cbc:TaxAmount>
-    <cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${money(net)}</cbc:TaxableAmount>
-      <cbc:TaxAmount currencyID="EUR">${money(vat)}</cbc:TaxAmount>
+    <cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${money(standardNet)}</cbc:TaxableAmount>
+      <cbc:TaxAmount currencyID="EUR">${money(standardVat)}</cbc:TaxAmount>
       <cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>19</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
     </cac:TaxSubtotal>
+    ${reducedSubtotal}
   </cac:TaxTotal>
   <cac:LegalMonetaryTotal>
-    <cbc:LineExtensionAmount currencyID="EUR">${money(netCents)}</cbc:LineExtensionAmount>
+    <cbc:LineExtensionAmount currencyID="EUR">${money(netCents + reducedNetCents)}</cbc:LineExtensionAmount>
     <cbc:TaxExclusiveAmount currencyID="EUR">${money(net)}</cbc:TaxExclusiveAmount>
     <cbc:TaxInclusiveAmount currencyID="EUR">${money(gross)}</cbc:TaxInclusiveAmount>
     ${optional("AllowanceTotalAmount", allowanceTotal)}
@@ -111,6 +122,13 @@ export function buildInvoiceXml({
     <cac:Item><cbc:Name>Leistung laut Bestellung ${po}</cbc:Name></cac:Item>
     <cac:Price><cbc:PriceAmount currencyID="EUR">${money(netCents)}</cbc:PriceAmount></cac:Price>
   </cac:${lineTag}>
+  ${reducedNetCents ? `<cac:${lineTag}>
+    <cbc:ID>2</cbc:ID>
+    <cbc:${quantityTag} unitCode="C62">1</cbc:${quantityTag}>
+    <cbc:LineExtensionAmount currencyID="EUR">${money(reducedNetCents)}</cbc:LineExtensionAmount>
+    <cac:Item><cbc:Name>Verpflegung</cbc:Name></cac:Item>
+    <cac:Price><cbc:PriceAmount currencyID="EUR">${money(reducedNetCents)}</cbc:PriceAmount></cac:Price>
+  </cac:${lineTag}>` : ""}
 </ubl:${root}>
 `;
 }

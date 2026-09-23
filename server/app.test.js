@@ -66,3 +66,25 @@ test("POST /api/invoices/:id/reprocess on an approved invoice is a 409", async (
 test("unknown invoice is a 404", async () => {
   assert.equal((await clients.clerk.get(`/api/invoices/00000000-0000-0000-0000-000000000000`)).status, 404);
 });
+
+test("an id that is not a UUID is a 404, on reads and on actions alike", async () => {
+  // Postgres refuses the cast, which used to surface as a 500.
+  for (const res of [
+    await clients.clerk.get("/api/invoices/not-a-uuid"),
+    await clients.clerk.get("/api/invoices/not-a-uuid/file"),
+    await clients.clerk.post("/api/invoices/not-a-uuid/reprocess"),
+  ]) {
+    assert.equal(res.status, 404);
+    assert.equal((await res.json()).code, "INVOICE_NOT_FOUND");
+  }
+});
+
+test("a malformed cookie is an unknown session, not a server error", async () => {
+  const res = await fetch(`${base}/api/invoices`, { headers: { Cookie: "finops_session=%E0%A4%A" } });
+  assert.equal(res.status, 401);
+});
+
+test("a refused upload says why, by code", async () => {
+  const res = await clients.clerk.upload(Buffer.from("%PDF"), "scan.pdf");
+  assert.equal((await res.json()).code, "UPLOAD_REJECTED");
+});

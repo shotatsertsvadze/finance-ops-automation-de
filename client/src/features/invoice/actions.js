@@ -13,6 +13,10 @@ const prompt = (key, ...args) => ({ key, args });
 
 const bookingNo = (invoice) => invoice.accounting_record?.document_no ?? "";
 
+// Offered until money is on its way: fraud found after the signature needs a
+// way out that is not the payment (ADR-054).
+const cancel = () => action("cancel", "invoice:cancel", { tone: "high", needsComment: true });
+
 /**
  * @returns `{ prompt: {key, args}, step, actions: [{key, needs, tone, needsComment}] }`
  */
@@ -48,7 +52,7 @@ export function availableActions(invoice) {
     case "APPROVED":
       return {
         prompt: prompt("hintApproved"), step,
-        actions: [action("accounting", "accounting:handoff", { tone: "ok" })],
+        actions: [action("accounting", "accounting:handoff", { tone: "ok" }), cancel()],
       };
 
     case "ACCOUNTING_READY":
@@ -57,7 +61,17 @@ export function availableActions(invoice) {
     case "PAYMENT_PENDING":
       return {
         prompt: prompt("hintPaymentPending"), step,
-        actions: [action("confirm", "payment:confirm", { tone: "ok" })],
+        actions: [
+          action("confirm", "payment:confirm", { tone: "ok" }),
+          // The bank rejected or returned it, or confirmed a recall (ADR-055).
+          action("fail", "payment:confirm", { tone: "high", needsComment: true }),
+        ],
+      };
+
+    case "PAYMENT_FAILED":
+      return {
+        prompt: prompt("hintPaymentFailed"), step,
+        actions: [action("retry", "payment:instruct", { tone: "ok" }), cancel()],
       };
 
     case "RECONCILIATION_EXCEPTION":
@@ -87,7 +101,7 @@ function bookedActions(invoice, step) {
   if (invoice.document_type === "CREDIT_NOTE") {
     return {
       prompt: prompt("hintCreditNoteReady", bookingNo(invoice)), step,
-      actions: [action("credit", "payment:instruct", { tone: "ok" })],
+      actions: [action("credit", "payment:instruct", { tone: "ok" }), cancel()],
     };
   }
 
@@ -99,13 +113,13 @@ function bookedActions(invoice, step) {
   if (gross > 0 && credit >= gross) {
     return {
       prompt: prompt("hintFullyCredited", bookingNo(invoice)), step,
-      actions: [action("settle", "payment:instruct", { tone: "ok" })],
+      actions: [action("settle", "payment:instruct", { tone: "ok" }), cancel()],
     };
   }
   return {
     // Stated before the click: the amount that will actually leave the bank.
     prompt: prompt(credit > 0 ? "hintNetted" : "hintAccountingReady", bookingNo(invoice)), step,
-    actions: [action("pay", "payment:instruct", { tone: "ok" })],
+    actions: [action("pay", "payment:instruct", { tone: "ok" }), cancel()],
   };
 }
 

@@ -14,6 +14,7 @@ export const PERMISSIONS = {
   "approval:decide": ["MANAGER", "FINANCE", "CFO"],
   "accounting:handoff": ["FINANCE", "ADMIN"],
   "payment:instruct": ["FINANCE", "ADMIN"],
+  "invoice:cancel": ["FINANCE", "ADMIN"],
   "payment:confirm": ["FINANCE", "ADMIN"],
   "bank:import": ["FINANCE", "ADMIN"],
   "reconciliation:run": ["FINANCE", "ADMIN"],

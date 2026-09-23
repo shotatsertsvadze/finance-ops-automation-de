@@ -41,12 +41,12 @@ test("an approval with no pending step offers nothing", () => {
 });
 
 test("an approved invoice offers the booking", () => {
-  assert.deepEqual(keys(invoice({ state: "APPROVED" })), ["accounting"]);
+  assert.deepEqual(keys(invoice({ state: "APPROVED" })), ["accounting", "cancel"]);
 });
 
 test("a booked invoice with no credits offers payment", () => {
   const result = availableActions(invoice());
-  assert.deepEqual(result.actions.map((a) => a.key), ["pay"]);
+  assert.deepEqual(result.actions.map((a) => a.key), ["pay", "cancel"]);
   assert.equal(result.prompt.key, "hintAccountingReady");
 });
 
@@ -54,40 +54,40 @@ test("a booked credit note offers the credit, never the payment", () => {
   // The failure this prevents: sending money in the direction the document
   // reverses.
   const result = availableActions(invoice({ document_type: "CREDIT_NOTE" }));
-  assert.deepEqual(result.actions.map((a) => a.key), ["credit"]);
+  assert.deepEqual(result.actions.map((a) => a.key), ["credit", "cancel"]);
   assert.equal(result.prompt.key, "hintCreditNoteReady");
 });
 
 test("a partly credited invoice still pays, and says so", () => {
   const result = availableActions(invoice({ open_credit_amount: "200.00" }));
-  assert.deepEqual(result.actions.map((a) => a.key), ["pay"]);
+  assert.deepEqual(result.actions.map((a) => a.key), ["pay", "cancel"]);
   assert.equal(result.prompt.key, "hintNetted", "the reduction is stated before the click");
 });
 
 test("an invoice its credits cover offers settlement, not payment", () => {
   const result = availableActions(invoice({ open_credit_amount: "1428.00" }));
-  assert.deepEqual(result.actions.map((a) => a.key), ["settle"]);
+  assert.deepEqual(result.actions.map((a) => a.key), ["settle", "cancel"]);
   assert.equal(result.prompt.key, "hintFullyCredited");
 });
 
 test("credits larger than the invoice still settle it", () => {
-  assert.deepEqual(keys(invoice({ open_credit_amount: "5000.00" })), ["settle"]);
+  assert.deepEqual(keys(invoice({ open_credit_amount: "5000.00" })), ["settle", "cancel"]);
 });
 
 test("a zero invoice is not settled by a zero credit", () => {
   // 0 >= 0 is true, and settling nothing against nothing would be a button
   // that cannot work. Such an invoice never reaches here anyway.
-  assert.deepEqual(keys(invoice({ gross_amount: "0.00", open_credit_amount: "0" })), ["pay"]);
+  assert.deepEqual(keys(invoice({ gross_amount: "0.00", open_credit_amount: "0" })), ["pay", "cancel"]);
 });
 
-test("the later money states offer their own single action", () => {
-  assert.deepEqual(keys(invoice({ state: "PAYMENT_PENDING" })), ["confirm"]);
+test("the later money states offer their own actions", () => {
+  assert.deepEqual(keys(invoice({ state: "PAYMENT_PENDING" })), ["confirm", "fail"]);
   assert.deepEqual(keys(invoice({ state: "RECONCILIATION_EXCEPTION" })), ["resolve"]);
   assert.deepEqual(keys(invoice({ state: "INFO_REQUESTED" })), ["info-received", "reject"]);
 });
 
 test("a finished invoice offers nothing", () => {
-  for (const state of ["RECONCILED", "CREDITED", "SETTLED_BY_CREDIT", "REJECTED", "DUPLICATE", "PAID"]) {
+  for (const state of ["RECONCILED", "CREDITED", "SETTLED_BY_CREDIT", "CANCELLED", "REJECTED", "DUPLICATE", "PAID"]) {
     assert.deepEqual(keys(invoice({ state })), [], state);
   }
 });
@@ -134,4 +134,32 @@ test("every path starts at intake and reaches the state it is drawn for", () => 
     assert.equal(path[0], "RECEIVED", `${state} starts at intake`);
     assert.ok(path.includes(state), `${state} appears on its own path`);
   }
+});
+
+test("an approved or booked invoice can be stopped, by finance, with a reason", () => {
+  // Fraud found after the signature needs a way out before the payment (ADR-054).
+  for (const state of ["APPROVED", "ACCOUNTING_READY"]) {
+    const stop = availableActions(invoice({ state })).actions.find((a) => a.key === "cancel");
+    assert.ok(stop, state);
+    assert.equal(stop.needs, "invoice:cancel");
+    assert.equal(stop.needsComment, true);
+    assert.equal(stop.tone, "high");
+  }
+});
+
+test("a payment on its way offers no cancel", () => {
+  assert.ok(!keys(invoice({ state: "PAYMENT_PENDING" })).includes("cancel"));
+});
+
+test("a payment on its way can be reported as failed, with a reason", () => {
+  // ADR-055: the bank rejected it, returned it, or confirmed a recall.
+  const fail = availableActions(invoice({ state: "PAYMENT_PENDING" })).actions.find((a) => a.key === "fail");
+  assert.equal(fail.needs, "payment:confirm");
+  assert.equal(fail.needsComment, true);
+});
+
+test("a failed payment is instructed again or stopped", () => {
+  const result = availableActions(invoice({ state: "PAYMENT_FAILED" }));
+  assert.deepEqual(result.actions.map((a) => a.key), ["retry", "cancel"]);
+  assert.equal(result.prompt.key, "hintPaymentFailed");
 });

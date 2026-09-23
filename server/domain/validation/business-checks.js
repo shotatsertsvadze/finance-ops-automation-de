@@ -1,6 +1,7 @@
 import { SEVERITY, failed, info, passed, skipped, warning } from "../checks.js";
 import { centsToDecimal, productToCents, toCents } from "../money.js";
 import { approvalTierLabel } from "../../config/policy.js";
+import { checkTaxBreakdown } from "./tax-breakdown.js";
 
 /**
  * "Does this invoice make sense for our company?" Pure function over the
@@ -288,6 +289,9 @@ export function runBusinessChecks(parsed, master, policy, company) {
       }));
     }
   }
+
+  // What the booking will be built from: the document's breakdown per rate.
+  checks.push(checkTaxBreakdown(parsed, policy));
 
   if (policy.allowedCurrencies.includes(parsed.currency)) {
     checks.push(passed("currency_expected", SEVERITY.MEDIUM, { expected: policy.allowedCurrencies.join(", "), actual: parsed.currency, reason: "Währung erwartet" }));

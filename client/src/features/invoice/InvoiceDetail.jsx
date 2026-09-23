@@ -172,7 +172,10 @@ export default function InvoiceDetail({ may, onChanged }) {
                       <Fact label={t("fieldCreditorAccount")} value={invoice.accounting_record.creditor_account} mono />
                       <Fact label={t("fieldExpenseAccount")} value={invoice.accounting_record.expense_account} mono />
                       <Fact label={t("fieldCostCentre")} value={invoice.accounting_record.cost_center ?? "—"} mono />
-                      <Fact label={t("fieldTaxKey")} value={invoice.accounting_record.tax_key} mono />
+                      <Fact label={t("fieldTaxKey")} value={(invoice.accounting_lines ?? []).map((l) => l.tax_key).join(", ")} mono />
+                      {invoice.accounting_reversal?.length > 0 && (
+                        <Fact label={t("fieldReversal")} value={invoice.accounting_reversal[0].document_no} mono />
+                      )}
                     </>
                   )}
                   {invoice.payment && (

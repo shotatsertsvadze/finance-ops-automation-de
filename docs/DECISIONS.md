@@ -1032,3 +1032,289 @@ is read, stored and displayed, but it does not steer the netting. Honouring it
 would mean deciding what happens when the named invoice is already paid, or
 belongs to another period, and that is a question about someone's accounting
 policy rather than about this code.
+
+## ADR-051 Every state has one phase, and every list of states is derived from it
+
+Context: the code filtered on invoice states in six places - `PAYABLE_STATES`,
+the commitment ledger's `HOLDS_CAPACITY`, two KPI filters, the reconciliation
+candidates and the duplicate lookup - plus the partial unique index. Each was a
+hand-written list. ADR-039 recorded the rule "a state added to the machine has
+to be placed in every figure that filters on state", and the next two states
+proved it could not be followed by memory: after ADR-049 and ADR-050,
+settling an invoice against credits released its purchase-order claim
+(reproduced: PO-2026-0102 reported 600,00 available after a 100,00 invoice was
+settled, against an opening 500,00), credited and settled documents counted as
+overdue, and neither state was covered by `invoices_one_payable_per_number`.
+
+Decision: `states.js` gives each state one phase - OPEN, AWAITING_APPROVAL,
+COMMITTED, SETTLED or DISCARDED - and exports every list as a derivation:
+`PAYABLE_STATES` (committed or settled), `HOLDS_CAPACITY_STATES` (awaiting
+approval onward, not discarded), `OUTSTANDING_STATES` (not yet settled or
+discarded), `DISCARDED_STATES`, and `AWAITING_RECONCILIATION_STATES` (derived
+from the transition table). SQL receives these as `invoice_state[]` parameters
+rather than literals.
+
+The one list that cannot be derived is a partial index predicate. Migration
+0013 widens it, and a test reads the index back from `pg_indexes` and compares
+it with `PAYABLE_STATES`, so the two cannot drift silently. 0013 also restores,
+per ADR-037, the claims that settlement had already released.
+
+Consequences: a new state fails `states.test.js` until it is given a phase, and
+placing it is one line. The invariant "once committed, only forward" is now a
+test rather than a property of the table someone has to check by eye.
+
+## ADR-052 A changed IBAN is verified into master data, never waved through
+
+Supersedes the part of ADR-019 and ADR-041 that treated a changed IBAN as a
+business exception a reviewer may accept. Extends ADR-013.
+
+Context: the payment instruction paid the IBAN printed on the invoice. A
+reviewer could release an invoice whose IBAN matched no account of the
+supplier, one approver could sign it, and money went to an account nobody had
+verified — the most common invoice-fraud pattern. Master data was re-checked at
+the signature (ADR-041) but not at payment, so a supplier blocked or an account
+retired between approval and payment was still paid. Separately, managers may
+upload invoices and one-step invoices need only a manager, so one person could
+submit and approve the same invoice.
+
+Decision:
+- `supplier_iban_match` joins `NON_OVERRIDABLE_CHECKS`. Review cannot release
+  an invoice whose IBAN is not an active account of the supplier. The way on is
+  to verify the account (a call-back on a number already in master data), add
+  it to master data, and re-validate; ADR-020 still requires a signature.
+- The payment instruction asks again: the supplier must be ACTIVE and the
+  invoice's IBAN an ACTIVE account of it, or the instruction is refused
+  (`SUPPLIER_NOT_ACTIVE`, `IBAN_NOT_VERIFIED`) and the invoice stays
+  `ACCOUNTING_READY`. The instruction carries the account as master data holds it.
+- `decideApprovalStep` refuses the person who submitted the invoice, read from
+  its `received` audit event (`UPLOADER_CANNOT_APPROVE`). A system channel has
+  no submitter and is unaffected.
+
+Consequences: the demo no longer releases fixture B; it requests information
+for a call-back, and the four-eyes beat uses fixture C (a PO overrun, still a
+judgement call). Tests that used B as "an exception a reviewer accepts" now use
+C or a built invoice against an unknown order. Master data has no write API in
+this PoC, so adding a verified account is done outside the application.
+
+## ADR-053 A booking has one line per tax rate, taken from the document
+
+Refines ADR-018, whose account and key assignments remain demo values.
+
+Context: the booking record carried one tax key, derived from total VAT divided
+by total net. A mixed invoice - 7 % food and 19 % other goods is ordinary in
+Germany - produced a ratio matching no real rate, and the lookup then fell back
+to key "0", tax-free, without a word. An unrecognised rate did the same. That
+is a wrong booking made silently, against the fail-closed rule. The document
+states its rates itself, one `TaxSubtotal` each, but the parser never read them.
+
+Decision:
+- The parser reads each `TaxSubtotal` (base, tax, VAT category, rate).
+- A new business check, `tax_breakdown_bookable` (HIGH), requires a breakdown;
+  a tax key for every category and rate in `config/tax-keys.js`; each rate's
+  tax equal to base x rate within the totals tolerance; and the breakdown
+  summing exactly to the declared net and VAT, as EN 16931 defines those
+  sums. It is not overridable: a reviewer cannot supply a rate mapping or
+  arithmetic, as with `totals_consistent` (ADR-047).
+- Keys are mapped by category and rate, not rate alone. Reverse charge (AE) is
+  0 % and is not tax-free; it has no key, so it stops rather than being booked
+  as key "0".
+- The handoff writes one booking line per rate under one document number. Each
+  line's gross is its base plus its tax, so the lines sum to the tax-inclusive
+  total; a prepayment on the document was booked when it was made and is not
+  part of this booking. Migration 0014 moves uniqueness to (invoice, tax key)
+  and (document number, tax key).
+- The handoff runs the same check again and refuses with 422 rather than
+  trusting validation alone. An invoice parsed before the breakdown was read
+  has none stored; its original is an intake fact and is parsed again.
+
+Consequences: every invoice shows one more check (22, not 21). The CSV export
+has one row per line, and the invoice detail lists every line's tax key.
+Mapping a new rate is one entry in `config/tax-keys.js`.
+
+## ADR-054 An approved invoice can be stopped until money is on its way
+
+Context: once approved, an invoice could only move forward. `APPROVED` led to
+the booking, the booking to the payment. Fraud or a dispute found after the
+signature had no way out except paying, or editing the database behind
+`transition()` - which the project rules forbid.
+
+Decision:
+- `APPROVED` and `ACCOUNTING_READY` may move to a new terminal state,
+  `CANCELLED`, through `POST /api/invoices/:id/cancel`. A reason is required;
+  the permission `invoice:cancel` is finance's and admin's.
+- `CANCELLED` is in the DISCARDED phase (ADR-051): no longer owed, not
+  payable, and its purchase-order claim is released by `transition()`.
+- A booked invoice is reversed in the same transaction: its booking lines
+  again with the sign turned, under a new document number, each line naming
+  the document it reverses (`reverses_document_no`, migration 0016). A
+  cancellation that left the booking in place would leave accounting holding
+  an obligation nobody will pay.
+- `PAYMENT_PENDING` cannot be cancelled directly. Once an instruction has gone
+  to the bank, stopping it is a recall that the bank has to confirm; that
+  belongs to the failed-payment path, not to this action.
+- The invariant "once committed, only forward" becomes "once committed,
+  forward or cancelled - never back to review".
+
+Consequences: a new enum value in its own migration (0015), because Postgres
+does not allow a value to be used in the transaction that adds it. The
+dictionary guard now scans every server module for refusal codes; its
+hand-kept list had missed the new folder and would have passed for the wrong
+reason.
+
+## ADR-055 A payment the bank did not carry out fails, and is tried again or stopped
+
+Completes ADR-054. Supersedes the part of ADR-017 that keyed the payment
+instruction once per invoice.
+
+Context: `PAYMENT_PENDING` could only become `PAID`. A transfer the bank
+rejected or returned had no state, and a second attempt was impossible: the
+instruction's idempotency key was `pay:<invoice>`, so the only instruction an
+invoice could ever have was the one that failed.
+
+Decision:
+- `PAYMENT_PENDING -> PAYMENT_FAILED`, reason required, through
+  `POST /api/invoices/:id/payment/fail` - what a bank adapter's webhook would
+  call. A recall is modelled as a failure the bank confirms, so a pending
+  payment is never cancelled directly.
+- `PAYMENT_FAILED` is in the COMMITTED phase (ADR-051): still owed, still
+  payable, still holding its purchase-order claim. From it the invoice goes
+  back to `ACCOUNTING_READY` (`/payment/retry`), to be instructed or settled
+  again, or is stopped (ADR-054), which reverses its booking.
+- Idempotency is per attempt: the key is `pay:<invoice>:<attempt>`, and a
+  partial unique index allows at most one live (pending or executed)
+  instruction per invoice, so a replay still cannot pay twice. Confirmation
+  and reconciliation read only the live instruction; the invoice detail shows
+  the latest attempt.
+- Credits applied to the failed attempt are released - `released_at` on
+  `credit_applications`, not a delete - so the ledger keeps the record and the
+  next attempt nets them again (ADR-050).
+
+Consequences: two enum and schema migrations (0017, 0018). The dictionary,
+state and schema guards each flagged the new state until it was placed, which
+is what ADR-051 set them up to do.
+
+## ADR-056 Whoever signs an invoice does not pay it
+
+Extends ADR-013 and ADR-052.
+
+Context: FINANCE signs the second approval step of every invoice above tier 1
+and also instructs and confirms payments. One person could sign an invoice and
+then send its money, so the approval chain ended in the hands it was meant to
+check.
+
+Decision:
+- `createPaymentInstruction` and `confirmPayment` refuse anyone who holds an
+  `APPROVED` step on the invoice (409 `APPROVER_CANNOT_PAY`), before anything
+  is written. The live signatures are read from `approval_steps`; after
+  `APPROVED` no path leads back to review, so they cannot be rebuilt under the
+  payer's feet.
+- Booking, reporting a failed payment, reopening one and stopping an invoice
+  stay open to the signer: none of them sends money.
+- An invoice the system approved has no signer and is unaffected. ADMIN cannot
+  approve, so is unaffected too.
+- The client shows the refusal rather than hiding the buttons, as it does for
+  the other person-based rules of ADR-013.
+
+Consequences: an invoice with a FINANCE step needs a second finance user to
+pay it; the seed has two (Jonas Weber, Mira Hoffmann). The demo generator lets
+Mira sign and Jonas pay, and the demo script follows.
+
+## ADR-057 An ended session returns the client to sign-in
+
+Context: every page catches its own request errors. When the session expired,
+a page either showed a bare "Nicht angemeldet" or, worse, rendered as empty:
+the payments page read "0 Umsätze importiert" over a statement of 38 lines.
+
+Decision: `request()` reports a refusal with code `NOT_SIGNED_IN` to one
+listener, which `useSession` sets. It keys on the code, not on status 401,
+because a wrong password is also a 401 (`SIGN_IN_REFUSED`). The listener only
+acts when someone was signed in, so the first visit's refused `/auth/me` is
+not called an expiry. The sign-in screen then says the session has expired;
+the URL is kept, so signing in again returns to the same page.
+
+Consequences: nothing a page did before the expiry is retried; the person
+repeats the action after signing in, and the server decides it afresh.
+
+## ADR-058 A production start serves the client and refuses the demo password
+
+Context: the app could only run as a local demo. Nothing served the built
+client, there was no start command, and every account, ADMIN included, shared
+a password printed in the README. The `Secure` cookie flag depended on a
+`NODE_ENV` nobody set.
+
+Decision:
+- `npm start` sets `NODE_ENV=production`. In production the API serves `dist/`
+  and answers any GET outside `/api/` with `index.html`, so a reloaded client
+  route works; `/api` keeps its JSON answers. Cookies are `Secure`, so HTTPS
+  (typically a reverse proxy on the same host) is required.
+- The start is refused, exit code 1, while `dist/index.html` is missing or any
+  account still verifies against the published demo password. Every such
+  account is named. `DEMO_MODE=true` allows the demo password on purpose, for
+  a hosted demo on synthetic data. Development is never refused.
+- `npm run user:password -- <email>` takes the password on stdin, so it stays
+  out of shell history, requires 12 characters, clears a login lock and ends
+  the account's open sessions.
+
+Consequences: checking every account costs one scrypt verification each at
+startup, about 40 ms per account. A password set through `DEMO_PASSWORD` is
+not recognised as a demo password; it is a demo-only knob, documented as such.
+There is still no self-service password change (S24).
+
+## ADR-059 Failed sign-ins throttle the address, never the account
+
+Supersedes the account lock of ADR-029 and the expired-lock rule of ADR-040.
+
+Context: five wrong passwords locked the account itself for fifteen minutes,
+and the lock outlived the right password. Anyone who knew an address, which
+the demo accounts print on the login screen, could shut the CFO out at will,
+from anywhere, again and again. Reproduced on 2026-09-23: six failures from
+one address, then the owner's correct password from another got 429.
+
+Decision:
+- Failures are recorded per client address in `login_failures`. An address
+  gets `LOGIN_MAX_ATTEMPTS` (5) per account and `LOGIN_MAX_ATTEMPTS_PER_IP`
+  (20) across all accounts within `LOGIN_LOCK_MINUTES` (15); beyond that it
+  gets 429 `LOGIN_THROTTLED` with `Retry-After`, even for the right password.
+  The owner, from another address, is not affected.
+- The attempt is written before the password is checked and taken back on
+  success, so simultaneous guesses count one another; the per-account counter
+  of F06 needed a single-statement update for the same reason.
+- The check runs before the account is looked up, so a throttled answer is the
+  same for an address that exists and one that does not (ADR-040 still holds).
+- `trust proxy` is `loopback`: `X-Forwarded-For` is believed only from a proxy
+  on the same host, so a client connecting directly cannot choose its address.
+- `users.failed_attempts` and `users.locked_until` are dropped (0019).
+
+Consequences: an attacker spread over many addresses is not stopped by this;
+each address gets five guesses per account per quarter hour. That, and a
+shared office address throttling colleagues after twenty failures, is the
+trade against a lockout anyone can trigger. A second factor (S24) is the
+answer to distributed guessing and remains out of scope.
+
+## ADR-060 Requests are named, logged as JSON, and readiness asks the database
+
+Completes the observability item whose pool error handler landed earlier.
+
+Context: a failure in production could not be traced. The only log line was a
+bare `console.error` of a 500, which the caller saw as "Interner Fehler" with
+nothing to quote, and `/api/health` answered `ok` with the database down.
+
+Decision:
+- Every request gets an id: the caller's `X-Request-Id` when it is 1-64
+  characters of `[A-Za-z0-9._-]`, so a proxy's id links both logs, otherwise a
+  UUID. It is returned in `X-Request-Id`.
+- Logs are one JSON object per line, from `server/log.js`, with no library.
+  Each request logs method, path without its query, status, duration and the
+  user id when it finishes; never the body, which can hold a password. warn
+  and error go to stderr.
+- A 500 logs the message and stack under the request id; the response carries
+  only the id (`details.request_id`), which the client shows as the reference.
+- `/api/health` stays liveness. `/api/health/ready` runs `select 1` with a two
+  second limit and answers 503 when the database does not answer, so a load
+  balancer can take the instance out without anything restarting it.
+- `npm test` sets `LOG_LEVEL=warn`, so the test run is not buried in request
+  lines; tests capture lines through `logOutput`, not stdout, because the
+  test runner reports on stdout.
+
+Consequences: no log shipping, metrics or tracing across services; a JSON
+line per request is what a collector needs to start.

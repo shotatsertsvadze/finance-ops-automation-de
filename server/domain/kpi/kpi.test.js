@@ -170,7 +170,7 @@ test("processing time is reported separately for the path a human touched", asyn
 });
 
 test("review dwell time is measured from entering review to release", async () => {
-  const invoice = await upload(fixture("B_iban_changed_2499.xml"), "B.xml");
+  const invoice = await upload(fixture("C_po_overrun_8500.xml"), "C.xml");
   assert.equal(invoice.state, "REVIEW_REQUIRED");
   await post(`/api/invoices/${invoice.id}/review/accept`, clients.clerk, { comment: "geklärt" });
 
@@ -239,6 +239,19 @@ test("an invoice that has been paid is not overdue, even with an unclear reconci
   assert.equal(workload.overdue, 0, "the supplier has their money; this is bookkeeping work");
   assert.equal(workload.due_within_7_days, 0);
   assert.equal(workload.reconciliation_exceptions, 1, "and it is counted where it belongs");
+});
+
+test("no settled document is overdue, whichever way it was settled", async () => {
+  // Credited and offset against credits are settled as much as paid is. Set
+  // directly, as above: the question is only how the figure reads the state.
+  const invoice = await upload(fixture("A_clean_1240.xml"), "A_clean_1240.xml");
+  await deps.pool.query("update finops.invoices set due_date = current_date - 30 where id = $1", [invoice.id]);
+  for (const state of ["CREDITED", "SETTLED_BY_CREDIT"]) {
+    await deps.pool.query("update finops.invoices set state = $2 where id = $1", [invoice.id, state]);
+    const { workload } = await kpis();
+    assert.equal(workload.overdue, 0, state);
+    assert.equal(workload.due_within_7_days, 0, state);
+  }
 });
 
 test("an unpaid invoice past its due date is still overdue", async () => {

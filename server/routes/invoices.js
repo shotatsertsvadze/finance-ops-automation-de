@@ -7,10 +7,11 @@ import { STATES } from "../domain/workflow/states.js";
 import { decideApprovalStep, decideReview, requestInfoFromApproval } from "../domain/approvals/approvals.js";
 import { requirePermission } from "../auth/authorize.js";
 import { createAccountingRecord } from "../domain/accounting/accounting.js";
-import { confirmPayment, createPaymentInstruction } from "../domain/payments/payments.js";
+import { confirmPayment, createPaymentInstruction, failPayment, retryPayment } from "../domain/payments/payments.js";
 import { bookCredit } from "../domain/accounting/credit-notes.js";
 import { settleByCredit } from "../domain/accounting/netting.js";
 import { resolveReconciliation } from "../domain/reconciliation/reconciliation.js";
+import { cancelInvoice } from "../domain/cancellation/cancel.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -20,13 +21,22 @@ const upload = multer({
   // check and the parser. Requiring the extension rather than accepting either
   // signal at least keeps the weaker one from overriding the stronger.
   fileFilter: (req, file, cb) => {
-    const ok = /\.xml$/i.test(file.originalname);
-    cb(ok ? null : new Error("Nur XML-Dateien (XRechnung) werden angenommen"), ok);
+    if (/\.xml$/i.test(file.originalname)) return cb(null, true);
+    cb(Object.assign(new Error("Nur XML-Dateien (XRechnung) werden angenommen"), { status: 400, code: "UPLOAD_REJECTED" }), false);
   },
 });
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function invoicesRouter(deps) {
   const router = Router();
+
+  // An id that cannot be a UUID names no invoice. Checked here rather than
+  // left to Postgres, whose refused cast would surface as a 500.
+  router.param("id", (req, res, next, id) => {
+    if (!UUID.test(id)) return res.status(404).json({ error: "Rechnung nicht gefunden", code: "INVOICE_NOT_FOUND" });
+    next();
+  });
 
   router.post("/", requirePermission("invoice:upload"), upload.single("file"), async (req, res, next) => {
     try {
@@ -186,6 +196,35 @@ export function invoicesRouter(deps) {
   router.post("/:id/payment/confirm", requirePermission("payment:confirm"), async (req, res, next) => {
     try {
       await confirmPayment(deps, { invoiceId: req.params.id, actor: req.actor, providerRef: req.body?.provider_ref });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Stopping an approved invoice before money moves (ADR-054).
+  router.post("/:id/cancel", requirePermission("invoice:cancel"), async (req, res, next) => {
+    try {
+      await cancelInvoice(deps, { invoiceId: req.params.id, actor: req.actor, comment: req.body?.comment });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // The bank did not carry the payment out (ADR-055).
+  router.post("/:id/payment/fail", requirePermission("payment:confirm"), async (req, res, next) => {
+    try {
+      await failPayment(deps, { invoiceId: req.params.id, actor: req.actor, comment: req.body?.comment });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/payment/retry", requirePermission("payment:instruct"), async (req, res, next) => {
+    try {
+      await retryPayment(deps, { invoiceId: req.params.id, actor: req.actor });
       res.json(await getInvoiceDetail(deps.pool, req.params.id));
     } catch (error) {
       next(error);

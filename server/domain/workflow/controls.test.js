@@ -72,11 +72,13 @@ test("R01: an invoice without a resolved amount or supplier can never reach a pa
   assert.ok(body.details.blockers.includes("gross_amount"), JSON.stringify(body.details));
 });
 
-test("R01: a business exception such as a changed IBAN stays overridable", async () => {
-  const { body: invoice } = await upload(fixture("B_iban_changed_2499.xml"), "B.xml");
+test("R01: a business exception such as a PO overrun stays overridable", async () => {
+  // A changed IBAN used to be the example here; it is no longer overridable
+  // (ADR-052). An overrun is a judgement about the order, which review is for.
+  const { body: invoice } = await upload(fixture("C_po_overrun_8500.xml"), "C.xml");
   assert.equal(invoice.state, "REVIEW_REQUIRED");
 
-  const res = await post(`/api/invoices/${invoice.id}/review/accept`, clients.clerk, { comment: "IBAN bestätigt" });
+  const res = await post(`/api/invoices/${invoice.id}/review/accept`, clients.clerk, { comment: "Bestellung erhöht" });
   assert.equal(res.status, 200, "business exceptions are what review exists for");
   assert.equal((await get(invoice.id)).state, "READY_FOR_APPROVAL");
 });

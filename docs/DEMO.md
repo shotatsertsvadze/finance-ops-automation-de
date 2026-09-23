@@ -46,7 +46,7 @@ reason `SUPPLIER_IBAN_MATCH`.
 
 ## 3. The evidence — 2 minutes, the heart of it
 
-On that invoice, the check trail shows **1 of 21 checks failed**, with:
+On that invoice, the check trail shows **1 of 22 checks failed**, with:
 
 ```
 EXPECTED   DE02 1203 0000 0000 2020 51
@@ -60,7 +60,7 @@ The differing characters are marked.
 > of comparing an IBAN by eye. Every check works this way — that is the whole
 > product."
 
-Press **Show all 20 passed checks**: the ones that passed are there too, so a
+Press **Show all 21 passed checks**: the ones that passed are there too, so a
 reviewer can see what was *not* a problem.
 
 ## 4. Fail closed — 30 seconds
@@ -70,16 +70,29 @@ reviewer can see what was *not* a problem.
 > Some checks cannot be overridden at all: a reviewer judges business facts,
 > they cannot supply arithmetic the document never did."
 
+Still on B, press **Send for approval** with a reason. It is refused: a changed
+IBAN is not a judgement call. Instead, **Request information** with *Call back
+the supplier on the number in our master data*. It moves to **awaiting
+information**.
+
+> "A reviewer cannot wave a new bank account through. It clears only when the
+> verified account is in master data and the invoice is checked again — and
+> even then a second person signs, and the payment re-checks the account at the
+> moment money leaves."
+
 ## 5. Four eyes — 90 seconds
 
-Accept the invoice into approval with a reason. It moves to **awaiting
-approval**, not to approved.
+Upload **`C_po_overrun_8500.xml`**. It stops at review: it overruns its
+purchase order. That *is* a judgement call. Accept it into approval with a
+reason. It moves to **awaiting approval** with two steps, manager and finance,
+not to approved.
 
 Now sign in as **tim.kessler@nordwerk.example** (cost centre manager) and
-approve it.
+approve step 1, then as **mira.hoffmann@nordwerk.example** (finance) step 2.
 
 > "The person who cleared the exception cannot be the person who approves the
-> payment. That is enforced by the server, not by the screen."
+> payment, nobody signs an invoice they submitted, and whoever signs does not
+> send the money. That is enforced by the server, not by the screen."
 
 Point at the approval step: it records the document hash, the validation run
 and the amount that was approved. If the document or the amount changes
@@ -87,8 +100,9 @@ afterwards, the approval no longer counts.
 
 ## 6. The money path — 60 seconds
 
-Back as Finance: **create booking record**, then **instruct payment**, then
-**confirm payment**.
+Back as Jonas (finance, who did not sign it): **create booking record**, then
+**instruct payment**, then **confirm payment**. As Mira, the payment buttons
+would be refused.
 
 > "The booking record is vendor-neutral; a DATEV or SAP adapter formats it. No
 > money moves here — this is the seam where a real bank API goes."

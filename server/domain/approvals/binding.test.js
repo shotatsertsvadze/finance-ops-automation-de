@@ -109,8 +109,9 @@ test("an unchanged invoice runs the whole path exactly as before", async () => {
   assert.equal((await approve(invoice.id, 1, clients.manager)).status, 200);
   assert.equal((await approve(invoice.id, 2, clients.finance)).status, 200);
 
-  for (const stage of ["accounting-record", "payment", "payment/confirm"]) {
-    assert.equal((await clients.finance.post(`/api/invoices/${invoice.id}/${stage}`, {})).status, 200, stage);
+  // The payment goes to a second finance user: the signer may not pay (ADR-056).
+  for (const [stage, client] of [["accounting-record", clients.finance], ["payment", clients.finance2], ["payment/confirm", clients.finance2]]) {
+    assert.equal((await client.post(`/api/invoices/${invoice.id}/${stage}`, {})).status, 200, stage);
   }
   assert.equal((await get(invoice.id)).state, "PAID");
 });

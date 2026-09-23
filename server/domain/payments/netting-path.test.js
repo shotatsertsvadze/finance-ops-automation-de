@@ -18,6 +18,7 @@ import { decideApprovalStep } from "../approvals/approvals.js";
 import { bookCredit } from "../accounting/credit-notes.js";
 import { createPaymentInstruction } from "./payments.js";
 import { settleByCredit } from "../accounting/netting.js";
+import { getInvoiceDetail } from "../invoice/queries.js";
 
 let deps;
 let counter = 0;
@@ -123,6 +124,17 @@ test("a credit from another supplier is not touched", async () => {
   assert.equal((await instruction(invoice.id)).amount, "595.00", "one supplier's credit does not pay another's invoice");
 });
 
+test("the invoice detail shows the credit the payment would apply, and no other", async () => {
+  // The client chooses between "pay" and "settle" from this figure, so it must
+  // be the netting's own answer. A credit in another currency is not applied.
+  const note = await bookedCredit(10000);           // 119.00
+  const invoice = await readyToPay(50000);
+  assert.equal((await getInvoiceDetail(deps.pool, invoice.id)).open_credit_amount, "119.00");
+
+  await deps.pool.query("update finops.invoices set currency = 'USD' where id = $1", [note.id]);
+  assert.equal((await getInvoiceDetail(deps.pool, invoice.id)).open_credit_amount, "0.00");
+});
+
 test("a credit note that is only approved is not yet available", async () => {
   // It has to be booked. Until then it is a document under consideration.
   const note = await upload(buildInvoiceXml({
@@ -170,6 +182,18 @@ test("a credit cannot be applied to the same invoice twice", async () => {
     ),
     /credit_applications_once_per_pair|duplicate key/,
   );
+});
+
+test("a settled invoice keeps its claim on the purchase order", async () => {
+  // Settled against a credit is still spent: the goods were delivered. Its
+  // claim stays active, as a paid invoice's does.
+  await bookedCredit(10000);
+  const invoice = await readyToPay(10000);
+  await settleByCredit(deps, { invoiceId: invoice.id, actor: finance() });
+  const { rows } = await deps.pool.query(
+    "select amount from finops.po_commitments where invoice_id = $1 and status = 'ACTIVE'", [invoice.id],
+  );
+  assert.deepEqual(rows.map((r) => r.amount), ["100.00"]);
 });
 
 test("settling refuses an invoice the credits do not cover", async () => {

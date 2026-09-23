@@ -180,6 +180,44 @@ test("a repeated payment confirmation is refused and changes nothing", async () 
   assert.equal((await get(invoice.id)).state, "PAID");
 });
 
+/**
+ * Master data can move between approval and payment. The instruction is the
+ * last moment before money leaves, so it asks again (ADR-052). The changes are
+ * undone afterwards: master data outlives the per-test invoice cleanup.
+ */
+async function bookedWithMasterDataChange(change, undo) {
+  const invoice = await approved();
+  await post(`/api/invoices/${invoice.id}/accounting-record`, { actor: clients.finance });
+  await deps.pool.query(change, [invoice.supplier_id]);
+  try {
+    const res = await post(`/api/invoices/${invoice.id}/payment`, { actor: clients.finance });
+    return { res, after: await get(invoice.id) };
+  } finally {
+    await deps.pool.query(undo, [invoice.supplier_id]);
+  }
+}
+
+test("no payment goes to an account master data no longer holds", async () => {
+  const { res, after } = await bookedWithMasterDataChange(
+    "update finops.supplier_bank_accounts set status = 'RETIRED' where supplier_id = $1",
+    "update finops.supplier_bank_accounts set status = 'ACTIVE' where supplier_id = $1",
+  );
+  assert.equal(res.status, 409);
+  assert.equal((await res.json()).code, "IBAN_NOT_VERIFIED");
+  assert.equal(after.state, "ACCOUNTING_READY");
+  assert.equal(after.payment, null, "nothing was instructed");
+});
+
+test("no payment goes to a supplier blocked after approval", async () => {
+  const { res, after } = await bookedWithMasterDataChange(
+    "update finops.suppliers set status = 'BLOCKED' where id = $1",
+    "update finops.suppliers set status = 'ACTIVE' where id = $1",
+  );
+  assert.equal(res.status, 409);
+  assert.equal((await res.json()).code, "SUPPLIER_NOT_ACTIVE");
+  assert.equal(after.state, "ACCOUNTING_READY");
+});
+
 test("payment cannot skip the accounting handoff", async () => {
   const invoice = await approved();
   const res = await post(`/api/invoices/${invoice.id}/payment`, { actor: clients.finance });

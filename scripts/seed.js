@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createPool } from "../server/db.js";
-import { hashPassword } from "../server/auth/passwords.js";
+import { PUBLISHED_DEMO_PASSWORD, hashPassword } from "../server/auth/passwords.js";
 
 const SEED_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "db", "seed", "master_data.sql");
 
@@ -11,7 +11,7 @@ const SEED_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", 
  * synthetic accounts in a local demo; the value is a placeholder, not a secret,
  * and it is set here rather than in SQL because the hash needs scrypt.
  */
-export const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? "nordwerk-demo";
+export const DEMO_PASSWORD = process.env.DEMO_PASSWORD ?? PUBLISHED_DEMO_PASSWORD;
 
 export async function seed(pool) {
   await pool.query(await readFile(SEED_FILE, "utf8"));

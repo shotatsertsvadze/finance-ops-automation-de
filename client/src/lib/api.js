@@ -3,6 +3,16 @@ function csrfToken() {
   return document.cookie.split("; ").find((c) => c.startsWith("finops_csrf="))?.split("=")[1] ?? "";
 }
 
+let signedOut = () => {};
+
+/**
+ * Called when the server no longer knows the session. Pages catch their own
+ * errors, so without this an expired session reads as empty data.
+ */
+export function onSignedOut(handler) {
+  signedOut = handler;
+}
+
 async function request(path, options = {}) {
   const mutating = options.method && options.method !== "GET";
   const response = await fetch(`/api${path}`, {
@@ -19,6 +29,7 @@ async function request(path, options = {}) {
     error.code = body.code ?? null;
     error.details = body.details ?? null;
     error.status = response.status;
+    if (error.code === "NOT_SIGNED_IN") signedOut();
     throw error;
   }
   return response.json();
@@ -55,6 +66,9 @@ export const instructPayment = (id) => actorPost(`/invoices/${id}/payment`);
 export const bookCredit = (id) => actorPost(`/invoices/${id}/credit`);
 export const settleByCredit = (id) => actorPost(`/invoices/${id}/settle-by-credit`);
 export const confirmPayment = (id) => actorPost(`/invoices/${id}/payment/confirm`);
+export const cancelInvoice = (id, comment) => actorPost(`/invoices/${id}/cancel`, { comment });
+export const failPayment = (id, comment) => actorPost(`/invoices/${id}/payment/fail`, { comment });
+export const retryPayment = (id) => actorPost(`/invoices/${id}/payment/retry`);
 export const resolveReconciliation = (id, comment) =>
   actorPost(`/invoices/${id}/reconciliation/resolve`, { comment });
 

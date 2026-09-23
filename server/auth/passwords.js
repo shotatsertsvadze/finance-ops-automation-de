@@ -3,6 +3,9 @@ import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 // scrypt from node:crypto: no dependency, and memory-hard, so a stolen hash is
 // expensive to attack. Parameters are the Node defaults with a raised cost.
 const KEYLEN = 64;
+
+/** The demo accounts' password, printed in the README. Never valid in production (ADR-058). */
+export const PUBLISHED_DEMO_PASSWORD = "nordwerk-demo";
 const COST = { N: 16384, r: 8, p: 1, maxmem: 64 * 1024 * 1024 };
 
 export function hashPassword(password, salt = randomBytes(16).toString("hex")) {

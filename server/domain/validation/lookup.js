@@ -1,4 +1,5 @@
 import { availableCents } from "../purchase-orders/commitments.js";
+import { DISCARDED_STATES } from "../workflow/states.js";
 
 /** Loads the master data a business validation needs. */
 export async function loadMasterData(client, parsed, { excludeInvoiceId = null } = {}) {
@@ -39,8 +40,8 @@ export async function loadMasterData(client, parsed, { excludeInvoiceId = null }
   const existingSameNumber = supplier && parsed.invoiceNumber
     ? (await client.query(
         `select id, state from finops.invoices
-         where supplier_id = $1 and invoice_number = $2 and state not in ('DUPLICATE', 'REJECTED') and id <> $3`,
-        [supplier.id, parsed.invoiceNumber, excludeInvoiceId ?? "00000000-0000-0000-0000-000000000000"],
+         where supplier_id = $1 and invoice_number = $2 and state <> all($4::finops.invoice_state[]) and id <> $3`,
+        [supplier.id, parsed.invoiceNumber, excludeInvoiceId ?? "00000000-0000-0000-0000-000000000000", DISCARDED_STATES],
       )).rows
     : [];
   // Locks the order row, so two invoices arriving together cannot both read
