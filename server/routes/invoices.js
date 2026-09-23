@@ -11,6 +11,7 @@ import { confirmPayment, createPaymentInstruction } from "../domain/payments/pay
 import { bookCredit } from "../domain/accounting/credit-notes.js";
 import { settleByCredit } from "../domain/accounting/netting.js";
 import { resolveReconciliation } from "../domain/reconciliation/reconciliation.js";
+import { cancelInvoice } from "../domain/cancellation/cancel.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -195,6 +196,16 @@ export function invoicesRouter(deps) {
   router.post("/:id/payment/confirm", requirePermission("payment:confirm"), async (req, res, next) => {
     try {
       await confirmPayment(deps, { invoiceId: req.params.id, actor: req.actor, providerRef: req.body?.provider_ref });
+      res.json(await getInvoiceDetail(deps.pool, req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Stopping an approved invoice before money moves (ADR-054).
+  router.post("/:id/cancel", requirePermission("invoice:cancel"), async (req, res, next) => {
+    try {
+      await cancelInvoice(deps, { invoiceId: req.params.id, actor: req.actor, comment: req.body?.comment });
       res.json(await getInvoiceDetail(deps.pool, req.params.id));
     } catch (error) {
       next(error);

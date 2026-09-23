@@ -17,13 +17,25 @@ test("a terminal state is settled or discarded", () => {
   for (const s of TERMINAL_STATES) assert.ok(["SETTLED", "DISCARDED"].includes(PHASE[s]), s);
 });
 
-test("once committed, an invoice only moves forward", () => {
+test("once committed, an invoice moves forward or is cancelled, never back to review", () => {
+  // Cancelling is the one way out that is not forward: fraud found after the
+  // signature must have somewhere to go that is not the payment (ADR-054).
   const order = ["COMMITTED", "SETTLED"];
   for (const s of STATES.filter((s) => order.includes(PHASE[s]))) {
     for (const to of TRANSITIONS[s]) {
+      if (to === "CANCELLED") continue;
       assert.ok(order.indexOf(PHASE[to]) >= order.indexOf(PHASE[s]), `${s} -> ${to}`);
     }
   }
+});
+
+test("an approved or booked invoice can be stopped; a payment already sent cannot", () => {
+  assert.equal(canTransition("APPROVED", "CANCELLED"), true);
+  assert.equal(canTransition("ACCOUNTING_READY", "CANCELLED"), true);
+  for (const from of ["READY_FOR_APPROVAL", "PAYMENT_PENDING", "PAID", "RECONCILED"]) {
+    assert.equal(canTransition(from, "CANCELLED"), false, from);
+  }
+  assert.equal(PHASE.CANCELLED, "DISCARDED", "no longer owed, holds no capacity");
 });
 
 test("the derived lists name the states their users need", () => {
@@ -35,12 +47,12 @@ test("the derived lists name the states their users need", () => {
   assert.ok(HOLDS_CAPACITY_STATES.includes("READY_FOR_APPROVAL"));
   assert.ok(!PAYABLE_STATES.includes("READY_FOR_APPROVAL"));
   assert.ok(OUTSTANDING_STATES.includes("PAYMENT_PENDING"));
-  assert.deepEqual([...DISCARDED_STATES].sort(), ["DUPLICATE", "REJECTED"]);
+  assert.deepEqual([...DISCARDED_STATES].sort(), ["CANCELLED", "DUPLICATE", "REJECTED"]);
   assert.deepEqual([...AWAITING_RECONCILIATION_STATES].sort(), ["PAID", "RECONCILIATION_EXCEPTION"]);
 });
 
 test("terminal states have no outgoing transitions", () => {
-  assert.deepEqual(TERMINAL_STATES.sort(), ["CREDITED", "DUPLICATE", "RECONCILED", "REJECTED", "SETTLED_BY_CREDIT"]);
+  assert.deepEqual(TERMINAL_STATES.sort(), ["CANCELLED", "CREDITED", "DUPLICATE", "RECONCILED", "REJECTED", "SETTLED_BY_CREDIT"]);
   for (const s of TERMINAL_STATES) assert.deepEqual(TRANSITIONS[s], []);
 });
 
@@ -56,7 +68,7 @@ test("every non-initial state is reachable", () => {
 test("nothing leaves a payable state except forward in the money path or reconciliation", () => {
   // CREDITED is on the list because a credit note shares the states up to the
   // accounting handoff and then leaves the money path instead of being paid.
-  const allowed = new Set(["ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED", "RECONCILIATION_EXCEPTION", "CREDITED", "SETTLED_BY_CREDIT"]);
+  const allowed = new Set(["ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED", "RECONCILIATION_EXCEPTION", "CREDITED", "SETTLED_BY_CREDIT", "CANCELLED"]);
   for (const s of PAYABLE_STATES) for (const to of TRANSITIONS[s]) assert.ok(allowed.has(to), `${s} -> ${to}`);
 });
 

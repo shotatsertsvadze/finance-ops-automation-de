@@ -102,6 +102,12 @@ browser).
 | B15 | A mixed-rate invoice | processed like a clean one; booked as one line per rate under one document number, one CSV row per line | AUTO | `intake.test.js`; `booking-lines.test.js` |
 | B16 | An invoice parsed before the breakdown was read | booked from its stored original, not guessed | AUTO | `booking-lines.test.js` |
 | B17 | The handoff does not trust validation alone | 422 `TAX_BREAKDOWN_NOT_BOOKABLE`, no line written | AUTO | `booking-lines.test.js` |
+| C1 | An approved invoice is stopped | CANCELLED, reason on the audit event, PO claim released | AUTO | `cancellation/cancel.test.js`; browser check 2026-09-23 (MANUAL): spine and history show it |
+| C2 | Stopping without a reason, or by a clerk or manager | 400 `REASON_REQUIRED`; 403 | AUTO | `cancellation/cancel.test.js` |
+| C3 | A booked invoice is stopped | reversal lines: new document number, sign turned, `reverses_document_no` names the booking | AUTO | `cancellation/cancel.test.js` |
+| C4 | Stopping before approval or once payment is instructed | 409 `NOT_CANCELLABLE` | AUTO | `cancellation/cancel.test.js`; `states.test.js` |
+| C5 | The client offers stopping only where the server allows it | APPROVED and every booked variant, finance, reason required | AUTO | `actions.test.js` |
+| C6 | Every server module is scanned for refusal codes | a new folder cannot slip past the dictionary guard | AUTO | `dictionaries.test.js` |
 | B12 | A stated amount that cannot be read is not zero | `totals_consistent` HIGH | AUTO | `business-checks.test.js` |
 | B13 | Nothing left to pay after a discount or prepayment | REVIEW_REQUIRED, `NOTHING_TO_PAY` | AUTO | `decide.test.js` |
 | B14 | A line amount that does not follow from quantity and price | `line_amounts_consistent` HIGH, totals still PASSED | AUTO | `business-checks.test.js` |

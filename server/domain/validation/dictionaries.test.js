@@ -9,7 +9,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { DICTIONARIES, auditReason, checkSentence, errorText, translateTerms } from "../../../client/src/lib/dictionaries.js";
 import { STATES } from "../workflow/states.js";
 import { PERMISSIONS } from "../../auth/authorize.js";
@@ -232,18 +232,24 @@ test("a comment a person typed is left in their own words", () => {
 // ------------------------------------------------------------- refusals ----
 
 /**
+ * Every server module that could send a refusal: all of server/, minus tests
+ * and test support. Scanned rather than listed, because a hand-kept list
+ * silently misses the next new folder and then passes for the wrong reason.
+ */
+function serverModules() {
+  const root = new URL("../../", import.meta.url);
+  return readdirSync(root, { recursive: true })
+    .filter((f) => f.endsWith(".js") && !f.endsWith(".test.js") && !f.startsWith("test-support"))
+    .map((f) => `../../${f}`);
+}
+
+/**
  * Every refusal code the server can send: the second argument of a RuleError,
  * the first of a TransitionError or NotFoundError, and the `code` field of a
  * refusal a route writes directly.
  */
 function emittedErrorCodes() {
-  const files = [
-    "../../routes/invoices.js", "../../routes/auth.js", "../../routes/session.js", "../../routes/money.js",
-    "../../app.js", "../../auth/authorize.js",
-    "../workflow/transitions.js", "../intake/intake.js", "../approvals/approvals.js",
-    "../accounting/accounting.js", "../accounting/credit-notes.js", "../accounting/netting.js",
-    "../payments/payments.js", "../reconciliation/reconciliation.js",
-  ];
+  const files = serverModules();
   const codes = new Set();
   for (const path of files) {
     const text = source(path);
@@ -277,9 +283,7 @@ test("no refusal text exists for a code the server cannot send", () => {
 test("every refusal is thrown with a code", () => {
   // A refusal without one falls back to German, which is the defect this
   // closes, so the absence has to fail rather than degrade quietly.
-  const domain = ["../workflow/transitions.js", "../intake/intake.js", "../approvals/approvals.js",
-    "../accounting/accounting.js", "../payments/payments.js", "../reconciliation/reconciliation.js"];
-  for (const path of domain) {
+  for (const path of serverModules()) {
     for (const [line] of source(path).matchAll(/throw new (?:RuleError|TransitionError|NotFoundError)\([^\n]*/g)) {
       assert.match(line, /"[A-Z_]{3,}"/, `refusal without a code in ${path}: ${line.trim()}`);
     }

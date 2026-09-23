@@ -85,21 +85,9 @@ export async function createAccountingRecord({ pool, storage, policy }, { invoic
       throw new RuleError(422, "TAX_BREAKDOWN_NOT_BOOKABLE", "Steueraufschlüsselung ist nicht buchbar, kein Buchungssatz erzeugt", { reason: check.reason });
     }
 
-    const { rows: [seq] } = await client.query("select nextval('finops.accounting_document_seq') as n");
-    const documentNo = `BELEG-${new Date().getUTCFullYear()}-${String(seq.n).padStart(5, "0")}`;
-    const lines = buildBookingLines({ ...invoice, parsed }, { documentNo, bookingDate: new Date().toISOString().slice(0, 10) });
-
-    for (const line of lines) {
-      await client.query(
-        `insert into finops.accounting_records
-           (invoice_id, document_no, booking_date, supplier_no, creditor_account, expense_account,
-            cost_center, tax_key, net_amount, vat_amount, gross_amount, currency, reference)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-        [invoiceId, line.document_no, line.booking_date, line.supplier_no, line.creditor_account,
-          line.expense_account, line.cost_center, line.tax_key, line.net_amount, line.vat_amount,
-          line.gross_amount, line.currency, line.reference],
-      );
-    }
+    const documentNo = await nextDocumentNo(client);
+    const lines = buildBookingLines({ ...invoice, parsed }, { documentNo, bookingDate: today() });
+    for (const line of lines) await insertLine(client, invoiceId, line);
 
     await transition(client, {
       invoiceId, to: "ACCOUNTING_READY", actor, action: "accounting_record_created",
@@ -111,6 +99,47 @@ export async function createAccountingRecord({ pool, storage, policy }, { invoic
     });
     return lines;
   });
+}
+
+/**
+ * Reverses an invoice's booking: the same lines with the sign turned, under a
+ * new document number that names the one it reverses. Called inside the
+ * caller's transaction, with the invoice row locked (ADR-054).
+ */
+export async function reverseBooking(client, invoiceId) {
+  const { rows: lines } = await client.query(
+    "select * from finops.accounting_records where invoice_id = $1 and reverses_document_no is null order by tax_key",
+    [invoiceId],
+  );
+  if (lines.length === 0) return null;
+  const documentNo = await nextDocumentNo(client);
+  const negate = (amount) => centsToDecimal(-toCents(amount));
+  for (const line of lines) {
+    await insertLine(client, invoiceId, {
+      ...line, document_no: documentNo, booking_date: today(), reverses_document_no: line.document_no,
+      net_amount: negate(line.net_amount), vat_amount: negate(line.vat_amount), gross_amount: negate(line.gross_amount),
+    });
+  }
+  return { documentNo, reverses: lines[0].document_no };
+}
+
+const today = () => new Date().toISOString().slice(0, 10);
+
+async function nextDocumentNo(client) {
+  const { rows: [seq] } = await client.query("select nextval('finops.accounting_document_seq') as n");
+  return `BELEG-${new Date().getUTCFullYear()}-${String(seq.n).padStart(5, "0")}`;
+}
+
+function insertLine(client, invoiceId, line) {
+  return client.query(
+    `insert into finops.accounting_records
+       (invoice_id, document_no, booking_date, supplier_no, creditor_account, expense_account,
+        cost_center, tax_key, net_amount, vat_amount, gross_amount, currency, reference, reverses_document_no)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+    [invoiceId, line.document_no, line.booking_date, line.supplier_no, line.creditor_account,
+      line.expense_account, line.cost_center, line.tax_key, line.net_amount, line.vat_amount,
+      line.gross_amount, line.currency, line.reference, line.reverses_document_no ?? null],
+  );
 }
 
 /**

@@ -55,6 +55,7 @@ export const instructPayment = (id) => actorPost(`/invoices/${id}/payment`);
 export const bookCredit = (id) => actorPost(`/invoices/${id}/credit`);
 export const settleByCredit = (id) => actorPost(`/invoices/${id}/settle-by-credit`);
 export const confirmPayment = (id) => actorPost(`/invoices/${id}/payment/confirm`);
+export const cancelInvoice = (id, comment) => actorPost(`/invoices/${id}/cancel`, { comment });
 export const resolveReconciliation = (id, comment) =>
   actorPost(`/invoices/${id}/reconciliation/resolve`, { comment });
 

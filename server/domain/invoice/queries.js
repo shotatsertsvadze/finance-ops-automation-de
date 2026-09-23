@@ -56,7 +56,7 @@ export async function getInvoiceDetail(pool, id) {
       `select e.*, u.name as actor_name from finops.audit_events e left join finops.users u on u.id = e.actor_id
        where e.invoice_id = $1 order by e.occurred_at, e.id`, [id],
     ),
-    pool.query("select * from finops.accounting_records where invoice_id = $1 order by tax_key", [id]),
+    pool.query("select * from finops.accounting_records where invoice_id = $1 order by reverses_document_no nulls first, tax_key", [id]),
     pool.query("select * from finops.payment_instructions where invoice_id = $1", [id]),
     pool.query("select * from finops.bank_transactions where matched_invoice_id = $1 order by value_date", [id]),
     openCreditCents(pool, invoice),
@@ -78,7 +78,9 @@ export async function getInvoiceDetail(pool, id) {
     audit_events: events.rows,
     // One line per tax rate (ADR-053); the record is what they share.
     accounting_record: accounting.rows[0] ?? null,
-    accounting_lines: accounting.rows,
+    accounting_lines: accounting.rows.filter((l) => !l.reverses_document_no),
+    // Written when a booked invoice is cancelled (ADR-054).
+    accounting_reversal: accounting.rows.filter((l) => l.reverses_document_no),
     payment: payment.rows[0] ?? null,
     bank_transactions: bankTx.rows,
   };

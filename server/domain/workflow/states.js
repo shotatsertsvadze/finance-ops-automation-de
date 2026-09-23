@@ -7,16 +7,19 @@ export const TRANSITIONS = {
   // Back to review when the final gate finds a business fact that changed
   // while the invoice waited for a signature (ADR-041).
   READY_FOR_APPROVAL: ["APPROVED", "REJECTED", "INFO_REQUESTED", "REVIEW_REQUIRED"],
-  APPROVED: ["ACCOUNTING_READY"],
+  // Stopping is possible until money is on its way: fraud found after the
+  // signature needs a way out that is not the payment (ADR-054).
+  APPROVED: ["ACCOUNTING_READY", "CANCELLED"],
   // Two ways to leave without a payment: a credit note is booked, and an
   // invoice its open credits cover entirely is settled against them.
-  ACCOUNTING_READY: ["PAYMENT_PENDING", "CREDITED", "SETTLED_BY_CREDIT"],
+  ACCOUNTING_READY: ["PAYMENT_PENDING", "CREDITED", "SETTLED_BY_CREDIT", "CANCELLED"],
   PAYMENT_PENDING: ["PAID"],
   PAID: ["RECONCILED", "RECONCILIATION_EXCEPTION"],
   RECONCILIATION_EXCEPTION: ["RECONCILED"],
   RECONCILED: [],
   CREDITED: [],
   SETTLED_BY_CREDIT: [],
+  CANCELLED: [],
   REJECTED: [],
   DUPLICATE: [],
 };
@@ -34,7 +37,7 @@ export const REPROCESSABLE_STATES = ["RECEIVED", "VALIDATING", "REVIEW_REQUIRED"
  * AWAITING_APPROVAL  decided by validation or review, waiting for a signature
  * COMMITTED          approved; the obligation stands but is not yet settled
  * SETTLED            paid, credited or offset; nothing is owed any more
- * DISCARDED          rejected or a duplicate; never an obligation
+ * DISCARDED          rejected, a duplicate or cancelled; not, or no longer, owed
  */
 export const PHASES = ["OPEN", "AWAITING_APPROVAL", "COMMITTED", "SETTLED", "DISCARDED"];
 export const PHASE = {
@@ -53,6 +56,7 @@ export const PHASE = {
   SETTLED_BY_CREDIT: "SETTLED",
   REJECTED: "DISCARDED",
   DUPLICATE: "DISCARDED",
+  CANCELLED: "DISCARDED",
 };
 
 const inPhase = (...phases) => STATES.filter((s) => phases.includes(PHASE[s]));
@@ -85,6 +89,7 @@ export const STATE_LABELS = {
   RECONCILIATION_EXCEPTION: "Abgleich unklar",
   CREDITED: "Gutgeschrieben",
   SETTLED_BY_CREDIT: "Durch Gutschrift ausgeglichen",
+  CANCELLED: "Storniert",
   REJECTED: "Abgelehnt",
   DUPLICATE: "Duplikat",
 };

@@ -182,6 +182,8 @@ stateDiagram-v2
     READY_FOR_APPROVAL --> REJECTED: any approver rejects
     READY_FOR_APPROVAL --> INFO_REQUESTED: approver requests correction
     APPROVED --> ACCOUNTING_READY: accounting record created
+    APPROVED --> CANCELLED: stopped by finance, reason required
+    ACCOUNTING_READY --> CANCELLED: stopped, booking reversed
     ACCOUNTING_READY --> PAYMENT_PENDING: payment instruction created
     ACCOUNTING_READY --> CREDITED: credit note booked, never paid
     ACCOUNTING_READY --> SETTLED_BY_CREDIT: open credits cover the invoice
@@ -192,13 +194,18 @@ stateDiagram-v2
     RECONCILED --> [*]
     CREDITED --> [*]
     SETTLED_BY_CREDIT --> [*]
+    CANCELLED --> [*]
     REJECTED --> [*]
     DUPLICATE --> [*]
 ```
 
 Rules:
 
-- Terminal states: `RECONCILED`, `CREDITED`, `SETTLED_BY_CREDIT`, `REJECTED`, `DUPLICATE`. No transition leaves them.
+- Terminal states: `RECONCILED`, `CREDITED`, `SETTLED_BY_CREDIT`, `CANCELLED`, `REJECTED`, `DUPLICATE`. No transition leaves them.
+- An approved invoice can be stopped until money is on its way: `APPROVED` or
+  `ACCOUNTING_READY` to `CANCELLED`, finance only, with a reason. A booked
+  invoice is reversed in the same transaction: the same lines, sign turned,
+  under a new document number naming the original (ADR-054).
 - Every state has one phase in `states.js` (ADR-051), and every list of states
   the code filters on is derived from it:
 
@@ -208,7 +215,7 @@ Rules:
   | AWAITING_APPROVAL | READY_FOR_APPROVAL | | yes | yes |
   | COMMITTED | APPROVED, ACCOUNTING_READY, PAYMENT_PENDING | yes | yes | yes |
   | SETTLED | PAID, RECONCILED, RECONCILIATION_EXCEPTION, CREDITED, SETTLED_BY_CREDIT | yes | yes | |
-  | DISCARDED | REJECTED, DUPLICATE | | | |
+  | DISCARDED | REJECTED, DUPLICATE, CANCELLED | | | |
 - A credit note (`document_type = 'CREDIT_NOTE'`, UNTDID 1001 code 381) shares
   every state up to `ACCOUNTING_READY` and then ends in `CREDITED`. The payment
   route refuses it, its booking record carries the amounts negated, and its
@@ -301,6 +308,7 @@ invoice above the auto limit.
 | POST | `/api/invoices/:id/credit` | 3 | books a credit note, ACCOUNTING_READY to CREDITED; refuses an invoice |
 | POST | `/api/invoices/:id/settle-by-credit` | 3 | ACCOUNTING_READY to SETTLED_BY_CREDIT when open credits cover the invoice; refuses a remainder |
 | POST | `/api/invoices/:id/payment/confirm` | 3 | simulated provider confirmation, PAYMENT_PENDING to PAID |
+| POST | `/api/invoices/:id/cancel` | 3 | stops an APPROVED or ACCOUNTING_READY invoice, reason required; reverses a booking |
 | POST | `/api/invoices/:id/reconciliation/resolve` | 3 | closes a reconciliation exception, reason required |
 | GET | `/api/accounting/export` | 3 | CSV of all booking lines; `?profile=spreadsheet` neutralises formula cells (ADR-045) |
 | POST | `/api/bank/import` | 3 | imports a synthetic statement, idempotent on `external_id` |

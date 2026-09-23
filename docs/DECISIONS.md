@@ -1130,3 +1130,33 @@ Decision:
 Consequences: every invoice shows one more check (22, not 21). The CSV export
 has one row per line, and the invoice detail lists every line's tax key.
 Mapping a new rate is one entry in `config/tax-keys.js`.
+
+## ADR-054 An approved invoice can be stopped until money is on its way
+
+Context: once approved, an invoice could only move forward. `APPROVED` led to
+the booking, the booking to the payment. Fraud or a dispute found after the
+signature had no way out except paying, or editing the database behind
+`transition()` - which the project rules forbid.
+
+Decision:
+- `APPROVED` and `ACCOUNTING_READY` may move to a new terminal state,
+  `CANCELLED`, through `POST /api/invoices/:id/cancel`. A reason is required;
+  the permission `invoice:cancel` is finance's and admin's.
+- `CANCELLED` is in the DISCARDED phase (ADR-051): no longer owed, not
+  payable, and its purchase-order claim is released by `transition()`.
+- A booked invoice is reversed in the same transaction: its booking lines
+  again with the sign turned, under a new document number, each line naming
+  the document it reverses (`reverses_document_no`, migration 0016). A
+  cancellation that left the booking in place would leave accounting holding
+  an obligation nobody will pay.
+- `PAYMENT_PENDING` cannot be cancelled directly. Once an instruction has gone
+  to the bank, stopping it is a recall that the bank has to confirm; that
+  belongs to the failed-payment path, not to this action.
+- The invariant "once committed, only forward" becomes "once committed,
+  forward or cancelled - never back to review".
+
+Consequences: a new enum value in its own migration (0015), because Postgres
+does not allow a value to be used in the transaction that adds it. The
+dictionary guard now scans every server module for refusal codes; its
+hand-kept list had missed the new folder and would have passed for the wrong
+reason.

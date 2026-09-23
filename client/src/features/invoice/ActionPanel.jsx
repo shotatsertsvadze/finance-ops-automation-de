@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  confirmPayment, createAccountingRecord, decideReview, decideStep,
+  cancelInvoice, confirmPayment, createAccountingRecord, decideReview, decideStep,
   instructPayment, bookCredit, settleByCredit, reportInfoReceived, reprocessInvoice, resolveReconciliation,
 } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
@@ -55,13 +55,14 @@ export default function ActionPanel({ invoice, may, onDone }) {
     confirm: () => confirmPayment(id),
     resolve: () => resolveReconciliation(id, comment),
     "info-received": () => reportInfoReceived(id, comment),
+    cancel: () => cancelInvoice(id, comment),
   };
   const LABELS = {
     accept: "releaseFromReview", "request-info": "requestInfo", "confirm-duplicate": "confirmDuplicate",
     reject: "reject", reprocess: "reprocess", approve: "approve", "step-reject": "reject",
     accounting: "createBookingRecord", credit: "bookCredit", settle: "settleByCredit",
     pay: "instructPayment", confirm: "confirmPayment", resolve: "closeReconciliation",
-    "info-received": "infoReceived",
+    "info-received": "infoReceived", cancel: "cancelInvoice",
   };
 
   const actions = available.map((a) => ({ ...a, label: t(LABELS[a.key]), run: handlers[a.key] }));
