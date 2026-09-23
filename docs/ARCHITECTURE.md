@@ -56,32 +56,36 @@ same database transaction.
 finance-ops-automation-de/
   README.md  AGENTS.md  CLAUDE.md  .env.example  package.json
   docs/                    PRODUCT, ARCHITECTURE, IST/SOLL process, BUSINESS_CASE,
-                           DECISIONS, TEST_MATRIX, REFERENCE_AUDIT, IMPLEMENTATION_PLAN
-  docs/screenshots/        images used by README.md
-  .github/workflows/       CI: the suite against a Postgres service container
-  fixtures/xrechnung/      demo invoices A-I (synthetic UBL 2.1 / XRechnung 3.0 profile)
+                           DECISIONS, TEST_MATRIX, DEMO, DEMO_VIDEO, reviews
+  .github/workflows/       CI: the suite against a Postgres service container, then the build
+  fixtures/xrechnung/      demo invoices A-J (synthetic UBL 2.1 / XRechnung 3.0 profile)
+  fixtures/bank/           synthetic bank statement for the tests
   db/migrations/           append-only SQL, applied by scripts/migrate.js
   db/seed/                 synthetic master data (users, suppliers, IBANs, POs)
-  scripts/                 migrate.js, seed.js, create-test-db.js
+  scripts/                 migrate.js, seed.js, reset.js, demo-data.js, demo-walkthrough.mjs
   server/
     index.js               starts the HTTP server
     app.js                 createApp(): express app without listen (used by tests)
     db.js                  pool, withTransaction, type parsers
-    config/policy.js       thresholds and tolerances (env-overridable)
+    auth/                  passwords (scrypt), sessions (cookie + CSRF), authorize (role matrix)
+    config/                policy.js, company.js, assumptions.js, tax-keys.js
     domain/
-      invoice/             xml-safety.js, parse-xrechnung.js (UBL adapter), technical-validation.js
-      validation/          business-checks.js (each check returns a CheckResult)
-      routing/             decide.js (pure), policy application
-      workflow/            states.js (state + transition table), transitions.js (transition())
-      audit/               audit.js (writeEvent)
+      invoice/             xml-safety.js, parse-xrechnung.js (UBL adapter), technical-validation.js, queries.js
+      validation/          business-checks.js, tax-breakdown.js, lookup.js (each check returns a CheckResult)
+      routing/             decide.js (pure)
+      workflow/            states.js (transitions and phases), transitions.js (transition(), audit), eligibility.js
       intake/              intake.js (orchestration of one upload)
-      approvals/           Phase 2
-      accounting/ payments/ reconciliation/   Phase 3 (adapter boundaries)
-    routes/                invoices.js, master-data.js, users.js
+      approvals/           review and approval decisions, binding, final re-check
+      purchase-orders/     commitments.js (capacity ledger)
+      accounting/ payments/ reconciliation/ kpi/
+    routes/                auth, session, invoices, master-data, money
     storage/               files.js (store/read original file)
+    test-support/          test database, demo users, invoice XML builder
   client/
     index.html  vite.config.js
-    src/                   App.jsx, features/inbox, features/invoice-detail, features/upload, ...
+    src/                   App.jsx, lib/ (api, i18n, dictionaries), features/ (auth, inbox, invoice,
+                           upload, payments, dashboard)
+  browser/                 Playwright tests for what only a browser can show
   storage/                 original files (gitignored)
 ```
 
@@ -279,6 +283,10 @@ invoice above the auto limit.
 
 | Method | Path | Phase | Purpose |
 |---|---|---|---|
+| GET | `/api/health` | - | liveness, no session needed |
+| POST | `/api/auth/login`, `/api/auth/logout` | - | session cookie and CSRF cookie; failures lock the account after `LOGIN_MAX_ATTEMPTS` |
+| GET | `/api/auth/me` | - | the signed-in user and their permissions |
+| GET | `/api/meta/states` | - | state labels, transition table, policy |
 | POST | `/api/invoices` | 1 | multipart upload (`file`, `source_channel`), runs the pipeline, returns the invoice |
 | GET | `/api/invoices` | 1 | list with optional `state` filter |
 | GET | `/api/invoices/:id` | 1 | invoice, lines, latest validation results, routing decision, approval steps, audit events |
@@ -294,25 +302,28 @@ invoice above the auto limit.
 | POST | `/api/invoices/:id/settle-by-credit` | 3 | ACCOUNTING_READY to SETTLED_BY_CREDIT when open credits cover the invoice; refuses a remainder |
 | POST | `/api/invoices/:id/payment/confirm` | 3 | simulated provider confirmation, PAYMENT_PENDING to PAID |
 | POST | `/api/invoices/:id/reconciliation/resolve` | 3 | closes a reconciliation exception, reason required |
-| GET | `/api/accounting/export` | 3 | CSV of all booking records |
+| GET | `/api/accounting/export` | 3 | CSV of all booking lines; `?profile=spreadsheet` neutralises formula cells (ADR-045) |
 | POST | `/api/bank/import` | 3 | imports a synthetic statement, idempotent on `external_id` |
 | GET | `/api/bank/transactions` | 3 | statement lines with match status and reason |
 | POST | `/api/reconciliation/run` | 3 | matches unmatched transactions against paid invoices |
 | GET | `/api/dashboard/kpis` | 4 | operational KPIs |
 
-Actor identity: `X-Actor-Id` header resolved against `users`. Missing or unknown
-actor on a human action → 400. This is an MVP boundary, not authentication
-(ADR-005).
+Identity: a session cookie set by `POST /api/auth/login`, stored hashed; every
+state-changing request must echo the CSRF token (ADR-029). Everything under
+`/api` except `health` and `auth` requires a session. What a role may do is one
+matrix in `server/auth/authorize.js`, enforced per route and served to the
+client (ADR-030); which role decides an approval step is enforced in the
+approvals domain. An `:id` that is not a UUID is a 404.
 
 ## 8. Adapter boundaries
 
 - `domain/invoice/parse-xrechnung.js` exports `parseInvoiceXml(buffer)` returning a
   format-neutral `ParsedInvoice`. A CII/ZUGFeRD parser will implement the same
   output; the detector in `technical-validation.js` chooses the parser.
-- `domain/invoice/external-validator.js` (Phase 5) is a stub interface for an
-  official EN 16931 / XRechnung validator (e.g. the KoSIT validator). Until it is
-  wired, the system reports "profile declared" and "structure checked", never
-  "compliant".
+- An official EN 16931 / XRechnung validator (e.g. the KoSIT validator) is not
+  wired and has no stub yet; it would sit beside `technical-validation.js`.
+  Until then the system reports "profile declared" and "structure checked",
+  never "compliant".
 - `domain/accounting/accounting.js` builds vendor-neutral booking lines, one
   per tax rate of the document, under one document number (ADR-053);
   `exportAccountingCsv()` is one formatter over them, and a DATEV or SAP
@@ -329,6 +340,12 @@ actor on a human action → 400. This is an MVP boundary, not authentication
 - XML parsed with entity and DTD processing disabled; files with `<!DOCTYPE`
   rejected before parsing; 5 MB upload limit; only `.xml` accepted.
 - No secrets in the repository; `.env.example` has placeholders only.
+- Stored originals are served as `text/plain` with a sandboxing CSP, never
+  rendered, so an uploaded XHTML page cannot run script (ADR-035).
+- Sessions: HttpOnly, SameSite=Strict cookie holding a random token stored as
+  a hash; double-submit CSRF token on every mutation; scrypt password hashes;
+  account lock after repeated failures (ADR-029, ADR-040). The demo accounts
+  share one password; that is for a local demo only.
 - Original files are immutable; deletion is not exposed by the API.
 - All data is synthetic. Personal data in a real deployment would be limited to
   supplier contact data and approver identities; retention would follow the

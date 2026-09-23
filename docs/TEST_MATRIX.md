@@ -307,6 +307,10 @@ described as working.
 | A4 | Non-XML upload | 400 | AUTO | `app.test.js` |
 | A5 | Original file download | byte-identical | AUTO | `app.test.js` |
 | A6 | Unknown invoice | 404 | AUTO | `app.test.js` |
+| A6a | An id that is not a UUID | 404 `INVOICE_NOT_FOUND` on reads and actions, not 500 | AUTO | `app.test.js` |
+| A6b | A malformed cookie | 401 like no session, not 500 | AUTO | `app.test.js` |
+| A6c | A refused upload | 400 with code `UPLOAD_REJECTED`, set where it is thrown | AUTO | `app.test.js` |
+| A6d | A dropped idle database connection | logged; the process keeps running | AUTO | `db.test.js` |
 
 ## UI
 

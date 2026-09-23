@@ -20,13 +20,22 @@ const upload = multer({
   // check and the parser. Requiring the extension rather than accepting either
   // signal at least keeps the weaker one from overriding the stronger.
   fileFilter: (req, file, cb) => {
-    const ok = /\.xml$/i.test(file.originalname);
-    cb(ok ? null : new Error("Nur XML-Dateien (XRechnung) werden angenommen"), ok);
+    if (/\.xml$/i.test(file.originalname)) return cb(null, true);
+    cb(Object.assign(new Error("Nur XML-Dateien (XRechnung) werden angenommen"), { status: 400, code: "UPLOAD_REJECTED" }), false);
   },
 });
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export function invoicesRouter(deps) {
   const router = Router();
+
+  // An id that cannot be a UUID names no invoice. Checked here rather than
+  // left to Postgres, whose refused cast would surface as a 500.
+  router.param("id", (req, res, next, id) => {
+    if (!UUID.test(id)) return res.status(404).json({ error: "Rechnung nicht gefunden", code: "INVOICE_NOT_FOUND" });
+    next();
+  });
 
   router.post("/", requirePermission("invoice:upload"), upload.single("file"), async (req, res, next) => {
     try {
