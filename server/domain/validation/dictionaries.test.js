@@ -304,3 +304,9 @@ test("an unknown refusal code falls back to the sentence the server sent", () =>
   assert.equal(errorText(DICTIONARIES.en, unknown), "Serversatz auf Deutsch");
   assert.equal(errorText(DICTIONARIES.en, { message: "ohne Code" }), "ohne Code");
 });
+
+test("an internal error shows the reference the server logged it under", () => {
+  const error = { code: "INTERNAL_ERROR", message: "Interner Fehler (Referenz r-1)", details: { request_id: "r-1" } };
+  assert.equal(errorText(DICTIONARIES.de, error), "Interner Fehler (Referenz r-1)");
+  assert.equal(errorText(DICTIONARIES.en, error), "Internal error (reference r-1)");
+});

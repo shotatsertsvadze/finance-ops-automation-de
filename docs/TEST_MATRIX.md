@@ -236,6 +236,11 @@ described as working.
 | S26 | Production start refuses a missing client build | names `npm run build` | AUTO | `server/config/deployment.test.js` |
 | S27 | Replacing a password ends the old sessions | old session 401, demo password 401, new password signs in; short password and unknown account refused | AUTO | `server/auth/set-password.test.js` |
 | S28 | The API serves the built client | page, assets, a reloaded client route gets the page; an unknown `/api` path stays a JSON 401 | AUTO | `server/client-serving.test.js` |
+| S30 | Every response names its request | `X-Request-Id` set; a usable inbound id kept, an unusable one replaced | AUTO | `server/observability.test.js` (ADR-060) |
+| S31 | One JSON log line per request | method, path, status, ms, user; no password, no query string | AUTO | `server/observability.test.js` |
+| S32 | An internal error is traceable, not exposed | logged with request id and stack; the caller gets the id, not the cause; the client shows it as the reference | AUTO | `server/observability.test.js`; `dictionaries.test.js` |
+| S33 | Readiness asks the database | 200 when it answers; 503 within the 2 s timeout when it hangs | AUTO | `server/observability.test.js` |
+| S34 | Logs from a running server | startup, health, readiness and a refused request each one JSON line; the test run writes none | MANUAL | Probe, 2026-09-23 |
 | S29 | `npm start` end to end | refused with exit 1 on demo passwords and no build; in demo mode serves the UI with `Secure` cookies, sign-in and reload work in chromium; after `user:password` for every account it starts and the demo password gets 401 | MANUAL | Probe, 2026-09-23, against the test database |
 
 ## Operational KPIs

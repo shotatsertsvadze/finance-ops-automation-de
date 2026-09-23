@@ -391,7 +391,7 @@ const de = {
     UNKNOWN_STATE_FILTER: "Unbekannter Status",
     UNKNOWN_EXPORT_PROFILE: "Unbekanntes Exportprofil",
     UPLOAD_REJECTED: "Datei abgelehnt: nur XML-Dateien werden angenommen",
-    INTERNAL_ERROR: "Interner Fehler",
+    INTERNAL_ERROR: ({ request_id }) => (request_id ? `Interner Fehler (Referenz ${request_id})` : "Interner Fehler"),
   },
 
   // German check text comes from the server as `reason`, so the dictionary is
@@ -766,7 +766,7 @@ const en = {
     UNKNOWN_STATE_FILTER: "Unknown state",
     UNKNOWN_EXPORT_PROFILE: "Unknown export profile",
     UPLOAD_REJECTED: "File rejected: only XML files are accepted",
-    INTERNAL_ERROR: "Internal error",
+    INTERNAL_ERROR: ({ request_id }) => (request_id ? `Internal error (reference ${request_id})` : "Internal error"),
   },
 
   /**

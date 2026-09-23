@@ -67,6 +67,7 @@ finance-ops-automation-de/
     index.js               starts the HTTP server; refuses an unsafe production start
     app.js                 createApp(): express app without listen (used by tests)
     db.js                  pool, withTransaction, type parsers
+    log.js request-log.js  JSON log lines; request id and one line per request
     auth/                  passwords (scrypt), sessions (cookie + CSRF), authorize (role matrix), set-password
     config/                policy.js, company.js, assumptions.js, tax-keys.js, deployment.js
     domain/
@@ -78,7 +79,7 @@ finance-ops-automation-de/
       approvals/           review and approval decisions, binding, final re-check
       purchase-orders/     commitments.js (capacity ledger)
       accounting/ payments/ reconciliation/ kpi/
-    routes/                auth, session, invoices, master-data, money
+    routes/                auth, session, health, invoices, master-data, money
     storage/               files.js (store/read original file)
     test-support/          test database, demo users, invoice XML builder
   client/
@@ -302,6 +303,7 @@ invoice above the auto limit.
 | Method | Path | Phase | Purpose |
 |---|---|---|---|
 | GET | `/api/health` | - | liveness, no session needed |
+| GET | `/api/health/ready` | - | readiness: 200 when the database answers `select 1` within 2 s, else 503 (ADR-060) |
 | POST | `/api/auth/login`, `/api/auth/logout` | - | session cookie and CSRF cookie; failures throttle the client address (429 `LOGIN_THROTTLED`), never the account (ADR-059) |
 | GET | `/api/auth/me` | - | the signed-in user and their permissions |
 | GET | `/api/meta/states` | - | state labels, transition table, policy |
@@ -378,6 +380,11 @@ expired, and signing in again stays on the same page (ADR-057).
   unless `DEMO_MODE=true` (ADR-058). `npm run user:password` replaces a
   password and ends that account's sessions.
 - Original files are immutable; deletion is not exposed by the API.
+- Logs are one JSON object per line (`LOG_LEVEL`, default `info`). Every
+  response carries `X-Request-Id`, kept from a proxy when usable; each request
+  logs method, path without query, status, duration and user id, never the
+  body. A 500 logs its stack under the request id and gives the caller only
+  the id to quote (ADR-060).
 - All data is synthetic. Personal data in a real deployment would be limited to
   supplier contact data and approver identities; retention would follow the
   German 8/10-year rules for accounting records (GoBD, HGB/AO), which this MVP

@@ -1290,3 +1290,31 @@ each address gets five guesses per account per quarter hour. That, and a
 shared office address throttling colleagues after twenty failures, is the
 trade against a lockout anyone can trigger. A second factor (S24) is the
 answer to distributed guessing and remains out of scope.
+
+## ADR-060 Requests are named, logged as JSON, and readiness asks the database
+
+Completes the observability item whose pool error handler landed earlier.
+
+Context: a failure in production could not be traced. The only log line was a
+bare `console.error` of a 500, which the caller saw as "Interner Fehler" with
+nothing to quote, and `/api/health` answered `ok` with the database down.
+
+Decision:
+- Every request gets an id: the caller's `X-Request-Id` when it is 1-64
+  characters of `[A-Za-z0-9._-]`, so a proxy's id links both logs, otherwise a
+  UUID. It is returned in `X-Request-Id`.
+- Logs are one JSON object per line, from `server/log.js`, with no library.
+  Each request logs method, path without its query, status, duration and the
+  user id when it finishes; never the body, which can hold a password. warn
+  and error go to stderr.
+- A 500 logs the message and stack under the request id; the response carries
+  only the id (`details.request_id`), which the client shows as the reference.
+- `/api/health` stays liveness. `/api/health/ready` runs `select 1` with a two
+  second limit and answers 503 when the database does not answer, so a load
+  balancer can take the instance out without anything restarting it.
+- `npm test` sets `LOG_LEVEL=warn`, so the test run is not buried in request
+  lines; tests capture lines through `logOutput`, not stdout, because the
+  test runner reports on stdout.
+
+Consequences: no log shipping, metrics or tracing across services; a JSON
+line per request is what a collector needs to start.

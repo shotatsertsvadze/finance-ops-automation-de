@@ -107,7 +107,9 @@ npm start                   # NODE_ENV=production
 the demo password; `DEMO_MODE=true` allows the demo password on purpose, for a
 hosted demo. Cookies are `Secure` in production, so it must sit behind HTTPS;
 the API listens on `127.0.0.1` unless `API_HOST` says otherwise, which suits a
-reverse proxy on the same host.
+reverse proxy on the same host. Route traffic on `/api/health/ready`, which
+checks the database; logs are JSON lines on stdout and stderr, and every
+response carries an `X-Request-Id` to find its line.
 
 ## Try it
 

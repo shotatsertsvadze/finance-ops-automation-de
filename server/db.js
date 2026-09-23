@@ -1,4 +1,5 @@
 import pg from "pg";
+import { log } from "./log.js";
 
 const { Pool, types } = pg;
 
@@ -12,7 +13,7 @@ export function createPool(connectionString = process.env.DATABASE_URL) {
   const pool = new Pool({ connectionString });
   // An idle client whose connection dies is removed by pg, which then emits
   // this. Unhandled, it would take the whole process down.
-  pool.on("error", (error) => console.error("postgres idle client error:", error.message));
+  pool.on("error", (error) => log("error", "postgres idle client error", { error: error.message }));
   return pool;
 }
 

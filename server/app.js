@@ -6,7 +6,10 @@ import { masterDataRouter, usersRouter } from "./routes/master-data.js";
 import { accountingRouter, bankRouter, dashboardRouter, reconciliationRouter } from "./routes/money.js";
 import { authRouter } from "./routes/auth.js";
 import { requireSession, sessionMiddleware } from "./routes/session.js";
+import { healthRouter } from "./routes/health.js";
 import { STATE_LABELS, TRANSITIONS } from "./domain/workflow/states.js";
+import { requestLog } from "./request-log.js";
+import { log } from "./log.js";
 
 /**
  * Same-origin only. The UI is served by Vite in development, which proxies
@@ -48,6 +51,7 @@ export function createApp(deps, { clientDir } = {}) {
   // believed only from a proxy on this host, so a client connecting directly
   // cannot choose its own address to dodge the login throttle (ADR-059).
   app.set("trust proxy", "loopback");
+  app.use(requestLog);
   // Content types on this API are declared, never guessed. Without this a
   // browser may sniff bytes back into a renderable type and run them.
   app.use((req, res, next) => {
@@ -57,7 +61,7 @@ export function createApp(deps, { clientDir } = {}) {
   app.use(cors(corsOptions()));
   app.use(express.json({ limit: "1mb" }));
 
-  app.get("/api/health", (req, res) => res.json({ ok: true }));
+  app.use("/api/health", healthRouter(deps));
 
   app.use("/api", sessionMiddleware(deps.pool));
   app.use("/api/auth", authRouter(deps));
@@ -77,8 +81,9 @@ export function createApp(deps, { clientDir } = {}) {
   app.use((error, req, res, next) => {
     if (error.status) return res.status(error.status).json({ error: error.message, code: error.code ?? null, details: error.details ?? null });
     if (error.name === "MulterError") return res.status(400).json({ error: error.message, code: "UPLOAD_REJECTED" });
-    console.error(error);
-    res.status(500).json({ error: "Interner Fehler", code: "INTERNAL_ERROR" });
+    // The cause stays in the log; the caller gets the id to quote.
+    log("error", "internal error", { request_id: req.id, error: error.message, stack: error.stack });
+    res.status(500).json({ error: `Interner Fehler (Referenz ${req.id})`, code: "INTERNAL_ERROR", details: { request_id: req.id } });
   });
   return app;
 }
