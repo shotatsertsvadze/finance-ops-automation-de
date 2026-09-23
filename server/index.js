@@ -33,6 +33,26 @@ if (problems.length) {
   await deps.pool.end();
   process.exitCode = 1;
 } else {
-  createApp(deps, { clientDir: production ? clientDir : undefined })
+  const server = createApp(deps, { clientDir: production ? clientDir : undefined })
     .listen(port, host, () => log("info", `finops api listening on http://${host}:${port}`, { production }));
+  server.requestTimeout = 30_000;
+  for (const signal of ["SIGTERM", "SIGINT"]) process.once(signal, () => shutDown(server, signal));
+}
+
+/**
+ * Stops taking requests, lets the ones in flight finish, then closes the
+ * pool, so a deploy or a Ctrl-C never cuts a transaction off halfway
+ * (ADR-075). Gives up after ten seconds rather than hang the deploy.
+ */
+function shutDown(server, signal) {
+  log("info", "shutting down", { signal });
+  setTimeout(() => {
+    log("error", "shutdown timed out, exiting");
+    process.exit(1);
+  }, 10_000).unref();
+  server.close(async () => {
+    await deps.pool.end();
+    log("info", "stopped");
+  });
+  server.closeIdleConnections();
 }

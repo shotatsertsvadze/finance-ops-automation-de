@@ -1569,3 +1569,20 @@ location. In production HSTS is added, since the app runs behind HTTPS there
 Consequences: fonts from another host, or an inline script, need the policy
 changed on purpose. The Vite dev server is not covered; it serves the
 development build only.
+
+## ADR-075 Every wait is bounded, and the server shuts down cleanly
+
+Context: the pool had no connection, statement or idle-transaction limit, so a
+database that hung took every request with it; a connect to an unroutable
+address waited 75 s for the operating system. The process ignored SIGTERM, so
+a deploy or restart cut requests off mid-transaction.
+
+Decision: `createPool` bounds connecting (5 s), each statement (15 s) and a
+transaction left idle (30 s), each overridable by environment and by tests;
+the migration runner lifts the statement limit for its own session. A request
+may take at most 30 s. On SIGTERM or SIGINT the server stops accepting
+connections, closes idle ones, lets running requests finish, closes the pool
+and exits 0; after 10 s it exits with 1 rather than hang.
+
+Consequences: a slow query now fails with a 500 and a request id instead of
+waiting indefinitely, which is what the logs and readiness check expect.

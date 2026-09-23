@@ -533,3 +533,6 @@ findings themselves.
 | O36 | A numeric setting that is not a number in range | the start stops, naming the setting. Before: `SESSION_HOURS=zwoelf` started and every sign-in failed | AUTO | `server/config/env.test.js` |
 | O37 | Security headers on the page and the API | CSP without unsafe-inline or unsafe-eval, frame-ancestors none, X-Frame-Options DENY, no-referrer, nosniff; HSTS in production only | AUTO | `server/security-headers.test.js` (ADR-074) |
 | O38 | The built app under that CSP | sign-in, invoice, dashboard, payments and the original XML work; both fonts load; no CSP violation in the console | MANUAL | Browser, 2026-09-23, `dist/` served by the API |
+| O39 | A statement that runs too long | cancelled at the statement limit | AUTO | `server/timeouts.test.js` (ADR-075) |
+| O40 | A database that cannot be reached | fails within the connect limit; before: a connect to an unroutable address hung 75 s | AUTO | `server/timeouts.test.js` |
+| O41 | SIGTERM | "shutting down", "stopped", exit code 0 | AUTO | `server/timeouts.test.js` |

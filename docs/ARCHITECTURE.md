@@ -400,6 +400,10 @@ expired, and signing in again stays on the same page (ADR-057).
   to the audit trail but not update, delete or truncate it, and may not delete
   invoices, whose deletion would cascade to their trail. A production start
   refuses a connection that could (ADR-068).
+- Every wait is bounded: connecting to the database (5 s), one statement
+  (15 s), an idle open transaction (30 s), one request (30 s). SIGTERM and
+  SIGINT stop new requests, let running ones finish, close the pool and exit;
+  after 10 s the process exits anyway (ADR-075).
 - Every response carries a Content-Security-Policy (own origin, Google Fonts
   for the fonts, no framing), `X-Frame-Options: DENY`, `Referrer-Policy:
   no-referrer`, COOP and a Permissions-Policy; HSTS in production (ADR-074).
