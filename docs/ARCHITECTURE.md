@@ -373,6 +373,8 @@ expired, and signing in again stays on the same page (ADR-057).
 - No secrets in the repository; `.env.example` has placeholders only.
 - Stored originals are served as `text/plain` with a sandboxing CSP, never
   rendered, so an uploaded XHTML page cannot run script (ADR-035).
+- Sessions: `last_seen_at` is written at most once a minute, and each sign-in
+  deletes sessions that ended more than a day ago (ADR-065).
 - Sessions: HttpOnly, SameSite=Strict cookie holding a random token stored as
   a hash; double-submit CSRF token on every mutation; scrypt password hashes;
   failed sign-ins throttled per client address, 5 per account and 20 overall

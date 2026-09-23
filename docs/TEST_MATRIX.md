@@ -507,3 +507,6 @@ findings themselves.
 | O11 | The demo generator after the change | same totals: 36 paid, 30 matched, 4 exceptions, 4 unmatched | MANUAL | Run against the test database, 2026-09-23 |
 | O12 | Reads that carry bank details or the books | export and bank transactions: finance and admin only; supplier and PO master data: clerk, finance, admin; every other role 403 | AUTO | `read-permissions.test.js` (ADR-064) |
 | O13 | A role without `bank:read` on the payments page | says the area is reserved for finance, never shows an empty statement; finance sees the statement | MANUAL | Browser, 2026-09-23: manager and finance |
+| O14 | A request within a minute of the last one | `last_seen_at` not written | AUTO | `session-upkeep.test.js` (ADR-065) |
+| O15 | A request after a minute | `last_seen_at` refreshed | AUTO | `session-upkeep.test.js` |
+| O16 | Sessions that ended more than a day ago | deleted at the next sign-in; one that ended an hour ago stays | AUTO | `session-upkeep.test.js` |

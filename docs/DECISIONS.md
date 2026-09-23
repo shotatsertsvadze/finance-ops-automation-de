@@ -1398,3 +1398,17 @@ reserved for finance instead of showing an empty statement.
 
 Consequences: `/api/users` stays open to any signed-in user; it holds names and
 roles, which the approval screens show anyway.
+
+## ADR-065 Sessions are written less and cleaned up
+
+Context: resolving a session updated `last_seen_at` on every request, so every
+read was also a write, and sessions that had expired or been revoked were
+never removed.
+
+Decision: `last_seen_at` is updated only when it is more than a minute old.
+Each sign-in deletes sessions that expired or were revoked more than a day
+ago; the last day stays, for anyone asking who was signed in when.
+
+Consequences: `last_seen_at` is accurate to a minute. Clean-up runs only when
+someone signs in, which is often enough for a table that grows only through
+sign-ins; no scheduled job is needed.
