@@ -95,6 +95,20 @@ createdb finops_test
 npm test
 ```
 
+Production (one process serves the API and the built client):
+
+```bash
+npm run build
+printf '%s' "$PASSWORD" | npm run user:password -- jonas.weber@nordwerk.example   # for every account
+npm start                   # NODE_ENV=production
+```
+
+`npm start` refuses to run while `dist/` is missing or any account still has
+the demo password; `DEMO_MODE=true` allows the demo password on purpose, for a
+hosted demo. Cookies are `Secure` in production, so it must sit behind HTTPS;
+the API listens on `127.0.0.1` unless `API_HOST` says otherwise, which suits a
+reverse proxy on the same host.
+
 ## Try it
 
 `docs/DEMO.md` walks through the system in ten minutes. To try a single
@@ -195,7 +209,7 @@ ADR-034.
 
 The demo accounts share one password, `nordwerk-demo`, set by `npm run db:seed`
 and overridable with `DEMO_PASSWORD`. These are synthetic accounts in a local
-demo.
+demo; a production start refuses them (see Setup).
 
 | Account | Role | May |
 |---|---|---|

@@ -62,13 +62,13 @@ finance-ops-automation-de/
   fixtures/bank/           synthetic bank statement for the tests
   db/migrations/           append-only SQL, applied by scripts/migrate.js
   db/seed/                 synthetic master data (users, suppliers, IBANs, POs)
-  scripts/                 migrate.js, seed.js, reset.js, demo-data.js, demo-walkthrough.mjs
+  scripts/                 migrate.js, seed.js, reset.js, set-password.js, demo-data.js, demo-walkthrough.mjs
   server/
-    index.js               starts the HTTP server
+    index.js               starts the HTTP server; refuses an unsafe production start
     app.js                 createApp(): express app without listen (used by tests)
     db.js                  pool, withTransaction, type parsers
-    auth/                  passwords (scrypt), sessions (cookie + CSRF), authorize (role matrix)
-    config/                policy.js, company.js, assumptions.js, tax-keys.js
+    auth/                  passwords (scrypt), sessions (cookie + CSRF), authorize (role matrix), set-password
+    config/                policy.js, company.js, assumptions.js, tax-keys.js, deployment.js
     domain/
       invoice/             xml-safety.js, parse-xrechnung.js (UBL adapter), technical-validation.js, queries.js
       validation/          business-checks.js, tax-breakdown.js, lookup.js (each check returns a CheckResult)
@@ -369,6 +369,11 @@ expired, and signing in again stays on the same page (ADR-057).
   a hash; double-submit CSRF token on every mutation; scrypt password hashes;
   account lock after repeated failures (ADR-029, ADR-040). The demo accounts
   share one password; that is for a local demo only.
+- Production (`npm start`, `NODE_ENV=production`): the API serves the built
+  client from `dist/`, cookies are `Secure`, and the start is refused while
+  `dist/` is missing or any account still has the published demo password,
+  unless `DEMO_MODE=true` (ADR-058). `npm run user:password` replaces a
+  password and ends that account's sessions.
 - Original files are immutable; deletion is not exposed by the API.
 - All data is synthetic. Personal data in a real deployment would be limited to
   supplier contact data and approver identities; retention would follow the

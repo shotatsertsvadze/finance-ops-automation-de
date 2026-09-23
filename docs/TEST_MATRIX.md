@@ -228,6 +228,11 @@ described as working.
 | S22 | UI hides actions a role may not take | manager sees no review buttons, sees whose step it is | MANUAL | Browser, 2026-09-17 |
 | S23 | Test database safeguard | refuses to run when it equals `DATABASE_URL` | MANUAL | Probe, 2026-09-17 |
 | S24 | No password reset, second factor or SSO | out of scope | OPEN | Deliberate, see ADR-029 |
+| S25 | Production start refuses the published demo password | every such account named, ADMIN included; an account with its own password is not; `DEMO_MODE=true` allows it; development never refused | AUTO | `server/config/deployment.test.js` (ADR-058) |
+| S26 | Production start refuses a missing client build | names `npm run build` | AUTO | `server/config/deployment.test.js` |
+| S27 | Replacing a password ends the old sessions | old session 401, demo password 401, new password signs in; short password and unknown account refused | AUTO | `server/auth/set-password.test.js` |
+| S28 | The API serves the built client | page, assets, a reloaded client route gets the page; an unknown `/api` path stays a JSON 401 | AUTO | `server/client-serving.test.js` |
+| S29 | `npm start` end to end | refused with exit 1 on demo passwords and no build; in demo mode serves the UI with `Secure` cookies, sign-in and reload work in chromium; after `user:password` for every account it starts and the demo password gets 401 | MANUAL | Probe, 2026-09-23, against the test database |
 
 ## Operational KPIs
 

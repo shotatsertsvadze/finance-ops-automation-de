@@ -1234,3 +1234,28 @@ the URL is kept, so signing in again returns to the same page.
 
 Consequences: nothing a page did before the expiry is retried; the person
 repeats the action after signing in, and the server decides it afresh.
+
+## ADR-058 A production start serves the client and refuses the demo password
+
+Context: the app could only run as a local demo. Nothing served the built
+client, there was no start command, and every account, ADMIN included, shared
+a password printed in the README. The `Secure` cookie flag depended on a
+`NODE_ENV` nobody set.
+
+Decision:
+- `npm start` sets `NODE_ENV=production`. In production the API serves `dist/`
+  and answers any GET outside `/api/` with `index.html`, so a reloaded client
+  route works; `/api` keeps its JSON answers. Cookies are `Secure`, so HTTPS
+  (typically a reverse proxy on the same host) is required.
+- The start is refused, exit code 1, while `dist/index.html` is missing or any
+  account still verifies against the published demo password. Every such
+  account is named. `DEMO_MODE=true` allows the demo password on purpose, for
+  a hosted demo on synthetic data. Development is never refused.
+- `npm run user:password -- <email>` takes the password on stdin, so it stays
+  out of shell history, requires 12 characters, clears a login lock and ends
+  the account's open sessions.
+
+Consequences: checking every account costs one scrypt verification each at
+startup, about 40 ms per account. A password set through `DEMO_PASSWORD` is
+not recognised as a demo password; it is a demo-only knob, documented as such.
+There is still no self-service password change (S24).

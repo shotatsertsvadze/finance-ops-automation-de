@@ -1,8 +1,10 @@
+import { fileURLToPath } from "node:url";
 import { createApp } from "./app.js";
 import { createPool } from "./db.js";
 import { createStorage } from "./storage/files.js";
 import { loadPolicy } from "./config/policy.js";
 import { loadCompany } from "./config/company.js";
+import { deploymentProblems } from "./config/deployment.js";
 
 // API_PORT, not PORT: the UI dev server and some hosts set PORT for
 // themselves, and an ambient PORT overrides --env-file. Sharing the name made
@@ -19,4 +21,16 @@ const deps = {
 // deliberate act, not the default.
 const host = process.env.API_HOST ?? "127.0.0.1";
 
-createApp(deps).listen(port, host, () => console.log(`finops api listening on http://${host}:${port}`));
+// In production the API serves the built client; in development Vite does.
+const clientDir = fileURLToPath(new URL("../dist", import.meta.url));
+const production = process.env.NODE_ENV === "production";
+
+const problems = await deploymentProblems({ pool: deps.pool, env: process.env, clientDir });
+if (problems.length) {
+  for (const problem of problems) console.error(`Start abgelehnt: ${problem}`);
+  await deps.pool.end();
+  process.exitCode = 1;
+} else {
+  createApp(deps, { clientDir: production ? clientDir : undefined })
+    .listen(port, host, () => console.log(`finops api listening on http://${host}:${port}${production ? " (production)" : ""}`));
+}

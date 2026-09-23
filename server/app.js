@@ -1,3 +1,4 @@
+import path from "node:path";
 import express from "express";
 import cors from "cors";
 import { invoicesRouter } from "./routes/invoices.js";
@@ -23,8 +24,24 @@ function corsOptions() {
   };
 }
 
-/** Express app without listen(), so tests can mount it on any port. */
-export function createApp(deps) {
+/**
+ * The built client, when there is one. Any GET outside /api gets index.html,
+ * so a route the browser reloads (`/rechnung/:id`) reaches the client router.
+ */
+function serveClient(app, clientDir) {
+  const index = path.resolve(clientDir, "index.html");
+  app.use(express.static(clientDir, { index: false }));
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api/")) return next();
+    res.sendFile(index);
+  });
+}
+
+/**
+ * Express app without listen(), so tests can mount it on any port.
+ * `clientDir` is the built client (`dist/`); in development Vite serves it.
+ */
+export function createApp(deps, { clientDir } = {}) {
   const app = express();
   app.disable("x-powered-by");
   // Content types on this API are declared, never guessed. Without this a
@@ -51,6 +68,7 @@ export function createApp(deps) {
   app.use("/api/bank", bankRouter(deps));
   app.use("/api/reconciliation", reconciliationRouter(deps));
   app.use("/api/dashboard", dashboardRouter(deps));
+  if (clientDir) serveClient(app, clientDir);
 
   app.use((error, req, res, next) => {
     if (error.status) return res.status(error.status).json({ error: error.message, code: error.code ?? null, details: error.details ?? null });

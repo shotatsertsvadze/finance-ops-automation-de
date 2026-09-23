@@ -22,6 +22,8 @@ npm run db:seed           # synthetic master data
 npm run dev               # API (4400) + Vite (5400)
 npm test                  # node --test; DB tests use TEST_DATABASE_URL
 npm run test:browser      # the browser suite alone; skips without chromium
+npm run build && npm start   # production: one process, API + built client
+printf '%s' "$PW" | npm run user:password -- <email>   # replace a demo password
 npx playwright install chromium   # once, to stop the browser tests skipping
 ```
 
