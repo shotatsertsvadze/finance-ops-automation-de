@@ -8,6 +8,7 @@ import { SYSTEM, TransitionError, NotFoundError, recordEvent, transition, writeE
 import { REPROCESSABLE_STATES } from "../workflow/states.js";
 import { toCents, centsToDecimal } from "../money.js";
 import { parseIsoDate } from "../dates.js";
+import { startRound } from "../approvals/rounds.js";
 
 const sha256 = (buffer) => createHash("sha256").update(buffer).digest("hex");
 
@@ -133,10 +134,7 @@ export async function processInvoice({ pool, storage, policy, company }, invoice
     });
     await saveDecision(client, invoiceId, runNo, decision, policy);
     await client.query("update finops.approval_steps set status = 'CANCELLED' where invoice_id = $1 and status = 'PENDING'", [invoiceId]);
-    await client.query("delete from finops.approval_steps where invoice_id = $1 and status = 'CANCELLED'", [invoiceId]);
-    for (const step of decision.requiredSteps) {
-      await client.query("insert into finops.approval_steps (invoice_id, step_no, required_role) values ($1, $2, $3)", [invoiceId, step.step_no, step.required_role]);
-    }
+    await startRound(client, invoiceId, decision.requiredSteps);
     await markException(client, invoiceId, decision.targetState);
     const action = { REVIEW: "routed_to_review", APPROVAL: "routed_to_approval", AUTO_APPROVE: "auto_approved" }[decision.decision];
     await transition(client, {

@@ -514,3 +514,6 @@ findings themselves.
 | O18 | A page size outside 1-200 or a negative offset | 400 `INVALID_PAGE` | AUTO | `paging.test.js` |
 | O19 | Navigation counts | one grouped query, not the downloaded list | AUTO | `paging.test.js`; client `api.test.js` |
 | O20 | Paging in the inbox | 70 demo invoices: 50 shown with "Weitere laden (50 von 70 angezeigt)", all 70 after one click; nav counts 70 and 6 in review | MANUAL | Browser, 2026-09-23 |
+| O21 | An invoice released into approval a second time | the first round's steps stay, cancelled, with who signed; the new round is round 2 | AUTO | `rounds.test.js` (ADR-067) |
+| O22 | The detail after a second release | `approval_steps` is the live round; `approval_history` holds the earlier one with its signer | AUTO | `rounds.test.js` |
+| O23 | Deciding the new round | works as before and leaves the old round untouched | AUTO | `rounds.test.js`; demo generator totals unchanged |

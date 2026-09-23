@@ -65,7 +65,7 @@ export async function getInvoiceDetail(pool, id) {
     pool.query("select * from finops.routing_decisions where invoice_id = $1 order by run_no desc limit 1", [id]),
     pool.query(
       `select a.*, u.name as actor_name from finops.approval_steps a left join finops.users u on u.id = a.actor_id
-       where a.invoice_id = $1 order by a.step_no`, [id],
+       where a.invoice_id = $1 order by a.round, a.step_no`, [id],
     ),
     pool.query(
       `select e.*, u.name as actor_name from finops.audit_events e left join finops.users u on u.id = e.actor_id
@@ -90,7 +90,9 @@ export async function getInvoiceDetail(pool, id) {
     lines: lines.rows,
     validation: { technical: results.rows.filter((r) => r.phase === "TECHNICAL"), business: results.rows.filter((r) => r.phase === "BUSINESS") },
     routing: decision.rows[0] ?? null,
-    approval_steps: steps.rows,
+    // The live round; the rounds before it, cancelled, as the record (ADR-067).
+    approval_steps: steps.rows.filter((s) => s.round === currentRound(steps.rows)),
+    approval_history: steps.rows.filter((s) => s.round !== currentRound(steps.rows)),
     audit_events: events.rows,
     // One line per tax rate (ADR-053); the record is what they share.
     accounting_record: accounting.rows[0] ?? null,
@@ -101,6 +103,8 @@ export async function getInvoiceDetail(pool, id) {
     bank_transactions: bankTx.rows,
   };
 }
+
+const currentRound = (steps) => Math.max(0, ...steps.map((s) => s.round));
 
 async function openCreditCents(pool, invoice) {
   const credits = await openCreditsFor(pool, invoice.supplier_id, invoice.currency ?? "EUR", invoice.id, { lock: false });

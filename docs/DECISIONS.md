@@ -1430,3 +1430,20 @@ between two pages; for a work queue read by people that is acceptable, and
 keyset paging can replace it without changing the client's contract. The KPI
 queries still aggregate whole tables, which is what they are for; an index or
 a summary table is the next step when that becomes slow.
+
+## ADR-067 Approval steps are kept, round by round
+
+Context: releasing an invoice from review deleted every approval step and
+re-validation deleted the cancelled ones, so who had signed what in an earlier
+round was gone from the table and survived only in the audit log.
+
+Decision: steps carry a `round`. Each release into approval starts a new round
+after cancelling what is left of the old one; nothing is deleted. The approval
+decision works on the live round, the highest one. The invoice detail returns
+the live round as `approval_steps`, as before, and the earlier rounds as
+`approval_history`. Every other reader already filtered by status, and an
+earlier round is always cancelled, so none of them changed.
+
+Consequences: a cancelled step keeps its signer and decision time but not the
+fact that it had been approved; the audit log has that. The screen does not
+show `approval_history` yet.
