@@ -88,11 +88,11 @@ reason. It moves to **awaiting approval** with two steps, manager and finance,
 not to approved.
 
 Now sign in as **tim.kessler@nordwerk.example** (cost centre manager) and
-approve step 1, then as **jonas.weber@nordwerk.example** (finance) step 2.
+approve step 1, then as **mira.hoffmann@nordwerk.example** (finance) step 2.
 
 > "The person who cleared the exception cannot be the person who approves the
-> payment, and nobody signs an invoice they submitted. That is enforced by the
-> server, not by the screen."
+> payment, nobody signs an invoice they submitted, and whoever signs does not
+> send the money. That is enforced by the server, not by the screen."
 
 Point at the approval step: it records the document hash, the validation run
 and the amount that was approved. If the document or the amount changes
@@ -100,8 +100,9 @@ afterwards, the approval no longer counts.
 
 ## 6. The money path — 60 seconds
 
-Back as Finance: **create booking record**, then **instruct payment**, then
-**confirm payment**.
+Back as Jonas (finance, who did not sign it): **create booking record**, then
+**instruct payment**, then **confirm payment**. As Mira, the payment buttons
+would be refused.
 
 > "The booking record is vendor-neutral; a DATEV or SAP adapter formats it. No
 > money moves here — this is the seam where a real bank API goes."

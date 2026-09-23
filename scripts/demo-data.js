@@ -30,6 +30,7 @@ const USERS = {
   manager: "00000000-0000-0000-0000-000000000002",
   manager2: "00000000-0000-0000-0000-000000000003",
   finance: "00000000-0000-0000-0000-000000000004",
+  finance2: "00000000-0000-0000-0000-000000000007",
   cfo: "00000000-0000-0000-0000-000000000005",
 };
 
@@ -245,7 +246,8 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
       const { rows: steps } = await deps.pool.query(
         "select step_no, required_role from finops.approval_steps where invoice_id = $1 and status = 'PENDING' order by step_no", [id],
       );
-      const approver = { MANAGER: USERS.manager2, FINANCE: USERS.finance, CFO: USERS.cfo };
+      // Mira signs, Jonas pays: a signer may not pay (ADR-056).
+      const approver = { MANAGER: USERS.manager2, FINANCE: USERS.finance2, CFO: USERS.cfo };
       for (const step of steps) {
         await decideApprovalStep(deps, {
           invoiceId: id, stepNo: step.step_no, action: "approve",

@@ -17,6 +17,18 @@ export const mockProvider = {
  * One key per attempt. A replay of the same attempt cannot pay twice, and at
  * most one instruction per invoice is live at a time (ADR-055).
  */
+/**
+ * Approving and paying are separate hands: whoever signed an approval step of
+ * this invoice neither sends its money nor confirms it (ADR-056).
+ */
+async function refuseApprover(client, invoiceId, actor) {
+  const { rowCount } = await client.query(
+    "select 1 from finops.approval_steps where invoice_id = $1 and status = 'APPROVED' and actor_id = $2",
+    [invoiceId, actor.id],
+  );
+  if (rowCount) throw new RuleError(409, "APPROVER_CANNOT_PAY", "Wer die Rechnung freigegeben hat, darf ihre Zahlung weder anweisen noch bestätigen");
+}
+
 async function idempotencyKey(client, invoiceId) {
   const { rows: [row] } = await client.query(
     "select count(*)::int as attempts from finops.payment_instructions where invoice_id = $1", [invoiceId],
@@ -44,6 +56,7 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
     if (invoice.state !== "ACCOUNTING_READY") {
       throw new TransitionError("NOT_READY_FOR_PAYMENT", `Rechnung im Status ${invoice.state} kann nicht zur Zahlung gegeben werden`, { state: invoice.state });
     }
+    await refuseApprover(client, invoiceId, actor);
     if (!invoice.supplier_iban_raw) throw new RuleError(422, "NO_IBAN", "Ohne IBAN kann keine Zahlung angewiesen werden");
     const creditorIban = await verifiedCreditorIban(client, invoice);
 
@@ -129,6 +142,7 @@ export async function confirmPayment({ pool }, { invoiceId, actor, providerRef }
     if (invoice.state !== "PAYMENT_PENDING") {
       throw new TransitionError("NOT_AWAITING_PAYMENT_CONFIRMATION", `Rechnung im Status ${invoice.state} wartet nicht auf eine Zahlungsbestätigung`, { state: invoice.state });
     }
+    await refuseApprover(client, invoiceId, actor);
 
     const { rows: [instruction] } = await client.query(
       "select * from finops.payment_instructions where invoice_id = $1 and status = 'PENDING' for update", [invoiceId],

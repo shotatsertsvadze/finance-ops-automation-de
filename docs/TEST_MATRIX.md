@@ -27,6 +27,7 @@ Run: `npm test` (165 tests, all passing as of 2026-09-17). Database tests need
 | R7 | Amount thresholds route to the right tier | 380 auto, 1 240 MANAGER, 30 000 three steps | AUTO | `decide.test.js` (incl. boundary values); `intake.test.js` A, E, G |
 | R8 | Same actor cannot satisfy two approval steps | 409, step stays PENDING, invoice not approved | AUTO | `approvals.test.js` "one actor cannot satisfy two approval steps" |
 | R8a | Whoever submitted an invoice cannot approve it | 409 `UPLOADER_CANNOT_APPROVE`; another manager can | AUTO | `approvals.test.js` "whoever submitted an invoice cannot approve it" |
+| R8b | Whoever signed an approval step cannot pay the invoice | 409 `APPROVER_CANNOT_PAY` on instruction and on confirmation, state unchanged; a second finance user can | AUTO | `separation.test.js` (ADR-056) |
 | R9 | Reviewer cannot approve what they released from review | 409, another approver succeeds | AUTO | `approvals.test.js` "whoever released an invoice from review cannot also approve it" |
 | R10 | Rejected invoice cannot become approved | 409 at the endpoint, no transition in the machine | AUTO | `approvals.test.js` "a rejected invoice cannot be approved afterwards"; `states.test.js` |
 | R11 | Finalised invoice cannot be processed again | 409, nothing changes | AUTO | `intake.test.js` "reprocess ... refused from APPROVED"; `app.test.js` returns 409 |

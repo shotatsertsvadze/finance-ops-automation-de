@@ -139,7 +139,8 @@ same transaction as the invoice, and never re-enters matching (ADR-036).
 A changed IBAN is not overridable: review cannot release it, and the payment
 instruction pays only an ACTIVE master-data account of an ACTIVE supplier,
 checked again at that moment. Whoever submitted an invoice cannot approve it
-(ADR-052).
+(ADR-052), and whoever signed an approval step can neither instruct nor
+confirm its payment (ADR-056).
 
 Before an approval is recorded the business checks run again against current
 master data. A check that was not failing at the last run and is failing now

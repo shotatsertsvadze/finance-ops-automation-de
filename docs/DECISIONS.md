@@ -1192,3 +1192,29 @@ Decision:
 Consequences: two enum and schema migrations (0017, 0018). The dictionary,
 state and schema guards each flagged the new state until it was placed, which
 is what ADR-051 set them up to do.
+
+## ADR-056 Whoever signs an invoice does not pay it
+
+Extends ADR-013 and ADR-052.
+
+Context: FINANCE signs the second approval step of every invoice above tier 1
+and also instructs and confirms payments. One person could sign an invoice and
+then send its money, so the approval chain ended in the hands it was meant to
+check.
+
+Decision:
+- `createPaymentInstruction` and `confirmPayment` refuse anyone who holds an
+  `APPROVED` step on the invoice (409 `APPROVER_CANNOT_PAY`), before anything
+  is written. The live signatures are read from `approval_steps`; after
+  `APPROVED` no path leads back to review, so they cannot be rebuilt under the
+  payer's feet.
+- Booking, reporting a failed payment, reopening one and stopping an invoice
+  stay open to the signer: none of them sends money.
+- An invoice the system approved has no signer and is unaffected. ADMIN cannot
+  approve, so is unaffected too.
+- The client shows the refusal rather than hiding the buttons, as it does for
+  the other person-based rules of ADR-013.
+
+Consequences: an invoice with a FINANCE step needs a second finance user to
+pay it; the seed has two (Jonas Weber, Mira Hoffmann). The demo generator lets
+Mira sign and Jonas pay, and the demo script follows.
