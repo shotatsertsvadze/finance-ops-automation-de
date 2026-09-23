@@ -27,9 +27,9 @@ const UNFINISHED_INTAKE = ["RECEIVED", "VALIDATING"];
  * touched again.
  *
  * Sending the same file again while its first run never finished resumes that
- * invoice instead of recording a duplicate: the stranded row used to count as
- * the live one, so the obvious thing for a sender to try was also the one
- * thing that could not work.
+ * invoice instead of recording a duplicate. A stranded row is not a live
+ * invoice: counting it as one would make re-sending, the obvious thing for a
+ * sender to try, the one thing that cannot work (ADR-044).
  */
 export async function receiveInvoice({ pool, storage }, { buffer, originalFilename, sourceChannel, actor }) {
   const id = randomUUID();

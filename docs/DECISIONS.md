@@ -1487,3 +1487,18 @@ passes the action through.
 Consequences: no behaviour changes. The refusal `NOT_AWAITING_APPROVAL`
 disappears, because the state it guarded is now decided before the call; the
 dictionary guard flagged its text as orphaned.
+
+## ADR-070 Comments say why, not what happened
+
+Context: several comments told the story of a change ("used to count as the
+live one", "until this existed", "read 0 for as long as it existed"). The
+story belongs to the ADRs and the commit log; in the code it ages into
+confusion, describing a past the reader cannot see.
+
+Decision: a comment states the reason the code is as it is, in the present,
+and names the ADR that holds the story. Test files keep their headers naming
+the defect a test guards against: that is the test's reason for existing.
+Comments about rows written before a column existed stay, since they explain
+current behaviour for old data.
+
+Consequences: six comments rewritten; no code changed.
