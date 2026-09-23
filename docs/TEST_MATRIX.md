@@ -18,7 +18,8 @@ Run: `npm test` (165 tests, all passing as of 2026-09-17). Database tests need
 | R1 | Changed IBAN never auto-passes | HIGH failure, REVIEW_REQUIRED | AUTO | `intake.test.js` "B: changed IBAN never auto-passes"; `business-checks.test.js` also covers a RETIRED account not counting as approved |
 | R2 | Identical file uploaded twice | second is DUPLICATE, not processed, original untouched | AUTO | `intake.test.js` "identical file uploaded again becomes DUPLICATE" |
 | R3 | Same supplier + number, different file | REVIEW_REQUIRED, no payable record | AUTO | `intake.test.js` "D: same supplier and number in a different file" |
-| R4 | Two payable records for one supplier invoice number | impossible, DB rejects with 23505 | AUTO | `intake.test.js` "database forbids two payable records"; partial unique index `invoices_one_payable_per_number` |
+| R4 | Two payable records for one supplier invoice number | impossible, DB rejects with 23505 | AUTO | `intake.test.js` "database forbids two payable records"; partial unique index `invoices_one_payable_per_number`, covering CREDITED and SETTLED_BY_CREDIT since 0013; `schema-states.test.js` compares the index with `PAYABLE_STATES` |
+| R4a | Every state has exactly one phase, and every state list derives from it | a state without a phase fails the suite; nothing moves backward once committed | AUTO | `states.test.js` (ADR-051) |
 | R5 | Malformed / non-XML input | fail closed to REVIEW_REQUIRED, file kept and readable | AUTO | `intake.test.js` "F: malformed file fails closed", "non-XML bytes fail closed" |
 | R6 | XML with DOCTYPE or ENTITY | rejected before the parser runs | AUTO | `technical-validation.test.js` "DOCTYPE is rejected before parsing" |
 | R7 | Amount thresholds route to the right tier | 380 auto, 1 240 MANAGER, 30 000 three steps | AUTO | `decide.test.js` (incl. boundary values); `intake.test.js` A, E, G |
@@ -154,6 +155,8 @@ commitments is 510,00.
 | P11 | Invoice detail | reports available capacity, excluding the invoice's own hold | AUTO | "the invoice detail reports available capacity" |
 | P11b | A credit note gives capacity back | negative claim, order shows the amount free again | AUTO | `credit-note-path.test.js` |
 | P11c | A booked credit note keeps its claim | capacity stays back after CREDITED | AUTO | `credit-note-path.test.js`; releasing it undid the credit |
+| P11d | An invoice settled by credit keeps its claim | ACTIVE commitment after SETTLED_BY_CREDIT | AUTO | `netting-path.test.js` "a settled invoice keeps its claim" |
+| P11e | Claims released by settlement before 0013 are restored | once, however often the repair runs | AUTO | `upgrade.test.js` "an invoice settled by credit before 0013" |
 | P11a | An order taken past its value by reviewers | shown as over-committed, not as a negative availability | MANUAL | Invoice detail, DEMO-PO-KLEIN in the demo run |
 | P12 | Original R07 reproduction | no longer reproduces | MANUAL | Probe against a fresh database, 2026-09-17 |
 | P13 | Partial deliveries and order closure | not modelled | OPEN | Deliberate, see ADR-032; credit notes returning capacity are modelled, see ADR-049 |
@@ -219,6 +222,7 @@ described as working.
 | K10 | Review dwell time | measured entering review to release | AUTO | `kpi.test.js` |
 | K11 | Savings estimate | derived from the stated assumptions and real volume | AUTO | `kpi.test.js` |
 | K12 | API serves the same figures | 200 with the computed values | AUTO | `kpi.test.js` |
+| K12a | Credited and settled documents are not overdue | overdue and due-soon count only OUTSTANDING_STATES | AUTO | `kpi.test.js` "no settled document is overdue" |
 | K13 | Dashboard renders over demo data | all panels, German number format, no page overflow | MANUAL | Browser, 2026-09-17, 1400 px and 375 px |
 | K14 | Release-time measurement is sound | reviewed invoices show 17,9 h to release, non-reviewed 0,005 h | MANUAL | SQL check against demo data, 2026-09-17 |
 

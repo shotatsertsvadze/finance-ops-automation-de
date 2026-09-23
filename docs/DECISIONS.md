@@ -1032,3 +1032,33 @@ is read, stored and displayed, but it does not steer the netting. Honouring it
 would mean deciding what happens when the named invoice is already paid, or
 belongs to another period, and that is a question about someone's accounting
 policy rather than about this code.
+
+## ADR-051 Every state has one phase, and every list of states is derived from it
+
+Context: the code filtered on invoice states in six places - `PAYABLE_STATES`,
+the commitment ledger's `HOLDS_CAPACITY`, two KPI filters, the reconciliation
+candidates and the duplicate lookup - plus the partial unique index. Each was a
+hand-written list. ADR-039 recorded the rule "a state added to the machine has
+to be placed in every figure that filters on state", and the next two states
+proved it could not be followed by memory: after ADR-049 and ADR-050,
+settling an invoice against credits released its purchase-order claim
+(reproduced: PO-2026-0102 reported 600,00 available after a 100,00 invoice was
+settled, against an opening 500,00), credited and settled documents counted as
+overdue, and neither state was covered by `invoices_one_payable_per_number`.
+
+Decision: `states.js` gives each state one phase - OPEN, AWAITING_APPROVAL,
+COMMITTED, SETTLED or DISCARDED - and exports every list as a derivation:
+`PAYABLE_STATES` (committed or settled), `HOLDS_CAPACITY_STATES` (awaiting
+approval onward, not discarded), `OUTSTANDING_STATES` (not yet settled or
+discarded), `DISCARDED_STATES`, and `AWAITING_RECONCILIATION_STATES` (derived
+from the transition table). SQL receives these as `invoice_state[]` parameters
+rather than literals.
+
+The one list that cannot be derived is a partial index predicate. Migration
+0013 widens it, and a test reads the index back from `pg_indexes` and compares
+it with `PAYABLE_STATES`, so the two cannot drift silently. 0013 also restores,
+per ADR-037, the claims that settlement had already released.
+
+Consequences: a new state fails `states.test.js` until it is given a phase, and
+placing it is one line. The invariant "once committed, only forward" is now a
+test rather than a property of the table someone has to check by eye.

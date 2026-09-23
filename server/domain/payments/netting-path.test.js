@@ -172,6 +172,18 @@ test("a credit cannot be applied to the same invoice twice", async () => {
   );
 });
 
+test("a settled invoice keeps its claim on the purchase order", async () => {
+  // Settled against a credit is still spent: the goods were delivered. Its
+  // claim stays active, as a paid invoice's does.
+  await bookedCredit(10000);
+  const invoice = await readyToPay(10000);
+  await settleByCredit(deps, { invoiceId: invoice.id, actor: finance() });
+  const { rows } = await deps.pool.query(
+    "select amount from finops.po_commitments where invoice_id = $1 and status = 'ACTIVE'", [invoice.id],
+  );
+  assert.deepEqual(rows.map((r) => r.amount), ["100.00"]);
+});
+
 test("settling refuses an invoice the credits do not cover", async () => {
   await bookedCredit(10000);                        // 119.00
   const invoice = await readyToPay(50000);          // 595.00

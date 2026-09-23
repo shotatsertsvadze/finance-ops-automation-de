@@ -23,8 +23,49 @@ export const TRANSITIONS = {
 
 export const STATES = Object.keys(TRANSITIONS);
 export const TERMINAL_STATES = STATES.filter((s) => TRANSITIONS[s].length === 0);
-export const PAYABLE_STATES = ["APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED"];
 export const REPROCESSABLE_STATES = ["RECEIVED", "VALIDATING", "REVIEW_REQUIRED"];
+
+/**
+ * Where each state stands on the way to the money. Every list of states the
+ * code filters on is derived from this one table, so a new state is placed
+ * once, here, and cannot be forgotten by a KPI or a capacity claim (ADR-051).
+ *
+ * OPEN               not yet decided
+ * AWAITING_APPROVAL  decided by validation or review, waiting for a signature
+ * COMMITTED          approved; the obligation stands but is not yet settled
+ * SETTLED            paid, credited or offset; nothing is owed any more
+ * DISCARDED          rejected or a duplicate; never an obligation
+ */
+export const PHASES = ["OPEN", "AWAITING_APPROVAL", "COMMITTED", "SETTLED", "DISCARDED"];
+export const PHASE = {
+  RECEIVED: "OPEN",
+  VALIDATING: "OPEN",
+  REVIEW_REQUIRED: "OPEN",
+  INFO_REQUESTED: "OPEN",
+  READY_FOR_APPROVAL: "AWAITING_APPROVAL",
+  APPROVED: "COMMITTED",
+  ACCOUNTING_READY: "COMMITTED",
+  PAYMENT_PENDING: "COMMITTED",
+  PAID: "SETTLED",
+  RECONCILED: "SETTLED",
+  RECONCILIATION_EXCEPTION: "SETTLED",
+  CREDITED: "SETTLED",
+  SETTLED_BY_CREDIT: "SETTLED",
+  REJECTED: "DISCARDED",
+  DUPLICATE: "DISCARDED",
+};
+
+const inPhase = (...phases) => STATES.filter((s) => phases.includes(PHASE[s]));
+
+/** Approved and not undone: at most one per supplier invoice number. */
+export const PAYABLE_STATES = inPhase("COMMITTED", "SETTLED");
+/** A claim on the purchase order's capacity. */
+export const HOLDS_CAPACITY_STATES = inPhase("AWAITING_APPROVAL", "COMMITTED", "SETTLED");
+/** The supplier is still owed: what due-soon and overdue count. */
+export const OUTSTANDING_STATES = inPhase("OPEN", "AWAITING_APPROVAL", "COMMITTED");
+export const DISCARDED_STATES = inPhase("DISCARDED");
+/** Paid, with the bank line still to be matched. */
+export const AWAITING_RECONCILIATION_STATES = STATES.filter((s) => TRANSITIONS[s].includes("RECONCILED"));
 
 export function canTransition(from, to) {
   return (TRANSITIONS[from] ?? []).includes(to);

@@ -120,6 +120,23 @@ test("the order reports the capacity those old invoices leave free", async () =>
     "not the full opening balance, which is what the defect reported");
 });
 
+test("an invoice settled by credit before 0013 gets its released claim back", async () => {
+  // Until 0013 settling released the invoice's claim, so an installation that
+  // settled anything carries a RELEASED row and no ACTIVE one.
+  await insertPreUpgradeInvoice("SETTLED_BY_CREDIT", "40.00", "47.60", "OLD-SETTLED");
+  await pool.query(
+    `insert into finops.po_commitments (purchase_order_id, invoice_id, amount, status, released_at)
+     select $1, id, 40.00, 'RELEASED', now() from finops.invoices where invoice_number = 'OLD-SETTLED'`,
+    [PO_ID],
+  );
+  const sql = await readFile(path.join(MIGRATIONS, "0013_state_phases.sql"), "utf8");
+  await pool.query(sql);
+  await pool.query(sql);
+
+  const settled = (await activeCommitments()).filter((r) => r.invoice_number === "OLD-SETTLED");
+  assert.deepEqual(settled, [{ invoice_number: "OLD-SETTLED", amount: "40.00" }], "restored once, however often it runs");
+});
+
 test("running the backfill again does not double a claim", async () => {
   const before = await activeCommitments();
   const sql = await readFile(path.join(MIGRATIONS, "0009_backfill_po_commitments.sql"), "utf8");

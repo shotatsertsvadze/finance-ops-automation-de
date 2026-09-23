@@ -1,6 +1,43 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { PAYABLE_STATES, STATES, TERMINAL_STATES, TRANSITIONS, canTransition } from "./states.js";
+import {
+  AWAITING_RECONCILIATION_STATES, DISCARDED_STATES, HOLDS_CAPACITY_STATES, OUTSTANDING_STATES,
+  PAYABLE_STATES, PHASE, PHASES, STATES, TERMINAL_STATES, TRANSITIONS, canTransition,
+} from "./states.js";
+
+// Every list of states is derived from one phase per state, so a state added
+// to the machine without a phase fails here instead of silently falling out of
+// a KPI, a capacity claim or the duplicate guard (ADR-051).
+test("every state has exactly one known phase", () => {
+  assert.deepEqual(Object.keys(PHASE).sort(), [...STATES].sort());
+  for (const s of STATES) assert.ok(PHASES.includes(PHASE[s]), `${s}: ${PHASE[s]}`);
+});
+
+test("a terminal state is settled or discarded", () => {
+  for (const s of TERMINAL_STATES) assert.ok(["SETTLED", "DISCARDED"].includes(PHASE[s]), s);
+});
+
+test("once committed, an invoice only moves forward", () => {
+  const order = ["COMMITTED", "SETTLED"];
+  for (const s of STATES.filter((s) => order.includes(PHASE[s]))) {
+    for (const to of TRANSITIONS[s]) {
+      assert.ok(order.indexOf(PHASE[to]) >= order.indexOf(PHASE[s]), `${s} -> ${to}`);
+    }
+  }
+});
+
+test("the derived lists name the states their users need", () => {
+  for (const s of ["RECONCILIATION_EXCEPTION", "SETTLED_BY_CREDIT", "CREDITED"]) {
+    assert.ok(PAYABLE_STATES.includes(s), `payable: ${s}`);
+    assert.ok(HOLDS_CAPACITY_STATES.includes(s), `capacity: ${s}`);
+    assert.ok(!OUTSTANDING_STATES.includes(s), `outstanding: ${s}`);
+  }
+  assert.ok(HOLDS_CAPACITY_STATES.includes("READY_FOR_APPROVAL"));
+  assert.ok(!PAYABLE_STATES.includes("READY_FOR_APPROVAL"));
+  assert.ok(OUTSTANDING_STATES.includes("PAYMENT_PENDING"));
+  assert.deepEqual([...DISCARDED_STATES].sort(), ["DUPLICATE", "REJECTED"]);
+  assert.deepEqual([...AWAITING_RECONCILIATION_STATES].sort(), ["PAID", "RECONCILIATION_EXCEPTION"]);
+});
 
 test("terminal states have no outgoing transitions", () => {
   assert.deepEqual(TERMINAL_STATES.sort(), ["CREDITED", "DUPLICATE", "RECONCILED", "REJECTED", "SETTLED_BY_CREDIT"]);

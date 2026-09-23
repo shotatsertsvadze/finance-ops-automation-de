@@ -241,6 +241,19 @@ test("an invoice that has been paid is not overdue, even with an unclear reconci
   assert.equal(workload.reconciliation_exceptions, 1, "and it is counted where it belongs");
 });
 
+test("no settled document is overdue, whichever way it was settled", async () => {
+  // Credited and offset against credits are settled as much as paid is. Set
+  // directly, as above: the question is only how the figure reads the state.
+  const invoice = await upload(fixture("A_clean_1240.xml"), "A_clean_1240.xml");
+  await deps.pool.query("update finops.invoices set due_date = current_date - 30 where id = $1", [invoice.id]);
+  for (const state of ["CREDITED", "SETTLED_BY_CREDIT"]) {
+    await deps.pool.query("update finops.invoices set state = $2 where id = $1", [invoice.id, state]);
+    const { workload } = await kpis();
+    assert.equal(workload.overdue, 0, state);
+    assert.equal(workload.due_within_7_days, 0, state);
+  }
+});
+
 test("an unpaid invoice past its due date is still overdue", async () => {
   const invoice = await upload(fixture("A_clean_1240.xml"), "A_clean_1240.xml");
   await deps.pool.query("update finops.invoices set due_date = current_date - 5 where id = $1", [invoice.id]);

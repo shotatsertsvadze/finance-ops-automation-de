@@ -147,7 +147,8 @@ Database-enforced invariants:
 - `unique (file_sha256) where state <> 'DUPLICATE'`: the same file can exist
   once as a live invoice.
 - `unique (supplier_id, invoice_number) where state in (payable states)`: two
-  payable records for the same supplier invoice number are impossible.
+  payable records for the same supplier invoice number are impossible. The
+  index lists its states in SQL; a test compares them with `PAYABLE_STATES`.
 - `unique (invoice_id, step_no)` on approval steps.
 - `check (actor_type = 'SYSTEM' or actor_id is not null)` on audit events.
 
@@ -189,8 +190,16 @@ stateDiagram-v2
 Rules:
 
 - Terminal states: `RECONCILED`, `CREDITED`, `SETTLED_BY_CREDIT`, `REJECTED`, `DUPLICATE`. No transition leaves them.
-- Payable states (money may move): `APPROVED`, `ACCOUNTING_READY`,
-  `PAYMENT_PENDING`, `PAID`, `RECONCILED`.
+- Every state has one phase in `states.js` (ADR-051), and every list of states
+  the code filters on is derived from it:
+
+  | Phase | States | Payable | Holds PO capacity | Outstanding (due/overdue) |
+  |---|---|---|---|---|
+  | OPEN | RECEIVED, VALIDATING, REVIEW_REQUIRED, INFO_REQUESTED | | | yes |
+  | AWAITING_APPROVAL | READY_FOR_APPROVAL | | yes | yes |
+  | COMMITTED | APPROVED, ACCOUNTING_READY, PAYMENT_PENDING | yes | yes | yes |
+  | SETTLED | PAID, RECONCILED, RECONCILIATION_EXCEPTION, CREDITED, SETTLED_BY_CREDIT | yes | yes | |
+  | DISCARDED | REJECTED, DUPLICATE | | | |
 - A credit note (`document_type = 'CREDIT_NOTE'`, UNTDID 1001 code 381) shares
   every state up to `ACCOUNTING_READY` and then ends in `CREDITED`. The payment
   route refuses it, its booking record carries the amounts negated, and its

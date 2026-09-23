@@ -2,6 +2,7 @@ import { withTransaction } from "../../db.js";
 import { NotFoundError, TransitionError, transition } from "../workflow/transitions.js";
 import { RuleError } from "../approvals/approvals.js";
 import { matchTransaction } from "./matching.js";
+import { AWAITING_RECONCILIATION_STATES } from "../workflow/states.js";
 
 /**
  * Import a synthetic bank statement. external_id is the bank's own id, so
@@ -48,7 +49,8 @@ export async function runReconciliation({ pool }, { actor }) {
       `select i.id as invoice_id, p.reference, p.amount, p.currency, p.creditor_iban
        from finops.invoices i
        join finops.payment_instructions p on p.invoice_id = i.id
-       where i.state in ('PAID', 'RECONCILIATION_EXCEPTION')`,
+       where i.state = any($1::finops.invoice_state[])`,
+      [AWAITING_RECONCILIATION_STATES],
     );
 
     const summary = { matched: 0, exceptions: 0, unmatched: 0 };

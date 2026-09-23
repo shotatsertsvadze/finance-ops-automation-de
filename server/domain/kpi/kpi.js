@@ -1,4 +1,5 @@
 import { loadAssumptions } from "../../config/assumptions.js";
+import { OUTSTANDING_STATES } from "../workflow/states.js";
 
 /**
  * Operational KPIs, computed from the invoices and their audit events.
@@ -113,19 +114,19 @@ async function queryWorkload(pool) {
             count(*) filter (where state = 'READY_FOR_APPROVAL')::int as awaiting_approval,
             count(*) filter (where state = 'INFO_REQUESTED')::int as awaiting_information,
             count(*) filter (where state = 'RECONCILIATION_EXCEPTION')::int as reconciliation_exceptions,
-            -- Overdue means the supplier has not been paid. Everything from
-            -- PAID onwards is settled, including a reconciliation that is
-            -- still unclear: that is bookkeeping work, counted on its own
-            -- above, not an unpaid bill.
+            -- Overdue means the supplier is still owed. A settled document,
+            -- including one whose reconciliation is unclear, is not an unpaid
+            -- bill: that is bookkeeping work, counted on its own above.
             count(*) filter (
               where due_date is not null and due_date <= current_date + 7
-                and state not in ('PAID','RECONCILED','RECONCILIATION_EXCEPTION','REJECTED','DUPLICATE')
+                and state = any($1::finops.invoice_state[])
             )::int as due_within_7_days,
             count(*) filter (
               where due_date is not null and due_date < current_date
-                and state not in ('PAID','RECONCILED','RECONCILIATION_EXCEPTION','REJECTED','DUPLICATE')
+                and state = any($1::finops.invoice_state[])
             )::int as overdue
      from finops.invoices`,
+    [OUTSTANDING_STATES],
   );
   return Object.fromEntries(Object.entries(row).map(([k, v]) => [k, int(v)]));
 }
