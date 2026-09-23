@@ -531,3 +531,5 @@ findings themselves.
 | O34 | A comment that is not text or longer than 1000 characters | 400 `COMMENT_INVALID`; exactly 1000 is accepted. Before: a number gave 500, 900 KB was stored | AUTO | `server/input-validation.test.js` |
 | O35 | A body that is not JSON | 400 `INVALID_JSON` | AUTO | `server/input-validation.test.js` |
 | O36 | A numeric setting that is not a number in range | the start stops, naming the setting. Before: `SESSION_HOURS=zwoelf` started and every sign-in failed | AUTO | `server/config/env.test.js` |
+| O37 | Security headers on the page and the API | CSP without unsafe-inline or unsafe-eval, frame-ancestors none, X-Frame-Options DENY, no-referrer, nosniff; HSTS in production only | AUTO | `server/security-headers.test.js` (ADR-074) |
+| O38 | The built app under that CSP | sign-in, invoice, dashboard, payments and the original XML work; both fonts load; no CSP violation in the console | MANUAL | Browser, 2026-09-23, `dist/` served by the API |

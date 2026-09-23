@@ -1551,3 +1551,21 @@ Decision:
   setting's name and allowed range.
 
 Consequences: a 500 now means a fault in the app, not bad input.
+
+## ADR-074 Browser security headers on every response
+
+Context: the only header was `nosniff`. The approval screens could be framed
+by another site, a classic clickjacking target, and nothing limited where
+scripts could load from.
+
+Decision: every response carries a Content-Security-Policy that allows the
+app's own origin and Google Fonts for the typefaces, with no inline script,
+no eval, no plugins and no framing; `X-Frame-Options: DENY` for older
+browsers; `Referrer-Policy: no-referrer`; `Cross-Origin-Opener-Policy:
+same-origin`; and a Permissions-Policy that turns off camera, microphone and
+location. In production HSTS is added, since the app runs behind HTTPS there
+(ADR-058). The original-XML route keeps its own stricter sandbox policy.
+
+Consequences: fonts from another host, or an inline script, need the policy
+changed on purpose. The Vite dev server is not covered; it serves the
+development build only.

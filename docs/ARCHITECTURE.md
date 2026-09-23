@@ -400,6 +400,9 @@ expired, and signing in again stays on the same page (ADR-057).
   to the audit trail but not update, delete or truncate it, and may not delete
   invoices, whose deletion would cascade to their trail. A production start
   refuses a connection that could (ADR-068).
+- Every response carries a Content-Security-Policy (own origin, Google Fonts
+  for the fonts, no framing), `X-Frame-Options: DENY`, `Referrer-Policy:
+  no-referrer`, COOP and a Permissions-Policy; HSTS in production (ADR-074).
 - Input is checked before it reaches the database: statement lines field by
   field (400 `TRANSACTION_INVALID` naming each bad line, nothing imported),
   every `comment` as text of at most 1000 characters (`COMMENT_INVALID`),
