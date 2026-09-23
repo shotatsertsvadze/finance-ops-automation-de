@@ -8,6 +8,17 @@ async function demoPasswordAccounts(pool) {
   return rows.filter((u) => verifyPassword(PUBLISHED_DEMO_PASSWORD, u.password_hash, u.password_salt)).map((u) => u.email);
 }
 
+/** What the connected role could do to history; empty for a role set up by grantAppRole (ADR-068). */
+async function trailWriters(pool) {
+  const { rows: [can] } = await pool.query(
+    `select has_table_privilege('finops.audit_events', 'UPDATE') as update_audit,
+            has_table_privilege('finops.audit_events', 'DELETE') as delete_audit,
+            has_table_privilege('finops.audit_events', 'TRUNCATE') as truncate_audit,
+            has_table_privilege('finops.invoices', 'DELETE') as delete_invoices`,
+  );
+  return Object.entries(can).filter(([, allowed]) => allowed).map(([name]) => name);
+}
+
 /**
  * Why a production start must not go ahead; empty when it may (ADR-058).
  * Development is never refused. DEMO_MODE=true runs production on the demo
@@ -18,6 +29,10 @@ export async function deploymentProblems({ pool, env, clientDir }) {
   const problems = [];
   if (!existsSync(path.join(clientDir, "index.html"))) {
     problems.push(`Kein gebauter Client in ${clientDir}: zuerst npm run build`);
+  }
+  const trail = await trailWriters(pool);
+  if (trail.length) {
+    problems.push(`Die Datenbankrolle kann den Prüfpfad ändern (${trail.join(", ")}); als eigene Rolle verbinden, eingerichtet mit npm run db:grant`);
   }
   if (env.DEMO_MODE !== "true") {
     const accounts = await demoPasswordAccounts(pool);

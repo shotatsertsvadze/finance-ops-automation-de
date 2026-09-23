@@ -390,6 +390,10 @@ expired, and signing in again stays on the same page (ADR-057).
   `dist/` is missing or any account still has the published demo password,
   unless `DEMO_MODE=true` (ADR-058). `npm run user:password` replaces a
   password and ends that account's sessions.
+- The app connects as its own role, set up with `npm run db:grant`: it may add
+  to the audit trail but not update, delete or truncate it, and may not delete
+  invoices, whose deletion would cascade to their trail. A production start
+  refuses a connection that could (ADR-068).
 - Original files are immutable; deletion is not exposed by the API.
   An intake that fails before its transaction commits removes the file it
   wrote, since no row can refer to it (ADR-062).

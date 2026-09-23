@@ -517,3 +517,7 @@ findings themselves.
 | O21 | An invoice released into approval a second time | the first round's steps stay, cancelled, with who signed; the new round is round 2 | AUTO | `rounds.test.js` (ADR-067) |
 | O22 | The detail after a second release | `approval_steps` is the live round; `approval_history` holds the earlier one with its signer | AUTO | `rounds.test.js` |
 | O23 | Deciding the new round | works as before and leaves the old round untouched | AUTO | `rounds.test.js`; demo generator totals unchanged |
+| O24 | The app runs as its own database role | upload, booking, payment and confirmation all succeed as the granted role | AUTO | `audit-role.test.js` (ADR-068) |
+| O25 | That role and the audit trail | update, delete and truncate refused; deleting an invoice refused, so no cascade | AUTO | `audit-role.test.js` |
+| O26 | A production start as a role that could change the trail | refused, naming what it could do; the granted role passes | AUTO | `audit-role.test.js` |
+| O27 | `db:grant` and `npm start` end to end | grant sets the rights and refuses an unsafe role name; start as the owner refused naming update, delete, truncate and invoice delete; start as the granted role listens | MANUAL | Probe, 2026-09-23, against the test database |

@@ -1447,3 +1447,26 @@ earlier round is always cancelled, so none of them changed.
 Consequences: a cancelled step keeps its signer and decision time but not the
 fact that it had been approved; the audit log has that. The screen does not
 show `approval_history` yet.
+
+## ADR-068 The app's database role cannot change the audit trail
+
+Context: the app connected as the schema owner, which may UPDATE and DELETE
+audit rows, and `audit_events` cascades from `invoices`, so deleting an invoice
+erased its trail. Nothing in the app does either, but a trail that anyone with
+the app's credentials can rewrite is not evidence.
+
+Decision:
+- The app connects as its own role. `npm run db:grant -- <role>`, run as the
+  owner after every migration, gives it what the app needs and withholds
+  UPDATE, DELETE and TRUNCATE on `audit_events`, DELETE and TRUNCATE on
+  `invoices`, and writes to `schema_migrations`. Default privileges cover
+  tables a later migration creates.
+- A production start is refused while the connected role could change the
+  trail, so running as the owner is caught, not assumed away.
+- Migrations, the seed and the tests keep running as the owner.
+
+Consequences: a deployment has two connection strings, the owner's for
+migrations and the app's for `npm start`. The owner can still change anything;
+protecting the trail from the database's owner is the database operator's
+concern, outside this app. The cascade from invoices stays in the schema;
+what stops it is that the app role cannot delete an invoice.

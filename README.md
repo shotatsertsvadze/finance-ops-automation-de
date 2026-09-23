@@ -98,14 +98,21 @@ npm test
 Production (one process serves the API and the built client):
 
 ```bash
+# once, as a database superuser
+psql -c "create role finops_app login password '...'"
+# as the schema owner, after every migration
+DATABASE_URL=$OWNER_URL npm run db:migrate
+DATABASE_URL=$OWNER_URL npm run db:grant -- finops_app
+printf '%s' "$PASSWORD" | DATABASE_URL=$OWNER_URL npm run user:password -- jonas.weber@nordwerk.example   # every account
+# the app itself connects as finops_app
 npm run build
-printf '%s' "$PASSWORD" | npm run user:password -- jonas.weber@nordwerk.example   # for every account
-npm start                   # NODE_ENV=production
+DATABASE_URL=$APP_URL npm start   # NODE_ENV=production
 ```
 
-`npm start` refuses to run while `dist/` is missing or any account still has
-the demo password; `DEMO_MODE=true` allows the demo password on purpose, for a
-hosted demo. Cookies are `Secure` in production, so it must sit behind HTTPS;
+`npm start` refuses to run while `dist/` is missing, while any account still has
+the demo password, or while its database role could change the audit trail
+(the owner can; `finops_app` cannot). `DEMO_MODE=true` allows the demo password
+on purpose, for a hosted demo. Cookies are `Secure` in production, so it must sit behind HTTPS;
 the API listens on `127.0.0.1` unless `API_HOST` says otherwise, which suits a
 reverse proxy on the same host. Route traffic on `/api/health/ready`, which
 checks the database; logs are JSON lines on stdout and stderr, and every
