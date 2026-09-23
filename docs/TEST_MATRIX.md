@@ -249,6 +249,7 @@ described as working.
 | M17 | An open credit reduces what is sent to the bank | instruction 476.00 for a 595.00 invoice | AUTO | `netting-path.test.js` |
 | M18 | Netting order | oldest credit first, ties by number; independent of row order | AUTO | `netting.test.js` |
 | M19 | A credit of another supplier | not applied | AUTO | `netting-path.test.js` |
+| M19a | The open credit on the invoice detail | the netting's own figure: same supplier, same currency, drives pay vs. settle | AUTO | `netting-path.test.js` "the invoice detail shows the credit the payment would apply"; PO availability likewise comes from `availableCents` |
 | M20 | A credit note not yet booked | not available for netting | AUTO | `netting-path.test.js` |
 | M21 | An invoice the credits cover entirely | 409 `FULLY_CREDITED`; settles through its own action | AUTO | `netting-path.test.js` |
 | M22 | Settling an invoice with a remainder | 409 `NOT_FULLY_CREDITED`, nothing consumed | AUTO | `netting-path.test.js` |

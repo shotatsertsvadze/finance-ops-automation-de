@@ -1,3 +1,7 @@
+import { openCreditsFor } from "../accounting/netting.js";
+import { availableCents } from "../purchase-orders/commitments.js";
+import { centsToDecimal, toCents } from "../money.js";
+
 /** Read models for the API. No business logic here. */
 export async function listInvoices(pool, { state } = {}) {
   const { rows } = await pool.query(
@@ -23,30 +27,11 @@ export async function getInvoiceDetail(pool, id) {
     `select i.*, s.supplier_no, s.legal_name as supplier_name, s.status as supplier_status, s.default_cost_center,
             p.po_number, p.remaining_amount as po_remaining_amount, p.approved_amount as po_approved_amount, p.cost_center as po_cost_center,
             d.invoice_number as duplicate_of_number,
-            -- Booked credits of this supplier that still have something left.
-            -- Shown before the decision, so the amount that will actually be
-            -- sent is visible rather than discovered afterwards.
-            coalesce((
-              select sum(c.gross_amount - coalesce((
-                select sum(a.amount) from finops.credit_applications a where a.credit_note_id = c.id
-              ), 0))
-              from finops.invoices c
-              where c.supplier_id = i.supplier_id
-                and c.document_type = 'CREDIT_NOTE'
-                and c.state = 'CREDITED'
-                and c.id <> i.id
-            ), 0) as open_credit_amount,
             -- What this document has had applied to it, either way round.
             coalesce((
               select sum(a.amount) from finops.credit_applications a
               where a.invoice_id = i.id or a.credit_note_id = i.id
-            ), 0) as credit_applied_amount,
-            -- Available capacity, not the opening balance: other live invoices
-            -- may already hold part of this order.
-            (p.remaining_amount - coalesce((
-              select sum(c.amount) from finops.po_commitments c
-              where c.purchase_order_id = p.id and c.status = 'ACTIVE' and c.invoice_id <> i.id
-            ), 0)) as po_available_amount
+            ), 0) as credit_applied_amount
      from finops.invoices i
      left join finops.suppliers s on s.id = i.supplier_id
      left join finops.purchase_orders p on p.id = i.purchase_order_id
@@ -55,7 +40,7 @@ export async function getInvoiceDetail(pool, id) {
     [id],
   );
   if (!invoice) return null;
-  const [lines, results, decision, steps, events, accounting, payment, bankTx] = await Promise.all([
+  const [lines, results, decision, steps, events, accounting, payment, bankTx, openCredit, poAvailable] = await Promise.all([
     pool.query("select * from finops.invoice_lines where invoice_id = $1 order by line_no", [id]),
     pool.query(
       `select * from finops.validation_results where invoice_id = $1
@@ -74,11 +59,18 @@ export async function getInvoiceDetail(pool, id) {
     pool.query("select * from finops.accounting_records where invoice_id = $1", [id]),
     pool.query("select * from finops.payment_instructions where invoice_id = $1", [id]),
     pool.query("select * from finops.bank_transactions where matched_invoice_id = $1 order by value_date", [id]),
+    openCreditCents(pool, invoice),
+    invoice.purchase_order_id ? availableCents(pool, invoice.purchase_order_id, id, { lock: false }) : null,
   ]);
   const { file_path, parsed, ...rest } = invoice;
   return {
     ...rest,
     parsed,
+    // The domain's own answers, so what the screen offers is what the payment
+    // and the PO check will do: credits that would be netted, and the order's
+    // capacity net of other invoices' claims.
+    open_credit_amount: centsToDecimal(openCredit),
+    po_available_amount: centsToDecimal(poAvailable),
     lines: lines.rows,
     validation: { technical: results.rows.filter((r) => r.phase === "TECHNICAL"), business: results.rows.filter((r) => r.phase === "BUSINESS") },
     routing: decision.rows[0] ?? null,
@@ -88,4 +80,9 @@ export async function getInvoiceDetail(pool, id) {
     payment: payment.rows[0] ?? null,
     bank_transactions: bankTx.rows,
   };
+}
+
+async function openCreditCents(pool, invoice) {
+  const credits = await openCreditsFor(pool, invoice.supplier_id, invoice.currency ?? "EUR", invoice.id, { lock: false });
+  return credits.reduce((sum, credit) => sum + toCents(credit.open_amount), 0);
 }

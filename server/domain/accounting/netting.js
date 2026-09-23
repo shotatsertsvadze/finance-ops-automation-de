@@ -52,9 +52,10 @@ function byAgeThenNumber(a, b) {
  * together would otherwise both read the same open balance and both spend it.
  *
  * `excludeInvoiceId` keeps an invoice from netting against itself, which a
- * credit note would otherwise do when its own payment is instructed.
+ * credit note would otherwise do when its own payment is instructed. The
+ * invoice detail reads the same answer with `lock: false`.
  */
-export async function openCreditsFor(client, supplierId, currency = "EUR", excludeInvoiceId = null) {
+export async function openCreditsFor(client, supplierId, currency = "EUR", excludeInvoiceId = null, { lock = true } = {}) {
   if (!supplierId) return [];
   const { rows } = await client.query(
     `select i.id, i.invoice_number, i.issue_date,
@@ -68,7 +69,7 @@ export async function openCreditsFor(client, supplierId, currency = "EUR", exclu
        and coalesce(i.currency, 'EUR') = $2
        and i.id is distinct from $3
      order by i.issue_date, i.invoice_number
-     for update of i`,
+     ${lock ? "for update of i" : ""}`,
     [supplierId, currency, excludeInvoiceId],
   );
   return rows.filter((row) => Number(row.open_amount) > 0);

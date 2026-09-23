@@ -18,6 +18,7 @@ import { decideApprovalStep } from "../approvals/approvals.js";
 import { bookCredit } from "../accounting/credit-notes.js";
 import { createPaymentInstruction } from "./payments.js";
 import { settleByCredit } from "../accounting/netting.js";
+import { getInvoiceDetail } from "../invoice/queries.js";
 
 let deps;
 let counter = 0;
@@ -121,6 +122,17 @@ test("a credit from another supplier is not touched", async () => {
   const invoice = await readyToPay(50000);
   await createPaymentInstruction(deps, { invoiceId: invoice.id, actor: finance() });
   assert.equal((await instruction(invoice.id)).amount, "595.00", "one supplier's credit does not pay another's invoice");
+});
+
+test("the invoice detail shows the credit the payment would apply, and no other", async () => {
+  // The client chooses between "pay" and "settle" from this figure, so it must
+  // be the netting's own answer. A credit in another currency is not applied.
+  const note = await bookedCredit(10000);           // 119.00
+  const invoice = await readyToPay(50000);
+  assert.equal((await getInvoiceDetail(deps.pool, invoice.id)).open_credit_amount, "119.00");
+
+  await deps.pool.query("update finops.invoices set currency = 'USD' where id = $1", [note.id]);
+  assert.equal((await getInvoiceDetail(deps.pool, invoice.id)).open_credit_amount, "0.00");
 });
 
 test("a credit note that is only approved is not yet available", async () => {

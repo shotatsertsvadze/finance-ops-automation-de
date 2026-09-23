@@ -15,11 +15,12 @@ const HOLDS_CAPACITY = new Set(HOLDS_CAPACITY_STATES);
  * Capacity left on the order, ignoring what this invoice itself holds.
  *
  * Locks the order row: without it two invoices arriving together read the
- * same availability and both commit.
+ * same availability and both commit. The invoice detail reads the same answer
+ * with `lock: false`.
  */
-export async function availableCents(client, purchaseOrderId, excludeInvoiceId = null) {
+export async function availableCents(client, purchaseOrderId, excludeInvoiceId = null, { lock = true } = {}) {
   const { rows: [order] } = await client.query(
-    "select remaining_amount from finops.purchase_orders where id = $1 for update",
+    `select remaining_amount from finops.purchase_orders where id = $1 ${lock ? "for update" : ""}`,
     [purchaseOrderId],
   );
   if (!order) return null;
