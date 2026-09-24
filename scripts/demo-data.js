@@ -41,9 +41,9 @@ const SUPPLIERS = {
 };
 
 // The seeded orders are a small, readable master-data example. A month of
-// invoices needs more capacity than that, and since orders are now genuinely
-// consumed, too little capacity would turn every later invoice into a PO
-// exception and drown out the other cases.
+// invoices needs more capacity than that: invoices consume their order's
+// capacity, and too little would turn every later invoice into a PO exception
+// and drown out the other cases.
 const ORDERS_PER_SUPPLIER = 4;
 const ORDER_AMOUNT = "18000.00";
 const SMALL_ORDER = "DEMO-PO-KLEIN";
@@ -302,8 +302,8 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
 
   await backdate(deps.pool, created, random);
   Object.assign(summary, await settlePayments(deps, random));
-  // Counted from the audit trail rather than tallied in the loop above, which
-  // is why this line read 0 for as long as it existed.
+  // Counted from the audit trail: straight-through approvals happen inside the
+  // upload, where the loop above does not see them.
   const { rows: [straight] } = await deps.pool.query(
     "select count(distinct invoice_id)::int as n from finops.audit_events where action = 'auto_approved'",
   );
@@ -331,9 +331,9 @@ const FIXTURE_TRANSACTIONS = [
  * Builds the bank statement that answers the demo's own payments, imports it
  * and reconciles it.
  *
- * Without this the demo could not show the last stage of its own process: the
- * shipped statement names the fixture invoices, so against a generated
- * population every line stayed unmatched and nothing ever reached RECONCILED.
+ * The shipped statement names the fixture invoices, which a generated
+ * population does not contain; without a statement of its own no generated
+ * payment would reach RECONCILED.
  *
  * The statement is deliberately imperfect. A month of bank lines that all match
  * would demonstrate nothing: the point of the stage is what happens when one

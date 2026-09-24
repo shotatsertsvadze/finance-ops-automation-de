@@ -1,20 +1,12 @@
 import { withTransaction } from "../../db.js";
+import { NotFoundError, RuleError, TransitionError } from "../errors.js";
 import { stepsAfterReview } from "../../config/policy.js";
-import { NotFoundError, TransitionError, recordEvent, transition } from "../workflow/transitions.js";
+import { recordEvent, transition } from "../workflow/transitions.js";
 import { latestFailedChecks, payableBlockers } from "../workflow/eligibility.js";
 import { bindingDrift, bindingOf, latestRunNo } from "./binding.js";
 import { newBusinessFailures, recordRecheck } from "./final-checks.js";
 import { toCents } from "../money.js";
-
-/** A refusal the caller caused, distinct from a state-machine violation. */
-export class RuleError extends Error {
-  constructor(status, code, message, details = {}) {
-    super(message);
-    this.status = status;
-    this.code = code;
-    this.details = details;
-  }
-}
+import { CURRENT_ROUND, startRound } from "./rounds.js";
 
 const requireComment = (comment) => {
   const text = (comment ?? "").trim();
@@ -51,6 +43,10 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
   return withTransaction(pool, async (client) => {
     const invoice = await lockInvoice(client, invoiceId);
 
+    if (action === "request-info" && invoice.state === "READY_FOR_APPROVAL") {
+      return requestInfoInApproval(client, invoiceId, { actor, comment });
+    }
+
     if (action === "info-received") {
       if (invoice.state !== "INFO_REQUESTED") {
         throw new TransitionError("NOT_AWAITING_INFORMATION", `Rechnung im Status ${invoice.state} wartet nicht auf eine Rückmeldung`, { state: invoice.state });
@@ -85,13 +81,8 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
         throw new RuleError(422, "NOT_PAYABLE_ELIGIBLE", "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben", { blockers });
       }
       const steps = stepsAfterReview(policy, toCents(invoice.gross_amount));
-      await client.query("delete from finops.approval_steps where invoice_id = $1", [invoiceId]);
-      for (const step of steps) {
-        await client.query(
-          "insert into finops.approval_steps (invoice_id, step_no, required_role) values ($1, $2, $3)",
-          [invoiceId, step.step_no, step.required_role],
-        );
-      }
+      await cancelAllSteps(client, invoiceId);
+      await startRound(client, invoiceId, steps);
       await client.query("update finops.invoices set review_accepted_by = $2 where id = $1", [invoiceId, actor.id]);
       await transition(client, {
         invoiceId, to: "READY_FOR_APPROVAL", actor, action: "review_accepted",
@@ -135,18 +126,12 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
  * must invalidate approvals already given rather than leave them to be
  * inherited by the next validation run.
  */
-export async function requestInfoFromApproval({ pool }, { invoiceId, actor, comment }) {
-  return withTransaction(pool, async (client) => {
-    const invoice = await lockInvoice(client, invoiceId);
-    if (invoice.state !== "READY_FOR_APPROVAL") {
-      throw new TransitionError("NOT_AWAITING_APPROVAL", `Rechnung im Status ${invoice.state} steht nicht zur Freigabe`, { state: invoice.state });
-    }
-    const reason = requireComment(comment);
-    await cancelAllSteps(client, invoiceId);
-    await client.query("update finops.invoices set review_accepted_by = null where id = $1", [invoiceId]);
-    await transition(client, {
-      invoiceId, to: "INFO_REQUESTED", actor, action: "information_requested", reason,
-    });
+async function requestInfoInApproval(client, invoiceId, { actor, comment }) {
+  const reason = requireComment(comment);
+  await cancelAllSteps(client, invoiceId);
+  await client.query("update finops.invoices set review_accepted_by = null where id = $1", [invoiceId]);
+  await transition(client, {
+    invoiceId, to: "INFO_REQUESTED", actor, action: "information_requested", reason,
   });
 }
 
@@ -163,7 +148,7 @@ export async function decideApprovalStep({ pool, policy, company }, { invoiceId,
     }
 
     const { rows: steps } = await client.query(
-      "select * from finops.approval_steps where invoice_id = $1 order by step_no for update",
+      `select * from finops.approval_steps where invoice_id = $1 and round = ${CURRENT_ROUND} order by step_no for update`,
       [invoiceId],
     );
     const step = steps.find((s) => s.step_no === stepNo);
@@ -237,10 +222,10 @@ export async function decideApprovalStep({ pool, policy, company }, { invoiceId,
     const reason = action === "reject" ? requireComment(comment) : (comment ?? "").trim() || null;
     await client.query(
       `update finops.approval_steps
-         set status = $3, actor_id = $4, decided_at = now(), comment = $5,
-             document_sha256 = $6, validation_run_no = $7, decided_gross = $8
-       where invoice_id = $1 and step_no = $2`,
-      [invoiceId, stepNo, decided, actor.id, reason,
+         set status = $2, actor_id = $3, decided_at = now(), comment = $4,
+             document_sha256 = $5, validation_run_no = $6, decided_gross = $7
+       where id = $1`,
+      [step.id, decided, actor.id, reason,
         binding.document_sha256, binding.validation_run_no, binding.decided_gross],
     );
 

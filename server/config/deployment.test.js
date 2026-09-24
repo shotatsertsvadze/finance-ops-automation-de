@@ -22,7 +22,10 @@ before(async () => {
 });
 after(() => deps.pool.end());
 
-const problems = (env, dir = clientDir) => deploymentProblems({ pool: deps.pool, env, clientDir: dir });
+// These tests connect as the schema owner, which the audit-trail check also
+// refuses; that check has its own tests in audit-role.test.js (ADR-068).
+const problems = async (env, dir = clientDir) =>
+  (await deploymentProblems({ pool: deps.pool, env, clientDir: dir })).filter((p) => !/Prüfpfad/.test(p));
 
 test("a development start is never refused", async () => {
   assert.deepEqual(await problems({}, path.join(clientDir, "missing")), []);

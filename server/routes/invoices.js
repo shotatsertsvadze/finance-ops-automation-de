@@ -1,10 +1,10 @@
 import { Router } from "express";
 import multer from "multer";
 import { handleUpload, processInvoice } from "../domain/intake/intake.js";
-import { getInvoiceDetail, listInvoices } from "../domain/invoice/queries.js";
+import { countInvoices, getInvoiceDetail, listInvoices } from "../domain/invoice/queries.js";
 import { MAX_XML_BYTES } from "../domain/invoice/xml-safety.js";
 import { STATES } from "../domain/workflow/states.js";
-import { decideApprovalStep, decideReview, requestInfoFromApproval } from "../domain/approvals/approvals.js";
+import { decideApprovalStep, decideReview } from "../domain/approvals/approvals.js";
 import { requirePermission } from "../auth/authorize.js";
 import { createAccountingRecord } from "../domain/accounting/accounting.js";
 import { confirmPayment, createPaymentInstruction, failPayment, retryPayment } from "../domain/payments/payments.js";
@@ -53,7 +53,21 @@ export function invoicesRouter(deps) {
     try {
       const state = req.query.state ? String(req.query.state) : undefined;
       if (state && !STATES.includes(state)) return res.status(400).json({ error: "Unbekannter Status", code: "UNKNOWN_STATE_FILTER" });
-      res.json(await listInvoices(deps.pool, { state }));
+      const limit = Number(req.query.limit ?? 50);
+      const offset = Number(req.query.offset ?? 0);
+      if (!Number.isInteger(limit) || limit < 1 || limit > 200 || !Number.isInteger(offset) || offset < 0) {
+        return res.status(400).json({ error: "Seitengröße 1 bis 200, Versatz ab 0", code: "INVALID_PAGE" });
+      }
+      const { rows, total } = await listInvoices(deps.pool, { state, limit, offset });
+      res.set("X-Total-Count", String(total)).json(rows);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.get("/counts", async (req, res, next) => {
+    try {
+      res.json(await countInvoices(deps.pool));
     } catch (error) {
       next(error);
     }
@@ -107,13 +121,7 @@ export function invoicesRouter(deps) {
     try {
       const { action } = req.params;
       if (!REVIEW_ACTIONS.includes(action)) return res.status(400).json({ error: "Unbekannte Entscheidung", code: "UNKNOWN_DECISION" });
-      // Requesting information is also valid while an invoice waits for
-      // approval, and must invalidate approvals already given.
-      const invoiceState = await currentState(deps.pool, req.params.id);
-      const handler =
-        action === "request-info" && invoiceState === "READY_FOR_APPROVAL" ? requestInfoFromApproval : null;
-      if (handler) await handler(deps, { invoiceId: req.params.id, actor: req.actor, comment: req.body?.comment });
-      else await decideReview(deps, { invoiceId: req.params.id, action, actor: req.actor, comment: req.body?.comment });
+      await decideReview(deps, { invoiceId: req.params.id, action, actor: req.actor, comment: req.body?.comment });
       res.json(await getInvoiceDetail(deps.pool, req.params.id));
     } catch (error) {
       next(error);
@@ -241,9 +249,4 @@ export function invoicesRouter(deps) {
   });
 
   return router;
-}
-
-async function currentState(pool, invoiceId) {
-  const { rows: [row] } = await pool.query("select state from finops.invoices where id = $1", [invoiceId]);
-  return row?.state ?? null;
 }

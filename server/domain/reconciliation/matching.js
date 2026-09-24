@@ -22,14 +22,19 @@ import { toCents } from "../money.js";
  *
  * Pure function: the caller persists the outcome.
  *
- * @param openPayments rows of `{ invoice_id, reference, amount, currency, creditor_iban }`
+ * @param openPayments rows of `{ invoice_id, reference, end_to_end_id, amount, currency, creditor_iban }`
  */
 export function matchTransaction(transaction, openPayments) {
   const reference = (transaction.reference ?? "").toUpperCase();
   const signedCents = toCents(transaction.amount) ?? 0;
   const amountCents = Math.abs(signedCents);
 
-  const named = openPayments.filter((payment) => payment.reference && namesPayment(reference, payment.reference));
+  const named = openPayments.filter((payment) => {
+    // The id Nordwerk issued (ADR-063). Only an instruction from before it
+    // existed is recognised by its reference, which was the invoice number.
+    const token = payment.end_to_end_id ?? payment.reference;
+    return token && namesPayment(reference, token);
+  });
 
   // Two payments named is two obligations, not a near miss to be resolved by
   // picking one. Token boundaries already keep "INV-1" out of "INV-10", so

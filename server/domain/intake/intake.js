@@ -1,13 +1,15 @@
 import { createHash, randomUUID } from "node:crypto";
+import { NotFoundError, TransitionError } from "../errors.js";
 import { withTransaction } from "../../db.js";
 import { runTechnicalValidation } from "../invoice/technical-validation.js";
 import { runBusinessChecks } from "../validation/business-checks.js";
 import { loadMasterData } from "../validation/lookup.js";
 import { decide } from "../routing/decide.js";
-import { SYSTEM, TransitionError, NotFoundError, recordEvent, transition, writeEvent } from "../workflow/transitions.js";
+import { SYSTEM, recordEvent, transition, writeEvent } from "../workflow/transitions.js";
 import { REPROCESSABLE_STATES } from "../workflow/states.js";
 import { toCents, centsToDecimal } from "../money.js";
 import { parseIsoDate } from "../dates.js";
+import { startRound } from "../approvals/rounds.js";
 
 const sha256 = (buffer) => createHash("sha256").update(buffer).digest("hex");
 
@@ -25,9 +27,9 @@ const UNFINISHED_INTAKE = ["RECEIVED", "VALIDATING"];
  * touched again.
  *
  * Sending the same file again while its first run never finished resumes that
- * invoice instead of recording a duplicate: the stranded row used to count as
- * the live one, so the obvious thing for a sender to try was also the one
- * thing that could not work.
+ * invoice instead of recording a duplicate. A stranded row is not a live
+ * invoice: counting it as one would make re-sending, the obvious thing for a
+ * sender to try, the one thing that cannot work (ADR-044).
  */
 export async function receiveInvoice({ pool, storage }, { buffer, originalFilename, sourceChannel, actor }) {
   const id = randomUUID();
@@ -54,27 +56,40 @@ export async function receiveInvoice({ pool, storage }, { buffer, originalFilena
     // Written only once it is clear a row will reference it; a resumption
     // would otherwise leave a second copy of identical bytes behind.
     const filePath = await storage.writeOriginal(id, buffer);
-    const duplicateOf = live?.id ?? null;
-    const state = duplicateOf ? "DUPLICATE" : "RECEIVED";
     try {
-      await client.query(
-        `insert into finops.invoices (id, state, source_channel, original_filename, file_sha256, file_path, file_size_bytes, duplicate_of)
-         values ($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [id, state, sourceChannel, originalFilename, fileSha256, filePath, buffer.length, duplicateOf],
-      );
+      return await recordReceipt(client, {
+        id, filePath, duplicateOf: live?.id ?? null, buffer, fileSha256, originalFilename, sourceChannel, actor,
+      });
     } catch (error) {
-      if (error.code !== "23505") throw error;
-      // Lost a race against an identical upload: record this one as the duplicate.
-      throw new TransitionError("CONCURRENT_DUPLICATE", "Gleiche Datei wurde gerade parallel verarbeitet, bitte erneut hochladen");
+      // Nothing committed can refer to the file yet, so it goes with the row.
+      // A failed commit is not caught here: whether the row made it is then
+      // uncertain, and a spare file is better than a lost original (ADR-062).
+      await storage.discardUnreferenced(id);
+      throw error;
     }
-    if (duplicateOf) {
-      await writeEvent(client, { invoiceId: id, actor, action: "duplicate_file_detected", fromState: null, toState: "DUPLICATE", reason: "Identische Datei (SHA-256) bereits vorhanden", evidence: { duplicate_of: duplicateOf, file_sha256: fileSha256 } });
-      await recordEvent(client, { invoiceId: duplicateOf, actor, action: "duplicate_attempt", reason: "Identische Datei erneut hochgeladen", evidence: { duplicate_invoice_id: id } });
-    } else {
-      await writeEvent(client, { invoiceId: id, actor, action: "received", fromState: null, toState: "RECEIVED", reason: `Eingang über ${sourceChannel}`, evidence: { file_sha256: fileSha256, original_filename: originalFilename, size_bytes: buffer.length } });
-    }
-    return { id, state, duplicateOf, resumed: false };
   });
+}
+
+async function recordReceipt(client, { id, filePath, duplicateOf, buffer, fileSha256, originalFilename, sourceChannel, actor }) {
+  const state = duplicateOf ? "DUPLICATE" : "RECEIVED";
+  try {
+    await client.query(
+      `insert into finops.invoices (id, state, source_channel, original_filename, file_sha256, file_path, file_size_bytes, duplicate_of)
+       values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [id, state, sourceChannel, originalFilename, fileSha256, filePath, buffer.length, duplicateOf],
+    );
+  } catch (error) {
+    if (error.code !== "23505") throw error;
+    // Lost a race against an identical upload: record this one as the duplicate.
+    throw new TransitionError("CONCURRENT_DUPLICATE", "Gleiche Datei wurde gerade parallel verarbeitet, bitte erneut hochladen");
+  }
+  if (duplicateOf) {
+    await writeEvent(client, { invoiceId: id, actor, action: "duplicate_file_detected", fromState: null, toState: "DUPLICATE", reason: "Identische Datei (SHA-256) bereits vorhanden", evidence: { duplicate_of: duplicateOf, file_sha256: fileSha256 } });
+    await recordEvent(client, { invoiceId: duplicateOf, actor, action: "duplicate_attempt", reason: "Identische Datei erneut hochgeladen", evidence: { duplicate_invoice_id: id } });
+  } else {
+    await writeEvent(client, { invoiceId: id, actor, action: "received", fromState: null, toState: "RECEIVED", reason: `Eingang über ${sourceChannel}`, evidence: { file_sha256: fileSha256, original_filename: originalFilename, size_bytes: buffer.length } });
+  }
+  return { id, state, duplicateOf, resumed: false };
 }
 
 /**
@@ -120,10 +135,7 @@ export async function processInvoice({ pool, storage, policy, company }, invoice
     });
     await saveDecision(client, invoiceId, runNo, decision, policy);
     await client.query("update finops.approval_steps set status = 'CANCELLED' where invoice_id = $1 and status = 'PENDING'", [invoiceId]);
-    await client.query("delete from finops.approval_steps where invoice_id = $1 and status = 'CANCELLED'", [invoiceId]);
-    for (const step of decision.requiredSteps) {
-      await client.query("insert into finops.approval_steps (invoice_id, step_no, required_role) values ($1, $2, $3)", [invoiceId, step.step_no, step.required_role]);
-    }
+    await startRound(client, invoiceId, decision.requiredSteps);
     await markException(client, invoiceId, decision.targetState);
     const action = { REVIEW: "routed_to_review", APPROVAL: "routed_to_approval", AUTO_APPROVE: "auto_approved" }[decision.decision];
     await transition(client, {

@@ -13,6 +13,11 @@ export async function createSession(pool, userId, userAgent) {
   const token = randomBytes(32).toString("base64url");
   const csrfToken = randomBytes(24).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_HOURS * 3600 * 1000);
+  // Sessions that ended more than a day ago go at each sign-in; a day's worth
+  // stays for anyone asking who was signed in when (ADR-065).
+  await pool.query(
+    "delete from finops.sessions where expires_at < now() - interval '1 day' or revoked_at < now() - interval '1 day'",
+  );
   await pool.query(
     `insert into finops.sessions (user_id, token_hash, csrf_token, expires_at, user_agent)
      values ($1, $2, $3, $4, $5)`,
@@ -31,7 +36,12 @@ export async function resolveSession(pool, token) {
     [hashToken(token)],
   );
   if (!row) return null;
-  await pool.query("update finops.sessions set last_seen_at = now() where id = $1", [row.id]);
+  // At most once a minute: "when was this session last used" needs no finer
+  // grain, and a write on every read is a write on every request (ADR-065).
+  await pool.query(
+    "update finops.sessions set last_seen_at = now() where id = $1 and last_seen_at < now() - interval '1 minute'",
+    [row.id],
+  );
   return {
     sessionId: row.id,
     csrfToken: row.csrf_token,

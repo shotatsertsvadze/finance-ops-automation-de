@@ -123,7 +123,7 @@ test("R02: duplicate protection survives a reconciliation exception", async () =
     assert.equal(r.status, 200, step);
   }
   await post("/api/bank/import", clients.finance, {
-    transactions: [{ external_id: "TX-R02", value_date: "2026-09-22", amount: "-350.00", currency: "EUR", reference: "Teilzahlung zu INV-2026-00433" }],
+    transactions: [{ external_id: "TX-R02", value_date: "2026-09-22", amount: "-350.00", currency: "EUR", reference: `Teilzahlung zu ${(await get(first.id)).payment.reference}` }],
   });
   await post("/api/reconciliation/run", clients.finance, {});
   assert.equal((await get(first.id)).state, "RECONCILIATION_EXCEPTION");

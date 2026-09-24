@@ -36,7 +36,8 @@ async function paidInvoice(netCents, number = `REC-${Date.now()}-${(counter += 1
   }
   const detail = await get(invoice.id);
   assert.equal(detail.state, "PAID", `${number} reached PAID`);
-  return { id: invoice.id, number, gross: detail.gross_amount };
+  // What the bank line carries: the reference Nordwerk sent (ADR-063).
+  return { id: invoice.id, number, gross: detail.gross_amount, ref: detail.payment.reference };
 }
 
 const get = (id) => clients.clerk.get(`/api/invoices/${id}`).then((r) => r.json());
@@ -77,7 +78,7 @@ beforeEach(async () => {
 
 test("a clean payment reconciles the invoice and consumes the transaction", async () => {
   const invoice = await paidInvoice(10000);
-  await importTx({ external_id: "TX-CLEAN", amount: `-${invoice.gross}`, reference: `Rechnung ${invoice.number}` });
+  await importTx({ external_id: "TX-CLEAN", amount: `-${invoice.gross}`, reference: `Rechnung ${invoice.ref}` });
 
   const summary = await run();
   assert.equal(summary.matched, 1, JSON.stringify(summary));
@@ -88,7 +89,7 @@ test("a clean payment reconciles the invoice and consumes the transaction", asyn
 test("closing an exception by hand also closes its bank evidence", async () => {
   const invoice = await paidInvoice(10000);
   // A short payment: the reference names the invoice, the amount does not agree.
-  await importTx({ external_id: "TX-SHORT", amount: "-100.00", reference: `Rechnung ${invoice.number}` });
+  await importTx({ external_id: "TX-SHORT", amount: "-100.00", reference: `Rechnung ${invoice.ref}` });
 
   await run();
   assert.equal((await get(invoice.id)).state, "RECONCILIATION_EXCEPTION");
@@ -104,7 +105,7 @@ test("closing an exception by hand also closes its bank evidence", async () => {
 
 test("resolved evidence does not come back in the next run", async () => {
   const invoice = await paidInvoice(10000);
-  await importTx({ external_id: "TX-SHORT", amount: "-100.00", reference: `Rechnung ${invoice.number}` });
+  await importTx({ external_id: "TX-SHORT", amount: "-100.00", reference: `Rechnung ${invoice.ref}` });
   await run();
   await clients.finance.post(`/api/invoices/${invoice.id}/reconciliation/resolve`, { comment: "geklärt" });
 
@@ -118,7 +119,7 @@ test("resolved evidence cannot attach itself to a later invoice", async () => {
   // The defect: after manual resolution the transaction returned to the pool
   // and matched a different invoice that happened to carry the same number.
   const first = await paidInvoice(10000, "REC-SHARED-NUMBER");
-  await importTx({ external_id: "TX-REUSE", amount: "-100.00", reference: "Rechnung REC-SHARED-NUMBER" });
+  await importTx({ external_id: "TX-REUSE", amount: "-100.00", reference: `Rechnung ${first.ref}` });
   await run();
   await clients.finance.post(`/api/invoices/${first.id}/reconciliation/resolve`, { comment: "geklärt" });
 
@@ -133,7 +134,7 @@ test("resolved evidence cannot attach itself to a later invoice", async () => {
 
 test("a transaction that stops matching loses its invoice link", async () => {
   const invoice = await paidInvoice(10000);
-  await importTx({ external_id: "TX-STALE", amount: "-100.00", reference: `Rechnung ${invoice.number}` });
+  await importTx({ external_id: "TX-STALE", amount: "-100.00", reference: `Rechnung ${invoice.ref}` });
   await run();
   assert.equal((await txRow("TX-STALE")).matched_invoice_id, invoice.id);
 
@@ -153,7 +154,7 @@ test("a payment in the wrong currency does not reconcile the invoice", async () 
   const invoice = await paidInvoice(10000);
   await importTx({
     external_id: "TX-USD", amount: `-${invoice.gross}`, currency: "USD",
-    reference: `Rechnung ${invoice.number}`,
+    reference: `Rechnung ${invoice.ref}`,
   });
 
   await run();
@@ -165,7 +166,7 @@ test("a payment to another supplier's account does not reconcile the invoice", a
   const invoice = await paidInvoice(10000);
   await importTx({
     external_id: "TX-OTHER-IBAN", amount: `-${invoice.gross}`,
-    counterparty_iban: "DE02120300000000202051", reference: `Rechnung ${invoice.number}`,
+    counterparty_iban: "DE02120300000000202051", reference: `Rechnung ${invoice.ref}`,
   });
 
   await run();
@@ -175,7 +176,7 @@ test("a payment to another supplier's account does not reconcile the invoice", a
 
 test("money arriving does not reconcile a payable", async () => {
   const invoice = await paidInvoice(10000);
-  await importTx({ external_id: "TX-INCOMING", amount: invoice.gross, reference: `Rechnung ${invoice.number}` });
+  await importTx({ external_id: "TX-INCOMING", amount: invoice.gross, reference: `Rechnung ${invoice.ref}` });
 
   await run();
   assert.equal((await get(invoice.id)).state, "RECONCILIATION_EXCEPTION");
@@ -192,7 +193,7 @@ test("the bank line is compared with what was instructed, not with the invoice",
     [invoice.id, "DE02120300000000202051", "999.99"],
   );
 
-  await importTx({ external_id: "TX-INSTRUCTED", amount: `-${invoice.gross}`, reference: `Rechnung ${invoice.number}` });
+  await importTx({ external_id: "TX-INSTRUCTED", amount: `-${invoice.gross}`, reference: `Rechnung ${invoice.ref}` });
   await run();
 
   assert.equal((await get(invoice.id)).state, "RECONCILED",
@@ -203,7 +204,7 @@ test("the bank line is compared with what was instructed, not with the invoice",
 test("an invoice that was never instructed cannot be reconciled", async () => {
   const invoice = await paidInvoice(10000);
   await deps.pool.query("delete from finops.payment_instructions where invoice_id = $1", [invoice.id]);
-  await importTx({ external_id: "TX-NO-INSTRUCTION", amount: `-${invoice.gross}`, reference: `Rechnung ${invoice.number}` });
+  await importTx({ external_id: "TX-NO-INSTRUCTION", amount: `-${invoice.gross}`, reference: `Rechnung ${invoice.ref}` });
 
   await run();
   assert.equal((await txRow("TX-NO-INSTRUCTION")).status, "UNMATCHED");

@@ -46,7 +46,21 @@ async function paid(name = "A_clean_1240.xml") {
   return get(invoice.id);
 }
 
-const importStatement = (payload = statement) => post("/api/bank/import", { actor: clients.finance, body: payload });
+/**
+ * The fixture's lines name the supplier's invoice numbers. A bank line echoes
+ * what Nordwerk sent, which is known only once the payment is instructed, so
+ * each number is replaced by the reference sent for it (ADR-063).
+ */
+async function asSent(payload) {
+  const { rows } = await deps.pool.query(
+    `select i.invoice_number, p.reference from finops.payment_instructions p
+     join finops.invoices i on i.id = p.invoice_id where p.end_to_end_id is not null`,
+  );
+  const sent = (reference) => rows.reduce((text, r) => text.replace(r.invoice_number, r.reference), reference ?? "");
+  return { ...payload, transactions: payload.transactions.map((tx) => ({ ...tx, reference: sent(tx.reference) })) };
+}
+
+const importStatement = async (payload = statement) => post("/api/bank/import", { actor: clients.finance, body: await asSent(payload) });
 const runReconciliation = () => post("/api/reconciliation/run", { actor: clients.finance });
 
 before(async () => {

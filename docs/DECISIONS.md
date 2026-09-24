@@ -1318,3 +1318,201 @@ Decision:
 
 Consequences: no log shipping, metrics or tracing across services; a JSON
 line per request is what a collector needs to start.
+
+## ADR-061 The migration runner checks what it applied and runs alone
+
+Context: `schema_migrations` recorded only file names. A migration edited after
+it was applied was skipped without a word, so the change never reached any
+database that already had the file, and two runs at once raced through the
+same files; reproduced on 2026-09-23, the second crashed creating `pgcrypto`.
+
+Decision:
+- Each applied migration is recorded with the sha256 of its file. A run that
+  finds an applied file whose checksum differs stops, naming the file. A row
+  from before checksums existed is given its checksum on the next run.
+- The whole run holds a Postgres advisory lock, so a second run waits and then
+  finds nothing left to do.
+
+Consequences: a checksum covers the bytes, so a line-ending conversion counts
+as an edit. The rule was already append-only (AGENTS.md); now the runner
+enforces it.
+
+## ADR-062 A failed intake takes its file with it
+
+Context: the original is written inside the intake transaction, before the
+invoice row, so that a row never points at a file that is not there. When a
+later step failed - a concurrent identical upload, any insert error - the
+rollback removed the row and left the file, referenced by nothing. Reproduced
+on 2026-09-23 with a failing insert.
+
+Decision: an error between writing the file and the end of the intake's work
+removes the file (`storage.discardUnreferenced`) before the rollback. A failed
+commit does not: whether the row was committed is then uncertain, and a spare
+file is harmless where a missing original is not.
+
+Consequences: a process that dies between the write and the commit still
+leaves a file behind. That is rare, harmless, and the only case left; a sweep
+comparing storage with `invoices.file_path` would find it, and is not built.
+Stored originals stay immutable: only a file no committed row refers to is
+ever removed.
+
+## ADR-063 A payment is known at the bank by an id Nordwerk issues
+
+Context: the reference on a payment instruction was the supplier's invoice
+number. It is chosen by the supplier, is not unique across suppliers, and was
+never held to SEPA's 140 characters or its character set, so a long or odd
+number would have been rejected by a bank. Reconciliation then looked for that
+number in the bank line: a bank line naming only the supplier's number
+reconciled the payment (reproduced on 2026-09-23).
+
+Decision:
+- Each instruction gets an `end_to_end_id`, `NW-P-` and eight digits from a
+  sequence, one per attempt, unique, within SEPA's 35 characters.
+- The reference sent is `<id> RE <invoice number>`, with any character SEPA
+  does not carry replaced by a dot, cut at 140. The database enforces both for
+  every row that has an id.
+- Reconciliation looks for the id. The supplier's number alone identifies
+  nothing. An instruction created before this change has no id and is still
+  recognised by its reference, which was the invoice number, so payments in
+  flight at the migration are not stranded.
+
+Consequences: the bank line must echo the reference Nordwerk sent, which is
+what a bank statement for an outgoing transfer does. Tests that used fixed
+statements now substitute the reference that was sent. The demo generator's
+totals are unchanged; its shipped statement is regenerated in the new format.
+
+## ADR-064 Reading bank details and the books needs a permission
+
+Extends ADR-030, which guarded every write but no read.
+
+Context: any signed-in role could read the accounting export, the bank
+transactions and the supplier master data, every IBAN included. A cost-centre
+manager needs none of them to approve an invoice.
+
+Decision: three read permissions. `accounting:export` and `bank:read` for
+finance and admin; `master-data:read` for the AP clerk, finance and admin, since
+the clerk reviews supplier and bank-account questions. The invoice detail still
+shows the invoice's own IBAN to everyone who may see the invoice: the reviewer
+and approvers need it to judge that invoice. The payments page says the area is
+reserved for finance instead of showing an empty statement.
+
+Consequences: `/api/users` stays open to any signed-in user; it holds names and
+roles, which the approval screens show anyway.
+
+## ADR-065 Sessions are written less and cleaned up
+
+Context: resolving a session updated `last_seen_at` on every request, so every
+read was also a write, and sessions that had expired or been revoked were
+never removed.
+
+Decision: `last_seen_at` is updated only when it is more than a minute old.
+Each sign-in deletes sessions that expired or were revoked more than a day
+ago; the last day stays, for anyone asking who was signed in when.
+
+Consequences: `last_seen_at` is accurate to a minute. Clean-up runs only when
+someone signs in, which is often enough for a table that grows only through
+sign-ins; no scheduled job is needed.
+
+## ADR-066 The invoice list comes a page at a time
+
+Context: `GET /api/invoices` returned every invoice in one response, and the
+navigation counted invoices per state by downloading that whole list on every
+change.
+
+Decision: the list takes `limit` (1-200, default 50) and `offset`, sorted by
+receipt newest first with the id as tie-break, and reports the full count in
+`X-Total-Count`. The body stays an array, so callers that read it are
+unchanged. `GET /api/invoices/counts` answers the navigation with one grouped
+query. The inbox shows the true total and loads further pages on request.
+
+Consequences: offset paging can skip or repeat a row when invoices arrive
+between two pages; for a work queue read by people that is acceptable, and
+keyset paging can replace it without changing the client's contract. The KPI
+queries still aggregate whole tables, which is what they are for; an index or
+a summary table is the next step when that becomes slow.
+
+## ADR-067 Approval steps are kept, round by round
+
+Context: releasing an invoice from review deleted every approval step and
+re-validation deleted the cancelled ones, so who had signed what in an earlier
+round was gone from the table and survived only in the audit log.
+
+Decision: steps carry a `round`. Each release into approval starts a new round
+after cancelling what is left of the old one; nothing is deleted. The approval
+decision works on the live round, the highest one. The invoice detail returns
+the live round as `approval_steps`, as before, and the earlier rounds as
+`approval_history`. Every other reader already filtered by status, and an
+earlier round is always cancelled, so none of them changed.
+
+Consequences: a cancelled step keeps its signer and decision time but not the
+fact that it had been approved; the audit log has that. The screen does not
+show `approval_history` yet.
+
+## ADR-068 The app's database role cannot change the audit trail
+
+Context: the app connected as the schema owner, which may UPDATE and DELETE
+audit rows, and `audit_events` cascades from `invoices`, so deleting an invoice
+erased its trail. Nothing in the app does either, but a trail that anyone with
+the app's credentials can rewrite is not evidence.
+
+Decision:
+- The app connects as its own role. `npm run db:grant -- <role>`, run as the
+  owner after every migration, gives it what the app needs and withholds
+  UPDATE, DELETE and TRUNCATE on `audit_events`, DELETE and TRUNCATE on
+  `invoices`, and writes to `schema_migrations`. Default privileges cover
+  tables a later migration creates.
+- A production start is refused while the connected role could change the
+  trail, so running as the owner is caught, not assumed away.
+- Migrations, the seed and the tests keep running as the owner.
+
+Consequences: a deployment has two connection strings, the owner's for
+migrations and the app's for `npm start`. The owner can still change anything;
+protecting the trail from the database's owner is the database operator's
+concern, outside this app. The cascade from invoices stays in the schema;
+what stops it is that the app role cannot delete an invoice.
+
+## ADR-069 Refusals live in one module, and the domain picks its own handler
+
+Context: `RuleError` was defined in the approvals module and imported by five
+others, and `TransitionError` and `NotFoundError` lived in the state-machine
+module; a module that refused a payment depended on approvals for the class.
+Separately, the review route read the invoice's state to decide which domain
+function should handle "request information", a rule outside the domain.
+
+Decision: the three refusal classes live in `server/domain/errors.js`.
+`decideReview` handles "request information" while the invoice awaits
+approval itself, in the same transaction that locks the invoice; the route
+passes the action through.
+
+Consequences: no behaviour changes. The refusal `NOT_AWAITING_APPROVAL`
+disappears, because the state it guarded is now decided before the call; the
+dictionary guard flagged its text as orphaned.
+
+## ADR-070 Comments say why, not what happened
+
+Context: several comments told the story of a change ("used to count as the
+live one", "until this existed", "read 0 for as long as it existed"). The
+story belongs to the ADRs and the commit log; in the code it ages into
+confusion, describing a past the reader cannot see.
+
+Decision: a comment states the reason the code is as it is, in the present,
+and names the ADR that holds the story. Test files keep their headers naming
+the defect a test guards against: that is the test's reason for existing.
+Comments about rows written before a column existed stay, since they explain
+current behaviour for old data.
+
+Consequences: six comments rewritten; no code changed.
+
+## ADR-071 The screen does not offer a release the server would refuse
+
+Context: every invoice in review showed "Zur Freigabe geben". For one with a
+failure no reviewer may override, such as a changed IBAN (ADR-052), the
+button always failed with `NOT_PAYABLE_ELIGIBLE`.
+
+Decision: the invoice detail carries `payable_blockers`, computed by the same
+`payableBlockers` the release calls. With any blocker the client leaves the
+release out and says why; asking for information, rejecting, confirming a
+duplicate and checking again remain.
+
+Consequences: the server still refuses on its own; the screen only stops
+offering a button that cannot work.

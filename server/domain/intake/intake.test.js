@@ -1,4 +1,5 @@
 import { test, before, after } from "node:test";
+import { TransitionError } from "../errors.js";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { USERS, testDeps } from "../../test-support/db.js";
@@ -6,7 +7,7 @@ import { buildInvoiceXml } from "../../test-support/invoice-xml.js";
 import { handleUpload, processInvoice, receiveInvoice } from "./intake.js";
 import { getInvoiceDetail } from "../invoice/queries.js";
 import { decideReview } from "../approvals/approvals.js";
-import { SYSTEM, TransitionError, human, transition } from "../workflow/transitions.js";
+import { SYSTEM, human, transition } from "../workflow/transitions.js";
 import { withTransaction } from "../../db.js";
 
 const fixture = (name) => readFileSync(new URL(`../../../fixtures/xrechnung/${name}`, import.meta.url));

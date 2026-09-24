@@ -253,6 +253,7 @@ described as working.
 | K4 | Risk signals | count the invoices that raised them | AUTO | `kpi.test.js` |
 | K5 | Exception reasons | ranked, biggest first | AUTO | `kpi.test.js` |
 | K6 | Workload | counts what waits for a person now | AUTO | `kpi.test.js` |
+| K6a | A failed payment on the dashboard | counted under "Zahlungen fehlgeschlagen" as work for finance | AUTO | `kpi.test.js` "a payment the bank did not carry out is waiting for finance" |
 | K7 | Approval time | measured release to approval | AUTO | `kpi.test.js` |
 | K8 | Stage with no data | null, not zero | AUTO | `kpi.test.js` |
 | K9 | Processing time split by path | touched path has its own median | AUTO | `kpi.test.js` |
@@ -489,3 +490,39 @@ findings themselves.
 | I22 | An unknown code falls back to the server's sentence | German rather than nothing | AUTO | `dictionaries.test.js` |
 | I23 | The English guard catches German without umlauts | a German word in an English entry fails | MANUAL | Mutation check, 2026-09-17: "Freigabeschritt" passed the old guard, fails the new one |
 | I24 | A refusal is visible in English end to end | sign-in and a business-gate 409 both read in English | MANUAL | Browser, 2026-09-17: "Email address or password is wrong"; "Not approved: a business check has failed since the invoice was submitted" |
+
+## Operations
+
+| ID | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| O1 | Every applied migration carries its file's checksum | sha256 per row in `schema_migrations` | AUTO | `server/migrations.test.js` (ADR-061) |
+| O2 | An applied migration edited afterwards | the run stops and names the file | AUTO | `server/migrations.test.js` |
+| O3 | A database migrated before checksums existed | each row gets its checksum once, nothing re-applied | AUTO | `server/migrations.test.js` |
+| O4 | Two migration runs at once | each file applied exactly once; before the lock, the second crashed on `pgcrypto` | AUTO | `server/migrations.test.js` |
+| O5 | An intake that fails after writing its file | no row and no file; before the fix the file stayed, referenced by nothing | AUTO | `orphan-file.test.js` (ADR-062) |
+| O6 | A successful intake keeps its file | `<id>/original.xml` present | AUTO | `orphan-file.test.js` |
+| O7 | Each payment has its own end-to-end id | `NW-P-` and eight digits, unique per attempt; reference is `<id> RE <invoice number>` | AUTO | `payment-reference.test.js` (ADR-063) |
+| O8 | A supplier's invoice number cannot break the reference | 200-character number with `#` and `|`: reference 140 characters at most, SEPA characters only | AUTO | `payment-reference.test.js` |
+| O9 | A bank line naming only the supplier's number | not reconciled; a line naming the payment's id is | AUTO | `payment-reference.test.js`; `matching.test.js` |
+| O10 | An instruction from before end-to-end ids | still recognised by its reference | AUTO | `matching.test.js` |
+| O11 | The demo generator after the change | same totals: 36 paid, 30 matched, 4 exceptions, 4 unmatched | MANUAL | Run against the test database, 2026-09-23 |
+| O12 | Reads that carry bank details or the books | export and bank transactions: finance and admin only; supplier and PO master data: clerk, finance, admin; every other role 403 | AUTO | `read-permissions.test.js` (ADR-064) |
+| O13 | A role without `bank:read` on the payments page | says the area is reserved for finance, never shows an empty statement; finance sees the statement | MANUAL | Browser, 2026-09-23: manager and finance |
+| O14 | A request within a minute of the last one | `last_seen_at` not written | AUTO | `session-upkeep.test.js` (ADR-065) |
+| O15 | A request after a minute | `last_seen_at` refreshed | AUTO | `session-upkeep.test.js` |
+| O16 | Sessions that ended more than a day ago | deleted at the next sign-in; one that ended an hour ago stays | AUTO | `session-upkeep.test.js` |
+| O17 | The invoice list in pages | `limit` and `offset`, newest first, no invoice twice or missing, full count in `X-Total-Count`, the count follows the state filter | AUTO | `paging.test.js` (ADR-066) |
+| O18 | A page size outside 1-200 or a negative offset | 400 `INVALID_PAGE` | AUTO | `paging.test.js` |
+| O19 | Navigation counts | one grouped query, not the downloaded list | AUTO | `paging.test.js`; client `api.test.js` |
+| O20 | Paging in the inbox | 70 demo invoices: 50 shown with "Weitere laden (50 von 70 angezeigt)", all 70 after one click; nav counts 70 and 6 in review | MANUAL | Browser, 2026-09-23 |
+| O21 | An invoice released into approval a second time | the first round's steps stay, cancelled, with who signed; the new round is round 2 | AUTO | `rounds.test.js` (ADR-067) |
+| O22 | The detail after a second release | `approval_steps` is the live round; `approval_history` holds the earlier one with its signer | AUTO | `rounds.test.js` |
+| O23 | Deciding the new round | works as before and leaves the old round untouched | AUTO | `rounds.test.js`; demo generator totals unchanged |
+| O24 | The app runs as its own database role | upload, booking, payment and confirmation all succeed as the granted role | AUTO | `audit-role.test.js` (ADR-068) |
+| O25 | That role and the audit trail | update, delete and truncate refused; deleting an invoice refused, so no cascade | AUTO | `audit-role.test.js` |
+| O26 | A production start as a role that could change the trail | refused, naming what it could do; the granted role passes | AUTO | `audit-role.test.js` |
+| O27 | `db:grant` and `npm start` end to end | grant sets the rights and refuses an unsafe role name; start as the owner refused naming update, delete, truncate and invoice delete; start as the granted role listens | MANUAL | Probe, 2026-09-23, against the test database |
+| O28 | The detail says whether review may release the invoice | `payable_blockers`: a changed IBAN is named, the same answer the release gives; a PO overrun blocks nothing | AUTO | `releasable.test.js` (ADR-071) |
+| O29 | A review with a blocker | "Zur Freigabe geben" not offered, the prompt says why; the other decisions stay | AUTO | client `actions.test.js` |
+| O30 | Earlier approval rounds on the invoice screen | round, step, role, signer and time, marked cancelled, under the live steps | MANUAL | Browser, 2026-09-23: E after a question and a second release |
+| O31 | The three follow-ups together in the browser | B offers no release and says why; E lists its first round; dashboard shows one failed payment | MANUAL | Browser, 2026-09-23 |

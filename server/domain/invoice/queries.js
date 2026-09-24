@@ -1,9 +1,16 @@
 import { openCreditsFor } from "../accounting/netting.js";
 import { availableCents } from "../purchase-orders/commitments.js";
 import { centsToDecimal, toCents } from "../money.js";
+import { payableBlockers } from "../workflow/eligibility.js";
 
 /** Read models for the API. No business logic here. */
-export async function listInvoices(pool, { state } = {}) {
+
+/** One page of the list, newest first, and how many there are in all (ADR-066). */
+export async function listInvoices(pool, { state, limit = 50, offset = 0 } = {}) {
+  const { rows: [count] } = await pool.query(
+    "select count(*)::int as total from finops.invoices where ($1::text is null or state = $1::finops.invoice_state)",
+    [state ?? null],
+  );
   const { rows } = await pool.query(
     `select i.id, i.state, i.review_reason, i.received_at, i.source_channel, i.original_filename,
             i.invoice_number, i.issue_date, i.due_date, i.supplier_name_raw, i.gross_amount, i.currency,
@@ -16,10 +23,20 @@ export async function listInvoices(pool, { state } = {}) {
        select action, occurred_at from finops.audit_events e where e.invoice_id = i.id order by occurred_at desc, id desc limit 1
      ) last on true
      where ($1::text is null or i.state = $1::finops.invoice_state)
-     order by i.received_at desc`,
-    [state ?? null],
+     order by i.received_at desc, i.id
+     limit $2 offset $3`,
+    [state ?? null, limit, offset],
   );
-  return rows;
+  return { rows, total: count.total };
+}
+
+/** Invoices per state, for the navigation. */
+export async function countInvoices(pool) {
+  const { rows } = await pool.query("select state, count(*)::int as n from finops.invoices group by state order by state");
+  return {
+    total: rows.reduce((sum, r) => sum + r.n, 0),
+    by_state: Object.fromEntries(rows.map((r) => [r.state, r.n])),
+  };
 }
 
 export async function getInvoiceDetail(pool, id) {
@@ -50,7 +67,7 @@ export async function getInvoiceDetail(pool, id) {
     pool.query("select * from finops.routing_decisions where invoice_id = $1 order by run_no desc limit 1", [id]),
     pool.query(
       `select a.*, u.name as actor_name from finops.approval_steps a left join finops.users u on u.id = a.actor_id
-       where a.invoice_id = $1 order by a.step_no`, [id],
+       where a.invoice_id = $1 order by a.round, a.step_no`, [id],
     ),
     pool.query(
       `select e.*, u.name as actor_name from finops.audit_events e left join finops.users u on u.id = e.actor_id
@@ -74,8 +91,12 @@ export async function getInvoiceDetail(pool, id) {
     po_available_amount: centsToDecimal(poAvailable),
     lines: lines.rows,
     validation: { technical: results.rows.filter((r) => r.phase === "TECHNICAL"), business: results.rows.filter((r) => r.phase === "BUSINESS") },
+    // What stops a release from review, as the release itself decides it (ADR-071).
+    payable_blockers: payableBlockers(invoice, results.rows.filter((r) => r.status === "FAILED").map((r) => r.check_code)),
     routing: decision.rows[0] ?? null,
-    approval_steps: steps.rows,
+    // The live round; the rounds before it, cancelled, as the record (ADR-067).
+    approval_steps: steps.rows.filter((s) => s.round === currentRound(steps.rows)),
+    approval_history: steps.rows.filter((s) => s.round !== currentRound(steps.rows)),
     audit_events: events.rows,
     // One line per tax rate (ADR-053); the record is what they share.
     accounting_record: accounting.rows[0] ?? null,
@@ -86,6 +107,8 @@ export async function getInvoiceDetail(pool, id) {
     bank_transactions: bankTx.rows,
   };
 }
+
+const currentRound = (steps) => Math.max(0, ...steps.map((s) => s.round));
 
 async function openCreditCents(pool, invoice) {
   const credits = await openCreditsFor(pool, invoice.supplier_id, invoice.currency ?? "EUR", invoice.id, { lock: false });

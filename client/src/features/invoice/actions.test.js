@@ -25,6 +25,14 @@ test("a review offers the decisions a reviewer makes", () => {
     ["accept", "request-info", "confirm-duplicate", "reject", "reprocess"]);
 });
 
+test("a review whose failures no reviewer may override offers no release", () => {
+  // The server refuses the release with NOT_PAYABLE_ELIGIBLE; the button would
+  // always fail (ADR-071).
+  const result = availableActions(invoice({ state: "REVIEW_REQUIRED", payable_blockers: ["supplier_iban_match"] }));
+  assert.deepEqual(result.actions.map((a) => a.key), ["request-info", "confirm-duplicate", "reject", "reprocess"]);
+  assert.equal(result.prompt.key, "hintNotReleasable");
+});
+
 test("an approval step offers approve and reject, and names the step", () => {
   const inv = invoice({
     state: "READY_FOR_APPROVAL",

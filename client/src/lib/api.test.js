@@ -5,7 +5,7 @@
  */
 import { test, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { getInvoice, login, onSignedOut } from "./api.js";
+import { getInvoice, listInvoices, login, onSignedOut } from "./api.js";
 
 globalThis.document = { cookie: "" };
 const answer = (status, body) => {
@@ -34,4 +34,15 @@ test("any other refusal leaves the session alone", async () => {
   answer(403, { error: "Rolle darf das nicht", code: "ROLE_NOT_PERMITTED" });
   await assert.rejects(() => getInvoice("x"), { code: "ROLE_NOT_PERMITTED" });
   assert.equal(calls, 0);
+});
+
+test("the invoice list is read one page at a time, with the full count", async () => {
+  let asked;
+  globalThis.fetch = async (url) => {
+    asked = url;
+    return new Response("[{\"id\":\"a\"}]", { status: 200, headers: { "X-Total-Count": "120" } });
+  };
+  const page = await listInvoices("REVIEW_REQUIRED", 50);
+  assert.equal(asked, "/api/invoices?offset=50&state=REVIEW_REQUIRED");
+  assert.deepEqual(page, { rows: [{ id: "a" }], total: 120 });
 });

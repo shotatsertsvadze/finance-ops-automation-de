@@ -7,9 +7,9 @@ import { loadMasterData } from "../validation/lookup.js";
  *
  * Validation happens once, at intake. Master data does not: a supplier can be
  * blocked, a bank account retired or a purchase order consumed while an invoice
- * waits for a signature. Until this existed only `payableBlockers` was checked
- * again, which covers missing fields and unreadable structure, so a blocked
- * supplier was approved and paid on the strength of a check run days earlier.
+ * waits for a signature. `payableBlockers` alone covers missing fields and
+ * unreadable structure, so a blocked supplier would be approved and paid on
+ * the strength of a check run days earlier (ADR-041).
  *
  * The document itself cannot change (ADR-033), so this re-reads the stored
  * parse rather than the file, and only master data can move the answer.

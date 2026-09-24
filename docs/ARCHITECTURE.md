@@ -60,7 +60,7 @@ finance-ops-automation-de/
   .github/workflows/       CI: the suite against a Postgres service container, then the build
   fixtures/xrechnung/      demo invoices A-J (synthetic UBL 2.1 / XRechnung 3.0 profile)
   fixtures/bank/           synthetic bank statement for the tests
-  db/migrations/           append-only SQL, applied by scripts/migrate.js
+  db/migrations/           append-only SQL, applied by scripts/migrate.js under an advisory lock; an applied file that changed stops the run (ADR-061)
   db/seed/                 synthetic master data (users, suppliers, IBANs, POs)
   scripts/                 migrate.js, seed.js, reset.js, set-password.js, demo-data.js, demo-walkthrough.mjs
   server/
@@ -71,6 +71,7 @@ finance-ops-automation-de/
     auth/                  passwords (scrypt), sessions (cookie + CSRF), authorize (role matrix), set-password
     config/                policy.js, company.js, assumptions.js, tax-keys.js, deployment.js
     domain/
+      errors.js            TransitionError (409), NotFoundError (404), RuleError (own status)
       invoice/             xml-safety.js, parse-xrechnung.js (UBL adapter), technical-validation.js, queries.js
       validation/          business-checks.js, tax-breakdown.js, lookup.js (each check returns a CheckResult)
       routing/             decide.js (pure)
@@ -122,10 +123,12 @@ Key columns (full definitions in `db/migrations/0001_core.sql`):
   `recommended_action`).
 - `routing_decisions`: the decision, the reasons and the required approval
   steps as computed by the policy, with the policy snapshot.
-- `approval_steps`: `step_no`, `required_role`, `status`, `actor_id`,
+- `approval_steps`: `round`, `step_no`, `required_role`, `status`, `actor_id`,
   `decided_at`, `comment`, and what the decision was given for:
   `document_sha256`, `validation_run_no`, `decided_gross` (migration
-  `0007_approval_binding.sql`). The next approval step and the accounting
+  `0007_approval_binding.sql`). Each release into approval starts a new
+  round; earlier rounds stay, cancelled, and the detail returns them as
+  `approval_history` (ADR-067). The next approval step and the accounting
   handoff both refuse with 409 when the invoice no longer matches a step
   already decided (ADR-033).
 - `invoices.review_accepted_by`: who released the invoice from review, so that
@@ -237,6 +240,11 @@ Rules:
   the netted amount, and reconciliation compares the bank line with that
   instruction, so it needed no change. An invoice the credits cover entirely
   reaches `SETTLED_BY_CREDIT` without a payment (ADR-050).
+- Each payment instruction carries an `end_to_end_id` Nordwerk issues
+  (`NW-P-` and eight digits, from a sequence, one per attempt) and a reference
+  `<id> RE <invoice number>` in SEPA's characters, 140 at most. Reconciliation
+  looks for the id, never for the supplier's invoice number; an instruction
+  from before the id existed is still recognised by its reference (ADR-063).
 - A human review never ends in `APPROVED` directly. It ends in
   `READY_FOR_APPROVAL` with at least one approval step, and the reviewer cannot
   take that step (configurable four-eyes after review).
@@ -308,11 +316,18 @@ invoice above the auto limit.
 | GET | `/api/auth/me` | - | the signed-in user and their permissions |
 | GET | `/api/meta/states` | - | state labels, transition table, policy |
 | POST | `/api/invoices` | 1 | multipart upload (`file`, `source_channel`), runs the pipeline, returns the invoice |
-| GET | `/api/invoices` | 1 | list with optional `state` filter |
+| GET | `/api/invoices` | 1 | one page, newest first: optional `state`, `limit` 1-200 (default 50), `offset`; full count in `X-Total-Count` (ADR-066) |
+| GET | `/api/invoices/counts` | 1 | invoices per state and in total, for the navigation |
+
+The invoice detail (`GET /api/invoices/:id`) carries the domain's own answers
+where the screen needs them: `open_credit_amount`, `po_available_amount`,
+`payable_blockers` (what stops a release from review, ADR-071) and
+`approval_history` (earlier approval rounds, ADR-067).
 | GET | `/api/invoices/:id` | 1 | invoice, lines, latest validation results, routing decision, approval steps, audit events |
 | GET | `/api/invoices/:id/file` | 1 | original XML |
 | POST | `/api/invoices/:id/reprocess` | 1 | re-run validation from RECEIVED/VALIDATING/REVIEW_REQUIRED |
-| GET | `/api/master-data/suppliers`, `/purchase-orders`, `/api/users` | 1 | read-only master data |
+| GET | `/api/master-data/suppliers`, `/purchase-orders` | 1 | read-only master data, IBANs included; `master-data:read` (AP clerk, finance, admin; ADR-064) |
+| GET | `/api/users` | 1 | names and roles, any signed-in user |
 | POST | `/api/invoices/:id/review/accept\|reject\|request-info\|confirm-duplicate` | 2 | reviewer actions; `request-info` is also valid from READY_FOR_APPROVAL |
 | POST | `/api/invoices/:id/info-received` | 2 | INFO_REQUESTED back to REVIEW_REQUIRED |
 | POST | `/api/invoices/:id/approvals/:stepNo/approve\|reject` | 2 | approver actions |
@@ -325,9 +340,9 @@ invoice above the auto limit.
 | POST | `/api/invoices/:id/payment/retry` | 3 | PAYMENT_FAILED back to ACCOUNTING_READY, to instruct or settle again |
 | POST | `/api/invoices/:id/cancel` | 3 | stops an APPROVED, ACCOUNTING_READY or PAYMENT_FAILED invoice, reason required; reverses a booking |
 | POST | `/api/invoices/:id/reconciliation/resolve` | 3 | closes a reconciliation exception, reason required |
-| GET | `/api/accounting/export` | 3 | CSV of all booking lines; `?profile=spreadsheet` neutralises formula cells (ADR-045) |
+| GET | `/api/accounting/export` | 3 | CSV of all booking lines; `?profile=spreadsheet` neutralises formula cells (ADR-045); `accounting:export` (finance, admin) |
 | POST | `/api/bank/import` | 3 | imports a synthetic statement, idempotent on `external_id` |
-| GET | `/api/bank/transactions` | 3 | statement lines with match status and reason |
+| GET | `/api/bank/transactions` | 3 | statement lines with match status and reason; `bank:read` (finance, admin) |
 | POST | `/api/reconciliation/run` | 3 | matches unmatched transactions against paid invoices |
 | GET | `/api/dashboard/kpis` | 4 | operational KPIs |
 
@@ -367,6 +382,8 @@ expired, and signing in again stays on the same page (ADR-057).
 - No secrets in the repository; `.env.example` has placeholders only.
 - Stored originals are served as `text/plain` with a sandboxing CSP, never
   rendered, so an uploaded XHTML page cannot run script (ADR-035).
+- Sessions: `last_seen_at` is written at most once a minute, and each sign-in
+  deletes sessions that ended more than a day ago (ADR-065).
 - Sessions: HttpOnly, SameSite=Strict cookie holding a random token stored as
   a hash; double-submit CSRF token on every mutation; scrypt password hashes;
   failed sign-ins throttled per client address, 5 per account and 20 overall
@@ -379,7 +396,13 @@ expired, and signing in again stays on the same page (ADR-057).
   `dist/` is missing or any account still has the published demo password,
   unless `DEMO_MODE=true` (ADR-058). `npm run user:password` replaces a
   password and ends that account's sessions.
+- The app connects as its own role, set up with `npm run db:grant`: it may add
+  to the audit trail but not update, delete or truncate it, and may not delete
+  invoices, whose deletion would cascade to their trail. A production start
+  refuses a connection that could (ADR-068).
 - Original files are immutable; deletion is not exposed by the API.
+  An intake that fails before its transaction commits removes the file it
+  wrote, since no row can refer to it (ADR-062).
 - Logs are one JSON object per line (`LOG_LEVEL`, default `info`). Every
   response carries `X-Request-Id`, kept from a proxy when usable; each request
   logs method, path without query, status, duration and user id, never the

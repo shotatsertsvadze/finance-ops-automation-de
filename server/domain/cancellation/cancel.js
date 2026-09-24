@@ -1,6 +1,6 @@
 import { withTransaction } from "../../db.js";
-import { NotFoundError, TransitionError, transition } from "../workflow/transitions.js";
-import { RuleError } from "../approvals/approvals.js";
+import { NotFoundError, RuleError, TransitionError } from "../errors.js";
+import { transition } from "../workflow/transitions.js";
 import { reverseBooking } from "../accounting/accounting.js";
 
 /** States from which an invoice can be stopped: approved, money not on its way (any more). */

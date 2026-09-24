@@ -98,14 +98,21 @@ npm test
 Production (one process serves the API and the built client):
 
 ```bash
+# once, as a database superuser
+psql -c "create role finops_app login password '...'"
+# as the schema owner, after every migration
+DATABASE_URL=$OWNER_URL npm run db:migrate
+DATABASE_URL=$OWNER_URL npm run db:grant -- finops_app
+printf '%s' "$PASSWORD" | DATABASE_URL=$OWNER_URL npm run user:password -- jonas.weber@nordwerk.example   # every account
+# the app itself connects as finops_app
 npm run build
-printf '%s' "$PASSWORD" | npm run user:password -- jonas.weber@nordwerk.example   # for every account
-npm start                   # NODE_ENV=production
+DATABASE_URL=$APP_URL npm start   # NODE_ENV=production
 ```
 
-`npm start` refuses to run while `dist/` is missing or any account still has
-the demo password; `DEMO_MODE=true` allows the demo password on purpose, for a
-hosted demo. Cookies are `Secure` in production, so it must sit behind HTTPS;
+`npm start` refuses to run while `dist/` is missing, while any account still has
+the demo password, or while its database role could change the audit trail
+(the owner can; `finops_app` cannot). `DEMO_MODE=true` allows the demo password
+on purpose, for a hosted demo. Cookies are `Secure` in production, so it must sit behind HTTPS;
 the API listens on `127.0.0.1` unless `API_HOST` says otherwise, which suits a
 reverse proxy on the same host. Route traffic on `/api/health/ready`, which
 checks the database; logs are JSON lines on stdout and stderr, and every
@@ -254,8 +261,9 @@ a simulated provider, and matched against a synthetic bank statement. Under
 "Zahlungen und Abgleich" you can import the demo statement from
 `fixtures/bank/` and run the match.
 
-A payment is only matched to an invoice when its reference names that invoice
-and the amount agrees. A payment whose amount happens to equal an invoice is
+Each payment is sent with its own end-to-end id (`NW-P-00000001`) ahead of the
+invoice number, and a bank line is matched only when it names that id and the
+amount agrees; the supplier's invoice number alone identifies nothing. A payment whose amount happens to equal an invoice is
 never matched on that basis alone: it becomes an exception for a person to
 resolve. The demo statement contains one clean match, one amount-only payment,
 one part payment and one payment that matches nothing.

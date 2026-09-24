@@ -113,6 +113,16 @@ test("workload counts what is waiting for a person right now", async () => {
   assert.equal(k.workload.awaiting_review, 1);
 });
 
+test("a payment the bank did not carry out is waiting for finance", async () => {
+  // PAYMENT_FAILED is still owed and needs a person to retry or stop it
+  // (ADR-055); the dashboard counted it nowhere but in "overdue".
+  const invoice = await upload(fixture("G_clean_380.xml"), "G.xml");
+  for (const [path, body] of [["accounting-record"], ["payment"], ["payment/fail", { comment: "Rücklastschrift" }]]) {
+    assert.equal((await post(`/api/invoices/${invoice.id}/${path}`, clients.finance, body ?? {})).status, 200, path);
+  }
+  assert.equal((await kpis()).workload.failed_payments, 1);
+});
+
 test("approval time is measured from release to approval", async () => {
   const invoice = await upload(fixture("A_clean_1240.xml"), "A.xml");
   await post(`/api/invoices/${invoice.id}/approvals/1/approve`, clients.manager, {});

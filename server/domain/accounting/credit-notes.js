@@ -1,5 +1,6 @@
 import { withTransaction } from "../../db.js";
-import { NotFoundError, TransitionError, transition } from "../workflow/transitions.js";
+import { NotFoundError, TransitionError } from "../errors.js";
+import { transition } from "../workflow/transitions.js";
 
 /**
  * Closing a credit note.

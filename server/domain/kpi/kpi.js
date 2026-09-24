@@ -114,6 +114,7 @@ async function queryWorkload(pool) {
             count(*) filter (where state = 'READY_FOR_APPROVAL')::int as awaiting_approval,
             count(*) filter (where state = 'INFO_REQUESTED')::int as awaiting_information,
             count(*) filter (where state = 'RECONCILIATION_EXCEPTION')::int as reconciliation_exceptions,
+            count(*) filter (where state = 'PAYMENT_FAILED')::int as failed_payments,
             -- Overdue means the supplier is still owed. A settled document,
             -- including one whose reconciliation is unclear, is not an unpaid
             -- bill: that is bookkeeping work, counted on its own above.
