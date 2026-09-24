@@ -35,6 +35,9 @@ jobs:
 
       - run: npm ci
 
+      # A known high or critical vulnerability in any dependency fails the build.
+      - run: npm audit --audit-level=high
+
       # Two databases, not one. `testDeps()` drops and rebuilds the schema, and
       # refuses to do so if TEST_DATABASE_URL and DATABASE_URL reach the same
       # database - so running with both set exercises that guard rather than

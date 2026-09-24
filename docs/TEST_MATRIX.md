@@ -537,3 +537,5 @@ findings themselves.
 | O39 | A statement that runs too long | cancelled at the statement limit | AUTO | `server/timeouts.test.js` (ADR-075) |
 | O40 | A database that cannot be reached | fails within the connect limit; before: a connect to an unroutable address hung 75 s | AUTO | `server/timeouts.test.js` |
 | O41 | SIGTERM | "shutting down", "stopped", exit code 0 | AUTO | `server/timeouts.test.js` |
+| O42 | `docker compose up` on a machine with only Docker | the stack builds and starts, readiness answers, `/` serves the page, a demo account sees 70 invoices | CI | `ci.yml` job `docker`, first green run 2026-09-24 (ADR-076) |
+| O43 | A dependency with a known high or critical vulnerability | the build fails | CI | `ci.yml` job `test`, step `npm audit --audit-level=high` |
