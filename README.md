@@ -2,6 +2,11 @@
 
 [![tests](https://github.com/shotatsertsvadze/finance-ops-automation-de/actions/workflows/ci.yml/badge.svg)](https://github.com/shotatsertsvadze/finance-ops-automation-de/actions/workflows/ci.yml)
 
+**At a glance:** Node 22, Express 5, PostgreSQL 14, React 19. 489 automated
+tests: unit, integration against a real database, and browser. 76 decision
+records. `docker compose up` gives a running demo with a month of synthetic
+invoices on http://localhost:4400.
+
 ## Why this exists
 
 The opportunity is not parsing an e-invoice; it is automating the finance
@@ -65,11 +70,13 @@ The interface is German by default and switches to English.
   amount policy. No model decides anything, and none sits anywhere near the
   payment path.
 
-![An invoice stopped for review: the decision panel, what is blocking, and the two failed checks with their expected and found values](docs/screenshots/invoice.png)
+![An invoice stopped for review: the IBAN differs from master data, the differing characters are marked, and the release is not offered](docs/screenshots/invoice.png)
 
-An invoice the system stopped, because the purchase order named on it belongs
-to a different supplier. The reviewer is shown each failed check with what was
-expected and what the document actually carried, and decides from there.
+An invoice the system stopped: its IBAN is not one of the supplier's approved
+accounts, the most common invoice-fraud pattern. The characters that differ are
+marked. Because no reviewer may wave a changed IBAN through, the screen does
+not offer the release at all: the account has to be verified into master data
+first (ADR-052, ADR-071).
 
 The reasoning behind each decision is in `docs/DECISIONS.md`, every behaviour has
 a row in `docs/TEST_MATRIX.md`, and what the system does *not* do is listed under
@@ -188,6 +195,27 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
   declared profile and the structure it needs; it does not certify compliance.
 - Accounting, payment and bank data are simulated.
 - Approval thresholds and savings figures are demo assumptions.
+
+## What a production deployment would add
+
+This is a simulation built to show the workflow and its controls. The code is
+production-shaped where it matters for correctness: every state change is
+transactional and audited, money moves are idempotent, input is validated, and
+a production start refuses demo passwords and an unprotected audit trail. A
+real deployment would still need:
+
+- **A bank connection.** Payments leave as a SEPA file (pain.001) or through a
+  bank API via an outbox, and "paid" or "failed" comes from the bank's own
+  statements (camt.053/054) rather than a button.
+- **An accounting export the books import.** DATEV's Buchungsstapel format or
+  the ERP's API, in numbered batches so a re-send can never double-book.
+- **Company identity.** Single sign-on with a second factor, and user
+  lifecycle (joiners, leavers, role changes) managed there.
+- **Operations.** Point-in-time database backups, originals in write-protected
+  object storage for the retention period, a secrets manager, central logs
+  with alerts on errors and stuck invoices, and a tested rollback path.
+- **The other e-invoice syntax.** CII and ZUGFeRD, plus the official KoSIT
+  validator.
 
 ## When an intake does not finish
 
