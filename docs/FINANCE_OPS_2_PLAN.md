@@ -32,16 +32,18 @@ course, this section wins.
 | Core, not dropped | Stable demo | `docs/DEMO.md` verified against a fresh run, including the new fraud-story steps |
 | Important, reducible | BI / ROI source labels (section E) | every figure labelled synthetic, assumption, baseline or pilot; "nicht gemessen" where nothing is measured |
 | Important, reducible | AI exception explanation (section D) | grounding check and stored suggestion, plain text, off by default; no authority over state, approval, master data or payments |
-| Stretch | CII / ZUGFeRD | only through the gate below, and only without touching the UBL path |
 
 Customer discovery is not on the course's critical path. The interview guide
 and measurement framework (`docs/CUSTOMER_DISCOVERY.md`) stay in the repository
 as the planned next phase; interviews happen after the course, as market
 validation and pilot preparation. Nothing in the course plan waits for them.
 
+CII / ZUGFeRD is not built before the freeze. It is the first enhancement after
+the course (section C, row 2).
+
 ### Post-course and pilot roadmap
 
-Customer interviews, mailbox intake, DATEV, camt.053, pain.001, supplier
+First after the course: CII / ZUGFeRD intake. Then customer interviews, mailbox intake, DATEV, camt.053, pain.001, supplier
 onboarding and master-data import, SSO / MFA, hosting and backups, real pilot
 measurement. Also after the course: supplier block and reactivation, retiring an
 account, PO corrections, the AI feedback table, baseline entry in the BI view.
@@ -62,25 +64,24 @@ discovery shows small teams need it.
 
 ### Timeline to the feature freeze
 
-Implementation order: KoSIT feasibility spike, master-data loop, KoSIT
-integration, CII / ZUGFeRD if the gate allows, BI source labels, AI explanation.
+Implementation order: KoSIT feasibility spike (done), XRechnung conformance of
+the test data (done), master-data loop, KoSIT integration, BI source labels, AI
+explanation.
 Each item lands on `main` green, verified and demo-ready, so the repository can
 be presented at any point, including early in the window.
 
 | Dates | Work | Done when |
 |---|---|---|
-| Wed 30 Sep | KoSIT feasibility spike: get the validator running here (no Java runtime and no Docker daemon on this machine on 29 September) | the validator answers one fixture, or the fallback is chosen |
+| Wed 30 Sep | KoSIT feasibility spike; fixtures and demo generator made XRechnung-conformant | done: the validator runs here from the installed Java 17; KoSIT accepts every invoice meant to be valid (fixtures A-E, G-J; 65 of 70 generated) and rejects only the malformed ones |
 | Thu 1 - Wed 7 Oct | master-data loop: tests first, migration, domain, API, minimal screens, ADR, DEMO step for the fraud story | B uploaded, proposed, called back, approved, re-validated and signed, all through the UI |
 | Thu 8 - Fri 9 Oct | KoSIT adapter as a technical check; tests with a stub, one integration test that skips without the validator; CI runs it for real | every fixture carries an official validation result |
-| end of Fri 9 Oct | **CII / ZUGFeRD gate** | go only if the loop and KoSIT are merged and green |
-| Mon 12 - Tue 13 Oct | if go: CII / ZUGFeRD, at most these two days, merged only if finished and green; if no-go: BI labels (Mon), AI explanation (Tue) | |
-| Wed 14 - Thu 15 Oct | if go: BI labels (Wed), AI explanation (Thu); if no-go: AI finished (Wed), bug fixing and early course drafts (Thu) | |
+| Mon 12 Oct | BI source labels | no figure without its provenance |
+| Tue 13 - Wed 14 Oct | AI exception explanation | an ungrounded answer is never shown |
+| Thu 15 Oct | bug fixing, early course drafts | |
 | **Thu 15 Oct, end of day** | **feature freeze** | everything merged is green and verified |
 
-My recommendation at the gate is no-go unless the loop and KoSIT finished early:
-CII / ZUGFeRD is the stretch item, and the "go" track compresses the two
-reducible items into two days. The spike moved from 29 to 30 September; the
-freeze did not move, so the slack before it is one day smaller.
+The conformance fix, originally part of the KoSIT slot, is already done, so the
+two KoSIT days hold only the adapter.
 
 ### The window, 15-23 October
 
@@ -99,27 +100,24 @@ early in the window, the course documents move before the freeze; the
 
 ### Critical path
 
-KoSIT spike → master-data loop → KoSIT integration → feature freeze → demo
+KoSIT spike (done) → master-data loop → KoSIT integration → feature freeze → demo
 stabilisation → rehearsal. The master-data loop is the longest link and the one
-the demo story depends on. BI labels, the AI explanation and CII / ZUGFeRD are
-off the critical path. The course documents are core but depend on little, so
+the demo story depends on. BI labels and the AI explanation are off the
+critical path. The course documents are core but depend on little, so
 they can move earlier if needed.
 
 ### If the schedule slips
 
 Drop in this order, and write the dropped item up as designed but not built:
 
-1. CII / ZUGFeRD.
-2. The AI panel's polish: keep the grounding check and the stored suggestion,
+1. The AI panel's polish: keep the grounding check and the stored suggestion,
    show plain text.
-3. BI down to labels only.
-4. The AI feature entirely, keeping its design and evaluation plan in the docs.
+2. BI down to labels only.
+3. The AI feature entirely, keeping its design and evaluation plan in the docs.
 
 Never dropped: the master-data loop, KoSIT, the course documents, a stable demo.
 Fixing a bug found in the window beats every optional item.
 
-If the KoSIT spike fails (no Java runtime can be installed), the validator
-runs only in CI and in the Docker demo, and local tests use the stub.
 
 ## A. Scope at a glance
 
@@ -127,7 +125,7 @@ runs only in CI and in the Docker demo, and local tests use the stub.
 |---|---|---|---|
 | A Discovery | interview guide and measurement framework (written) | interviews, synthesis, 1-3 baselines | pilot agreement |
 | B Master-data control | bank-account change | supplier block and reactivation, retiring an account | PO corrections, supplier onboarding, master-data import |
-| C Integrations | official KoSIT validation; CII / ZUGFeRD as stretch | CII / ZUGFeRD intake, if not done | DATEV export, camt.053, mailbox intake; pain.001 last |
+| C Integrations | official KoSIT validation | CII / ZUGFeRD intake, first | DATEV export, camt.053, mailbox intake; pain.001 last |
 | D AI | exception explanation, off by default | feedback table | measured in the pilot, dropped if it saves no time |
 | E BI / ROI | source labels, "nicht gemessen" where nothing is measured | baseline entry | filled with a partner's real values |
 | Course layer | stakeholders, risks, data protection, method, rollout, reflection | - | data protection and rollout become pilot documents |
@@ -299,11 +297,45 @@ around the control, not as demonstrations of the intended path (the lesson of
 | # | Integration | Business value | Complexity | Architecture impact | Security and privacy | Reuses | Scope |
 |---|---|---|---|---|---|---|---|
 | 1 | KoSIT validation | high: an authoritative answer to "is this a valid XRechnung / EN 16931 invoice", replacing "profile declared" | medium | a Java validator run as a local service next to the app (a second container in `docker-compose.yml`); a new technical check with the rule ids it reports | runs locally, no invoice leaves; pin the configuration version and record it in the check's evidence; unavailable means review, not a pass | `technical-validation.js`, `CheckResult` | course |
-| 2 | CII / ZUGFeRD | very high: a large share of real e-invoices; without it most suppliers' invoices are refused | medium (CII) to medium-high (ZUGFeRD) | a CII parser producing the existing `ParsedInvoice`; for ZUGFeRD, PDF/A-3 intake that extracts the embedded XML; PDF accepted at upload; the original PDF kept, the XML stored as derived with its own hash | a PDF parser is new attack surface: extract the attachment only, never render, size limits, then the existing XML safety gate; the PDF is served as a download under the sandboxing CSP (ADR-035); MINIMUM and BASIC WL profiles go to review | `parseInvoiceXml` interface, format detector, intake, file serving | course stretch, through the gate on 9 October; otherwise right after the course |
+| 2 | CII / ZUGFeRD | very high: a large share of real e-invoices; without it most suppliers' invoices are refused | medium (CII) to medium-high (ZUGFeRD) | a CII parser producing the existing `ParsedInvoice`; for ZUGFeRD, PDF/A-3 intake that extracts the embedded XML; PDF accepted at upload; the original PDF kept, the XML stored as derived with its own hash | a PDF parser is new attack surface: extract the attachment only, never render, size limits, then the existing XML safety gate; the PDF is served as a download under the sandboxing CSP (ADR-035); MINIMUM and BASIC WL profiles go to review | `parseInvoiceXml` interface, format detector, intake, file serving | first after the course |
 | 3 | Mailbox intake | medium-high: matches how invoices arrive today | medium | the first background worker: an IMAP poller, idempotent on message id and attachment hash; `source_channel = EMAIL` already exists | mail is where invoice fraud arrives: sender data is recorded as evidence and never trusted for bank data; attachments limited to XML and PDF; credentials in a secret store; Microsoft 365 needs OAuth for IMAP; keep attachments and header metadata only, not mail bodies | intake, duplicate and resume logic (ADR-044) | pilot |
 | 4 | DATEV export | high: most SMEs book through a tax advisor in DATEV | medium | a second formatter over the existing booking lines: the DATEV format (EXTF) booking batch, SKR03/SKR04 account mapping and tax keys per customer, numbered batches so a re-send cannot double-book | contains supplier data; batches recorded and hashed in the trail | `accounting.js` booking lines, `exportAccountingCsv` seam, `config/tax-keys.js` | pilot (needs a real import by a tax advisor to verify) |
 | 5 | camt.053 | high for reconciliation credibility | low-medium | a parser into the existing statement shape; match on the end-to-end id field rather than free text | a statement holds every transaction of the account, payroll included: import only debits, or restrict and minimise before storing | `importStatement` with its validation (ADR-073), `matching.js`, end-to-end ids (ADR-063) | pilot |
 | 6 | pain.001 | medium: SMEs already pay from banking software | medium | payment runs as batches; a person uploads the file to the bank, so a human stays in the loop | a file between export and upload can be altered: hash it into the trail; one instruction in one batch only; the bank's Verification of Payee applies | `mockProvider` seam, idempotency keys, end-to-end ids | later |
+
+### KoSIT: spike results and rules for its ADR
+
+Spike, 30 September 2026:
+
+- Validator 1.6.3 with the XRechnung configuration 2026-08-31 (XRechnung 3.0.2)
+  runs from the standalone JAR on the Java 17 already installed (Homebrew
+  `openjdk@17`, used by absolute path; nothing installed, linked or upgraded).
+  No Docker on this machine; the Docker demo can only be checked in CI.
+- As a child process per document it takes about 5 s; as a local daemon
+  (`-D`, bound to 127.0.0.1) it starts in about 5 s and then answers in
+  10-40 ms, with HTTP 200 (acceptable), 406 (not acceptable) or 422 (could not
+  process), and the full report as the body. The adapter uses the daemon.
+- The report carries the verdict, each step's result, every message with level
+  and rule code, and the document's hash. It maps to one `official_validation`
+  check, with the messages and versions stored beside it and the raw report kept
+  as an immutable file next to the original.
+- The daemon has no authentication; it listens only on localhost or an internal
+  network.
+
+Rules for the ADR:
+
+- The validator's result is immutable. `official_validation = FAILED` is never
+  turned into a pass by a reviewer.
+- A human may later record an operational disposition for such a document, for
+  example `ACCEPT_FOR_MANUAL_PROCESSING`, with actor, reason and audit evidence.
+  The decision changes how the document is handled; it does not rewrite the
+  technical result.
+- Some severe technical failures stay non-overridable, as the existing ones in
+  `NON_OVERRIDABLE_CHECKS` are.
+- An unreachable validator, a timeout or a 422 fails closed: the check is
+  FAILED and the invoice goes to review, to be processed again later. Outside
+  production, with no validator configured, the check is SKIPPED and says so;
+  a production start without one is refused.
 
 **Smallest set that changes how a German SME sees the product: CII / ZUGFeRD
 intake plus KoSIT validation.** Both sit at the same boundary (detect format →
