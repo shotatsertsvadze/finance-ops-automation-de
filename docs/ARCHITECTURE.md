@@ -57,7 +57,8 @@ finance-ops-automation-de/
   README.md  AGENTS.md  CLAUDE.md  .env.example  package.json
   docs/                    PRODUCT, ARCHITECTURE, IST/SOLL process, BUSINESS_CASE,
                            DECISIONS, TEST_MATRIX, DEMO, DEMO_VIDEO, reviews
-  .github/workflows/       CI: the suite against a Postgres service container, then the build
+  .github/workflows/       CI: the suite against a Postgres service container, the build, and the Docker demo
+  Dockerfile, docker-compose.yml   the demo in one command: Postgres plus the app serving the built client
   fixtures/xrechnung/      demo invoices A-J (synthetic UBL 2.1 / XRechnung 3.0 profile)
   fixtures/bank/           synthetic bank statement for the tests
   db/migrations/           append-only SQL, applied by scripts/migrate.js under an advisory lock; an applied file that changed stops the run (ADR-061)
@@ -400,6 +401,17 @@ expired, and signing in again stays on the same page (ADR-057).
   to the audit trail but not update, delete or truncate it, and may not delete
   invoices, whose deletion would cascade to their trail. A production start
   refuses a connection that could (ADR-068).
+- Every wait is bounded: connecting to the database (5 s), one statement
+  (15 s), an idle open transaction (30 s), one request (30 s). SIGTERM and
+  SIGINT stop new requests, let running ones finish, close the pool and exit;
+  after 10 s the process exits anyway (ADR-075).
+- Every response carries a Content-Security-Policy (own origin, Google Fonts
+  for the fonts, no framing), `X-Frame-Options: DENY`, `Referrer-Policy:
+  no-referrer`, COOP and a Permissions-Policy; HSTS in production (ADR-074).
+- Input is checked before it reaches the database: statement lines field by
+  field (400 `TRANSACTION_INVALID` naming each bad line, nothing imported),
+  every `comment` as text of at most 1000 characters (`COMMENT_INVALID`),
+  malformed JSON (`INVALID_JSON`), and numeric settings at startup (ADR-073).
 - Original files are immutable; deletion is not exposed by the API.
   An intake that fails before its transaction commits removes the file it
   wrote, since no row can refer to it (ADR-062).

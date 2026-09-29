@@ -1,4 +1,5 @@
 import { withTransaction } from "../../db.js";
+import { isValidIsoDate } from "../dates.js";
 import { NotFoundError, RuleError, TransitionError } from "../errors.js";
 import { transition } from "../workflow/transitions.js";
 import { matchTransaction } from "./matching.js";
@@ -12,12 +13,14 @@ export async function importStatement({ pool }, { statement }) {
   const transactions = statement?.transactions;
   if (!Array.isArray(transactions)) throw new RuleError(400, "STATEMENT_WITHOUT_TRANSACTIONS", "Kontoauszug enthält keine Buchungen");
 
+  const errors = transactions.flatMap((tx, index) => lineErrors(tx ?? {}, index));
+  if (errors.length) {
+    throw new RuleError(400, "TRANSACTION_INVALID", "Kontoauszug enthält ungültige Buchungen; nichts importiert", { errors });
+  }
+
   return withTransaction(pool, async (client) => {
     let imported = 0;
     for (const tx of transactions) {
-      if (!tx.external_id || !tx.value_date || tx.amount === undefined) {
-        throw new RuleError(400, "TRANSACTION_INCOMPLETE", "Buchung ohne external_id, Datum oder Betrag");
-      }
       const { rowCount } = await client.query(
         `insert into finops.bank_transactions
            (external_id, value_date, amount, currency, counterparty_name, counterparty_iban, reference)
@@ -30,6 +33,27 @@ export async function importStatement({ pool }, { statement }) {
     }
     return { imported, received: transactions.length };
   });
+}
+
+const AMOUNT = /^-?\d{1,12}(\.\d{1,2})?$/;
+const CURRENCY = /^[A-Z]{3}$/;
+const text = (value, max) => value === undefined || value === null || (typeof value === "string" && value.length <= max);
+
+/**
+ * What is wrong with one statement line, field by field, checked before any
+ * of it reaches the database (ADR-073). A statement is imported whole or not
+ * at all, so the caller learns every bad line at once.
+ */
+function lineErrors(tx, index) {
+  const bad = [];
+  if (typeof tx.external_id !== "string" || !tx.external_id.trim() || tx.external_id.length > 64) bad.push("external_id");
+  if (typeof tx.value_date !== "string" || !isValidIsoDate(tx.value_date)) bad.push("value_date");
+  if (!["string", "number"].includes(typeof tx.amount) || !AMOUNT.test(String(tx.amount))) bad.push("amount");
+  if (tx.currency !== undefined && !(typeof tx.currency === "string" && CURRENCY.test(tx.currency))) bad.push("currency");
+  if (!text(tx.counterparty_name, 140)) bad.push("counterparty_name");
+  if (!text(tx.counterparty_iban, 34)) bad.push("counterparty_iban");
+  if (!text(tx.reference, 140)) bad.push("reference");
+  return bad.map((field) => ({ index, field }));
 }
 
 /**

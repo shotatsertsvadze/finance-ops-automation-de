@@ -1,0 +1,24 @@
+# docker compose up  ->  http://localhost:4400, demo accounts in the README.
+# Synthetic data, rebuilt on every start. Not a production setup (ADR-076).
+services:
+  db:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_USER: finops
+      POSTGRES_PASSWORD: finops-demo
+      POSTGRES_DB: finops
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finops -d finops"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://finops:finops-demo@db:5432/finops
+    ports:
+      - "4400:4400"

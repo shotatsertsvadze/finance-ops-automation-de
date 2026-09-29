@@ -1516,3 +1516,91 @@ duplicate and checking again remain.
 
 Consequences: the server still refuses on its own; the screen only stops
 offering a button that cannot work.
+
+## ADR-072 One business date, in German time
+
+Context: the booking date was `new Date().toISOString()`, which is UTC, while
+the due-date figures on the dashboard used the database's `current_date`,
+which follows whatever zone the database runs in. Between midnight and 02:00
+German summer time a booking was dated the day before, on New Year's night the
+year before, and a hosted database on UTC would have moved "overdue" as well.
+
+Decision: `businessDate()` in `server/domain/dates.js` gives today's date in
+Europe/Berlin. Bookings, reversals and the due-date figures all use it; the
+figures pass it to SQL instead of reading `current_date`.
+
+Consequences: server and database zones no longer matter for any date the
+business sees. Timestamps (`received_at`, audit times) stay `timestamptz`.
+
+## ADR-073 Bad input is a 400 that says what is wrong
+
+Context: input was checked only where a rule needed it, and the database was
+left to refuse the rest. A statement line with amount "abc" or date "gestern"
+came back as a 500, a numeric comment crashed on `.trim()` with a 500, a 900 KB
+comment was written into the audit trail whole, malformed JSON got the
+parser's English message and no code, and `SESSION_HOURS=zwoelf` started the
+server and failed every sign-in.
+
+Decision:
+- Statement lines are checked field by field before the import; the 400 lists
+  every bad line and field, and nothing of the statement is imported.
+- Every `comment` is checked once at the API boundary: text, at most 1000
+  characters. The form enforces the same limit.
+- Malformed JSON is 400 `INVALID_JSON`, an oversized body 413 `BODY_TOO_LARGE`.
+- Numeric settings go through `envNumber`, which stops the start with the
+  setting's name and allowed range.
+
+Consequences: a 500 now means a fault in the app, not bad input.
+
+## ADR-074 Browser security headers on every response
+
+Context: the only header was `nosniff`. The approval screens could be framed
+by another site, a classic clickjacking target, and nothing limited where
+scripts could load from.
+
+Decision: every response carries a Content-Security-Policy that allows the
+app's own origin and Google Fonts for the typefaces, with no inline script,
+no eval, no plugins and no framing; `X-Frame-Options: DENY` for older
+browsers; `Referrer-Policy: no-referrer`; `Cross-Origin-Opener-Policy:
+same-origin`; and a Permissions-Policy that turns off camera, microphone and
+location. In production HSTS is added, since the app runs behind HTTPS there
+(ADR-058). The original-XML route keeps its own stricter sandbox policy.
+
+Consequences: fonts from another host, or an inline script, need the policy
+changed on purpose. The Vite dev server is not covered; it serves the
+development build only.
+
+## ADR-075 Every wait is bounded, and the server shuts down cleanly
+
+Context: the pool had no connection, statement or idle-transaction limit, so a
+database that hung took every request with it; a connect to an unroutable
+address waited 75 s for the operating system. The process ignored SIGTERM, so
+a deploy or restart cut requests off mid-transaction.
+
+Decision: `createPool` bounds connecting (5 s), each statement (15 s) and a
+transaction left idle (30 s), each overridable by environment and by tests;
+the migration runner lifts the statement limit for its own session. A request
+may take at most 30 s. On SIGTERM or SIGINT the server stops accepting
+connections, closes idle ones, lets running requests finish, closes the pool
+and exits 0; after 10 s it exits with 1 rather than hang.
+
+Consequences: a slow query now fails with a 500 and a request id instead of
+waiting indefinitely, which is what the logs and readiness check expect.
+
+## ADR-076 The demo runs with one command
+
+Context: this is a portfolio project. Running it needed Node, a local
+Postgres, an `.env` and five commands, and the API served the built client only
+in production, where HTTPS, a separate database role and replaced passwords are
+required (ADR-058, ADR-068). A reviewer had no short way to see it.
+
+Decision: `docker compose up` starts Postgres 14 and the app. The container
+rebuilds the schema, seeds, generates the demo month, publishes the matching
+bank statement and serves the built client on port 4400, as a non-root user.
+The API now serves the built client whenever one exists; production still
+requires it. A CI job builds the stack, waits for readiness and checks that a
+demo account sees the 70 invoices.
+
+Consequences: the Docker demo runs in development mode on plain HTTP, with the
+demo passwords and the owner connection; it is a showcase, not a deployment.
+Production keeps its own checks.

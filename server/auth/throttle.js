@@ -1,7 +1,9 @@
+import { envNumber } from "../config/env.js";
+
 export const LOGIN_LIMITS = {
-  perAccount: Number(process.env.LOGIN_MAX_ATTEMPTS ?? 5),
-  perAddress: Number(process.env.LOGIN_MAX_ATTEMPTS_PER_IP ?? 20),
-  windowMinutes: Number(process.env.LOGIN_LOCK_MINUTES ?? 15),
+  perAccount: envNumber("LOGIN_MAX_ATTEMPTS", 5, { max: 1000 }),
+  perAddress: envNumber("LOGIN_MAX_ATTEMPTS_PER_IP", 20, { max: 1000 }),
+  windowMinutes: envNumber("LOGIN_LOCK_MINUTES", 15, { max: 1440 }),
 };
 
 /**

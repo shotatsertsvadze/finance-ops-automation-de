@@ -1,4 +1,5 @@
 import { withTransaction } from "../../db.js";
+import { businessDate } from "../dates.js";
 import { NotFoundError, RuleError, TransitionError } from "../errors.js";
 import { transition } from "../workflow/transitions.js";
 import { bindingDrift, bindingOf, latestRunNo } from "../approvals/binding.js";
@@ -86,7 +87,7 @@ export async function createAccountingRecord({ pool, storage, policy }, { invoic
     }
 
     const documentNo = await nextDocumentNo(client);
-    const lines = buildBookingLines({ ...invoice, parsed }, { documentNo, bookingDate: today() });
+    const lines = buildBookingLines({ ...invoice, parsed }, { documentNo, bookingDate: businessDate() });
     for (const line of lines) await insertLine(client, invoiceId, line);
 
     await transition(client, {
@@ -116,14 +117,13 @@ export async function reverseBooking(client, invoiceId) {
   const negate = (amount) => centsToDecimal(-toCents(amount));
   for (const line of lines) {
     await insertLine(client, invoiceId, {
-      ...line, document_no: documentNo, booking_date: today(), reverses_document_no: line.document_no,
+      ...line, document_no: documentNo, booking_date: businessDate(), reverses_document_no: line.document_no,
       net_amount: negate(line.net_amount), vat_amount: negate(line.vat_amount), gross_amount: negate(line.gross_amount),
     });
   }
   return { documentNo, reverses: lines[0].document_no };
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
 
 async function nextDocumentNo(client) {
   const { rows: [seq] } = await client.query("select nextval('finops.accounting_document_seq') as n");

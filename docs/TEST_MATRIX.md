@@ -6,9 +6,10 @@ Legend:
 - **AUTO** verified by an automated test (`npm test`), test file named
 - **MANUAL** verified by hand, date and method named
 - **CODE** inferred from reading the code only, never executed
+- **CI** verified by an automated job in `.github/workflows/ci.yml` outside `npm test`, job named
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (165 tests, all passing as of 2026-09-17). Database tests need
+Run: `npm test` (489 tests, all passing as of 2026-09-23). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
 
 ## High-priority business risks
@@ -526,3 +527,15 @@ findings themselves.
 | O29 | A review with a blocker | "Zur Freigabe geben" not offered, the prompt says why; the other decisions stay | AUTO | client `actions.test.js` |
 | O30 | Earlier approval rounds on the invoice screen | round, step, role, signer and time, marked cancelled, under the live steps | MANUAL | Browser, 2026-09-23: E after a question and a second release |
 | O31 | The three follow-ups together in the browser | B offers no release and says why; E lists its first round; dashboard shows one failed payment | MANUAL | Browser, 2026-09-23 |
+| O32 | The business date around midnight in Germany | 01:30 CEST books the new day; 00:30 CET on 1 January books the new year; 23:59 CEST stays on the same day | AUTO | `server/domain/dates.test.js` (ADR-072) |
+| O33 | A statement line with a malformed amount, date or currency | 400 `TRANSACTION_INVALID` naming line and field; nothing imported. Before: 500 | AUTO | `server/input-validation.test.js` (ADR-073) |
+| O34 | A comment that is not text or longer than 1000 characters | 400 `COMMENT_INVALID`; exactly 1000 is accepted. Before: a number gave 500, 900 KB was stored | AUTO | `server/input-validation.test.js` |
+| O35 | A body that is not JSON | 400 `INVALID_JSON` | AUTO | `server/input-validation.test.js` |
+| O36 | A numeric setting that is not a number in range | the start stops, naming the setting. Before: `SESSION_HOURS=zwoelf` started and every sign-in failed | AUTO | `server/config/env.test.js` |
+| O37 | Security headers on the page and the API | CSP without unsafe-inline or unsafe-eval, frame-ancestors none, X-Frame-Options DENY, no-referrer, nosniff; HSTS in production only | AUTO | `server/security-headers.test.js` (ADR-074) |
+| O38 | The built app under that CSP | sign-in, invoice, dashboard, payments and the original XML work; both fonts load; no CSP violation in the console | MANUAL | Browser, 2026-09-23, `dist/` served by the API |
+| O39 | A statement that runs too long | cancelled at the statement limit | AUTO | `server/timeouts.test.js` (ADR-075) |
+| O40 | A database that cannot be reached | fails within the connect limit; before: a connect to an unroutable address hung 75 s | AUTO | `server/timeouts.test.js` |
+| O41 | SIGTERM | "shutting down", "stopped", exit code 0 | AUTO | `server/timeouts.test.js` |
+| O42 | `docker compose up` on a machine with only Docker | the stack builds and starts, readiness answers, `/` serves the page, a demo account sees 70 invoices | CI | `ci.yml` job `docker`, first green run 2026-09-24 (ADR-076) |
+| O43 | A dependency with a known high or critical vulnerability | the build fails | CI | `ci.yml` job `test`, step `npm audit --audit-level=high` |

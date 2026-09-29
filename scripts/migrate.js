@@ -22,6 +22,9 @@ export async function migrate(pool) {
   const files = (await readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith(".sql")).sort();
   const client = await pool.connect();
   try {
+    // A migration, and the wait for another run's lock, may outlast the
+    // app's statement limit (ADR-075).
+    await client.query("set statement_timeout = 0");
     await client.query("select pg_advisory_lock($1)", [MIGRATION_LOCK]);
     await client.query("create schema if not exists finops");
     await client.query(
