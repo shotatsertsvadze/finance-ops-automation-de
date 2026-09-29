@@ -64,6 +64,7 @@ browser).
 | H | 380 EUR with a changed IBAN | REVIEW_REQUIRED; accepting it still needs one approval | AUTO | `approvals.test.js` "a review of a small invoice" |
 | I | 3 % discount, 499.80 EUR due | APPROVED, no steps; 535.50 without the discount would need one | AUTO | `business-checks.test.js` "fixture I behaves as the README says" |
 | J | credit note, 214.20 EUR, crediting RE-2026-4471 | APPROVED, booked negative, CREDITED, never paid | AUTO | `moneypath.test.js` "a credit note runs the pipeline" |
+| A-J, demo | official XRechnung validity | KoSIT accepts A-E and G-J and rejects F; of the 70 generated demo invoices it accepts 65 and rejects the 5 malformed ones | MANUAL | KoSIT validator 1.6.3, XRechnung configuration 2026-08-31, 2026-09-30 |
 
 ## Parsing and technical validation
 
@@ -83,6 +84,7 @@ browser).
 | T9c | An Invoice document with type code 381 is one too | `documentType` CREDIT_NOTE | AUTO | `credit-notes.test.js` |
 | T9d | A CreditNote root in another namespace | refused | AUTO | `credit-notes.test.js` |
 | T9e | 380 and 381 are both known types | no `invoice_type_code` warning | AUTO | `credit-notes.test.js` |
+| T9f | A CreditNote's due date | read from `PaymentMeans/PaymentDueDate`, where the UBL CreditNote schema puts it; an Invoice still reads only its own `DueDate` | AUTO | `credit-notes.test.js` "a CreditNote's due date", "an Invoice's due date" |
 | T10 | Official EN 16931 / KoSIT validation | not implemented, adapter boundary only | OPEN | Deliberate, see ADR-008 |
 
 ## Business checks

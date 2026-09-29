@@ -11,6 +11,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { parseInvoiceXml } from "./parse-xrechnung.js";
 import { runTechnicalValidation } from "./technical-validation.js";
 import { buildInvoiceXml } from "../../test-support/invoice-xml.js";
@@ -64,4 +65,20 @@ test("a credit note passes technical validation without the odd-type warning", (
   assert.equal(result.passed, true, JSON.stringify(result.checks.filter((c) => c.status === "FAILED")));
   assert.equal(result.checks.find((c) => c.check === "invoice_type_code"), undefined,
     "381 is a document we now understand, not an anomaly to flag");
+});
+
+const fixture = (name) => readFileSync(new URL(`../../../fixtures/xrechnung/${name}`, import.meta.url), "utf8");
+
+test("a CreditNote's due date is read from PaymentMeans/PaymentDueDate, where UBL puts it", () => {
+  // The UBL CreditNote schema has no document-level DueDate; without this the
+  // due date read as missing and the credit note went to review for it.
+  assert.equal(parseInvoiceXml(fixture("J_credit_note_214.xml")).dueDate, "2026-09-10");
+});
+
+test("an Invoice's due date is still only its own DueDate", () => {
+  const xml = fixture("A_clean_1240.xml")
+    .replace("<cbc:DueDate>2026-10-10</cbc:DueDate>", "")
+    .replace("<cbc:PaymentMeansCode>58</cbc:PaymentMeansCode>", "<cbc:PaymentMeansCode>58</cbc:PaymentMeansCode><cbc:PaymentDueDate>2026-10-10</cbc:PaymentDueDate>");
+  assert.equal(parseInvoiceXml(fixture("A_clean_1240.xml")).dueDate, "2026-10-10");
+  assert.equal(parseInvoiceXml(xml).dueDate, null);
 });

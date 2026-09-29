@@ -35,9 +35,12 @@ const USERS = {
 };
 
 const SUPPLIERS = {
-  S1: { no: "S-1001", name: "Berliner Bürobedarf GmbH", vat: "DE123456789", iban: "DE89370400440532013000", bic: "COBADEFFXXX" },
-  S2: { no: "S-1002", name: "Havel Logistik GmbH", vat: "DE234567890", iban: "DE02120300000000202051", bic: "BYLADEM1001" },
-  S3: { no: "S-1003", name: "Spree IT-Systeme AG", vat: "DE345678901", iban: "DE02500105170137075030", bic: "INGDDEFFXXX" },
+  S1: { no: "S-1001", name: "Berliner Bürobedarf GmbH", vat: "DE123456789", iban: "DE89370400440532013000", bic: "COBADEFFXXX",
+    email: "rechnung@berliner-buerobedarf.example", street: "Chausseestraße 45", city: "Berlin", zip: "10115" },
+  S2: { no: "S-1002", name: "Havel Logistik GmbH", vat: "DE234567890", iban: "DE02120300000000202051", bic: "BYLADEM1001",
+    email: "billing@havel-logistik.example", street: "Hafenweg 3", city: "Potsdam", zip: "14467" },
+  S3: { no: "S-1003", name: "Spree IT-Systeme AG", vat: "DE345678901", iban: "DE02500105170137075030", bic: "INGDDEFFXXX",
+    email: "invoice@spree-it.example", street: "Friedrichstraße 200", city: "Berlin", zip: "10117" },
 };
 
 // The seeded orders are a small, readable master-data example. A month of
@@ -91,27 +94,33 @@ function invoiceXml({ number, issueDate, dueDate, supplier, iban, netCents, po, 
              xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
              xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
   <cbc:CustomizationID>urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0</cbc:CustomizationID>
+  <cbc:ProfileID>urn:fdc:peppol.eu:2017:poacc:billing:01:1.0</cbc:ProfileID>
   <cbc:ID>${number}</cbc:ID>
   <cbc:IssueDate>${issueDate}</cbc:IssueDate>
-  <cbc:DueDate>${dueDate}</cbc:DueDate>
+  ${creditNote ? "" : `<cbc:DueDate>${dueDate}</cbc:DueDate>`}
   <cbc:${typeTag}>${creditNote ? "381" : "380"}</cbc:${typeTag}>
   <cbc:DocumentCurrencyCode>EUR</cbc:DocumentCurrencyCode>
   <cbc:BuyerReference>NORDWERK-EINKAUF-01</cbc:BuyerReference>
   <cac:OrderReference><cbc:ID>${po}</cbc:ID></cac:OrderReference>
   ${billingReference}
   <cac:AccountingSupplierParty><cac:Party>
+    <cbc:EndpointID schemeID="EM">${supplier.email}</cbc:EndpointID>
     <cac:PartyName><cbc:Name>${supplier.name}</cbc:Name></cac:PartyName>
-    <cac:PostalAddress><cbc:CityName>Berlin</cbc:CityName><cac:Country><cbc:IdentificationCode>DE</cbc:IdentificationCode></cac:Country></cac:PostalAddress>
+    <cac:PostalAddress><cbc:StreetName>${supplier.street}</cbc:StreetName><cbc:CityName>${supplier.city}</cbc:CityName><cbc:PostalZone>${supplier.zip}</cbc:PostalZone><cac:Country><cbc:IdentificationCode>DE</cbc:IdentificationCode></cac:Country></cac:PostalAddress>
     <cac:PartyTaxScheme><cbc:CompanyID>${supplier.vat}</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
     <cac:PartyLegalEntity><cbc:RegistrationName>${supplier.name}</cbc:RegistrationName></cac:PartyLegalEntity>
+    <cac:Contact><cbc:Name>Rechnungsstelle</cbc:Name><cbc:Telephone>+49 30 0000000</cbc:Telephone><cbc:ElectronicMail>${supplier.email}</cbc:ElectronicMail></cac:Contact>
   </cac:Party></cac:AccountingSupplierParty>
   <cac:AccountingCustomerParty><cac:Party>
+    <cbc:EndpointID schemeID="EM">rechnungen@nordwerk.example</cbc:EndpointID>
     <cac:PartyName><cbc:Name>Nordwerk GmbH</cbc:Name></cac:PartyName>
+    <cac:PostalAddress><cbc:StreetName>Industriestraße 12</cbc:StreetName><cbc:CityName>Berlin</cbc:CityName><cbc:PostalZone>12277</cbc:PostalZone><cac:Country><cbc:IdentificationCode>DE</cbc:IdentificationCode></cac:Country></cac:PostalAddress>
     <cac:PartyTaxScheme><cbc:CompanyID>DE999999999</cbc:CompanyID><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:PartyTaxScheme>
     <cac:PartyLegalEntity><cbc:RegistrationName>Nordwerk GmbH</cbc:RegistrationName></cac:PartyLegalEntity>
   </cac:Party></cac:AccountingCustomerParty>
   <cac:PaymentMeans>
     <cbc:PaymentMeansCode>58</cbc:PaymentMeansCode>
+    ${creditNote ? `<cbc:PaymentDueDate>${dueDate}</cbc:PaymentDueDate>` : ""}
     <cbc:PaymentID>${number}</cbc:PaymentID>
     <cac:PayeeFinancialAccount><cbc:ID>${iban}</cbc:ID><cbc:Name>${supplier.name}</cbc:Name>
       <cac:FinancialInstitutionBranch><cbc:ID>${supplier.bic}</cbc:ID></cac:FinancialInstitutionBranch>
@@ -142,7 +151,9 @@ function invoiceXml({ number, issueDate, dueDate, supplier, iban, netCents, po, 
     <cbc:ID>1</cbc:ID>
     <cbc:${quantityTag} unitCode="C62">1</cbc:${quantityTag}>
     <cbc:LineExtensionAmount currencyID="EUR">${money(netCents)}</cbc:LineExtensionAmount>
-    <cac:Item><cbc:Name>Leistung laut Bestellung ${po}</cbc:Name></cac:Item>
+    <cac:Item><cbc:Name>Leistung laut Bestellung ${po}</cbc:Name>
+      <cac:ClassifiedTaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>19</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:ClassifiedTaxCategory>
+    </cac:Item>
     <cac:Price><cbc:PriceAmount currencyID="EUR">${money(netCents)}</cbc:PriceAmount></cac:Price>
   </cac:${lineTag}>
 </ubl:${root}>

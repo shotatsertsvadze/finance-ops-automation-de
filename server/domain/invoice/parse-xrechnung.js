@@ -134,7 +134,9 @@ export function parseInvoiceXml(xmlText) {
     profileId: str(inv, "ProfileID"),
     invoiceNumber: str(inv, "ID"),
     issueDate: str(inv, "IssueDate"),
-    dueDate: str(inv, "DueDate"),
+    // A UBL CreditNote has no document-level DueDate; its due date (BT-9) is
+    // PaymentMeans/PaymentDueDate.
+    dueDate: str(inv, "DueDate") ?? (doc.CreditNote ? str(paymentMeans, "PaymentDueDate") : null),
     typeCode,
     currency: str(inv, "DocumentCurrencyCode"),
     buyerReference: str(inv, "BuyerReference"),
