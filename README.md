@@ -179,6 +179,8 @@ meet an order the earlier ones already used.
 - `docs/DEMO.md` - a ten-minute walkthrough, in order
 - `docs/DEMO_VIDEO.md` - three-minute video storyboard and narration
 - `docs/REFERENCE_AUDIT.md` - audit of the two reference repositories
+- `docs/CUSTOMER_DISCOVERY.md` - ICPs, interview guide, baseline model, pilot criteria
+- `docs/FINANCE_OPS_2_PLAN.md` - the next phase: master-data control, integrations, AI, ROI
 
 ## Known limits
 
