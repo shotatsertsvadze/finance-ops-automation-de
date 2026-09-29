@@ -80,7 +80,7 @@ finance-ops-automation-de/
       intake/              intake.js (orchestration of one upload)
       approvals/           review and approval decisions, binding, final re-check
       purchase-orders/     commitments.js (capacity ledger)
-      accounting/ payments/ reconciliation/ kpi/
+      accounting/ payments/ cancellation/ reconciliation/ kpi/
     routes/                auth, session, health, invoices, master-data, money
     storage/               files.js (store/read original file)
     test-support/          test database, demo users, invoice XML builder
@@ -164,7 +164,8 @@ Database-enforced invariants:
 - `unique (supplier_id, invoice_number) where state in (payable states)`: two
   payable records for the same supplier invoice number are impossible. The
   index lists its states in SQL; a test compares them with `PAYABLE_STATES`.
-- `unique (invoice_id, step_no)` on approval steps.
+- `unique (invoice_id, round, step_no)` on approval steps (migration
+  `0021_approval_rounds.sql`).
 - `check (actor_type = 'SYSTEM' or actor_id is not null)` on audit events.
 
 ## 5. State machine
@@ -187,6 +188,7 @@ stateDiagram-v2
     READY_FOR_APPROVAL --> APPROVED: last required step approved
     READY_FOR_APPROVAL --> REJECTED: any approver rejects
     READY_FOR_APPROVAL --> INFO_REQUESTED: approver requests correction
+    READY_FOR_APPROVAL --> REVIEW_REQUIRED: a business check newly fails at the final gate
     APPROVED --> ACCOUNTING_READY: accounting record created
     APPROVED --> CANCELLED: stopped by finance, reason required
     ACCOUNTING_READY --> CANCELLED: stopped, booking reversed
@@ -265,16 +267,19 @@ process this as a structured invoice":
 | check_code | severity | fails when |
 |---|---|---|
 | `xml_well_formed` | HIGH | not parseable, or contains `<!DOCTYPE` |
-| `format_recognised` | HIGH | root is not UBL `Invoice` (CII/ZUGFeRD: adapter boundary, reported as unsupported) |
+| `format_recognised` | HIGH | root is not a UBL `Invoice` or `CreditNote` in its UBL namespace (CII/ZUGFeRD: adapter boundary, reported as unsupported) |
 | `xrechnung_profile_declared` | MEDIUM | `CustomizationID` does not name XRechnung |
 | `required_fields_present` | HIGH | invoice number, issue date, supplier name, currency, payable amount or lines missing |
 | `amounts_numeric` | HIGH | any amount fails decimal parsing |
+| `dates_valid` | HIGH | issue or due date is not a real calendar date in `YYYY-MM-DD` |
+| `invoice_type_code` | warning | type code is neither 380 (invoice) nor 381 (credit note); reported only then |
 
 Business validation (`domain/validation/business-checks.js`) answers "does this
 invoice make sense for Nordwerk":
 
 | check_code | severity | fails when |
 |---|---|---|
+| `buyer_is_us` | HIGH | the buyer's VAT ID or name names another company, or no buyer is given (ADR-021) |
 | `supplier_known` | HIGH | no supplier matches VAT ID (fallback: exact legal name) |
 | `supplier_active` | HIGH | supplier status is not ACTIVE |
 | `supplier_iban_match` | HIGH | invoice IBAN not among the supplier's ACTIVE accounts; not overridable (ADR-052) |
@@ -319,11 +324,6 @@ invoice above the auto limit.
 | POST | `/api/invoices` | 1 | multipart upload (`file`, `source_channel`), runs the pipeline, returns the invoice |
 | GET | `/api/invoices` | 1 | one page, newest first: optional `state`, `limit` 1-200 (default 50), `offset`; full count in `X-Total-Count` (ADR-066) |
 | GET | `/api/invoices/counts` | 1 | invoices per state and in total, for the navigation |
-
-The invoice detail (`GET /api/invoices/:id`) carries the domain's own answers
-where the screen needs them: `open_credit_amount`, `po_available_amount`,
-`payable_blockers` (what stops a release from review, ADR-071) and
-`approval_history` (earlier approval rounds, ADR-067).
 | GET | `/api/invoices/:id` | 1 | invoice, lines, latest validation results, routing decision, approval steps, audit events |
 | GET | `/api/invoices/:id/file` | 1 | original XML |
 | POST | `/api/invoices/:id/reprocess` | 1 | re-run validation from RECEIVED/VALIDATING/REVIEW_REQUIRED |
@@ -346,6 +346,11 @@ where the screen needs them: `open_credit_amount`, `po_available_amount`,
 | GET | `/api/bank/transactions` | 3 | statement lines with match status and reason; `bank:read` (finance, admin) |
 | POST | `/api/reconciliation/run` | 3 | matches unmatched transactions against paid invoices |
 | GET | `/api/dashboard/kpis` | 4 | operational KPIs |
+
+The invoice detail (`GET /api/invoices/:id`) carries the domain's own answers
+where the screen needs them: `open_credit_amount`, `po_available_amount`,
+`payable_blockers` (what stops a release from review, ADR-071) and
+`approval_history` (earlier approval rounds, ADR-067).
 
 Identity: a session cookie set by `POST /api/auth/login`, stored hashed; every
 state-changing request must echo the CSRF token (ADR-029). Everything under

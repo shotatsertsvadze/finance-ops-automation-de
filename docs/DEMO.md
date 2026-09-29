@@ -4,7 +4,9 @@ Ten minutes, in order. For the three-minute video cut, with narration and
 recording instructions, see `docs/DEMO_VIDEO.md`.
 
 Every figure below comes from `npm run db:demo` with its default seed, which is
-reproducible: the invoice numbers named here are the ones you will see.
+reproducible: the invoice numbers named here are the ones you will see. Steps
+2, 5 and 7 upload three more invoices, so the figures in step 10 include them.
+Run the steps once, in order, from a fresh reset.
 
 Nothing in this system pays anyone. The bank, the accounting handoff and the
 payment provider are simulated, and all data is synthetic.
@@ -14,8 +16,8 @@ payment provider are simulated, and all data is synthetic.
 ```bash
 npm install
 cp .env.example .env          # set DATABASE_URL and TEST_DATABASE_URL
-createdb finops
-npm run db:migrate && npm run db:seed && npm run db:demo
+createdb finops               # once
+npm run demo:reset            # drop, migrate, seed, generate the demo month
 npm run dev                   # API on :4400, UI on :5400
 ```
 
@@ -28,8 +30,9 @@ Open a second tab with `fixtures/xrechnung/` ready to upload.
 
 ## 1. The inbox — 60 seconds
 
-70 invoices, states in the left rail: 6 in manual review, 4 awaiting approval,
-28 reconciled.
+70 invoices. The left rail counts the work: 6 in manual review, 3 awaiting
+approval, 11 approved and waiting for the money path, 24 open under payments and
+reconciliation. 30 of the 70 are already reconciled.
 
 > "Every one of these arrived as an XRechnung XML and walked the same path. The
 > counts on the left are work, not statistics: they are what is waiting for a
@@ -70,10 +73,12 @@ reviewer can see what was *not* a problem.
 > Some checks cannot be overridden at all: a reviewer judges business facts,
 > they cannot supply arithmetic the document never did."
 
-Still on B, press **Send for approval** with a reason. It is refused: a changed
-IBAN is not a judgement call. Instead, **Request information** with *Call back
-the supplier on the number in our master data*. It moves to **awaiting
-information**.
+Still on B, look at the decision panel: **Send for approval** is not offered.
+The panel says the invoice is not releasable, because a changed IBAN is not a
+judgement call. The server would refuse the release anyway (`NOT_PAYABLE_ELIGIBLE`);
+the screen does not offer what the server would refuse. Instead, **Request
+information** with *Call back the supplier on the number in our master data*.
+It moves to **Question open**.
 
 > "A reviewer cannot wave a new bank account through. It clears only when the
 > verified account is in master data and the invoice is checked again — and
@@ -112,41 +117,61 @@ would be refused.
 Upload **`J_credit_note_214.xml`**. It is approved like any invoice, and the
 progress spine is different: it ends at **credited**, with no payment stages.
 
-Book it. The booking record reads **−214.20**.
+**Create booking record**: it reads **−214.20**. The screen offers no payment,
+only **Close the credit**; press it and the credit note ends as **Credited**.
 
 > "A credit note says the supplier owes us. It runs exactly the same checks,
-> and then the payment path is closed to it — asking to pay it is refused.
+> and then the payment path is closed to it — the screen offers no payment,
+> and the server refuses one.
 > Accounting sees a reversal."
 
 ## 8. Netting — 90 seconds
 
 Open **DEMO-2026-01018**. The invoice is 270.62; the payment instruction is
-**149.66**, because a 120.96 credit for that supplier was applied.
+**149.66**, because the supplier's 120.96 credit note (DEMO-2026-01016) was
+applied. Three more payments in the month were netted the same way; 823.09 of
+credits in all.
 
 > "The bank saw 149.66. The invoice says 270.62. The ledger records which
 > credit note made up the difference, so the question 'why was this payment
 > short' has an answer months later."
 
-Then open **DEMO-2026-01022**: 218.71, **settled by credit**, never paid,
-because the open credits covered it entirely.
+If asked what happens when the credits cover an invoice entirely: it is
+settled against them and never paid (**Settled by credit**, ADR-050). The
+generated month has no such case, so answer from the design rather than the
+screen.
 
 ## 9. Reconciliation — 90 seconds
 
-Go to **Payments and reconciliation**: 28 matched, 4 unclear, 4 open.
+Go to **Payments and reconciliation**. The statement has 38 lines: 30 matched,
+4 unclear, 4 open.
 
-Open the unclear ones — they carry distinct reasons: `AMOUNT_MISMATCH`,
-`NO_REFERENCE_MATCH`, `COUNTERPARTY_MISMATCH`.
+The four unclear lines each carry their reason:
+
+| Line | Reason | What happened |
+|---|---|---|
+| TX-DEMO-0007 | `AMOUNT_MISMATCH` | DEMO-2026-01012: 3,196.07 arrived against an instruction for 3,236.07 |
+| TX-DEMO-0029 | `AMOUNT_MISMATCH` | DEMO-2026-01055: 4,084.77 against 4,124.77 |
+| TX-DEMO-0011 | `COUNTERPARTY_MISMATCH` | DEMO-2026-01021: right reference and amount, paid to another account |
+| TX-DEMO-0013 | `NO_REFERENCE_MATCH` | 2,667.81, the exact amount of DEMO-2026-01024, but no payment named |
+
+The four open lines (TX-2026-09-0001 to -0004) belong to the hand-written
+fixtures, which the generated month does not contain, so there is nothing for
+them to match.
 
 > "A bank line is matched only when the reference names that payment and every
-> other piece of evidence agrees. Two payments of the same amount are
-> indistinguishable by amount, so an amount-only hit is always an exception,
-> never a match. DEMO-2026-01058 is a part payment: 1,960.41 arrived against
-> an instruction for 2,000.41, and a person decides what that means."
+> other piece of evidence agrees. TX-DEMO-0013 has exactly the amount of
+> DEMO-2026-01024, and it is still not a match: two payments of the same amount
+> are indistinguishable by amount, so an amount-only hit is always an exception.
+> DEMO-2026-01012 is a part payment: 3,196.07 arrived against 3,236.07, and a
+> person decides what that means."
 
 ## 10. The metrics — 60 seconds
 
-**Metrics**: 60 % straight through, 15.7 % exception rate, median approval
-time, and the exception reasons ranked.
+**Metrics**: 58.9 % straight through (43 of 73), 17.8 % exception rate, median
+approval time, and the exception reasons ranked, with IBAN mismatches and
+technical failures leading at five each. These include the three invoices
+uploaded in steps 2, 5 and 7; before them the month reads 60.0 % and 15.7 %.
 
 > "Every figure is computed from the invoices and their check trail, not
 > counted separately."

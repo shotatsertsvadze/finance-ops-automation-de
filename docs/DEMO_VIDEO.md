@@ -114,7 +114,7 @@ every pause if you need more room.
 |---|---|
 | **View** | same page, decision panel |
 | **Click** | type into Reason: *Call back the supplier on the number in our master data.* then **Request information** |
-| **On screen** | the typed reason, then the state moving to **Awaiting information** |
+| **On screen** | the typed reason, then the state moving to **Question open** |
 
 > "A person cannot wave a new bank account through. The way on is a call-back,
 > and the verified account in master data."

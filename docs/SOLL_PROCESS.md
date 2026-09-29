@@ -29,6 +29,13 @@ flowchart TD
     O --> P{Bank record match}
     P -- exact --> Q[RECONCILED]
     P -- none/ambiguous --> S[RECONCILIATION_EXCEPTION] --> Q
+    M -- credit note --> CR[CREDITED]
+    M -- open credits cover it --> SC[SETTLED_BY_CREDIT]
+    N -- bank did not carry it out --> PF[PAYMENT_FAILED]
+    PF -- instruct again --> M
+    H -- stopped by finance --> CX[CANCELLED]
+    M -- stopped, booking reversed --> CX
+    PF -- stopped, booking reversed --> CX
 ```
 
 | Step | Automated? | Human gate | Status |
@@ -41,10 +48,13 @@ flowchart TD
 | Straight-through approval ≤ auto limit | yes | - | ✅ |
 | Review decision | no | AP clerk / Finance | ✅ |
 | Approval steps | no | MANAGER / FINANCE / CFO, different actors | ✅ |
-| Accounting record and export | yes | - | ✅ |
-| Payment instruction (mock) | yes | - | ✅ |
+| Accounting record and export | yes | Finance triggers the handoff | ✅ |
+| Credit note booked, open credits netted against the next payment | yes | Finance | ✅ |
+| Payment instruction (mock) | yes | Finance instructs and confirms; not whoever signed an approval step | ✅ |
+| Failed payment, instructed again or stopped | no | Finance | ✅ |
+| Stopping an approved invoice, booking reversed | no | Finance, reason required | ✅ |
 | Reconciliation | yes | ambiguous → human | ✅ |
-| KPIs | yes | - | ❌ Phase 4 |
+| KPIs | yes | - | ✅ |
 
 Roles: review belongs to accounts payable and finance; approval steps to the
 cost-centre manager, finance and the CFO by amount tier; the money path to
