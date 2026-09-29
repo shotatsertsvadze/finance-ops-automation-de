@@ -42,8 +42,14 @@ Deliberately out of scope for discovery:
   (ADR-053).
 - Public-sector buyers: a different procurement and invoicing regime.
 
-Recommended mix: 6-8 interviews in ICP 1, 3-4 in ICP 2, 2-3 in ICP 3 (mainly
-for DATEV export requirements and referrals). 12-15 in total.
+Recommended mix for the full programme: 6-8 interviews in ICP 1, 3-4 in ICP 2,
+2-3 in ICP 3 (mainly for DATEV export requirements and referrals). 12-15 in
+total.
+
+Not part of the course final project (October 2026): the guide and the
+measurement framework are ready, and the interviews follow afterwards as market
+validation and pilot preparation. For a first round, questions 1, 2, 4, 6, 7,
+10 and 12 are enough.
 
 ## How to interview
 
@@ -144,7 +150,7 @@ Criteria, proposed and agreed with the partner before the start:
 Go / no-go at week 4 and at the end: continue when every control criterion is
 met and at least two of coverage, effort and speed are.
 
-## Plan
+## Plan (full programme)
 
 | Weeks | Step | Output |
 |---|---|---|

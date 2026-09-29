@@ -11,16 +11,126 @@ deterministic decisions, evidence rather than verdicts, an append-only trail.
 Customer discovery, the ICPs and the baseline model are in
 `docs/CUSTOMER_DISCOVERY.md`.
 
+## Course Final Scope — 15 October 2026
+
+15 October 2026 is the internal feature freeze. The presentation and
+submission window is 15-23 October; it is kept for documentation, demo
+stabilisation, presentation, rehearsal, video, bug fixing and final
+verification. No major feature is scheduled after 15 October.
+
+Everything from "A. Scope at a glance" onwards is the longer-term product and
+pilot roadmap. Where it disagrees with this section about what is built for the
+course, this section wins.
+
+### Scope
+
+| Class | Item | Minimum that counts |
+|---|---|---|
+| Core, not dropped | Master-data control loop, supplier IBAN change only (section B) | proposal, independent call-back, approval, audited update, re-validation of the affected invoices; no supplier block, retire action or PO correction |
+| Core, not dropped | KoSIT official validation (section C, row 1) | every uploaded invoice carries the official result; fail closed when the validator is unreachable |
+| Core, not dropped | Course documentation (`docs/course/`) | stakeholders, risks, data protection, method and timeline, rollout, reflection; short |
+| Core, not dropped | Stable demo | `docs/DEMO.md` verified against a fresh run, including the new fraud-story steps |
+| Important, reducible | BI / ROI source labels (section E) | every figure labelled synthetic, assumption, baseline or pilot; "nicht gemessen" where nothing is measured |
+| Important, reducible | AI exception explanation (section D) | grounding check and stored suggestion, plain text, off by default; no authority over state, approval, master data or payments |
+| Stretch | CII / ZUGFeRD | only through the gate below, and only without touching the UBL path |
+
+Customer discovery is not on the course's critical path. The interview guide
+and measurement framework (`docs/CUSTOMER_DISCOVERY.md`) stay in the repository
+as the planned next phase; interviews happen after the course, as market
+validation and pilot preparation. Nothing in the course plan waits for them.
+
+### Post-course and pilot roadmap
+
+Customer interviews, mailbox intake, DATEV, camt.053, pain.001, supplier
+onboarding and master-data import, SSO / MFA, hosting and backups, real pilot
+measurement. Also after the course: supplier block and reactivation, retiring an
+account, PO corrections, the AI feedback table, baseline entry in the BI view.
+
+### IBAN control policy
+
+Reference policy: **proposer → independent verifier → approver**, three people.
+
+The rules read the number of people from one policy value rather than
+assuming three: `persons_required` (default 3) is snapshotted into every change
+row when it is proposed and shown on the change, so a change always records
+the policy it was approved under. The segregation checks are written against
+that value: with 3, the approver may be neither proposer nor verifier; with 2,
+the approver may not be the proposer. A two-person mode would be an explicit
+configuration, visible on every change it governs and in the trail, never a
+silent relaxation. It is not implemented, and configuring 2 is refused, until
+discovery shows small teams need it.
+
+### Timeline to the feature freeze
+
+Implementation order: KoSIT feasibility spike, master-data loop, KoSIT
+integration, CII / ZUGFeRD if the gate allows, BI source labels, AI explanation.
+Each item lands on `main` green, verified and demo-ready, so the repository can
+be presented at any point, including early in the window.
+
+| Dates | Work | Done when |
+|---|---|---|
+| Wed 30 Sep | KoSIT feasibility spike: get the validator running here (no Java runtime and no Docker daemon on this machine on 29 September) | the validator answers one fixture, or the fallback is chosen |
+| Thu 1 - Wed 7 Oct | master-data loop: tests first, migration, domain, API, minimal screens, ADR, DEMO step for the fraud story | B uploaded, proposed, called back, approved, re-validated and signed, all through the UI |
+| Thu 8 - Fri 9 Oct | KoSIT adapter as a technical check; tests with a stub, one integration test that skips without the validator; CI runs it for real | every fixture carries an official validation result |
+| end of Fri 9 Oct | **CII / ZUGFeRD gate** | go only if the loop and KoSIT are merged and green |
+| Mon 12 - Tue 13 Oct | if go: CII / ZUGFeRD, at most these two days, merged only if finished and green; if no-go: BI labels (Mon), AI explanation (Tue) | |
+| Wed 14 - Thu 15 Oct | if go: BI labels (Wed), AI explanation (Thu); if no-go: AI finished (Wed), bug fixing and early course drafts (Thu) | |
+| **Thu 15 Oct, end of day** | **feature freeze** | everything merged is green and verified |
+
+My recommendation at the gate is no-go unless the loop and KoSIT finished early:
+CII / ZUGFeRD is the stretch item, and the "go" track compresses the two
+reducible items into two days. The spike moved from 29 to 30 September; the
+freeze did not move, so the slack before it is one day smaller.
+
+### The window, 15-23 October
+
+| Dates | Work |
+|---|---|
+| Fri 16 Oct | course documents: stakeholders, risks, data protection |
+| Mon 19 Oct | course documents: method and timeline, rollout, reflection; README and DEMO update |
+| Tue 20 Oct | demo stabilisation: rehearse from a fresh reset, fix what breaks, re-run the demo verification |
+| Wed 21 Oct | presentation storyline and slides; video notes, and a re-recording if wanted |
+| Thu 22 Oct | two full rehearsals; final verification: tests, demo check, CI; tag the presented version |
+| Fri 23 Oct | buffer and presentation |
+
+The weekend of 17-18 October is not scheduled. If the presentation slot falls
+early in the window, the course documents move before the freeze; the
+"demo-ready on every merge" rule is what makes that possible.
+
+### Critical path
+
+KoSIT spike → master-data loop → KoSIT integration → feature freeze → demo
+stabilisation → rehearsal. The master-data loop is the longest link and the one
+the demo story depends on. BI labels, the AI explanation and CII / ZUGFeRD are
+off the critical path. The course documents are core but depend on little, so
+they can move earlier if needed.
+
+### If the schedule slips
+
+Drop in this order, and write the dropped item up as designed but not built:
+
+1. CII / ZUGFeRD.
+2. The AI panel's polish: keep the grounding check and the stored suggestion,
+   show plain text.
+3. BI down to labels only.
+4. The AI feature entirely, keeping its design and evaluation plan in the docs.
+
+Never dropped: the master-data loop, KoSIT, the course documents, a stable demo.
+Fixing a bug found in the window beats every optional item.
+
+If the KoSIT spike fails (no Java runtime can be installed), the validator
+runs only in CI and in the Docker demo, and local tests use the stub.
+
 ## A. Scope at a glance
 
-| Workstream | Course final project | Pilot, later |
-|---|---|---|
-| A Discovery | interviews, synthesis, 1-3 baselines | pilot agreement |
-| B Master-data control | bank-account change, supplier block and reactivation | PO corrections, supplier onboarding, master-data import |
-| C Integrations | CII / ZUGFeRD intake, official KoSIT validation | DATEV export, camt.053, mailbox intake; pain.001 last |
-| D AI | exception explanation, off by default | measured in the pilot, dropped if it saves no time |
-| E BI / ROI | provenance-labelled Baseline → Pilot → Target | filled with a partner's real values |
-| Course layer | stakeholders, risks, data protection, method, rollout, reflection | data protection and rollout become pilot documents |
+| Workstream | By 15 October 2026 | After the course | Pilot, later |
+|---|---|---|---|
+| A Discovery | interview guide and measurement framework (written) | interviews, synthesis, 1-3 baselines | pilot agreement |
+| B Master-data control | bank-account change | supplier block and reactivation, retiring an account | PO corrections, supplier onboarding, master-data import |
+| C Integrations | official KoSIT validation; CII / ZUGFeRD as stretch | CII / ZUGFeRD intake, if not done | DATEV export, camt.053, mailbox intake; pain.001 last |
+| D AI | exception explanation, off by default | feedback table | measured in the pilot, dropped if it saves no time |
+| E BI / ROI | source labels, "nicht gemessen" where nothing is measured | baseline entry | filled with a partner's real values |
+| Course layer | stakeholders, risks, data protection, method, rollout, reflection | - | data protection and rollout become pilot documents |
 
 ## B. Master-data control
 
@@ -41,9 +151,10 @@ Stopping a payment must never wait for a second person; releasing one must.
 
 ### Scope
 
-- Course: `BANK_ACCOUNT_ADD` (the full loop with call-back), `SUPPLIER_REACTIVATE`
-  (proposal and approval, evidence required), and the tightening actions
-  `BANK_ACCOUNT_RETIRE` and `SUPPLIER_BLOCK`.
+- By 15 October: `BANK_ACCOUNT_ADD`, the full loop with call-back.
+- After the course: `SUPPLIER_REACTIVATE` (proposal and approval, evidence
+  required), and the tightening actions `BANK_ACCOUNT_RETIRE` and
+  `SUPPLIER_BLOCK`.
 - Pilot: `PO_AMOUNT_INCREASE` and `PO_REOPEN` (they interact with the commitment
   ledger, ADR-032), supplier onboarding, and the initial master-data import
   signed off by the customer.
@@ -59,9 +170,10 @@ Stopping a payment must never wait for a second person; releasing one must.
 | Tighten | FINANCE, CFO | - |
 
 A bank-account change therefore needs three people: in the demo Anna proposes,
-Jonas calls back, Mira approves. Whether a small AP team has three is a
-discovery question (question 4); the fallback, if needed, is a configured
-two-person mode recorded in the trail, not a silent relaxation.
+Jonas calls back, Mira approves. The number is a policy value snapshotted into
+each change, not an assumption in the code (see "IBAN control policy" in the
+course scope). Whether a small AP team has three is a discovery question
+(question 4); a two-person mode is built only if discovery shows it is needed.
 
 ADMIN takes no step here. System administration is not a business role. The
 existing matrix gives ADMIN money-path permissions; that is flagged for review,
@@ -187,10 +299,10 @@ around the control, not as demonstrations of the intended path (the lesson of
 | # | Integration | Business value | Complexity | Architecture impact | Security and privacy | Reuses | Scope |
 |---|---|---|---|---|---|---|---|
 | 1 | KoSIT validation | high: an authoritative answer to "is this a valid XRechnung / EN 16931 invoice", replacing "profile declared" | medium | a Java validator run as a local service next to the app (a second container in `docker-compose.yml`); a new technical check with the rule ids it reports | runs locally, no invoice leaves; pin the configuration version and record it in the check's evidence; unavailable means review, not a pass | `technical-validation.js`, `CheckResult` | course |
-| 2 | CII / ZUGFeRD | very high: a large share of real e-invoices; without it most suppliers' invoices are refused | medium (CII) to medium-high (ZUGFeRD) | a CII parser producing the existing `ParsedInvoice`; for ZUGFeRD, PDF/A-3 intake that extracts the embedded XML; PDF accepted at upload; the original PDF kept, the XML stored as derived with its own hash | a PDF parser is new attack surface: extract the attachment only, never render, size limits, then the existing XML safety gate; the PDF is served as a download under the sandboxing CSP (ADR-035); MINIMUM and BASIC WL profiles go to review | `parseInvoiceXml` interface, format detector, intake, file serving | course |
+| 2 | CII / ZUGFeRD | very high: a large share of real e-invoices; without it most suppliers' invoices are refused | medium (CII) to medium-high (ZUGFeRD) | a CII parser producing the existing `ParsedInvoice`; for ZUGFeRD, PDF/A-3 intake that extracts the embedded XML; PDF accepted at upload; the original PDF kept, the XML stored as derived with its own hash | a PDF parser is new attack surface: extract the attachment only, never render, size limits, then the existing XML safety gate; the PDF is served as a download under the sandboxing CSP (ADR-035); MINIMUM and BASIC WL profiles go to review | `parseInvoiceXml` interface, format detector, intake, file serving | course stretch, through the gate on 9 October; otherwise right after the course |
 | 3 | Mailbox intake | medium-high: matches how invoices arrive today | medium | the first background worker: an IMAP poller, idempotent on message id and attachment hash; `source_channel = EMAIL` already exists | mail is where invoice fraud arrives: sender data is recorded as evidence and never trusted for bank data; attachments limited to XML and PDF; credentials in a secret store; Microsoft 365 needs OAuth for IMAP; keep attachments and header metadata only, not mail bodies | intake, duplicate and resume logic (ADR-044) | pilot |
 | 4 | DATEV export | high: most SMEs book through a tax advisor in DATEV | medium | a second formatter over the existing booking lines: the DATEV format (EXTF) booking batch, SKR03/SKR04 account mapping and tax keys per customer, numbered batches so a re-send cannot double-book | contains supplier data; batches recorded and hashed in the trail | `accounting.js` booking lines, `exportAccountingCsv` seam, `config/tax-keys.js` | pilot (needs a real import by a tax advisor to verify) |
-| 5 | camt.053 | high for reconciliation credibility | low-medium | a parser into the existing statement shape; match on the end-to-end id field rather than free text | a statement holds every transaction of the account, payroll included: import only debits, or restrict and minimise before storing | `importStatement` with its validation (ADR-073), `matching.js`, end-to-end ids (ADR-063) | pilot; course stretch |
+| 5 | camt.053 | high for reconciliation credibility | low-medium | a parser into the existing statement shape; match on the end-to-end id field rather than free text | a statement holds every transaction of the account, payroll included: import only debits, or restrict and minimise before storing | `importStatement` with its validation (ADR-073), `matching.js`, end-to-end ids (ADR-063) | pilot |
 | 6 | pain.001 | medium: SMEs already pay from banking software | medium | payment runs as batches; a person uploads the file to the bank, so a human stays in the loop | a file between export and upload can be altered: hash it into the trail; one instruction in one batch only; the bank's Verification of Payee applies | `mockProvider` seam, idempotency keys, end-to-end ids | later |
 
 **Smallest set that changes how a German SME sees the product: CII / ZUGFeRD
@@ -310,6 +422,9 @@ Proposed location: `docs/course/`, one short file per artefact. The rubric
 decides the final form; nothing above assumes one.
 
 ## Phases and dependency order
+
+The longer-term roadmap. The dated plan to 15 October is in "Course Final
+Scope" above, which builds a reduced slice of phases 1-5.
 
 | Phase | Content | Depends on | Rough size |
 |---|---|---|---|
