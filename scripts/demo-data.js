@@ -354,8 +354,8 @@ async function settlePayments(deps, random) {
   const id = () => `TX-DEMO-${String((n += 1)).padStart(4, "0")}`;
 
   payments.forEach((payment, index) => {
-    // Three payments the bank has not reported yet: a statement is a snapshot,
-    // not a complete ledger.
+    // Every seventeenth payment, two in the default month, the bank has not
+    // reported yet: a statement is a snapshot, not a complete ledger.
     if (index % 17 === 5) return;
 
     const base = {
