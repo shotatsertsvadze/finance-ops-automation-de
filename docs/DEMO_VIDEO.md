@@ -99,7 +99,7 @@ every pause if you need more room.
 |---|---|
 | **View** | same page, check trail in frame |
 | **Click** | nothing — let it sit |
-| **On screen** | `supplier_iban_match · FAILED · HIGH`, EXPECTED vs FOUND, differing characters marked in red |
+| **On screen** | the sentence "The IBAN differs from the supplier's approved bank accounts (fraud risk)" with `FAILED · HIGH`, the code `supplier_iban_match` beneath, EXPECTED vs FOUND with the differing characters marked in red |
 
 > "It does not say 'suspicious'. It says what it expected, what the document
 > carried, and marks the characters that differ. A person decides in seconds
