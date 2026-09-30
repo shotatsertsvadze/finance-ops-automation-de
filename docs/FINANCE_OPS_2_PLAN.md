@@ -13,6 +13,12 @@ Customer discovery, the ICPs and the baseline model are in
 
 ## Course Final Scope — 15 October 2026
 
+**Status: FEATURE FREEZE since 2026-09-30**, reached early with the merge of the
+AI exception explanation (ADR-080). From here on only: bug fixes,
+documentation, course-final material, demo stabilisation, presentation and
+slides, video updates, rehearsal, and minor UI polish that adds no behaviour.
+No new product feature.
+
 15 October 2026 is the internal feature freeze. The presentation and
 submission window is 15-23 October; it is kept for documentation, demo
 stabilisation, presentation, rehearsal, video, bug fixing and final
@@ -79,7 +85,7 @@ be presented at any point, including early in the window.
 | Mon 12 Oct | BI source labels | no figure without its provenance. Implemented early, 2026-09-30 (ADR-079) |
 | Tue 13 - Wed 14 Oct | AI exception explanation | an ungrounded answer is never shown. Implemented early, 2026-09-30 (ADR-080), off by default; real-provider evaluation pending (no paid API usage) |
 | Thu 15 Oct | bug fixing, early course drafts | |
-| **Thu 15 Oct, end of day** | **feature freeze** | everything merged is green and verified |
+| **Thu 15 Oct, end of day** | **feature freeze** | everything merged is green and verified. Reached early, 2026-09-30 |
 
 The conformance fix, originally part of the KoSIT slot, is already done, so the
 two KoSIT days hold only the adapter.

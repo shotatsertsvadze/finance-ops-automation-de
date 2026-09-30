@@ -52,3 +52,6 @@ npx playwright install chromium   # once, to stop the browser tests skipping
   add. Mark it AUTO only if `npm test` runs it.
 - Keep functions and files short. Comments only where the why is not obvious.
 - Work incrementally: one small change, run `npm test`, then the next.
+- Feature freeze since 2026-09-30 (`docs/FINANCE_OPS_2_PLAN.md`): bug fixes,
+  documentation, course material, demo stabilisation and polish that adds no
+  behaviour only. No new product feature.
