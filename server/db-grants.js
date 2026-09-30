@@ -31,6 +31,8 @@ export async function grantAppRole(pool, role) {
     `grant update (${CHANGE_DECISION_COLUMNS.join(", ")}) on finops.bank_account_changes to ${role}`,
     // The official validator's answers are evidence, written once (ADR-078).
     `revoke update, delete, truncate on finops.official_validations from ${role}`,
+    // What was sent to an AI provider and what came back, written once (ADR-080).
+    `revoke update, delete, truncate on finops.ai_explanations from ${role}`,
   ];
   for (const sql of statements) await pool.query(sql);
 }

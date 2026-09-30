@@ -20,6 +20,8 @@ const HISTORY_PRIVILEGES = [
   ["DELETE", "bank_account_changes"],
   ["UPDATE", "supplier_bank_accounts"],
   ["DELETE", "supplier_bank_accounts"],
+  // Not evidence, but the record of what left the system (ADR-080).
+  ...["UPDATE", "DELETE", "TRUNCATE"].map((privilege) => [privilege, "ai_explanations"]),
 ];
 
 /**
