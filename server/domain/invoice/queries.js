@@ -2,6 +2,7 @@ import { openCreditsFor } from "../accounting/netting.js";
 import { availableCents } from "../purchase-orders/commitments.js";
 import { centsToDecimal, toCents } from "../money.js";
 import { payableBlockers } from "../workflow/eligibility.js";
+import { changesForInvoice } from "../bank-changes/queries.js";
 
 /** Read models for the API. No business logic here. */
 
@@ -57,7 +58,7 @@ export async function getInvoiceDetail(pool, id) {
     [id],
   );
   if (!invoice) return null;
-  const [lines, results, decision, steps, events, accounting, payment, bankTx, openCredit, poAvailable] = await Promise.all([
+  const [lines, results, decision, steps, events, accounting, payment, bankTx, openCredit, poAvailable, bankChanges] = await Promise.all([
     pool.query("select * from finops.invoice_lines where invoice_id = $1 order by line_no", [id]),
     pool.query(
       `select * from finops.validation_results where invoice_id = $1
@@ -79,6 +80,7 @@ export async function getInvoiceDetail(pool, id) {
     pool.query("select * from finops.bank_transactions where matched_invoice_id = $1 order by value_date", [id]),
     openCreditCents(pool, invoice),
     invoice.purchase_order_id ? availableCents(pool, invoice.purchase_order_id, id, { lock: false }) : null,
+    changesForInvoice(pool, invoice),
   ]);
   const { file_path, parsed, ...rest } = invoice;
   return {
@@ -93,6 +95,8 @@ export async function getInvoiceDetail(pool, id) {
     validation: { technical: results.rows.filter((r) => r.phase === "TECHNICAL"), business: results.rows.filter((r) => r.phase === "BUSINESS") },
     // What stops a release from review, as the release itself decides it (ADR-071).
     payable_blockers: payableBlockers(invoice, results.rows.filter((r) => r.status === "FAILED").map((r) => r.check_code)),
+    // Proposals to trust the IBAN this invoice carries (ADR-077).
+    bank_changes: bankChanges,
     routing: decision.rows[0] ?? null,
     // The live round; the rounds before it, cancelled, as the record (ADR-067).
     approval_steps: steps.rows.filter((s) => s.round === currentRound(steps.rows)),

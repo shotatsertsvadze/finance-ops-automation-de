@@ -97,55 +97,64 @@ async function recordReceipt(client, { id, filePath, duplicateOf, buffer, fileSh
  * in a single transaction. Allowed from RECEIVED, VALIDATING and
  * REVIEW_REQUIRED (re-validation). Everything else is a 409.
  */
-export async function processInvoice({ pool, storage, policy, company }, invoiceId, actor = SYSTEM) {
-  return withTransaction(pool, async (client) => {
-    const { rows: [invoice] } = await client.query("select * from finops.invoices where id = $1 for update", [invoiceId]);
-    if (!invoice) throw new NotFoundError("INVOICE_NOT_FOUND", `Rechnung ${invoiceId} nicht gefunden`);
-    if (!REPROCESSABLE_STATES.includes(invoice.state)) {
-      throw new TransitionError("NOT_REPROCESSABLE", `Rechnung im Status ${invoice.state} kann nicht erneut verarbeitet werden`, { state: invoice.state });
-    }
-    if (invoice.state !== "VALIDATING") {
-      await transition(client, { invoiceId, to: "VALIDATING", actor, action: invoice.state === "RECEIVED" ? "processing_started" : "reprocessing_started" });
-    }
-    const { rows: [{ run_no: runNo }] } = await client.query(
-      "select coalesce(max(run_no), 0) + 1 as run_no from finops.validation_results where invoice_id = $1", [invoiceId],
-    );
+export async function processInvoice(deps, invoiceId, actor = SYSTEM) {
+  return withTransaction(deps.pool, (client) => processInTransaction(client, deps, invoiceId, actor));
+}
 
-    const buffer = await storage.read(invoice.file_path);
-    const technical = runTechnicalValidation(buffer);
-    await saveChecks(client, invoiceId, runNo, "TECHNICAL", technical.checks);
-    if (technical.parsed) await saveExtractedFields(client, invoiceId, technical.parsed);
-
-    if (!technical.passed) {
-      const decision = decide({ technicalChecks: technical.checks, businessChecks: [], grossCents: null, policy, hadException: invoice.had_exception });
-      await saveDecision(client, invoiceId, runNo, decision, policy);
-      await markException(client, invoiceId, decision.targetState);
-      await transition(client, { invoiceId, to: decision.targetState, actor: SYSTEM, action: "technical_validation_failed", reason: decision.reviewReason, reviewReason: decision.reviewReason, evidence: { run_no: runNo, reasons: decision.reasons } });
-      return finalState(client, invoiceId);
-    }
-
-    const master = await loadMasterData(client, technical.parsed, { excludeInvoiceId: invoiceId });
-    const business = runBusinessChecks(technical.parsed, master, policy, company);
-    await saveChecks(client, invoiceId, runNo, "BUSINESS", business.checks);
-    await client.query("update finops.invoices set supplier_id = $2, purchase_order_id = $3 where id = $1", [invoiceId, business.supplierId, business.purchaseOrderId]);
-
-    const decision = decide({
-      technicalChecks: technical.checks, businessChecks: business.checks,
-      grossCents: business.grossCents, policy, hadException: invoice.had_exception,
-    });
-    await saveDecision(client, invoiceId, runNo, decision, policy);
-    await client.query("update finops.approval_steps set status = 'CANCELLED' where invoice_id = $1 and status = 'PENDING'", [invoiceId]);
-    await startRound(client, invoiceId, decision.requiredSteps);
-    await markException(client, invoiceId, decision.targetState);
-    const action = { REVIEW: "routed_to_review", APPROVAL: "routed_to_approval", AUTO_APPROVE: "auto_approved" }[decision.decision];
+/**
+ * The same run inside the caller's transaction, so a caller that must record
+ * something about the run commits both or neither. `cause` goes into the
+ * start event's evidence: what asked for this run.
+ */
+export async function processInTransaction(client, { storage, policy, company }, invoiceId, actor = SYSTEM, cause = {}) {
+  const { rows: [invoice] } = await client.query("select * from finops.invoices where id = $1 for update", [invoiceId]);
+  if (!invoice) throw new NotFoundError("INVOICE_NOT_FOUND", `Rechnung ${invoiceId} nicht gefunden`);
+  if (!REPROCESSABLE_STATES.includes(invoice.state)) {
+    throw new TransitionError("NOT_REPROCESSABLE", `Rechnung im Status ${invoice.state} kann nicht erneut verarbeitet werden`, { state: invoice.state });
+  }
+  if (invoice.state !== "VALIDATING") {
     await transition(client, {
-      invoiceId, to: decision.targetState, actor: SYSTEM, action,
-      reason: decision.reviewReason ?? decision.reasons[0],
-      reviewReason: decision.reviewReason,
-      evidence: { run_no: runNo, decision: decision.decision, reasons: decision.reasons, required_steps: decision.requiredSteps, gross_amount: centsToDecimal(business.grossCents) },
+      invoiceId, to: "VALIDATING", actor, action: invoice.state === "RECEIVED" ? "processing_started" : "reprocessing_started", evidence: cause,
     });
+  }
+  const { rows: [{ run_no: runNo }] } = await client.query(
+    "select coalesce(max(run_no), 0) + 1 as run_no from finops.validation_results where invoice_id = $1", [invoiceId],
+  );
+
+  const buffer = await storage.read(invoice.file_path);
+  const technical = runTechnicalValidation(buffer);
+  await saveChecks(client, invoiceId, runNo, "TECHNICAL", technical.checks);
+  if (technical.parsed) await saveExtractedFields(client, invoiceId, technical.parsed);
+
+  if (!technical.passed) {
+    const decision = decide({ technicalChecks: technical.checks, businessChecks: [], grossCents: null, policy, hadException: invoice.had_exception });
+    await saveDecision(client, invoiceId, runNo, decision, policy);
+    await markException(client, invoiceId, decision.targetState);
+    await transition(client, { invoiceId, to: decision.targetState, actor: SYSTEM, action: "technical_validation_failed", reason: decision.reviewReason, reviewReason: decision.reviewReason, evidence: { run_no: runNo, reasons: decision.reasons } });
     return finalState(client, invoiceId);
+  }
+
+  const master = await loadMasterData(client, technical.parsed, { excludeInvoiceId: invoiceId });
+  const business = runBusinessChecks(technical.parsed, master, policy, company);
+  await saveChecks(client, invoiceId, runNo, "BUSINESS", business.checks);
+  await client.query("update finops.invoices set supplier_id = $2, purchase_order_id = $3 where id = $1", [invoiceId, business.supplierId, business.purchaseOrderId]);
+
+  const decision = decide({
+    technicalChecks: technical.checks, businessChecks: business.checks,
+    grossCents: business.grossCents, policy, hadException: invoice.had_exception,
   });
+  await saveDecision(client, invoiceId, runNo, decision, policy);
+  await client.query("update finops.approval_steps set status = 'CANCELLED' where invoice_id = $1 and status = 'PENDING'", [invoiceId]);
+  await startRound(client, invoiceId, decision.requiredSteps);
+  await markException(client, invoiceId, decision.targetState);
+  const action = { REVIEW: "routed_to_review", APPROVAL: "routed_to_approval", AUTO_APPROVE: "auto_approved" }[decision.decision];
+  await transition(client, {
+    invoiceId, to: decision.targetState, actor: SYSTEM, action,
+    reason: decision.reviewReason ?? decision.reasons[0],
+    reviewReason: decision.reviewReason,
+    evidence: { run_no: runNo, decision: decision.decision, reasons: decision.reasons, required_steps: decision.requiredSteps, gross_amount: centsToDecimal(business.grossCents) },
+  });
+  return finalState(client, invoiceId);
 }
 
 /** Upload entry point: receive, then process unless it was a duplicate. */

@@ -1065,6 +1065,10 @@ test rather than a property of the table someone has to check by eye.
 
 ## ADR-052 A changed IBAN is verified into master data, never waved through
 
+**Partly superseded by ADR-077 (2026-09-30):** a verified account is now added
+inside the application, through a proposal, a call-back and an approval by
+three people. The last sentence below no longer holds.
+
 Supersedes the part of ADR-019 and ADR-041 that treated a changed IBAN as a
 business exception a reviewer may accept. Extends ADR-013.
 
@@ -1604,3 +1608,95 @@ demo account sees the 70 invoices.
 Consequences: the Docker demo runs in development mode on plain HTTP, with the
 demo passwords and the owner connection; it is a showcase, not a deployment.
 Production keeps its own checks.
+
+## ADR-077 A new supplier bank account is proposed, verified by call-back and approved by three people
+
+Supersedes the sentence of ADR-052 that master data has no write API and a
+verified account is added outside the application. Extends ADR-013, ADR-033
+and ADR-068.
+
+Context: ADR-052 stops an invoice whose IBAN is not a trusted account of its
+supplier, and no reviewer may override that. The way on, verifying the account
+and adding it to master data, happened outside the application, so the
+control that mattered most, who confirmed a new account and how, left no
+record here. An IBAN printed on an invoice is exactly what a fraudster
+controls, so it must never be the source of trusted data.
+
+Decision:
+- **Three people.** A change is proposed (AP clerk or finance), verified
+  (finance or CFO) and approved (finance or CFO). The proposer cannot verify,
+  approve or reject; under the three-person policy the verifier cannot
+  approve. The number of people is `POLICY_BANK_CHANGE_DISTINCT_ACTORS`,
+  default 3, stored on each change so the rule a change is judged by is the
+  one in force when it was proposed. Any other value stops the process: a
+  two-person mode is designed for (the row and the rule take 2) but not
+  enabled. Administration reads and takes no step; running the system is not
+  a business role. It may ask for the revalidation retry below, through
+  `invoice:reprocess`, which it already holds for any invoice in review: a
+  technical re-run of the checks, not a decision about the account, and it
+  ends at a signer like any other. The rules are enforced in the domain, as constraints in
+  the database and, for what to offer, on the screen.
+- **Call-back trust model.** Verification is one method only: a call-back on
+  `suppliers.callback_phone`, the number already on file. The server copies
+  that number into the evidence; a number in the request is never read. The
+  verifier records the role spoken to, the time, and the IBAN the supplier
+  reads back, which must equal the proposal to confirm; otherwise the call is
+  recorded as not confirmed and the change is rejected. The call-back number
+  itself has no write path in the application.
+- **Immutable proposal and evidence.** A proposal snapshots the supplier's
+  trusted IBANs and the policy under a SHA-256 hash; the verification stores
+  the hash it confirmed. Approval recomputes the hash from the stored columns,
+  compares it with both, and checks that the trusted accounts are still the
+  ones proposed against (`MASTER_DATA_CHANGED`) and that the supplier is still
+  active. A correction is a withdrawal and a new proposal; nothing is edited.
+  The app's database role may update only a change's state and decision
+  columns, never the proposal, and may only insert verifications, events,
+  revalidation links and bank accounts; a production start checks all of it.
+- **Add, not replace.** Approval adds the account as ACTIVE, naming the
+  change that added it. The supplier's previous accounts stay trusted:
+  retiring an account would strand invoices already approved to it, since the
+  payment re-checks the account (ADR-052), and is a later feature. Until
+  then, both accounts can be paid.
+- **A shared IBAN is a warning, not a constraint.** IBANs are unique per
+  supplier only. Factoring and group treasury legitimately put several
+  suppliers on one account, so the database does not forbid it. A proposal
+  records which other suppliers trust the IBAN, the screen shows it, and the
+  approval is refused (`SHARED_IBAN_NOT_ACKNOWLEDGED`) until the approver
+  explicitly acknowledges it; the acknowledgement is in the approval's
+  evidence.
+- **Revalidation after the commit.** The approval commits the master-data
+  change first. Then each invoice of that supplier which carries the new
+  IBAN, is in review, and whose latest run failed `supplier_iban_match` is
+  validated again, as the system, citing the change. Each invoice is its own
+  transaction, which writes the new run, the state change, its audit events
+  and its link to the change together: a crash leaves either all of it or
+  none. A new run keeps the old ones; every check runs again, so other
+  failures stay; and ADR-020 sends a former exception to a signer, never to
+  approved, whatever its amount. Invoices with an open question are reported
+  and left alone; decided ones are skipped.
+- **Retry and idempotency.** Revalidation can be asked for again from the
+  change. The link table's key (change, invoice) and the lock on the invoice
+  mean a retry, or two at once, never runs an invoice twice. The change is
+  marked complete once nothing is left waiting or failed. Repeating a step one
+  has already taken returns the change unchanged; another person's attempt at
+  a decided step is refused (`CHANGE_STATE_CONFLICT`). One open change per
+  supplier is a unique index.
+- **Information received stays what it was.** It returns an invoice from
+  INFO_REQUESTED to review and validates nothing; revalidation is its own,
+  explicit step. `docs/ARCHITECTURE.md` said otherwise and is corrected.
+
+Consequences:
+- **Residual human risk.** The system cannot prove that a call took place, or
+  that the person reached was entitled to confirm. The read-back, the number
+  on file, three people and the trail make a careless or colluding
+  confirmation harder and visible afterwards, not impossible.
+- **Out of scope, and why it matters.** Retiring an account, onboarding a
+  supplier, changing the call-back number, other verification methods,
+  attachments, a payment hold while a change is open, and the two-person mode
+  are later work. Retirement is the one that changes risk: until it exists, a
+  supplier's old account stays payable after a new one is approved.
+- The CFO can read bank-account changes, including IBANs, to decide them,
+  although `master-data:read` stays with the clerk, finance and
+  administration (ADR-064).
+- An upgraded installation has no call-back numbers until they are entered in
+  the database; verification is refused (`NO_CALLBACK_NUMBER`) until then.

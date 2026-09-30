@@ -26,7 +26,7 @@ course, this section wins.
 
 | Class | Item | Minimum that counts |
 |---|---|---|
-| Core, not dropped | Master-data control loop, supplier IBAN change only (section B) | proposal, independent call-back, approval, audited update, re-validation of the affected invoices; no supplier block, retire action or PO correction |
+| Core, not dropped | Master-data control loop, supplier IBAN change only (section B) | proposal, independent call-back, approval, audited update, re-validation of the affected invoices; no supplier block, retire action or PO correction. **Implemented 2026-09-30 (ADR-077)** as "verify and add a new trusted supplier bank account" |
 | Core, not dropped | KoSIT official validation (section C, row 1) | every uploaded invoice carries the official result; fail closed when the validator is unreachable |
 | Core, not dropped | Course documentation (`docs/course/`) | stakeholders, risks, data protection, method and timeline, rollout, reflection; short |
 | Core, not dropped | Stable demo | `docs/DEMO.md` verified against a fresh run, including the new fraud-story steps |
@@ -53,8 +53,9 @@ account, PO corrections, the AI feedback table, baseline entry in the BI view.
 Reference policy: **proposer → independent verifier → approver**, three people.
 
 The rules read the number of people from one policy value rather than
-assuming three: `persons_required` (default 3) is snapshotted into every change
-row when it is proposed and shown on the change, so a change always records
+assuming three: `POLICY_BANK_CHANGE_DISTINCT_ACTORS` (default 3) is
+snapshotted into every change row as `required_distinct_actors` when it is
+proposed and shown on the change, so a change always records
 the policy it was approved under. The segregation checks are written against
 that value: with 3, the approver may be neither proposer nor verifier; with 2,
 the approver may not be the proposer. A two-person mode would be an explicit
@@ -73,7 +74,7 @@ be presented at any point, including early in the window.
 | Dates | Work | Done when |
 |---|---|---|
 | Wed 30 Sep | KoSIT feasibility spike; fixtures and demo generator made XRechnung-conformant | done: the validator runs here from the installed Java 17; KoSIT accepts every invoice meant to be valid (fixtures A-E, G-J; 65 of 70 generated) and rejects only the malformed ones |
-| Thu 1 - Wed 7 Oct | master-data loop: tests first, migration, domain, API, minimal screens, ADR, DEMO step for the fraud story | B uploaded, proposed, called back, approved, re-validated and signed, all through the UI |
+| Thu 1 - Wed 7 Oct | master-data loop: tests first, migration, domain, API, minimal screens, ADR, DEMO step for the fraud story | B uploaded, proposed, called back, approved, re-validated and signed, all through the UI. Implemented early, 2026-09-30, on `feat/master-data-iban-control` (ADR-077) |
 | Thu 8 - Fri 9 Oct | KoSIT adapter as a technical check; tests with a stub, one integration test that skips without the validator; CI runs it for real | every fixture carries an official validation result |
 | Mon 12 Oct | BI source labels | no figure without its provenance |
 | Tue 13 - Wed 14 Oct | AI exception explanation | an ungrounded answer is never shown |
@@ -132,10 +133,38 @@ Fixing a bug found in the window beats every optional item.
 
 ## B. Master-data control
 
+**Phase 1 is built (2026-09-30, ADR-077).** This section is the design it
+started from; where they differ, ADR-077 and the code hold. The differences:
+
+- It adds a new trusted account and replaces nothing: the previous account
+  stays trusted until retiring accounts is built. Because the trusted accounts
+  do not change before approval, there is no payment hold
+  (`SUPPLIER_CHANGE_PENDING` is not built).
+- Tables: `bank_account_changes`, `bank_change_verifications`,
+  `bank_change_events`, `bank_change_revalidations`; the call-back number is
+  `suppliers.callback_phone`, not a `supplier_contacts` table. Verification is
+  a call-back only; no documents.
+- States: `APPROVED` for applied, `CANCELLED` for withdrawn; nothing is
+  created directly in a final state, and tightening actions are not built.
+- The same IBAN under two suppliers is allowed (factoring, group treasury):
+  the approver must acknowledge it (`SHARED_IBAN_NOT_ACKNOWLEDGED`) instead of
+  `IBAN_BELONGS_TO_OTHER_SUPPLIER`.
+- Invoices in `INFO_REQUESTED` are not moved by the system. They are listed as
+  waiting; after "information received", which validates nothing, the retry
+  revalidates them.
+- Codes as built: `PROPOSER_CANNOT_DECIDE` (approve or reject),
+  `CHANGE_STATE_CONFLICT`, `IBAN_ALREADY_ON_FILE`, `MASTER_DATA_CHANGED`,
+  `EVIDENCE_MISMATCH`, `IBAN_READ_BACK_MISMATCH`, `NO_CALLBACK_NUMBER`.
+  `CHANGE_APPROVER_CANNOT_SIGN`, `CONTACT_NOT_TRUSTED` (the number is never
+  taken from the request, so there is nothing to refuse) and the denied
+  call-back's event on the source invoice are not built.
+- API under `/api/bank-changes` with `bank-change:read|propose|verify|approve`;
+  the screen is "Bankverbindungen", without a count in the rail.
+
 The strongest risk in the product is a supplier's bank account changed by
 someone who is not the supplier. ADR-052 already refuses to release or pay such
 an invoice, and says the way on is a call-back and a verified account in master
-data. Master data has no write path today, so that way on happens outside the
+data. Master data had no write path before Phase 1, so that way on happened outside the
 application. This workstream builds it.
 
 ### Principle: tightening is immediate, loosening needs the loop
@@ -494,7 +523,7 @@ When each phase is built:
 
 | Phase | Files |
 |---|---|
-| 1 | `db/migrations/0022_master_data_changes.sql`; `server/domain/master-data/` (changes, evidence, transitions, revalidation); `server/routes/master-data.js`; `server/auth/authorize.js`; `server/db-grants.js` and `server/config/deployment.js` for the new trail; `db/seed/master_data.sql` (call-back contacts); `client/src/features/master-data/`; `client/src/lib/dictionaries.js`; ADRs; `docs/ARCHITECTURE.md`, `docs/TEST_MATRIX.md`, `docs/DEMO.md` |
+| 1 (built) | `db/migrations/0022_bank_account_changes.sql`; `db/seed/callback_numbers.sql`; `server/domain/bank-changes/` (rules, iban, changes, callback, master-data, trail, revalidation, queries); `server/domain/intake/intake.js` (`processInTransaction`); `server/routes/bank-changes.js`; `server/auth/authorize.js`; `server/config/policy.js`; `server/db-grants.js` and `server/config/deployment.js`; `client/src/features/bank-changes/`; `client/src/lib/dictionaries.js`; ADR-077; `docs/ARCHITECTURE.md`, `docs/TEST_MATRIX.md`, `docs/DEMO.md`, `README.md` |
 | 2 | `server/domain/invoice/parse-cii.js`, `zugferd.js`, `official-validation.js`; `technical-validation.js`; intake and upload limits; `docker-compose.yml` (validator service); CII and ZUGFeRD fixtures; ADRs; docs |
 | 3 | `db/migrations/0023_measurements.sql`; `server/domain/kpi/`; `server/config/assumptions.js`; `client/src/features/dashboard/`; `docs/BUSINESS_CASE.md` |
 | 4 | `db/migrations/0024_ai_suggestions.sql`; `server/domain/assist/`; the invoice screen panel; `.env.example`; ADR extending ADR-006 |

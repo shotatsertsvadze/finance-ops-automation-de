@@ -54,6 +54,36 @@ test("the app role runs the whole money path", async () => {
   }
 });
 
+test("the app role runs the whole bank-account change loop, revalidation included", async () => {
+  const server = createApp({ ...deps, pool: app }).listen(0);
+  try {
+    const base = `http://127.0.0.1:${server.address().port}`;
+    const [clerk, finance, finance2] = await Promise.all(["clerk", "finance", "finance2"].map((who) => loginAs(base, who)));
+    const xml = readFileSync(new URL("../fixtures/xrechnung/H_small_iban_changed_380.xml", import.meta.url));
+    const invoice = await (await clerk.upload(xml, "H.xml")).json();
+    const iban = "DE75512108001245126199";
+    const change = await (await clerk.post("/api/bank-changes", {
+      supplier_id: invoice.supplier_id, iban, source_invoice_id: invoice.id, comment: "Neue Bankverbindung",
+    })).json();
+    const verify = await finance.post(`/api/bank-changes/${change.id}/verify`, {
+      outcome: "CONFIRMED", contacted_role: "Buchhaltung", called_at: new Date().toISOString(), iban_read_back: iban,
+    });
+    assert.equal(verify.status, 200);
+    const approve = await finance2.post(`/api/bank-changes/${change.id}/approve`, {});
+    assert.equal(approve.status, 200);
+    // Where the invoice lands depends on the order G already drew on; what
+    // this proves is that the app role could write the run and its link.
+    const [done] = (await approve.json()).revalidation.revalidated;
+    assert.equal(done.to_run_no, 2);
+    const { rows } = await deps.pool.query(
+      "select check_code, status from finops.validation_results where invoice_id = $1 and run_no = 2 and status = 'FAILED'", [invoice.id],
+    );
+    assert.deepEqual(rows.map((r) => r.check_code), ["po_amount_within_tolerance"], "the IBAN passes; the order G used is still short");
+  } finally {
+    server.close();
+  }
+});
+
 test("the app role can neither rewrite nor delete the audit trail", async () => {
   await assert.rejects(() => app.query("update finops.audit_events set reason = 'geändert'"), /permission denied/);
   await assert.rejects(() => app.query("delete from finops.audit_events"), /permission denied/);
@@ -64,6 +94,33 @@ test("nor delete an invoice, which would take its trail with it", async () => {
   await assert.rejects(() => app.query("delete from finops.invoices"), /permission denied/);
   const { rows } = await deps.pool.query("select count(*)::int as n from finops.audit_events");
   assert.ok(rows[0].n > 0, "the trail is still there");
+});
+
+test("the app role cannot rewrite a bank-account proposal, its evidence or trusted accounts", async () => {
+  for (const sql of [
+    "update finops.bank_account_changes set proposed_iban = 'DE02300209000106531065'",
+    "update finops.bank_account_changes set proposal_sha256 = repeat('b', 64)",
+    "update finops.bank_account_changes set trusted_ibans = '{}'",
+    "delete from finops.bank_account_changes",
+    "update finops.bank_change_verifications set outcome = 'CONFIRMED'",
+    "delete from finops.bank_change_verifications",
+    "update finops.bank_change_events set reason = 'geändert'",
+    "delete from finops.bank_change_events",
+    "truncate finops.bank_change_events",
+    "update finops.bank_change_revalidations set to_run_no = 99",
+    "delete from finops.bank_change_revalidations",
+    "update finops.supplier_bank_accounts set iban = 'DE02300209000106531065'",
+    "delete from finops.supplier_bank_accounts",
+  ]) {
+    await assert.rejects(() => app.query(sql), /permission denied/, sql);
+  }
+});
+
+test("but may record a change's decision, which is all the workflow updates", async () => {
+  await app.query(
+    `update finops.bank_account_changes set state = state, verified_by = verified_by, decided_by = decided_by,
+       decision_reason = decision_reason, bank_account_id = bank_account_id, revalidated_at = revalidated_at where false`,
+  );
 });
 
 test("a production start refuses a connection that could change the trail", async () => {

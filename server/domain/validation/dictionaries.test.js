@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import { DICTIONARIES, auditReason, checkSentence, errorText, translateTerms } from "../../../client/src/lib/dictionaries.js";
 import { STATES } from "../workflow/states.js";
+import { CHANGE_STATES } from "../bank-changes/rules.js";
 import { PERMISSIONS } from "../../auth/authorize.js";
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
@@ -109,8 +110,20 @@ test("every audit action the server writes has a label in both languages", () =>
   }
 });
 
+test("every bank-account change state and event has a label in both languages", () => {
+  const events = new Set();
+  for (const path of ["../bank-changes/changes.js", "../bank-changes/revalidation.js"]) {
+    for (const [, action] of source(path).matchAll(/action: "([a-z_]+)"/g)) events.add(action);
+  }
+  assert.ok(events.size >= 6, "the scan found the change events");
+  for (const [lang, dict] of Object.entries(DICTIONARIES)) {
+    assert.deepEqual(CHANGE_STATES.filter((s) => !dict.changeState?.[s]), [], `${lang} is missing change states`);
+    assert.deepEqual([...events].filter((a) => !dict.changeAction?.[a]), [], `${lang} is missing change events`);
+  }
+});
+
 test("the two dictionaries carry the same keys", () => {
-  for (const group of ["ui", "state", "reviewReason", "action", "matchReason", "role", "error"]) {
+  for (const group of ["ui", "state", "reviewReason", "action", "matchReason", "role", "error", "changeState", "changeAction"]) {
     const de = Object.keys(DICTIONARIES.de[group]).sort();
     const en = Object.keys(DICTIONARIES.en[group]).sort();
     assert.deepEqual(en, de, `the ${group} groups differ`);

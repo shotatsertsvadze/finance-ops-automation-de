@@ -1,11 +1,11 @@
 # Demo walkthrough
 
-Ten minutes, in order. For the three-minute video cut, with narration and
+Twelve minutes, in order. For the three-minute video cut, with narration and
 recording instructions, see `docs/DEMO_VIDEO.md`.
 
 Every figure below comes from `npm run db:demo` with its default seed, which is
 reproducible: the invoice numbers named here are the ones you will see. Steps
-2, 5 and 7 upload three more invoices, so the figures in step 10 include them.
+2, 6 and 8 upload three more invoices, so the figures in step 11 include them.
 Run the steps once, in order, from a fresh reset.
 
 Nothing in this system pays anyone. The bank, the accounting handoff and the
@@ -22,7 +22,8 @@ npm run dev                   # API on :4400, UI on :5400
 ```
 
 Sign in as **jonas.weber@nordwerk.example** (Finance). Finance sees the whole
-path; the other accounts are for the four-eyes moment in step 5.
+path; the other accounts are for the three-person moment in step 5 and the
+four-eyes moment in step 6.
 
 Open a second tab with `fixtures/xrechnung/` ready to upload.
 
@@ -85,7 +86,41 @@ It moves to **Question open**.
 > even then a second person signs, and the payment re-checks the account at the
 > moment money leaves."
 
-## 5. Four eyes — 90 seconds
+## 5. A verified bank account — 2 minutes
+
+Still on B, the **Bank account** panel says what the way on is. The invoice
+never changes master data: its IBAN is only the reason for a proposal. Give a
+reason (*The supplier's letter announces a new account*) and press **Propose
+bank account for verification**. Proposal **BAC-000001** opens: the proposed
+IBAN against the account on file, the policy (three different people), and B
+listed as affected.
+
+Sign in as **mira.hoffmann@nordwerk.example** (finance). The call-back form
+shows the number to call, **+49 30 23125 102**, from master data; there is no
+field to type one. Record the call: role *Buchhaltung*, and the IBAN the
+supplier reads back, `DE02 3002 0900 0106 5310 65`. Press **Call-back confirms
+the IBAN**. Mira is not offered the approval: whoever made the call cannot
+approve.
+
+Sign in as **sabine.vogt@nordwerk.example** (CFO) and **Approve bank account**.
+The account is added to master data, next to the old one. B is listed as
+waiting: it has an open question, and answering a person's question is a
+person's act.
+
+Back as Jonas, open B and press **Information received**, then on BAC-000001
+**Revalidate invoices**. B runs its checks again as run 2, run 1 stays on
+record, and it moves to **Awaiting approval** with a manager step, not to
+approved.
+
+> "The invoice never wrote master data. Three different people did: one
+> proposed, one called back on the number we already had, one approved. And
+> the invoice that started it still needs a signature: once an exception,
+> always a human."
+
+The new account is added, not substituted: the supplier's previous account
+stays trusted until retiring accounts is built. Say so if asked.
+
+## 6. Four eyes — 90 seconds
 
 Upload **`C_po_overrun_8500.xml`**. It stops at review: it overruns its
 purchase order. That *is* a judgement call. Accept it into approval with a
@@ -103,7 +138,7 @@ Point at the approval step: it records the document hash, the validation run
 and the amount that was approved. If the document or the amount changes
 afterwards, the approval no longer counts.
 
-## 6. The money path — 60 seconds
+## 7. The money path — 60 seconds
 
 Back as Jonas (finance, who did not sign it): **create booking record**, then
 **instruct payment**, then **confirm payment**. As Mira, the payment buttons
@@ -112,7 +147,7 @@ would be refused.
 > "The booking record is vendor-neutral; a DATEV or SAP adapter formats it. No
 > money moves here — this is the seam where a real bank API goes."
 
-## 7. A credit note — 90 seconds
+## 8. A credit note — 90 seconds
 
 Upload **`J_credit_note_214.xml`**. It is approved like any invoice, and the
 progress spine is different: it ends at **credited**, with no payment stages.
@@ -125,7 +160,7 @@ only **Close the credit**; press it and the credit note ends as **Credited**.
 > and the server refuses one.
 > Accounting sees a reversal."
 
-## 8. Netting — 90 seconds
+## 9. Netting — 90 seconds
 
 Open **DEMO-2026-01018**. The invoice is 270.62; the payment instruction is
 **149.66**, because the supplier's 120.96 credit note (DEMO-2026-01016) was
@@ -141,7 +176,7 @@ settled against them and never paid (**Settled by credit**, ADR-050). The
 generated month has no such case, so answer from the design rather than the
 screen.
 
-## 9. Reconciliation — 90 seconds
+## 10. Reconciliation — 90 seconds
 
 Go to **Payments and reconciliation**. The statement has 38 lines: 30 matched,
 4 unclear, 4 open.
@@ -166,12 +201,17 @@ them to match.
 > DEMO-2026-01012 is a part payment: 3,196.07 arrived against 3,236.07, and a
 > person decides what that means."
 
-## 10. The metrics — 60 seconds
+## 11. The metrics — 60 seconds
 
 **Metrics**: 58.9 % straight through (43 of 73), 17.8 % exception rate, median
 approval time, and the exception reasons ranked, with IBAN mismatches and
 technical failures leading at five each. These include the three invoices
-uploaded in steps 2, 5 and 7; before them the month reads 60.0 % and 15.7 %.
+uploaded in steps 2, 6 and 8; before them the month reads 60.0 % and 15.7 %.
+
+The ranking also shows the comment typed at **Information received** in step 5
+as a reason of its own, once. The ranking counts every return to review by its
+recorded reason, and that return records the comment. It is a known flaw of the
+ranking, not of the bank-account step; if asked, say so.
 
 > "Every figure is computed from the invoices and their check trail, not
 > counted separately."
@@ -197,6 +237,8 @@ Do not improvise. It is written down, with the reasoning, in
 - Reconciliation is one bank line to one invoice; part and collective payments
   become exceptions.
 - Purchase orders are a single balance — no partial deliveries or order closure.
+- A verified bank account is added to master data; the supplier's previous
+  account stays trusted until retiring accounts is built.
 - Authentication is demo-grade: no password reset, second factor or SSO.
 
 ## If a demo goes wrong

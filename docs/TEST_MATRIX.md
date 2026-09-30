@@ -9,7 +9,7 @@ Legend:
 - **CI** verified by an automated job in `.github/workflows/ci.yml` outside `npm test`, job named
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (489 tests, all passing as of 2026-09-23). Database tests need
+Run: `npm test` (578 tests, all passing as of 2026-09-30). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
 
 ## High-priority business risks
@@ -202,6 +202,8 @@ described as working.
 | ~~L7~~ | ~~Business checks are not re-run at the final approval gate~~ | **Fixed 2026-09-17**: the gate re-checks business facts against current master data and returns the invoice to review when one has newly failed. See ADR-041 and the table below. | CLOSED |
 | ~~L5 (R12)~~ | ~~Unauthenticated actor header, unrestricted CORS, binds all interfaces~~ | **Fixed 2026-09-17**: password login with server-side sessions, CSRF double-submit, a role matrix, same-origin CORS and loopback binding. See ADR-029 and ADR-030. | CLOSED |
 | ~~L6 (R13)~~ | ~~The test helper could drop the development schema~~ | **Fixed 2026-09-17**: `testDeps()` refuses to run when `TEST_DATABASE_URL` equals `DATABASE_URL`. | CLOSED |
+| L9 | A supplier's previous bank account stays trusted after a new one is approved: both can be paid until retiring accounts exists (ADR-077) | Approve a change for S-1001: both IBANs are ACTIVE | OPEN |
+| L10 | The exception ranking counts the comment typed at "information received" as a reason of its own, because that return to review records the comment as its reason | Demo step 5: the ranking lists "Rückruf erledigt, Konto freigegeben" once | OPEN |
 
 ## Authentication and authorization
 
@@ -328,6 +330,58 @@ described as working.
 | W14 | An unchanged invoice runs the whole path unaffected | PAID | AUTO | `binding.test.js` |
 | W15 | The binding is readable from the API detail | hash and run number present on the step | AUTO | `binding.test.js` |
 | W16 | Neutering the drift check breaks the gates | W12 and W13 fail | MANUAL | Mutation check, 2026-09-17: `bindingDrift` returned early, both refusal tests failed |
+
+## Bank-account changes (ADR-077)
+
+A new trusted supplier bank account: proposed, verified by call-back on the
+number on file, approved by a third person, then the stopped invoices
+revalidated. Unit rules in `server/domain/bank-changes/rules.test.js` and
+`iban.test.js`; constraints in `schema.test.js`; the steps in
+`changes.test.js`; revalidation in `revalidation.test.js`; HTTP in
+`server/routes/bank-changes.test.js`; the app role in `audit-role.test.js`;
+the screen's offers in `client/src/features/bank-changes/rules.test.js`.
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| BC1 | An IBAN with a wrong check digit, or not IBAN-shaped | 400 `IBAN_INVALID`; spaces and case normalised | AUTO | `iban.test.js`, `changes.test.js` |
+| BC2 | Policy value for distinct people | 3 by default; any other value stops the start | AUTO | `rules.test.js` |
+| BC3 | A proposal | snapshots the trusted IBANs, the policy and a SHA-256 hash; event `proposed`; master data unchanged | AUTO | `changes.test.js` |
+| BC4 | Proposing an account already on file | 409 `IBAN_ALREADY_ON_FILE` | AUTO | `changes.test.js` |
+| BC5 | The same IBAN proposed again while open | the open change, 200, the first proposer kept | AUTO | `changes.test.js` |
+| BC6 | Another IBAN while one is open; two proposals at once | 409 `CHANGE_ALREADY_OPEN` naming it; exactly one open change | AUTO | `changes.test.js`; `schema.test.js` (unique index) |
+| BC7 | A source invoice of another supplier or IBAN; a blocked supplier | 400 `SOURCE_INVOICE_MISMATCH`; 409 `SUPPLIER_NOT_ACTIVE_FOR_CHANGE` | AUTO | `changes.test.js` |
+| BC8 | The proposer verifies | 409 `PROPOSER_CANNOT_VERIFY`; the database refuses it too | AUTO | `changes.test.js`, `schema.test.js`, `bank-changes.test.js` |
+| BC9 | A call-back number in the request | ignored: the number on file is recorded | AUTO | `changes.test.js`, `bank-changes.test.js` |
+| BC10 | Confirming without the IBAN read back, or with another | 409 `IBAN_READ_BACK_MISMATCH` | AUTO | `changes.test.js` |
+| BC11 | Call-back fields out of range, a time in the future or before the proposal | 400 `VERIFICATION_INVALID` naming the field | AUTO | `changes.test.js`, `bank-changes.test.js` |
+| BC12 | No call-back number on file (an upgraded installation) | 409 `NO_CALLBACK_NUMBER`, nothing recorded; a number sent with the call is no fallback | AUTO | `changes.test.js` |
+| BC13 | A denied call-back | the change is rejected; nothing trusted | AUTO | `changes.test.js` |
+| BC14 | Approval without verification | 409 `CHANGE_NOT_VERIFIED`; the database refuses an approved change without a verifier | AUTO | `changes.test.js`, `schema.test.js`, `bank-changes.test.js` |
+| BC15 | The proposer approves or rejects | 409 `PROPOSER_CANNOT_DECIDE`; the database refuses it | AUTO | `changes.test.js`, `schema.test.js` |
+| BC16 | The verifier approves under the three-person policy | 409 `VERIFIER_CANNOT_APPROVE`; the database refuses it; the verifier may still reject | AUTO | `changes.test.js`, `schema.test.js`, `rules.test.js` |
+| BC17 | A third person approves | the IBAN is added as ACTIVE naming the change; the previous account stays ACTIVE | AUTO | `changes.test.js` |
+| BC18 | A verification bound to another hash; a proposal altered after verification | 409 `EVIDENCE_MISMATCH`, nothing written | AUTO | `changes.test.js` |
+| BC19 | Master data changed after the proposal; the supplier blocked since | 409 `MASTER_DATA_CHANGED`; 409 `SUPPLIER_NOT_ACTIVE_FOR_CHANGE` | AUTO | `changes.test.js` |
+| BC20 | Two approvers at once; the same step repeated | one account, one approval event; a repeat by the same person returns the change unchanged, another person gets 409 `CHANGE_STATE_CONFLICT` | AUTO | `changes.test.js` |
+| BC21 | An IBAN trusted for another supplier | allowed by the database; the proposal lists the other supplier; approval refused with `SHARED_IBAN_NOT_ACKNOWLEDGED` until acknowledged, which the approval evidence records; the acknowledgement does not let an unverified change, the verifier or the proposer approve | AUTO | `schema.test.js`, `changes.test.js`, `bank-changes.test.js` |
+| BC22 | Rejected or withdrawn changes | never write master data; only the proposer withdraws; a withdrawn change no longer blocks a new one | AUTO | `changes.test.js`, `bank-changes.test.js` |
+| BC23 | An invoice with a new IBAN on its own | changes no master data and creates no proposal | AUTO | `bank-changes.test.js` |
+| BC24 | Who may do what | read: clerk, finance, CFO, admin; propose: clerk, finance; verify, approve, reject: finance, CFO; admin and manager take no step. The revalidation retry needs `invoice:reprocess`, so admin may ask for it: a technical re-run that decides nothing | AUTO | `bank-changes.test.js`; client `rules.test.js` |
+| BC25 | CSRF, a non-UUID id or supplier, bad input | 403 `CSRF_INVALID`; 404 with a code; 400 with a code; never 500 | AUTO | `bank-changes.test.js` |
+| BC26 | The app's own database role | runs the whole loop; cannot change a proposal, evidence, events, revalidation links or trusted accounts; may move a change's decision columns | AUTO | `audit-role.test.js` |
+| BC27 | A production start as a role that could rewrite bank-change history | refused, naming it | AUTO | `audit-role.test.js` |
+| BC28 | Revalidation after approval | the invoice gets a new run, the old run is kept; the link records runs and states; the invoice's trail names the change | AUTO | `revalidation.test.js` |
+| BC29 | A former exception below the auto-approve limit (fixture H) | `READY_FOR_APPROVAL` with one step, never `APPROVED` (ADR-020) | AUTO | `revalidation.test.js` |
+| BC30 | An unrelated failure | still failing in the new run; the invoice stays in review | AUTO | `revalidation.test.js`; `audit-role.test.js` |
+| BC31 | An invoice with an open question | reported as waiting, untouched; "information received" validates nothing; the retry then revalidates it, as the person who asked | AUTO | `revalidation.test.js` |
+| BC32 | An invoice rejected in the meantime; another supplier's or IBAN's invoice | skipped, no run | AUTO | `revalidation.test.js` |
+| BC33 | A crash between the new run and its link | neither committed; the retry runs the invoice once; two retries at once run it once; a retry after completion adds nothing | AUTO | `revalidation.test.js`; mutation check 2026-09-30: committing the run apart from its link failed this test |
+| BC39 | An affected invoice re-validated by hand before the change's retry, still in review for another reason | no longer pending; the retry does nothing and marks the change complete | AUTO | `revalidation.test.js` |
+| BC34 | Revalidation of a change not approved | 409 `CHANGE_STATE_CONFLICT` | AUTO | `revalidation.test.js`, `bank-changes.test.js` |
+| BC35 | What the screens offer | verify only to another person, approve only to a third, withdraw only to the proposer, nothing to admin, retry only while invoices are left; the invoice offers a proposal or links to the change | AUTO | client `rules.test.js` |
+| BC36 | Every change state, event and refusal in both languages | labels present in German and English | AUTO | `dictionaries.test.js` |
+| BC37 | The loop in the browser | H: proposed from the invoice, call-back form shows the number on file, verified, approved by a third person, H awaits a manager; B: waiting, then revalidated by the retry; a shared IBAN needs the tick; admin and manager see no step | MANUAL | Browser (Playwright script), 2026-09-30, built client served by the API |
+| BC38 | The demo with the new step | every figure DEMO.md quotes, and step 5 end to end | MANUAL | Demo verification script against a fresh `db:demo`, 2026-09-30 |
 
 ## API
 

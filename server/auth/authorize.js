@@ -23,6 +23,13 @@ export const PERMISSIONS = {
   "accounting:export": ["FINANCE", "ADMIN"],
   "bank:read": ["FINANCE", "ADMIN"],
   "master-data:read": ["AP_CLERK", "FINANCE", "ADMIN"],
+  // A new trusted bank account (ADR-077). Three steps, and segregation of
+  // duties by person on top. Administration reads and takes no step: running
+  // the system is not a business role.
+  "bank-change:read": ["AP_CLERK", "FINANCE", "CFO", "ADMIN"],
+  "bank-change:propose": ["AP_CLERK", "FINANCE"],
+  "bank-change:verify": ["FINANCE", "CFO"],
+  "bank-change:approve": ["FINANCE", "CFO"],
 };
 
 export function may(role, permission) {

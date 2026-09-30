@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import { invoicesRouter } from "./routes/invoices.js";
 import { masterDataRouter, usersRouter } from "./routes/master-data.js";
+import { bankChangesRouter } from "./routes/bank-changes.js";
 import { accountingRouter, bankRouter, dashboardRouter, reconciliationRouter } from "./routes/money.js";
 import { authRouter } from "./routes/auth.js";
 import { requireSession, sessionMiddleware } from "./routes/session.js";
@@ -114,6 +115,7 @@ export function createApp(deps, { clientDir } = {}) {
   app.get("/api/meta/states", (req, res) => res.json({ labels: STATE_LABELS, transitions: TRANSITIONS, policy: deps.policy }));
   app.use("/api/invoices", invoicesRouter(deps));
   app.use("/api/master-data", masterDataRouter(deps));
+  app.use("/api/bank-changes", bankChangesRouter(deps));
   app.use("/api/users", usersRouter(deps));
   app.use("/api/accounting", accountingRouter(deps));
   app.use("/api/bank", bankRouter(deps));

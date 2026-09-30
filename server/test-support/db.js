@@ -7,7 +7,7 @@ import { loadPolicy } from "../config/policy.js";
 import { loadCompany } from "../config/company.js";
 import { reset } from "../../scripts/reset.js";
 // Imported as well as re-exported: a bare `export ... from` does not bind it locally.
-import { DEMO_PASSWORD } from "../../scripts/seed.js";
+import { DEMO_PASSWORD, seed } from "../../scripts/seed.js";
 export { DEMO_PASSWORD };
 
 /**
@@ -27,6 +27,19 @@ export async function testDeps() {
   await reset(pool);
   const storage = createStorage(await mkdtemp(path.join(tmpdir(), "finops-test-")));
   return { pool, storage, policy: loadPolicy({}), company: loadCompany({}) };
+}
+
+/**
+ * Removes every bank-account change and the accounts they added, then puts
+ * the seeded accounts back. An approved change and its account point at each
+ * other, so a plain delete in either order is refused.
+ */
+export async function resetBankChanges(pool) {
+  await pool.query(
+    `truncate finops.bank_change_revalidations, finops.bank_change_events, finops.bank_change_verifications,
+       finops.bank_account_changes, finops.supplier_bank_accounts cascade`,
+  );
+  await seed(pool);
 }
 
 /** The server and database a connection actually reached. */

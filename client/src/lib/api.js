@@ -82,6 +82,16 @@ export const retryPayment = (id) => actorPost(`/invoices/${id}/payment/retry`);
 export const resolveReconciliation = (id, comment) =>
   actorPost(`/invoices/${id}/reconciliation/resolve`, { comment });
 
+// A new trusted supplier bank account, in three people's steps (ADR-077).
+export const listBankChanges = () => request("/bank-changes");
+export const getBankChange = (id) => request(`/bank-changes/${id}`);
+export const proposeBankChange = (body) => actorPost("/bank-changes", body);
+export const verifyBankChange = (id, body) => actorPost(`/bank-changes/${id}/verify`, body);
+export const approveBankChange = (id, body) => actorPost(`/bank-changes/${id}/approve`, body);
+export const rejectBankChange = (id, comment) => actorPost(`/bank-changes/${id}/reject`, { comment });
+export const cancelBankChange = (id, comment) => actorPost(`/bank-changes/${id}/cancel`, { comment });
+export const revalidateBankChange = (id) => actorPost(`/bank-changes/${id}/revalidate`);
+
 export const listBankTransactions = () => request("/bank/transactions");
 export const getKpis = () => request("/dashboard/kpis");
 export const runReconciliation = () => actorPost("/reconciliation/run");

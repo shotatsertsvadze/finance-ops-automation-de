@@ -62,7 +62,7 @@ finance-ops-automation-de/
   fixtures/xrechnung/      demo invoices A-J (synthetic UBL 2.1 / XRechnung 3.0 profile)
   fixtures/bank/           synthetic bank statement for the tests
   db/migrations/           append-only SQL, applied by scripts/migrate.js under an advisory lock; an applied file that changed stops the run (ADR-061)
-  db/seed/                 synthetic master data (users, suppliers, IBANs, POs)
+  db/seed/                 synthetic master data (users, suppliers, IBANs, POs) and call-back numbers
   scripts/                 migrate.js, seed.js, reset.js, set-password.js, demo-data.js, demo-walkthrough.mjs
   server/
     index.js               starts the HTTP server; refuses an unsafe production start
@@ -80,14 +80,15 @@ finance-ops-automation-de/
       intake/              intake.js (orchestration of one upload)
       approvals/           review and approval decisions, binding, final re-check
       purchase-orders/     commitments.js (capacity ledger)
+      bank-changes/        a new supplier bank account: proposal, call-back verification, approval, revalidation (ADR-077)
       accounting/ payments/ cancellation/ reconciliation/ kpi/
-    routes/                auth, session, health, invoices, master-data, money
+    routes/                auth, session, health, invoices, master-data, bank-changes, money
     storage/               files.js (store/read original file)
     test-support/          test database, demo users, invoice XML builder
   client/
     index.html  vite.config.js
     src/                   App.jsx, lib/ (api, i18n, dictionaries), features/ (auth, inbox, invoice,
-                           upload, payments, dashboard)
+                           upload, payments, dashboard, bank-changes)
   browser/                 Playwright tests for what only a browser can show
   storage/                 original files (gitignored)
 ```
@@ -107,6 +108,12 @@ erDiagram
     invoices ||--o{ approval_steps : requires
     invoices ||--o{ audit_events : "every transition"
     invoices ||--o| invoices : duplicate_of
+    suppliers ||--o{ bank_account_changes : "proposed for"
+    bank_account_changes ||--o| bank_change_verifications : "call-back"
+    bank_account_changes ||--o{ bank_change_events : "every step"
+    bank_account_changes ||--o{ bank_change_revalidations : "runs it caused"
+    invoices ||--o{ bank_change_revalidations : "revalidated"
+    bank_account_changes ||--o| supplier_bank_accounts : "added"
 ```
 
 Key columns (full definitions in `db/migrations/0001_core.sql`):
@@ -136,6 +143,19 @@ Key columns (full definitions in `db/migrations/0001_core.sql`):
   person can be excluded from approving it (migration `0002_review_actor.sql`).
 - `audit_events`: `occurred_at`, `actor_type` (SYSTEM|HUMAN), `actor_id`,
   `action`, `from_state`, `to_state`, `reason`, `evidence jsonb`.
+- `bank_account_changes` (migration `0022_bank_account_changes.sql`): one
+  proposal to trust a new IBAN for a supplier. The proposal (`proposed_iban`,
+  `trusted_ibans` at the time, `shared_with`, `source_invoice_id`, `reason`,
+  `required_distinct_actors`, `proposal_sha256`) is fixed; the workflow moves
+  `state`, `verified_by/_at`, `decided_by/_at`, `decision_reason`,
+  `bank_account_id` and `revalidated_at`. `bank_change_verifications` holds
+  the call-back (number on file, role reached, time, IBAN read back, outcome,
+  the hash it confirmed); `bank_change_events` is the change's own trail,
+  shaped like `audit_events`; `bank_change_revalidations` links each
+  revalidated invoice to the change with its runs before and after.
+  `supplier_bank_accounts.trusted_by_change_id` names the change that added
+  an account; `suppliers.callback_phone` is the only number a verification may
+  record.
 
 Bank transactions carry a status of `UNMATCHED`, `MATCHED`, `EXCEPTION` or
 `RESOLVED`. `RESOLVED` is set when a person closes an exception by hand, in the
@@ -145,7 +165,8 @@ A changed IBAN is not overridable: review cannot release it, and the payment
 instruction pays only an ACTIVE master-data account of an ACTIVE supplier,
 checked again at that moment. Whoever submitted an invoice cannot approve it
 (ADR-052), and whoever signed an approval step can neither instruct nor
-confirm its payment (ADR-056).
+confirm its payment (ADR-056). The way to trust a new account is a
+bank-account change, below; the invoice itself never writes master data.
 
 Before an approval is recorded the business checks run again against current
 master data. A check that was not failing at the last run and is failing now
@@ -167,6 +188,15 @@ Database-enforced invariants:
 - `unique (invoice_id, round, step_no)` on approval steps (migration
   `0021_approval_rounds.sql`).
 - `check (actor_type = 'SYSTEM' or actor_id is not null)` on audit events.
+- Bank-account changes: the verifier is not the proposer; an approved change
+  has a verifier, an approver who is not the proposer, under the three-person
+  policy not the verifier either, and the account it added; a rejection has a
+  reason and is not the proposer's; a withdrawal is. One open change per
+  supplier (`unique (supplier_id) where state in ('PROPOSED', 'VERIFIED')`),
+  one verification per change, one revalidation per change and invoice.
+- `unique (supplier_id, iban)` on bank accounts. The same IBAN under two
+  suppliers is allowed on purpose (factoring, group treasury) and is a
+  warning the approver must acknowledge instead (ADR-077).
 
 ## 5. State machine
 
@@ -213,6 +243,8 @@ stateDiagram-v2
 Rules:
 
 - Terminal states: `RECONCILED`, `CREDITED`, `SETTLED_BY_CREDIT`, `CANCELLED`, `REJECTED`, `DUPLICATE`. No transition leaves them.
+- `REVIEW_REQUIRED --> VALIDATING` also happens when an approved bank-account
+  change revalidates the invoices it concerns (below).
 - An approved invoice can be stopped until money is on its way: `APPROVED` or
   `ACCOUNTING_READY` to `CANCELLED`, finance only, with a reason. A booked
   invoice is reversed in the same transaction: the same lines, sign turned,
@@ -251,13 +283,49 @@ Rules:
 - A human review never ends in `APPROVED` directly. It ends in
   `READY_FOR_APPROVAL` with at least one approval step, and the reviewer cannot
   take that step (configurable four-eyes after review).
-- `INFO_REQUESTED` always returns to `REVIEW_REQUIRED`; existing approvals are
-  cancelled and re-validation runs.
+- `INFO_REQUESTED` always returns to `REVIEW_REQUIRED` ("information
+  received") and validates nothing on the way. Approvals were already
+  cancelled when the question was asked (ADR-014); re-validation is its own,
+  explicit step: **Erneut prüfen**, or the revalidation of an approved
+  bank-account change (ADR-077).
 - Changes vs. the brief's draft model: `DUPLICATE` and `INFO_REQUESTED` are
   explicit states, `RECONCILIATION_EXCEPTION` is explicit, and `VALIDATING` is
   the only transient state. There is no separate "technical failed" state:
   a malformed file is an exception for humans, so it goes to `REVIEW_REQUIRED`
   with `review_reason = TECHNICAL_VALIDATION_FAILED`.
+
+### Bank-account changes
+
+A new trusted account for a supplier (ADR-077). The table is
+`CHANGE_TRANSITIONS` in `server/domain/bank-changes/rules.js`; a change moves
+only through `moveChange()`, which writes its event in the same transaction.
+
+```mermaid
+stateDiagram-v2
+    [*] --> PROPOSED: proposed (clerk or finance), reason required
+    PROPOSED --> VERIFIED: call-back on the number on file confirms, IBAN read back (not the proposer)
+    PROPOSED --> REJECTED: call-back not confirmed, or rejected (not the proposer)
+    VERIFIED --> APPROVED: approved (not the proposer, not the verifier); account added
+    VERIFIED --> REJECTED: rejected (not the proposer)
+    PROPOSED --> CANCELLED: withdrawn by the proposer
+    VERIFIED --> CANCELLED: withdrawn by the proposer
+    APPROVED --> [*]
+    REJECTED --> [*]
+    CANCELLED --> [*]
+```
+
+- Only `APPROVED` writes master data, and it adds an account: the supplier's
+  previous accounts stay trusted until retiring accounts exists.
+- Approval is bound to the proposal: the hash recomputed from the stored
+  proposal must equal the one proposed and the one the call-back confirmed,
+  and the supplier's trusted accounts must be those proposed against.
+- After the approval commits, each invoice of that supplier in
+  `REVIEW_REQUIRED` that carries the new IBAN and whose latest run failed
+  `supplier_iban_match` is validated again in its own transaction, together
+  with its `bank_change_revalidations` row. An invoice in `INFO_REQUESTED` is
+  reported and left alone until information is received; the retry
+  (`POST /api/bank-changes/:id/revalidate`) takes it then. ADR-020 sends a
+  former exception to `READY_FOR_APPROVAL`, never to `APPROVED`.
 
 ## 6. Validation and routing
 
@@ -329,6 +397,12 @@ invoice above the auto limit.
 | POST | `/api/invoices/:id/reprocess` | 1 | re-run validation from RECEIVED/VALIDATING/REVIEW_REQUIRED |
 | GET | `/api/master-data/suppliers`, `/purchase-orders` | 1 | read-only master data, IBANs included; `master-data:read` (AP clerk, finance, admin; ADR-064) |
 | GET | `/api/users` | 1 | names and roles, any signed-in user |
+| GET | `/api/bank-changes`, `/api/bank-changes/:id` | 1 | bank-account changes, open first; the detail carries the trusted accounts, the call-back, events, revalidated and pending invoices; `bank-change:read` (AP clerk, finance, CFO, admin) |
+| POST | `/api/bank-changes` | 1 | proposes a new IBAN for a supplier (`supplier_id`, `iban`, optional `bic`, `source_invoice_id`, `comment` as reason); 201, or 200 with the open change for the same IBAN; `bank-change:propose` (AP clerk, finance) |
+| POST | `/api/bank-changes/:id/verify` | 1 | records the call-back (`outcome`, `contacted_role`, `called_at`, `iban_read_back`, `reference`, `comment`); the number called comes from master data; `bank-change:verify` (finance, CFO) |
+| POST | `/api/bank-changes/:id/approve` | 1 | adds the account, then revalidates the affected invoices and returns what happened as `revalidation`; `acknowledge_shared_iban: true` when another supplier trusts the IBAN; `bank-change:approve` (finance, CFO) |
+| POST | `/api/bank-changes/:id/reject\|cancel` | 1 | ends an open change, reason required; reject needs `bank-change:approve`, cancel is the proposer's |
+| POST | `/api/bank-changes/:id/revalidate` | 1 | revalidates what an approved change left: a failure, or an invoice whose question has been answered; `invoice:reprocess` (AP clerk, finance, admin): a technical re-run, not a decision about the account |
 | POST | `/api/invoices/:id/review/accept\|reject\|request-info\|confirm-duplicate` | 2 | reviewer actions; `request-info` is also valid from READY_FOR_APPROVAL |
 | POST | `/api/invoices/:id/info-received` | 2 | INFO_REQUESTED back to REVIEW_REQUIRED |
 | POST | `/api/invoices/:id/approvals/:stepNo/approve\|reject` | 2 | approver actions |
@@ -349,8 +423,9 @@ invoice above the auto limit.
 
 The invoice detail (`GET /api/invoices/:id`) carries the domain's own answers
 where the screen needs them: `open_credit_amount`, `po_available_amount`,
-`payable_blockers` (what stops a release from review, ADR-071) and
-`approval_history` (earlier approval rounds, ADR-067).
+`payable_blockers` (what stops a release from review, ADR-071),
+`approval_history` (earlier approval rounds, ADR-067) and `bank_changes`
+(changes proposing the IBAN the invoice carries, ADR-077).
 
 Identity: a session cookie set by `POST /api/auth/login`, stored hashed; every
 state-changing request must echo the CSRF token (ADR-029). Everything under
@@ -404,8 +479,14 @@ expired, and signing in again stays on the same page (ADR-057).
   password and ends that account's sessions.
 - The app connects as its own role, set up with `npm run db:grant`: it may add
   to the audit trail but not update, delete or truncate it, and may not delete
-  invoices, whose deletion would cascade to their trail. A production start
-  refuses a connection that could (ADR-068).
+  invoices, whose deletion would cascade to their trail. For bank-account
+  changes it may update only the decision columns, never the proposal, may
+  only add verifications, events, revalidation links and bank accounts, and
+  may neither alter nor remove a trusted account. A production start refuses
+  a connection that could do any of it (ADR-068, ADR-077).
+- A new supplier bank account needs three different people and a call-back
+  on the number already in master data; administration takes no step, and no
+  number is ever read from the request (ADR-077).
 - Every wait is bounded: connecting to the database (5 s), one statement
   (15 s), an idle open transaction (30 s), one request (30 s). SIGTERM and
   SIGINT stop new requests, let running ones finish, close the pool and exit;

@@ -245,7 +245,8 @@ select {
 
 .action-prompt { margin: 0 0 10px; font-size: 13px; color: var(--ink-2); }
 .action-comment { display: grid; gap: 3px; margin-bottom: 10px; }
-.action-comment textarea {
+.action-comment textarea,
+.action-comment input {
   font: inherit;
   font-size: 13px;
   padding: 7px 9px;
@@ -256,12 +257,15 @@ select {
   resize: vertical;
 }
 .action-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.action-check { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; margin-bottom: 10px; }
+.warning-note { margin: 0 0 10px; padding: 8px 10px; border-radius: var(--radius); background: var(--high-bg); color: var(--high); font-size: 13px; }
 .error { color: var(--high); font-size: 13px; }
 
 /* ---------- detail layout ---------- */
 .detail { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 20px; align-items: start; }
 .detail-stack { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 
+.plain-list { list-style: none; padding: 0; margin: 0 0 10px; display: grid; gap: 8px; font-size: 13px; }
 .back { font-size: 12px; color: var(--ink-3); text-decoration: none; }
 .back:hover { color: var(--ink); }
 
