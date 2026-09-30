@@ -1,6 +1,7 @@
 import { Router } from "express";
 import multer from "multer";
 import { handleUpload, processInvoice } from "../domain/intake/intake.js";
+import { retryOfficialValidation } from "../domain/intake/official-retry.js";
 import { countInvoices, getInvoiceDetail, listInvoices } from "../domain/invoice/queries.js";
 import { MAX_XML_BYTES } from "../domain/invoice/xml-safety.js";
 import { STATES } from "../domain/workflow/states.js";
@@ -36,6 +37,15 @@ export function invoicesRouter(deps) {
   router.param("id", (req, res, next, id) => {
     if (!UUID.test(id)) return res.status(404).json({ error: "Rechnung nicht gefunden", code: "INVOICE_NOT_FOUND" });
     next();
+  });
+
+  // After a validator outage: every invoice stranded without a verdict, once (ADR-078).
+  router.post("/official-validation/retry", requirePermission("invoice:reprocess"), async (req, res, next) => {
+    try {
+      res.json(await retryOfficialValidation(deps, req.actor));
+    } catch (error) {
+      next(error);
+    }
   });
 
   router.post("/", requirePermission("invoice:upload"), upload.single("file"), async (req, res, next) => {

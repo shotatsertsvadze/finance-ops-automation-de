@@ -92,3 +92,15 @@ test("a timeout the database transaction could not outlast stops the start", () 
   assert.throws(() => officialValidatorFromEnv({ KOSIT_URL: "http://x", KOSIT_TIMEOUT_MS: "25000" }), /KOSIT_TIMEOUT_MS/);
   assert.throws(() => officialValidatorFromEnv({ KOSIT_URL: "http://x", KOSIT_TIMEOUT_MS: "zehn" }), /KOSIT_TIMEOUT_MS/);
 });
+
+test("the health probe says whether the daemon is up", async () => {
+  reply = (req, res) => {
+    if (req.method === "GET" && req.url === "/server/health") return answer(200, "<healthtype><status>UP</status></healthtype>")(req, res);
+    answer(404)(req, res);
+  };
+  assert.equal(await client().available(), true);
+  reply = answer(503, "<healthtype><status>DOWN</status></healthtype>");
+  assert.equal(await client().available(), false);
+  reply = () => {};
+  assert.equal(await client(150).available(), false, "no answer is not up");
+});

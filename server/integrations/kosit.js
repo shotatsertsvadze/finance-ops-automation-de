@@ -32,6 +32,15 @@ export function createKositClient({ url, timeoutMs }) {
         return { outcome, httpStatus: null, report: null, durationMs: took(), error: error.cause?.message ?? error.message };
       }
     },
+    /** The daemon's own health endpoint says it is up. */
+    async available() {
+      try {
+        const response = await fetch(new URL("/server/health", url), { signal: AbortSignal.timeout(timeoutMs) });
+        return response.ok && (await response.text()).includes("UP");
+      } catch {
+        return false;
+      }
+    },
   };
 }
 

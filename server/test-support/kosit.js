@@ -29,7 +29,9 @@ export function standInValidator(answer = ANSWERS.accept) {
     required: true,
     answer,
     calls: 0,
+    up: true,
     client: {
+      available: async () => validator.up,
       async validate(buffer) {
         validator.calls += 1;
         return { durationMs: 5, ...validator.answer(buffer) };
