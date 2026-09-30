@@ -9,7 +9,9 @@ Legend:
 - **CI** verified by an automated job in `.github/workflows/ci.yml` outside `npm test`, job named
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (578 tests, all passing as of 2026-09-30). Database tests need
+Run: `npm test` (624 tests, all passing as of 2026-09-30; the three
+real-validator tests skip without `KOSIT_TEST_URL` and run in CI, see
+"Official validation"). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
 
 ## High-priority business risks
@@ -64,7 +66,7 @@ browser).
 | H | 380 EUR with a changed IBAN | REVIEW_REQUIRED; accepting it still needs one approval | AUTO | `approvals.test.js` "a review of a small invoice" |
 | I | 3 % discount, 499.80 EUR due | APPROVED, no steps; 535.50 without the discount would need one | AUTO | `business-checks.test.js` "fixture I behaves as the README says" |
 | J | credit note, 214.20 EUR, crediting RE-2026-4471 | APPROVED, booked negative, CREDITED, never paid | AUTO | `moneypath.test.js` "a credit note runs the pipeline" |
-| A-J, demo | official XRechnung validity | KoSIT accepts A-E and G-J and rejects F; of the 70 generated demo invoices it accepts 65 and rejects the 5 malformed ones | MANUAL | KoSIT validator 1.6.3, XRechnung configuration 2026-08-31, 2026-09-30 |
+| A-J, demo | official XRechnung validity | KoSIT accepts A-E and G-J and rejects F; of the 70 generated demo invoices it accepts 65 and rejects the 5 malformed ones | AUTO | `kosit-real.test.js` against the pinned KoSIT 1.6.3 and configuration 2026-08-31 (OV21-OV23); first measured by hand in the spike, 2026-09-30 |
 
 ## Parsing and technical validation
 
@@ -204,6 +206,8 @@ described as working.
 | ~~L6 (R13)~~ | ~~The test helper could drop the development schema~~ | **Fixed 2026-09-17**: `testDeps()` refuses to run when `TEST_DATABASE_URL` equals `DATABASE_URL`. | CLOSED |
 | L9 | A supplier's previous bank account stays trusted after a new one is approved: both can be paid until retiring accounts exists (ADR-077) | Approve a change for S-1001: both IBANs are ACTIVE | OPEN |
 | L10 | The exception ranking counts the comment typed at "information received" as a reason of its own, because that return to review records the comment as its reason | Demo step 5: the ranking lists "Rückruf erledigt, Konto freigegeben" once | OPEN |
+| L11 | The official-validation call runs inside the invoice's transaction and holds its row lock for the call, 10-40 ms normally and at most `KOSIT_TIMEOUT_MS` (20 s cap). The readiness check does not ask the validator; the Docker demo runs without one, so there the check is SKIPPED (ADR-078) | Stop the daemon: `/api/health/ready` still answers 200 and a new invoice goes to review | OPEN |
+| L12 | Rarely, one full-suite run fails with pg's "timeout exceeded when trying to connect", seen in `getInvoiceDetail`. Cause not established; it passed on rerun and in isolated runs, and was seen before ADR-078 | Not reproducible on demand: seen once in Phase 1 and once in Phase 2, not in the reruns | OPEN |
 
 ## Authentication and authorization
 
@@ -330,6 +334,45 @@ described as working.
 | W14 | An unchanged invoice runs the whole path unaffected | PAID | AUTO | `binding.test.js` |
 | W15 | The binding is readable from the API detail | hash and run number present on the step | AUTO | `binding.test.js` |
 | W16 | Neutering the drift check breaks the gates | W12 and W13 fail | MANUAL | Mutation check, 2026-09-17: `bindingDrift` returned early, both refusal tests failed |
+
+## Official validation (ADR-078)
+
+The KoSIT validator, pinned to 1.6.3 with the XRechnung 3.0.2 configuration of
+2026-08-31. Transport in `server/integrations/kosit.test.js`; meaning in
+`server/domain/invoice/official-validation.test.js` (real reports as
+fixtures); intake in `server/domain/intake/official-intake.test.js` and
+`official-retry.test.js` (a stand-in built from real reports); the real daemon
+in `server/integrations/kosit-real.test.js`.
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| OV1 | An accepted report | PASSED; validator and configuration version, scenario and the reported document hash kept | AUTO | `official-validation.test.js`; `kosit-real.test.js` |
+| OV2 | A rejected report | FAILED, naming the error count, the rule codes and the first message | AUTO | `official-validation.test.js`; `kosit-real.test.js` (F) |
+| OV3 | A report that contradicts its HTTP status | FAILED, no verdict recorded | AUTO | `official-validation.test.js` |
+| OV4 | A report about another document | FAILED: its SHA-256 is not this document's | AUTO | `official-validation.test.js` |
+| OV5 | A report from another validator version | FAILED | AUTO | `official-validation.test.js` |
+| OV6 | A report from another rule configuration, or an acceptance naming none | FAILED | AUTO | `official-validation.test.js` |
+| OV7 | A body that is not a report (empty, text, HTML, truncated) | FAILED | AUTO | `official-validation.test.js` |
+| OV8 | No answer within the timeout, or a body that stalls | TIMEOUT, FAILED | AUTO | `kosit.test.js`, `official-validation.test.js` |
+| OV9 | Validator not running | UNAVAILABLE, FAILED; an invoice that would auto-approve goes to review | AUTO | `kosit.test.js`, `official-intake.test.js` |
+| OV10 | HTTP 422 | UNPROCESSABLE, FAILED | AUTO | `kosit.test.js`, `official-intake.test.js` |
+| OV11 | Any other status (400, 500) | ERROR, FAILED | AUTO | `kosit.test.js`, `official-validation.test.js` |
+| OV12 | Required but not configured | FAILED and recorded as NOT_CONFIGURED; a production start without `KOSIT_URL` is refused | AUTO | `official-intake.test.js`, `deployment.test.js` |
+| OV13 | Not configured outside production | SKIPPED, saying the document was not validated officially; the business checks run; nothing recorded as a validation | AUTO | `official-intake.test.js` |
+| OV14 | A document the parser cannot read | not sent; SKIPPED | AUTO | `official-validation.test.js`, `official-intake.test.js` |
+| OV15 | The evidence of a run | one row per run: verdict, versions, both hashes, report and its SHA-256; the invoice detail carries it without the raw report | AUTO | `official-intake.test.js` |
+| OV16 | A failed official validation and the release | a payable blocker; release refused with 422; no business checks for that run | AUTO | `official-intake.test.js` |
+| OV17 | Reprocessing after an outage | a new run; run 1's record and FAILED check stay; the invoice then needs a signature (ADR-020) | AUTO | `official-intake.test.js` |
+| OV18 | The retry after an outage | validates stranded invoices once each; a replay changes nothing; while the validator is down nothing is touched; verdicts and invoices waiting for an answer are left alone; two retries at once run an invoice once, even one that stays in review | AUTO | `official-retry.test.js`; mutation check 2026-09-30: without the re-check under the lock the concurrent case ran B twice |
+| OV19 | The app's database role and the evidence | update, delete and truncate refused; a production start checks it | AUTO | `audit-role.test.js` |
+| OV20 | `KOSIT_TIMEOUT_MS` above 20 s or not a number | the start stops: the call runs inside the invoice's transaction | AUTO | `kosit.test.js` |
+| OV21 | The real validator and the fixtures | A-E and G-J accepted, F rejected, each report naming the document | AUTO | `kosit-real.test.js` |
+| OV22 | The real validator through intake | B and H stop on their IBAN, C on its order, D (after A) as a duplicate, each with the official check PASSED; F technical; A, E awaiting approval; G, I, J approved | AUTO | `kosit-real.test.js` |
+| OV23 | The demo month against the real validator | 65 accepted; rejected exactly DEMO-2026-01002, -01026, -01037, -01048, -01053; states and generator totals as without the validator | AUTO | `kosit-real.test.js` |
+| OV24 | Without a validator, or a named one that does not answer | the real tests skip without `KOSIT_TEST_URL`; with `KOSIT_TEST_REQUIRED=true`, or a URL that does not answer, they fail | MANUAL | 2026-09-30, both runs |
+| OV25 | `npm run kosit:fetch` and `npm run kosit` | fetch verifies both SHA-256s and keeps verified files; start refuses a missing or altered artifact, a missing Java, the macOS stub `/usr/bin/java`, and a non-local `KOSIT_URL`; the daemon listens on 127.0.0.1 only | MANUAL | 2026-09-30, with Homebrew openjdk@17 through `KOSIT_JAVA`; `lsof` shows 127.0.0.1:8081 |
+| OV26 | CI and the real validator | Java 17, the pinned artifacts fetched and cached, the daemon started before `npm test` with the real tests required | CI | `ci.yml` job `test` |
+| OV27 | The check in English | an entry for PASSED, FAILED and SKIPPED | AUTO | `dictionaries.test.js` |
 
 ## Bank-account changes (ADR-077)
 

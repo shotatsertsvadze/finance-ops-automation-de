@@ -17,9 +17,17 @@ payment provider are simulated, and all data is synthetic.
 npm install
 cp .env.example .env          # set DATABASE_URL and TEST_DATABASE_URL
 createdb finops               # once
+npm run kosit:fetch           # once: the pinned KoSIT validator, SHA-256 checked
+npm run kosit                 # in its own terminal; KOSIT_JAVA=... if `java` is not 11+
+# in .env: KOSIT_URL=http://127.0.0.1:8081
 npm run demo:reset            # drop, migrate, seed, generate the demo month
 npm run dev                   # API on :4400, UI on :5400
 ```
+
+The validator is optional. With it, every invoice carries the official
+validation (KoSIT): 65 of the generated month are acceptable and the 5
+malformed ones are not. Without it that check reads "skipped" and says the
+document was not validated officially. Nothing else in this script changes.
 
 Sign in as **jonas.weber@nordwerk.example** (Finance). Finance sees the whole
 path; the other accounts are for the three-person moment in step 5 and the
@@ -50,7 +58,7 @@ reason `SUPPLIER_IBAN_MATCH`.
 
 ## 3. The evidence — 2 minutes, the heart of it
 
-On that invoice, the check trail shows **1 of 22 checks failed**, with:
+On that invoice, the check trail shows **1 of 23 checks failed**, with:
 
 ```
 EXPECTED   DE02 1203 0000 0000 2020 51
@@ -64,8 +72,13 @@ The differing characters are marked.
 > of comparing an IBAN by eye. Every check works this way — that is the whole
 > product."
 
-Press **Show all 21 passed checks**: the ones that passed are there too, so a
-reviewer can see what was *not* a problem.
+Press **Show all 22 passed checks**: the ones that passed are there too, so a
+reviewer can see what was *not* a problem. With the validator running, one of
+them is **official validation (KoSIT)**: acceptable.
+
+> "Formally, this is a perfectly valid e-invoice. The official validator has
+> nothing against it. It is the business check, against our own master data,
+> that sees it pays the wrong account."
 
 ## 4. Fail closed — 30 seconds
 
@@ -230,8 +243,9 @@ Do not improvise. It is written down, with the reasoning, in
 `README.md` under "Known limits" and in `docs/DECISIONS.md`:
 
 - Only UBL syntax is read; CII and ZUGFeRD are adapter boundaries.
-- No official EN 16931 / KoSIT validator is wired in, and no compliance is
-  claimed.
+- Official validation is the pinned KoSIT validator; it reports an assessment,
+  and no compliance is claimed. A rejected invoice is not processed by hand:
+  the supplier sends a corrected one.
 - A credit note offsets the next payment to that supplier, not the invoice it
   names.
 - Reconciliation is one bank line to one invoice; part and collective payments

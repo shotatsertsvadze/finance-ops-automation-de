@@ -93,7 +93,7 @@ async function main() {
 
   await page.getByRole("link", { name: /INV-2026-00433/ }).first().click();
   await page.waitForSelector("text=Check trail");
-  await beat(page, "Its check trail — 22 checks, nothing to report",
+  await beat(page, "Its check trail — 23 checks, nothing to report",
     "Every check it passed is recorded, not just the ones that failed.", 13);
 
   // --- 1:00 the IBAN mismatch, the moment --------------------------------

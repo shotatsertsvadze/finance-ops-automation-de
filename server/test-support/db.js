@@ -26,7 +26,9 @@ export async function testDeps() {
   await refuseSharedDatabase(pool);
   await reset(pool);
   const storage = createStorage(await mkdtemp(path.join(tmpdir(), "finops-test-")));
-  return { pool, storage, policy: loadPolicy({}), company: loadCompany({}) };
+  // No validator unless a test brings one (test-support/kosit.js); the real
+  // one is exercised by kosit-real.test.js, never by accident through .env.
+  return { pool, storage, policy: loadPolicy({}), company: loadCompany({}), officialValidator: { client: null, required: false } };
 }
 
 /**

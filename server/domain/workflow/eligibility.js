@@ -26,6 +26,11 @@ export const NON_OVERRIDABLE_CHECKS = [
   // The booking is built from the breakdown per rate; one that does not add
   // up, or names a rate without a tax key, would be booked on a guess (ADR-053).
   "tax_breakdown_bookable",
+  // The official validator's verdict is evidence, not an opinion to overrule;
+  // without one the document was not validated at all. Either way on is a
+  // new run: a corrected document, or a retry once the validator answers
+  // (ADR-078).
+  "official_validation",
 ];
 
 /** Returns the reasons this invoice may not become payable. Empty means eligible. */

@@ -16,6 +16,7 @@ import { createPool } from "../server/db.js";
 import { createStorage } from "../server/storage/files.js";
 import { loadPolicy } from "../server/config/policy.js";
 import { loadCompany } from "../server/config/company.js";
+import { officialValidatorFromEnv } from "../server/integrations/kosit.js";
 import { handleUpload } from "../server/domain/intake/intake.js";
 import { decideApprovalStep, decideReview } from "../server/domain/approvals/approvals.js";
 import { createAccountingRecord } from "../server/domain/accounting/accounting.js";
@@ -171,7 +172,13 @@ function rng(seed) {
 
 const iso = (date) => date.toISOString().slice(0, 10);
 
-export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
+const STATEMENT_FILE = new URL("../client/public/demo/statement_2026-09.json", import.meta.url);
+
+/**
+ * `statementFile: null` leaves the published statement alone: its dates follow
+ * today, so a test that wrote it would change a tracked file.
+ */
+export async function generateDemoData(deps, { count = 70, seed = 42, statementFile = STATEMENT_FILE } = {}) {
   const random = rng(seed);
   await seedDemoOrders(deps.pool);
   const today = new Date();
@@ -312,7 +319,7 @@ export async function generateDemoData(deps, { count = 70, seed = 42 } = {}) {
   summary.netted_amount = netting.total;
 
   await backdate(deps.pool, created, random);
-  Object.assign(summary, await settlePayments(deps, random));
+  Object.assign(summary, await settlePayments(deps, random, statementFile));
   // Counted from the audit trail: straight-through approvals happen inside the
   // upload, where the loop above does not see them.
   const { rows: [straight] } = await deps.pool.query(
@@ -350,7 +357,7 @@ const FIXTURE_TRANSACTIONS = [
  * would demonstrate nothing: the point of the stage is what happens when one
  * does not.
  */
-async function settlePayments(deps, random) {
+async function settlePayments(deps, random, statementFile) {
   const { rows: payments } = await deps.pool.query(
     `select p.reference, p.amount, p.currency, p.creditor_iban, p.creditor_name, i.updated_at
      from finops.payment_instructions p
@@ -403,10 +410,7 @@ async function settlePayments(deps, random) {
     note: "Synthetischer Kontoauszug, erzeugt von scripts/demo-data.js",
     transactions: [...FIXTURE_TRANSACTIONS, ...transactions],
   };
-  await writeFile(
-    new URL("../client/public/demo/statement_2026-09.json", import.meta.url),
-    `${JSON.stringify(statement, null, 2)}\n`,
-  );
+  if (statementFile) await writeFile(statementFile, `${JSON.stringify(statement, null, 2)}\n`);
 
   await importStatement(deps, { statement });
   const result = await runReconciliation(deps, { actor: human(USERS.finance) });
@@ -464,6 +468,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     storage: createStorage(process.env.STORAGE_DIR ?? "./storage"),
     policy: loadPolicy(),
     company: loadCompany(),
+    officialValidator: officialValidatorFromEnv(),
   };
   generateDemoData(deps, { count: Number(process.env.DEMO_COUNT ?? 70) })
     .then((summary) => {

@@ -107,11 +107,22 @@ npm run db:seed
 npm run dev                 # API on http://localhost:4400, UI on http://localhost:5400
 ```
 
+Official validation (optional in development, required in production): the
+pinned KoSIT validator runs as a local daemon and needs Java 11 or newer.
+Without it the check is skipped and says so.
+
+```bash
+npm run kosit:fetch         # pinned jar and configuration, SHA-256 checked, into vendor/kosit
+KOSIT_JAVA=/path/to/java npm run kosit   # daemon on 127.0.0.1:8081; leave KOSIT_JAVA out if `java` is 11+
+# then in .env: KOSIT_URL=http://127.0.0.1:8081
+```
+
 Tests:
 
 ```bash
 createdb finops_test
 npm test
+KOSIT_TEST_URL=http://127.0.0.1:8081 npm run test:kosit   # against the running validator
 ```
 
 Production (one process serves the API and the built client):
@@ -128,7 +139,7 @@ npm run build
 DATABASE_URL=$APP_URL npm start   # NODE_ENV=production
 ```
 
-`npm start` refuses to run while `dist/` is missing, while any account still has
+`npm start` refuses to run without `KOSIT_URL`, while `dist/` is missing, while any account still has
 the demo password, or while its database role could change the audit trail
 (the owner can; `finops_app` cannot). `DEMO_MODE=true` allows the demo password
 on purpose, for a hosted demo. Cookies are `Secure` in production, so it must sit behind HTTPS;
@@ -205,8 +216,12 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
   matrix, but no password reset, no second factor and no SSO. Accounts are
   seeded with a shared, documented password.
 - Only XRechnung in UBL syntax is parsed. CII and ZUGFeRD are adapter boundaries.
-- No official EN 16931 / XRechnung validator is wired in. The system checks the
-  declared profile and the structure it needs; it does not certify compliance.
+- Official validation is the KoSIT validator 1.6.3 with the XRechnung 3.0.2
+  configuration of 2026-08-31, pinned (ADR-078). The check reports its
+  assessment; the system certifies nothing. A rejected invoice cannot be
+  processed by hand yet: the supplier sends a corrected one. The call runs
+  inside the invoice's transaction, and the readiness check does not ask the
+  validator.
 - Accounting, payment and bank data are simulated.
 - Approval thresholds and savings figures are demo assumptions.
 
@@ -228,8 +243,11 @@ real deployment would still need:
 - **Operations.** Point-in-time database backups, originals in write-protected
   object storage for the retention period, a secrets manager, central logs
   with alerts on errors and stuck invoices, and a tested rollback path.
-- **The other e-invoice syntax.** CII and ZUGFeRD, plus the official KoSIT
-  validator.
+- **The other e-invoice syntax.** CII and ZUGFeRD; the validator already
+  carries their rules, the parser does not read them.
+- **The validator as a service.** A KoSIT container on an internal network,
+  its health in the readiness check, and a screen for the retry after an
+  outage.
 
 ## When an intake does not finish
 

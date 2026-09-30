@@ -27,7 +27,7 @@ course, this section wins.
 | Class | Item | Minimum that counts |
 |---|---|---|
 | Core, not dropped | Master-data control loop, supplier IBAN change only (section B) | proposal, independent call-back, approval, audited update, re-validation of the affected invoices; no supplier block, retire action or PO correction. **Implemented 2026-09-30 (ADR-077)** as "verify and add a new trusted supplier bank account" |
-| Core, not dropped | KoSIT official validation (section C, row 1) | every uploaded invoice carries the official result; fail closed when the validator is unreachable |
+| Core, not dropped | KoSIT official validation (section C, row 1) | every uploaded invoice carries the official result; fail closed when the validator is unreachable. **Implemented 2026-09-30 (ADR-078)** on `feat/kosit-official-validation` |
 | Core, not dropped | Course documentation (`docs/course/`) | stakeholders, risks, data protection, method and timeline, rollout, reflection; short |
 | Core, not dropped | Stable demo | `docs/DEMO.md` verified against a fresh run, including the new fraud-story steps |
 | Important, reducible | BI / ROI source labels (section E) | every figure labelled synthetic, assumption, baseline or pilot; "nicht gemessen" where nothing is measured |
@@ -75,7 +75,7 @@ be presented at any point, including early in the window.
 |---|---|---|
 | Wed 30 Sep | KoSIT feasibility spike; fixtures and demo generator made XRechnung-conformant | done: the validator runs here from the installed Java 17; KoSIT accepts every invoice meant to be valid (fixtures A-E, G-J; 65 of 70 generated) and rejects only the malformed ones |
 | Thu 1 - Wed 7 Oct | master-data loop: tests first, migration, domain, API, minimal screens, ADR, DEMO step for the fraud story | B uploaded, proposed, called back, approved, re-validated and signed, all through the UI. Implemented early, 2026-09-30, on `feat/master-data-iban-control` (ADR-077) |
-| Thu 8 - Fri 9 Oct | KoSIT adapter as a technical check; tests with a stub, one integration test that skips without the validator; CI runs it for real | every fixture carries an official validation result |
+| Thu 8 - Fri 9 Oct | KoSIT adapter as a technical check; tests with a stub, one integration test that skips without the validator; CI runs it for real | every fixture carries an official validation result. Implemented early, 2026-09-30 (ADR-078) |
 | Mon 12 Oct | BI source labels | no figure without its provenance |
 | Tue 13 - Wed 14 Oct | AI exception explanation | an ungrounded answer is never shown |
 | Thu 15 Oct | bug fixing, early course drafts | |
@@ -334,6 +334,15 @@ around the control, not as demonstrations of the intended path (the lesson of
 
 ### KoSIT: spike results and rules for its ADR
 
+**Built on 2026-09-30 as ADR-078.** Where the build differs from the notes
+below, ADR-078 holds: the raw report is kept in the `official_validations` row
+of its run rather than as a file next to the original; the Docker demo runs
+without a validator (the check reads "skipped"), so no second container was
+added; a rejected invoice cannot yet be processed by hand, so the
+`ACCEPT_FOR_MANUAL_PROCESSING` disposition is designed but not built; and
+every report is checked against the pinned validator and rule versions, so
+configuration drift fails closed instead of only being recorded.
+
 Spike, 30 September 2026:
 
 - Validator 1.6.3 with the XRechnung configuration 2026-08-31 (XRechnung 3.0.2)
@@ -510,7 +519,7 @@ the only one that needs measurement to justify itself.
 | No interviewees | medium | high | tax advisors and IHK as door-openers; the course network; start in week 1 |
 | A segregation gap in the master-data loop | medium | high | tests that attack the control; an independent review before merging, as in Phase 0 |
 | ZUGFeRD PDF handling as attack surface | medium | medium | extract only, never render, limits, the existing XML gate |
-| KoSIT configuration drift (yearly XRechnung releases) | medium | low | pinned version recorded in each check |
+| KoSIT configuration drift (yearly XRechnung releases) | medium | low | versions and SHA-256 pinned; each report is checked against them, so a drifted daemon fails closed (ADR-078) |
 | AI inaccuracy or over-trust | medium | medium | grounding check, suggestion-only storage, off by default, measured |
 | Data protection blocks a pilot | medium | high | the data-protection concept and processing agreement ready before the first contact asks |
 | Metrics compared across different definitions | medium | medium | provenance rule in code; the same time-log method on both sides |
