@@ -1,8 +1,7 @@
 import { useI18n } from "../../lib/i18n.js";
-
-const TONE = { PROPOSED: "chip-wait", VERIFIED: "chip-wait", APPROVED: "chip-ok", REJECTED: "chip-review", CANCELLED: "chip-neutral" };
+import { CHANGE_TONE, chip } from "../../lib/tones.js";
 
 export default function ChangeChip({ state }) {
   const { changeState } = useI18n();
-  return <span className={`chip ${TONE[state] ?? "chip-neutral"}`}>{changeState(state)}</span>;
+  return <span className={chip(CHANGE_TONE[state])}>{changeState(state)}</span>;
 }

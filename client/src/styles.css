@@ -6,7 +6,7 @@
 :root {
   --ink: #12161f;
   --ink-2: #39404f;
-  --ink-3: #6b7383;
+  --ink-3: #5f6878;
   --paper: #f7f8fa;
   --surface: #ffffff;
   --surface-2: #f0f2f6;
@@ -15,7 +15,7 @@
 
   --high: #c4142b;
   --high-bg: #fdeceE;
-  --medium: #b8730a;
+  --medium: #8a5a00;
   --medium-bg: #fdf3e3;
   --ok: #0f7b4f;
   --ok-bg: #e8f4ef;
@@ -93,11 +93,12 @@ a { color: inherit; }
   border-left: 2px solid transparent;
 }
 .nav a:hover { color: #fff; background: #1b2130; }
-.nav a[aria-current="page"] { color: #fff; background: #1b2130; border-left-color: var(--high); font-weight: 500; }
+.nav a[aria-current="page"] { color: #fff; background: #1b2130; border-left-color: #8fa8e0; font-weight: 500; }
+.rail .label { color: #8b94a6; }
 .nav-count { font-family: var(--mono); font-size: 11px; color: #8b94a6; }
 .nav a[aria-current="page"] .nav-count { color: #fff; }
 
-.rail-foot { margin-top: auto; padding: 0 20px; font-size: 10px; color: #6b7383; line-height: 1.6; }
+.rail-foot { margin-top: auto; padding: 0 20px; font-size: 10px; color: #8b94a6; line-height: 1.6; }
 .rail-foot p { margin: 14px 0 0; }
 
 .session { display: grid; gap: 1px; padding-bottom: 4px; border-bottom: 1px solid #262e3d; }
@@ -194,7 +195,8 @@ a { color: inherit; }
 .supplier-sub { color: var(--ink-3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The blocking reason sits in the list: no click needed to learn why. */
-.blocker { display: inline-flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--high); }
+.blocker { display: inline-flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--medium); }
+.blocker.is-failed { color: var(--high); }
 .blocker::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; transform: translateY(-2px); flex: none; }
 .blocker.is-wait { color: var(--ink-3); }
 
@@ -209,9 +211,11 @@ a { color: inherit; }
   white-space: nowrap;
   border: 1px solid transparent;
 }
-.chip-review { background: var(--high-bg); color: var(--high); border-color: #f3c9cf; }
-.chip-wait { background: var(--medium-bg); color: var(--medium); border-color: #f0dcbb; }
-.chip-ok { background: var(--ok-bg); color: var(--ok); border-color: #c2ded3; }
+/* Tones from lib/tones.js: one meaning per colour. */
+.chip-attention { background: var(--medium-bg); color: var(--medium); border-color: #f0dcbb; }
+.chip-failed { background: var(--high-bg); color: var(--high); border-color: #f3c9cf; }
+.chip-done { background: var(--ok-bg); color: var(--ok); border-color: #c2ded3; }
+.chip-active { background: var(--accent-bg); color: var(--accent); border-color: #cdd8f0; }
 .chip-neutral { background: var(--surface-2); color: var(--ink-2); border-color: var(--line-strong); }
 
 /* ---------- upload ---------- */
@@ -296,12 +300,15 @@ select {
 .spine li.done::before { background: var(--ink-3); border-color: var(--ink-3); }
 .spine li.done::after { background: var(--line-strong); }
 .spine li.current::before { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
-.spine li.blocked::before { background: var(--high); border-color: var(--high); box-shadow: 0 0 0 3px var(--high-bg); }
+.spine li.off.attention::before { background: var(--medium); border-color: var(--medium); box-shadow: 0 0 0 3px var(--medium-bg); }
+.spine li.off.failed::before { background: var(--high); border-color: var(--high); box-shadow: 0 0 0 3px var(--high-bg); }
+.spine li.off.neutral::before { background: var(--ink-3); border-color: var(--ink-3); }
 .spine-name { font-size: 13px; color: var(--ink-3); }
 .spine li.done .spine-name { color: var(--ink-2); }
-.spine li.current .spine-name, .spine li.blocked .spine-name { color: var(--ink); font-weight: 600; }
+.spine li.current .spine-name, .spine li.off .spine-name { color: var(--ink); font-weight: 600; }
 .spine-note { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
-.spine li.blocked .spine-note { color: var(--high); }
+.spine li.off.attention .spine-note { color: var(--medium); }
+.spine li.off.failed .spine-note { color: var(--high); }
 
 /* ---------- facts ---------- */
 .facts { display: grid; grid-template-columns: 1fr; gap: 10px; }

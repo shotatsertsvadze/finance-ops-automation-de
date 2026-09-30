@@ -112,7 +112,7 @@ export default function DashboardView() {
               <Metric label={t("kpiApprovalOpen")} value={workload.awaiting_approval} link="/freigaben" />
               <Metric label={t("kpiInfoOpen")} value={workload.awaiting_information} />
               <Metric label={t("kpiReconciliationUnclear")} value={workload.reconciliation_exceptions} link="/zahlungen"
-                      tone={workload.reconciliation_exceptions > 0 ? "high" : null} />
+                      tone={workload.reconciliation_exceptions > 0 ? "medium" : null} />
               <Metric label={t("kpiPaymentsFailed")} value={workload.failed_payments}
                       tone={workload.failed_payments > 0 ? "high" : null} />
               <Metric label={t("kpiDueIn7")} value={workload.due_within_7_days} tone={workload.due_within_7_days > 0 ? "medium" : null} />

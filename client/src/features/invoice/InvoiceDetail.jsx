@@ -10,6 +10,7 @@ import EvidenceRow from "./EvidenceRow.jsx";
 import ActionPanel from "./ActionPanel.jsx";
 import InvoiceBankPanel from "../bank-changes/InvoiceBankPanel.jsx";
 import AiExplanation from "./AiExplanation.jsx";
+import { STEP_TONE, chip } from "../../lib/tones.js";
 
 export default function InvoiceDetail({ may, onChanged }) {
   const { t, errorText, role, action, reviewReason, auditReason, formatDate, formatDateTime, formatMoney } = useI18n();
@@ -222,7 +223,7 @@ export default function InvoiceDetail({ may, onChanged }) {
                       <div className="step-line">
                         <span className="step-no">{step.step_no}</span>
                         <span>{role(step.required_role)}</span>
-                        <span className={`chip ${step.status === "PENDING" ? "chip-wait" : "chip-ok"}`}>
+                        <span className={chip(STEP_TONE[step.status])}>
                           {step.status === "PENDING" ? t("stepOpen") : step.status}
                         </span>
                         {step.actor_name && <span className="hint">{step.actor_name}</span>}
