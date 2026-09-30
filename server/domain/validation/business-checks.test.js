@@ -321,13 +321,21 @@ test("a line charge with no indicator is not guessed at either", () => {
   assert.match(lines(r).actual, /Kennzeichen/);
 });
 
-test("a line with no price is reported as unchecked, not as correct", () => {
-  const r = runXml(withLine([['<cac:Price><cbc:PriceAmount currencyID="EUR">1000.00</cbc:PriceAmount></cac:Price>',
-                              "<cac:Price></cac:Price>"]]));
-  const c = lines(r);
-  assert.equal(c.status, "SKIPPED");
-  assert.match(c.actual, /Position 1/);
-});
+// A line that cannot be recomputed is not a line that was checked, and a
+// SKIPPED check does not stop routing: it fails like a wrong line (ADR-081).
+const unrecomputable = {
+  "no price": [['<cac:Price><cbc:PriceAmount currencyID="EUR">1000.00</cbc:PriceAmount></cac:Price>', "<cac:Price></cac:Price>"]],
+  "no quantity": [['<cbc:InvoicedQuantity unitCode="C62">1</cbc:InvoicedQuantity>', ""]],
+  "a base quantity of zero": [["<cac:Price>", '<cac:Price><cbc:BaseQuantity unitCode="C62">0</cbc:BaseQuantity>']],
+};
+for (const [what, replacements] of Object.entries(unrecomputable)) {
+  test(`a line with ${what} fails as HIGH, not as unchecked`, () => {
+    const c = lines(runXml(withLine(replacements)));
+    assert.equal(c.status, "FAILED");
+    assert.equal(c.severity, "HIGH");
+    assert.equal(c.actual, "Position 1: Menge oder Einzelpreis nicht lesbar");
+  });
+}
 
 test("a reviewer may accept a line the supplier miscalculated", () => {
   // Unlike the totals chain, this is a business fact a person can judge

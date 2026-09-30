@@ -13,7 +13,7 @@ import { SCENARIOS, runScenario, scenarioFixture } from "../../test-support/ai-s
 import { AI_OFF, aiEnabled, fakeExplainer, replies, sentInput } from "../../test-support/ai.js";
 import { human } from "../workflow/transitions.js";
 import { handleUpload, processInvoice } from "../intake/intake.js";
-import { standInValidator } from "../../test-support/kosit.js";
+import { ANSWERS, standInValidator } from "../../test-support/kosit.js";
 import { loadEvidence } from "./evidence.js";
 import { buildExplanationInput } from "./explanation-input.js";
 import { currentExplanation, requestExplanation } from "./explanations.js";
@@ -216,6 +216,71 @@ test("no supplier's number, name or VAT id leaves the system, even when a check 
     );
     assert.match(kept.actual, /S-10\d\d|DE777777777/, `${what}: the evidence itself still names the supplier`);
   }
+});
+
+// A value typed into any field of a document can be personal data: a name,
+// an address, a phone number. Wherever a check repeats such a value, it stays
+// in the evidence on screen and is not sent (ADR-082).
+const PLANTED = "Qxmarker Mustermann, Privatweg 8, +49 30 1234567";
+const LEAKED = /qxmarker|mustermann|privatweg|1234567/i;
+const G = readFileSync(new URL("../../../fixtures/xrechnung/G_clean_380.xml", import.meta.url), "utf8");
+const planted = {
+  "an amount that is not a number": ['<cbc:PayableAmount currencyID="EUR">380.00<', `<cbc:PayableAmount currencyID="EUR">${PLANTED}<`],
+  "a date": ["<cbc:IssueDate>2026-09-15<", `<cbc:IssueDate>${PLANTED}<`],
+  "the declared profile": [/<cbc:CustomizationID>[^<]*</, `<cbc:CustomizationID>${PLANTED}<`],
+  "the currency": ["<cbc:DocumentCurrencyCode>EUR<", `<cbc:DocumentCurrencyCode>${PLANTED}<`],
+  "the IBAN field": ["<cbc:ID>DE89370400440532013000<", `<cbc:ID>${PLANTED}<`],
+  "a tax rate": ["<cbc:Percent>19<", `<cbc:Percent>${PLANTED}<`],
+  "a line id": ['<cbc:ID>1</cbc:ID>\n    <cbc:InvoicedQuantity unitCode="XBX">20<', `<cbc:ID>${PLANTED}</cbc:ID>\n    <cbc:InvoicedQuantity unitCode="XBX">21<`],
+};
+
+async function uploadWith(xml, officialValidator = standInValidator()) {
+  const upload = { buffer: Buffer.from(xml), originalFilename: "planted.xml", sourceChannel: "UPLOAD", actor: human(USERS.clerk) };
+  return (await handleUpload({ ...deps, officialValidator }, upload)).id;
+}
+
+async function assertNotSent(what, id) {
+  const fake = withProvider(replies.timeout);
+  await requestExplanation(deps, id, "de", REVIEWER);
+  assert.equal(fake.calls.length, 1, `${what}: the provider was asked`);
+  assert.doesNotMatch(`${fake.calls[0].system}\n${fake.calls[0].message}`, LEAKED, what);
+  const { rows } = await deps.pool.query("select 1 from finops.validation_results where invoice_id = $1 and concat(actual, reason) ~* 'qxmarker'", [id]);
+  assert.ok(rows.length > 0, `${what}: the evidence kept here still shows it`);
+}
+
+for (const [what, [from, to]] of Object.entries(planted)) {
+  test(`a value planted in ${what} stays out of the provider request`, async () => {
+    await deps.pool.query("delete from finops.invoices");
+    const xml = G.replace(from, to);
+    assert.notEqual(xml, G, `${what}: the fixture no longer contains the field`);
+    await assertNotSent(what, await uploadWith(xml));
+  });
+}
+
+test("a value planted in a duplicated invoice number stays out of the provider request", async () => {
+  await deps.pool.query("delete from finops.invoices");
+  const xml = G.replace("<cbc:ID>INV-2026-00433<", `<cbc:ID>${PLANTED}<`);
+  await uploadWith(xml);
+  await assertNotSent("an invoice number", await uploadWith(`${xml}<!-- sent again -->\n`));
+});
+
+test("the KoSIT validator's own message, which quotes the document, stays out of the provider request", async () => {
+  await deps.pool.query("delete from finops.invoices");
+  // The captured report of the pinned validator, quoting the planted value as it quotes '19,00'.
+  const quoting = (buffer) => {
+    const answer = ANSWERS.reject(buffer);
+    return { ...answer, report: answer.report.replace("'19,00'", `'${PLANTED}'`) };
+  };
+  const id = await uploadWith(G, standInValidator(quoting));
+  const fake = withProvider(replies.timeout);
+  await requestExplanation(deps, id, "de", REVIEWER);
+  const official = sentInput(fake.calls[0]).failed.find((c) => c.check === "official_validation");
+  assert.match(official.actual, /cvc-datatype-valid\.1\.2\.1/, "the rule codes are sent");
+  assert.doesNotMatch(fake.calls[0].message, LEAKED);
+  const { rows: [kept] } = await deps.pool.query(
+    "select reason from finops.validation_results where invoice_id = $1 and check_code = 'official_validation'", [id],
+  );
+  assert.match(kept.reason, /Qxmarker/, "the full message stays in the evidence");
 });
 
 test("no workflow, routing, approval, master-data or payment code imports the AI modules", () => {

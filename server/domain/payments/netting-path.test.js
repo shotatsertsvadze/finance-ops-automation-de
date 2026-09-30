@@ -228,3 +228,107 @@ test("two credits are both applied, oldest first", async () => {
   assert.equal((await instruction(invoice.id)).amount, "357.00", "595.00 less two credits of 119.00");
   assert.equal((await applications(invoice.id)).length, 2);
 });
+
+// --- two at once (ADR-083) ----------------------------------------------------
+//
+// Two sessions reach the same credit note. The first holds its lock while the
+// second waits for it; what the second may use is what is left once the
+// first has committed, never the balance it would have read before.
+
+/** Supplier's credit note: its gross amount and everything applied from it. */
+async function ledger(note) {
+  const { rows: [row] } = await deps.pool.query(
+    `select i.gross_amount, coalesce(sum(a.amount), 0)::numeric(14,2)::text as applied
+     from finops.invoices i left join finops.credit_applications a on a.credit_note_id = i.id and a.released_at is null
+     where i.id = $1 group by i.gross_amount`, [note.id],
+  );
+  return row;
+}
+
+async function lockWaiters() {
+  const { rows: [row] } = await deps.pool.query(
+    "select count(*)::int as n from pg_stat_activity where datname = current_database() and wait_event_type = 'Lock'",
+  );
+  return row.n;
+}
+
+async function untilLockWaiters(n) {
+  for (let i = 0; i < 250; i += 1) {
+    if ((await lockWaiters()) >= n) return;
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error(`expected ${n} sessions waiting on a lock`);
+}
+
+/**
+ * Runs `first` until it is about to write its credit applications, holding the
+ * credit-note locks it took; starts `second` while it waits; then lets
+ * `first` commit. A third session holding the ledger table in SHARE mode is
+ * what stops `first` at exactly that point.
+ */
+async function interleaved(first, second) {
+  const blocker = await deps.pool.connect();
+  try {
+    await blocker.query("begin");
+    await blocker.query("lock table finops.credit_applications in share mode");
+    const one = first();
+    await untilLockWaiters(1);
+    const two = second();
+    await untilLockWaiters(2);
+    await blocker.query("commit");
+    return await Promise.allSettled([one, two]);
+  } finally {
+    blocker.release();
+  }
+}
+
+const pay = (invoice) => () => createPaymentInstruction(deps, { invoiceId: invoice.id, actor: finance() });
+const settle = (invoice) => () => settleByCredit(deps, { invoiceId: invoice.id, actor: finance() });
+
+test("payment against payment: the credit is spent once, and the second payment is the full amount", async () => {
+  const note = await bookedCredit(10000); // 119.00
+  const a = await readyToPay(20000); // 238.00
+  const b = await readyToPay(20000);
+  const results = await interleaved(pay(a), pay(b));
+  assert.deepEqual(results.map((r) => r.status), ["fulfilled", "fulfilled"]);
+  assert.deepEqual([(await instruction(a.id)).amount, (await instruction(b.id)).amount], ["119.00", "238.00"]);
+  assert.deepEqual(await ledger(note), { gross_amount: "119.00", applied: "119.00" });
+});
+
+test("settlement against payment: the payment uses only the balance the settlement left", async () => {
+  const note = await bookedCredit(30000); // 357.00
+  const a = await readyToPay(20000); // 238.00, covered
+  const b = await readyToPay(20000);
+  const results = await interleaved(settle(a), pay(b));
+  assert.deepEqual(results.map((r) => r.status), ["fulfilled", "fulfilled"]);
+  assert.equal(await stateOf(a.id), "SETTLED_BY_CREDIT");
+  assert.equal((await instruction(b.id)).amount, "119.00", "238.00 less the 119.00 left");
+  assert.deepEqual(await ledger(note), { gross_amount: "357.00", applied: "357.00" });
+});
+
+test("payment against settlement: an invoice the spent credit no longer covers is not settled", async () => {
+  const note = await bookedCredit(20000); // 238.00
+  const a = await readyToPay(40000); // 476.00
+  const b = await readyToPay(20000); // 238.00, covered only before a's payment
+  const [paid, settled] = await interleaved(pay(a), settle(b));
+  assert.equal(paid.status, "fulfilled");
+  assert.equal(settled.status, "rejected");
+  assert.equal(settled.reason.code, "NOT_FULLY_CREDITED");
+  assert.equal(await stateOf(b.id), "ACCOUNTING_READY");
+  assert.equal((await instruction(a.id)).amount, "238.00");
+  assert.deepEqual(await applications(b.id), []);
+  assert.deepEqual(await ledger(note), { gross_amount: "238.00", applied: "238.00" });
+});
+
+test("unforced, repeated: two payments at once never spend more than the credit", async () => {
+  for (let run = 0; run < 5; run += 1) {
+    await deps.pool.query("delete from finops.invoices");
+    const note = await bookedCredit(10000); // 119.00
+    const a = await readyToPay(20000); // 238.00
+    const b = await readyToPay(20000);
+    await Promise.all([pay(a)(), pay(b)()]);
+    assert.deepEqual(await ledger(note), { gross_amount: "119.00", applied: "119.00" }, `run ${run}`);
+    const amounts = [(await instruction(a.id)).amount, (await instruction(b.id)).amount].sort();
+    assert.deepEqual(amounts, ["119.00", "238.00"], `run ${run}: one netted, one in full`);
+  }
+});

@@ -9,6 +9,7 @@ import { getInvoiceDetail } from "../invoice/queries.js";
 import { decideReview } from "../approvals/approvals.js";
 import { SYSTEM, human, transition } from "../workflow/transitions.js";
 import { withTransaction } from "../../db.js";
+import { ANSWERS, standInValidator } from "../../test-support/kosit.js";
 
 const fixture = (name) => readFileSync(new URL(`../../../fixtures/xrechnung/${name}`, import.meta.url));
 let deps;
@@ -87,6 +88,31 @@ test("a rate with no tax key stops the invoice, and review cannot release it", a
     () => decideReview(deps, { invoiceId: id, action: "accept", actor: human(USERS.clerk), comment: "passt" }),
     (error) => error.code === "NOT_PAYABLE_ELIGIBLE" && error.details.blockers.includes("tax_breakdown_bookable"),
   );
+});
+
+// --- a line that cannot be recomputed (ADR-081) ------------------------------
+
+const withoutQuantity = (number) => buildInvoiceXml({ number, netCents: 20000, po: "PO-2026-0101" })
+  .replace('<cbc:InvoicedQuantity unitCode="C62">1</cbc:InvoicedQuantity>', "");
+
+test("without a validator, an invoice whose line has no quantity goes to review, not straight through", async () => {
+  const { id } = await uploadXml(withoutQuantity("NOQTY-DEV-1"), "noqty.xml");
+  const d = await detail(id);
+  assert.equal(checkOf(d, "line_amounts_consistent").status, "FAILED");
+  assert.equal(d.state, "REVIEW_REQUIRED", "238.00 is under the auto-approve limit and must still stop");
+  assert.equal(d.review_reason, "LINE_AMOUNTS_CONSISTENT");
+});
+
+test("a required validator that is missing or unreachable still stops the same invoice first", async () => {
+  const validators = { missing: { client: null, required: true }, unreachable: standInValidator(ANSWERS.unavailable) };
+  for (const [what, officialValidator] of Object.entries(validators)) {
+    const { id } = await handleUpload({ ...deps, officialValidator }, {
+      buffer: Buffer.from(withoutQuantity(`NOQTY-${what}`)), originalFilename: "noqty.xml", sourceChannel: "UPLOAD", actor: SYSTEM,
+    });
+    const d = await detail(id);
+    assert.equal(d.state, "REVIEW_REQUIRED", what);
+    assert.equal(d.review_reason, "TECHNICAL_VALIDATION_FAILED", what);
+  }
 });
 
 test("D: same supplier and number in a different file is flagged, not processed", async () => {

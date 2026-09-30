@@ -892,6 +892,10 @@ supplier's own arithmetic error inside a line.
 
 ## ADR-048 A line amount is recomputed, not taken on trust
 
+**Partly superseded by ADR-081 (2026-09-30):** a line that cannot be
+recomputed is FAILED, not SKIPPED. The first supporting decision below no
+longer holds.
+
 Completes ADR-047 and closes the last of L3's totals half.
 
 ADR-047 verifies the chain from the line total to the amount due, and that
@@ -984,6 +988,10 @@ reconciliation, the part of the system with the most safety rules in it. That
 is a larger piece of work and is named here rather than half-built.
 
 ## ADR-050 A booked credit reduces the next payment, and the ledger says which
+
+**Partly superseded by ADR-083 (2026-09-30):** reading the credits `for update`
+did not stop two payments spending the same credit; the balance is now read
+after the lock is held. The sentence on the lock below did not hold.
 
 Completes ADR-049, which booked credit notes and left settlement outside the
 system. A credit note now offsets the next payment to the same supplier.
@@ -1837,6 +1845,10 @@ Consequences:
 
 ## ADR-080 An AI model may explain why an invoice stopped; it never decides
 
+**Partly superseded by ADR-082 (2026-09-30):** which evidence is sent is now
+decided by an allowlist per check. The list of what is masked and never sent
+under "Input" below was not what the code guaranteed.
+
 Context: the system already knows why an invoice stopped, as structured
 checks with expected and found values. A reviewer still has to turn several
 of them into one picture, and exceptions are the most expensive step (25
@@ -1923,3 +1935,125 @@ Consequences:
   Real-provider quality and acceptance-rate evaluation against the configured
   Anthropic model is still pending because external paid API usage is not
   enabled for this project. `npm run ai:eval` stays for when it is.
+
+## ADR-081 A line that cannot be recomputed stops the invoice
+
+Supersedes the first supporting decision of ADR-048. Corrective hardening
+during the feature freeze; no behaviour is added.
+
+Context: ADR-048 reported a line it could not recompute as SKIPPED, so that
+a mixture of verified and unverifiable lines was not shown as PASSED. That was
+right about the report and wrong about the consequence. Routing stops only on
+FAILED checks, and a SKIPPED check is severity INFO. A missing quantity or unit
+price is not a numeric error either: `amounts_numeric` asks whether a stated
+value is a number, not whether it is stated. So an invoice whose line had no
+quantity passed every check that ran, and under the auto-approve limit it was
+APPROVED without a person.
+
+This held only where no validator is configured (development, the Docker demo,
+the tests). With a validator required, the pinned KoSIT rules reject such a
+document first (BR-22, BR-26, PEPPOL-EN16931-R121, checked against 1.6.3 with
+XRechnung 3.0.2), and an unreachable validator fails closed (ADR-078). The
+protection was real in production, but it came from the external rule set,
+not from this application's own rule.
+
+Decision: a line whose quantity, unit price, base quantity, declared amount or
+line allowances cannot be read into a product is an issue of
+`line_amounts_consistent`, FAILED with severity HIGH, stated as "Position n:
+Menge oder Einzelpreis nicht lesbar". It stays overridable, like a
+miscalculated line: a reviewer can read the order and judge it.
+
+Not changed: SKIPPED keeps its meaning everywhere else. A check that does not
+apply (no purchase order, an unknown supplier) is not evidence against the
+invoice, and making every SKIPPED block routing would stop invoices for
+questions that were never asked.
+
+Consequences: no invoice of the demo month changes; none of them has a line
+that cannot be recomputed. The English dictionary loses the SKIPPED text of
+this check, which can no longer occur.
+
+## ADR-082 What an AI explanation is sent is allowlisted per check
+
+Supersedes the masking part of ADR-080's input. Corrective hardening during
+the feature freeze; no behaviour is added.
+
+Context: ADR-080 sent every failed check's expected, found and reason text,
+cleaned: IBAN-shaped strings masked, e-mail addresses and the four known names
+(supplier, document supplier, buyer, company) removed. Many checks repeat what
+the document says. A monetary field, a date, the declared profile, the
+currency, the IBAN field, a tax rate, a line id or a duplicated invoice number
+went to the provider verbatim; so did the KoSIT validator's own message, which
+quotes the offending value ("'...' is not a valid value for 'decimal'"). A
+name, an address or a phone number typed into any of those fields reached the
+provider, and no pattern recognises every such value. The claim that no names
+or contact details are sent was true only of the fields designated as
+identities.
+
+Decision: `domain/ai/outbound.js` names, per check, what of `expected`,
+`actual` and `reason` may be sent: as it is, only when the application composes
+the text itself (fixed sentences, field labels, status codes, computed amounts,
+KoSIT rule codes); as a fixed text in its place (a duplicated number becomes
+"Rechnungsnummer desselben Lieferanten bereits im Bestand", the validator's
+message becomes a fixed sentence while its rule codes stay); or through a
+function (an IBAN field is sent as its first and last four characters only if
+the whole value is an IBAN, otherwise withheld). Everything else is replaced by
+"(Wert aus dem Dokument, nicht übermittelt)". A check the allowlist does not
+name sends its code, phase and severity only. The cleaning of ADR-080 still runs
+over what is sent, as a second line.
+
+A test fails when a check that can fail or warn is missing from the allowlist,
+so a new check is a decision, not a default. Another plants a marker in each of
+the fields above and asserts it is absent from the request the provider
+receives.
+
+Not changed: the evidence on screen, in the database and in the audit trail
+keeps every value, and the KoSIT report is stored as before. AI stays off by
+default.
+
+Consequences: explanations say less about some failures: a line mismatch no
+longer states its amounts, because lines are named by the document's own ids;
+a non-numeric amount no longer names its value. The verifier refuses an answer
+that cites a value it was not given, so two committed evaluation scenarios
+(duplicate, KoSIT rejection) were regenerated and their accepted answers no
+longer quote the invoice number or the rejected values. What is guaranteed is
+narrower than "no personal data": no value read from the document is sent
+unless its check is classified as composed by the application. Master data the
+application holds (an order status, a masked IBAN) can still be sent.
+
+## ADR-083 A credit's balance is read after its lock is held
+
+Supersedes the locking sentence of ADR-050. Corrective hardening during the
+feature freeze; no behaviour is added.
+
+Context: `openCreditsFor` computed each credit note's open balance (its gross
+amount less the sum of its applications) in the same statement that locked it
+`for update`. PostgreSQL runs at READ COMMITTED here, and a statement reads
+from the snapshot it took when it started. A second payment that started its
+statement while the first held the lock waited, got the row once the first
+committed, and returned the balance from its own, earlier snapshot. The first
+payment had not changed the credit-note row, only inserted into
+`credit_applications`, so nothing made PostgreSQL re-read it. Two payments
+to one supplier at once spent the same credit twice (in 20 of 20 unforced
+runs), and a settlement could close an invoice with credit a payment had just
+spent. The unique index on (credit note, invoice) stops one invoice using a
+credit twice, not two invoices sharing one.
+
+Decision: lock first, read second. One statement locks the supplier's booked
+credit notes `for update`, in the order the netting uses (issue date, then
+number); a second statement, whose snapshot starts after the locks are held,
+computes their open balances, and reads only the notes it locked. The credit
+applications are written while the locks are held, in the same transaction.
+Both paths that consume credit, the payment instruction and settlement by
+credit, go through this one function.
+
+Rejected: SERIALIZABLE, which would need retry handling the transactions do not
+have; REPEATABLE READ, which keeps the earlier snapshot and so the stale
+balance; an advisory lock, which is a second mechanism for what the row lock
+already serialises; a stored balance with a check constraint, which needs a
+migration and belongs to a pilot, not to this fix.
+
+Consequences: payments to the same supplier that hold open credits run one
+after another at that point, which they already did while waiting for the
+lock. No demo figure changes: the demo instructs its payments one at a time.
+Tests hold the first session at its write with a third session, so the
+interleaving is forced rather than hoped for.

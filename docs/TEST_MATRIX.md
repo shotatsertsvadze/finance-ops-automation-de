@@ -126,7 +126,8 @@ browser).
 | B14 | A line amount that does not follow from quantity and price | `line_amounts_consistent` HIGH, totals still PASSED | AUTO | `business-checks.test.js` |
 | B15 | A price stated per base quantity | PASSED; the base quantity divides the price | AUTO | `business-checks.test.js` |
 | B16 | A line discount the line amount reflects, and one it ignores | PASSED, then FAILED | AUTO | `business-checks.test.js` |
-| B17 | A line that cannot be recomputed | SKIPPED, not PASSED | AUTO | `business-checks.test.js` |
+| B17 | A line that cannot be recomputed: no quantity, no price, a base quantity of zero | `line_amounts_consistent` FAILED HIGH, "Menge oder Einzelpreis nicht lesbar"; overridable like B18 (ADR-081, was SKIPPED under ADR-048) | AUTO | `business-checks.test.js` |
+| B17a | The same invoice under the auto-approve limit, no validator configured | REVIEW_REQUIRED, `LINE_AMOUNTS_CONSISTENT`, never APPROVED; with a required validator missing or unreachable it still stops first as `TECHNICAL_VALIDATION_FAILED` | AUTO | `intake.test.js` |
 | B18 | A reviewer may accept a miscalculated line | not in payableBlockers, unlike `totals_consistent` | AUTO | `business-checks.test.js` |
 | B19 | Quantity times price is exact, not floating point | half a cent rounds away from zero; no precision lost on large lines | AUTO | `money.test.js` |
 | B20 | Fixture I behaves as the README table promises | no FAILED check, 499.80 EUR due, approved automatically | AUTO | `business-checks.test.js` |
@@ -314,6 +315,8 @@ described as working.
 | M21 | An invoice the credits cover entirely | 409 `FULLY_CREDITED`; settles through its own action | AUTO | `netting-path.test.js` |
 | M22 | Settling an invoice with a remainder | 409 `NOT_FULLY_CREDITED`, nothing consumed | AUTO | `netting-path.test.js` |
 | M23 | A credit applied twice to one invoice | refused by the unique index | AUTO | `netting-path.test.js` |
+| M23a | Two sessions reach the same credit note at once, the second waiting for the first's lock: payment against payment, settlement against payment, payment against settlement | the credit is spent once; the second sees only what the first left (119.00 of 357.00 after a settlement; nothing after a payment, so it pays in full); an invoice the spent credit no longer covers is refused `NOT_FULLY_CREDITED` and stays ACCOUNTING_READY (ADR-083) | AUTO | `netting-path.test.js` "payment against payment", "settlement against payment", "payment against settlement"; a third session holds the ledger table so the first stops with its locks held |
+| M23b | Two payment instructions at once, unforced, five runs | never more applied than the credit; one netted, one in full | AUTO | `netting-path.test.js` "unforced, repeated"; before ADR-083 the credit was spent twice in 20 of 20 runs |
 | M24 | What was applied is on the audit trail | gross, amount applied and the credit notes used | AUTO | `netting-path.test.js` |
 | M25 | A netted payment reconciles | bank line -476.00 matched against the instruction, no rule changed | MANUAL | End-to-end probe, 2026-09-18: imported, matched, RECONCILED |
 | M26 | A partly used credit keeps its remainder | 476.00 credit, 119.00 applied, 357.00 left | AUTO | `netting-path.test.js` |
@@ -409,6 +412,8 @@ model, and real-provider evaluation is pending (L16, AI24).
 | AI11 | Labelled as AI and not a decision | the API marks `ai_generated: true` with provider and model; the badge reads "KI-generierter Vorschlag – keine Entscheidung" / "AI-generated suggestion – not a decision" | AUTO | `explanations.test.js`; `dictionaries.test.js` |
 | AI12 | A newer validation run | the old run's explanation is kept but not shown as current; asking again explains run 2 | AUTO | `explanations.test.js` "an explanation belongs to its validation run" |
 | AI13 | What leaves the system | exactly the recorded input: no full IBAN, name, file name, path or e-mail; keys exactly the contract. No supplier number, name or VAT id, even when a check is about which supplier it is (an order of another supplier, an unknown supplier): those are sent as the relationship; the stored evidence still names them | AUTO | `explanations.test.js` "only the minimised evidence", "no supplier's number, name or VAT id"; `explanation-input.test.js` |
+| AI13a | A value typed into the document, repeated by a failed check: an amount, a date, the profile, the currency, the IBAN field, a tax rate, a line id, a duplicated invoice number, the KoSIT validator's message quoting it | none of it in the provider request; the stored evidence still shows it; KoSIT rule codes are sent, its message text is not (ADR-082) | AUTO | `explanations.test.js` "a value planted in", "the KoSIT validator's own message"; `explanation-input.test.js` |
+| AI13b | A check the allowlist does not name | sends its code, phase and severity only; expected, found and reason are withheld; every check that can fail or warn is named, and no stale entry remains | AUTO | `explanation-input.test.js` "a check nobody has classified", "every check that can fail or warn is classified" |
 | AI14 | Language and model in the cache key | German and English are separate explanations; another model never reuses an accepted answer | AUTO | `explanations.test.js`; mutation check 2026-09-30: without the model in the key, 12 tests fail |
 | AI15 | Verification switched off | a refused answer would be shown | AUTO | mutation check 2026-09-30: accepting every answer fails 2 tests |
 | AI16 | Two requests at once | one accepted row | AUTO | `explanations.test.js` |

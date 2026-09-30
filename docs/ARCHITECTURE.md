@@ -94,7 +94,8 @@ finance-ops-automation-de/
       purchase-orders/     commitments.js (capacity ledger)
       bank-changes/        a new supplier bank account: proposal, call-back verification, approval, revalidation (ADR-077)
       ai/                  AI explanation of a stopped invoice: evidence.js, explanation-input.js (minimised,
-                           masked), prompt.js, grounding.js (the verifier), explanations.js (ADR-080)
+                           masked), outbound.js (what evidence may be sent, ADR-082), prompt.js,
+                           grounding.js (the verifier), explanations.js (ADR-080)
       accounting/ payments/ cancellation/ reconciliation/ kpi/
     routes/                auth, session, health, invoices, master-data, bank-changes, money
     storage/               files.js (store/read original file)
@@ -402,7 +403,7 @@ invoice make sense for Nordwerk":
 | `po_exists` | HIGH | PO reference present but unknown |
 | `po_supplier_match` | HIGH | PO belongs to another supplier |
 | `po_amount_within_tolerance` | HIGH | net amount exceeds PO remaining amount by more than tolerance |
-| `line_amounts_consistent` | HIGH | a line's declared amount differs from quantity x unit price / base quantity - allowances + charges by more than 0.01; overridable, unlike the totals chain |
+| `line_amounts_consistent` | HIGH | a line's declared amount differs from quantity x unit price / base quantity - allowances + charges by more than 0.01, or a line cannot be recomputed (quantity, price or base quantity missing or unreadable, ADR-081); overridable, unlike the totals chain |
 | `credit_note_reference` | MEDIUM | a credit note names no invoice (asked only of credit notes) |
 | `totals_consistent` | HIGH | any link of the EN 16931 chain is off by more than 0.01: lines vs. declared line total, allowances and charges vs. their totals, lines - allowances + charges vs. net, net + VAT vs. gross, gross - prepaid + rounding vs. the amount due |
 | `tax_breakdown_bookable` | HIGH | no per-rate breakdown, a rate without a tax key (e.g. reverse charge), a rate's tax not base x rate within 0.01, or the breakdown not summing exactly to net and VAT; not overridable (ADR-053) |
@@ -545,10 +546,13 @@ expired, and signing in again stays on the same page (ADR-057).
   exposes it. Its answers are evidence insert-only for the app role; a
   production start is refused without `KOSIT_URL` (ADR-078).
 - AI explanations are off unless `AI_EXPLANATIONS=true`. When a reviewer asks,
-  only masked check evidence leaves the system (IBANs as first and last four
-  characters; no supplier number, name or VAT id, no contacts, document or
-  comments), and exactly what was
-  sent is stored. The answer is verified before it is shown and changes
+  only check evidence the allowlist in `ai/outbound.js` names leaves the system:
+  text the application composes (fixed sentences, field labels, status codes,
+  computed amounts, KoSIT rule codes) and IBANs as their first and last four
+  characters. A value repeated from the document, the validator's message and
+  supplier or buyer identities are replaced by a fixed description; a check
+  not in the allowlist sends none of its evidence (ADR-082). No document,
+  file name or comments are sent, and exactly what was sent is stored. The answer is verified before it is shown and changes
   nothing; a production start with AI on and no key is refused. A real
   deployment needs a provider and data-processing review first. Structurally
   tested with a stand-in provider; real-provider evaluation is pending (ADR-080).

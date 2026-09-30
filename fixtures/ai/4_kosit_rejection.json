@@ -24,7 +24,7 @@
         "phase": "TECHNICAL",
         "severity": "HIGH",
         "expected": "Dezimalzahlen mit Punkt",
-        "actual": "taxAmount=19,00, line 1 quantity=zwei",
+        "actual": "(Wert aus dem Dokument, nicht übermittelt)",
         "reason": "Beträge oder Mengen sind nicht numerisch"
       },
       {
@@ -33,7 +33,7 @@
         "severity": "HIGH",
         "expected": "KoSIT 1.6.3, xrechnung-3.0.2-validator-configuration-2026-08-31: annehmbar",
         "actual": "nicht annehmbar: 5 Fehler (cvc-datatype-valid.1.2.1, cvc-complex-type.2.2, cvc-complex-type.2.4.a)",
-        "reason": "KoSIT: '19,00' is not a valid value for 'decimal'."
+        "reason": "Der KoSIT-Validator hat das Dokument nicht angenommen oder keine verwertbare Antwort gegeben"
       }
     ],
     "warnings": [],
@@ -52,7 +52,7 @@
   "good": [
     {
       "summary": "Der offizielle KoSIT-Validator lehnt das Dokument ab, und es fehlen Pflichtangaben.",
-      "explanation": "KoSIT meldet 5 Fehler, darunter, dass '19,00' kein gültiger Dezimalwert ist. Außerdem fehlen Lieferantenname, Zahlbetrag und Nettobetrag, und die Menge 'zwei' ist keine Zahl. Der Lieferant muss eine korrigierte Rechnung senden.",
+      "explanation": "KoSIT meldet fünf Fehler. Außerdem fehlen Lieferantenname, Zahlbetrag und Nettobetrag, und Beträge oder Mengen sind nicht numerisch. Der Lieferant muss eine korrigierte Rechnung senden.",
       "failed_checks": [
         "required_fields_present",
         "amounts_numeric",
@@ -68,7 +68,7 @@
     },
     {
       "summary": "The official KoSIT validator rejects the document, and required details are missing.",
-      "explanation": "KoSIT reports 5 errors, among them that '19,00' is not a valid decimal. The supplier name, payable amount and net amount are missing, and the quantity 'zwei' is not a number. The supplier needs to send a corrected invoice.",
+      "explanation": "KoSIT reports five errors. The supplier name, payable amount and net amount are missing, and amounts or quantities are not numeric. The supplier needs to send a corrected invoice.",
       "failed_checks": [
         "required_fields_present",
         "amounts_numeric",
