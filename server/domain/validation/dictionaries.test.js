@@ -16,34 +16,10 @@ import { CHANGE_STATES } from "../bank-changes/rules.js";
 import { PERMISSIONS } from "../../auth/authorize.js";
 import { SOURCE_TYPES } from "../kpi/provenance.js";
 import { NEXT_STEPS } from "../ai/explanation-input.js";
+import { emittedChecks } from "../../test-support/emitted-checks.js";
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
-// Every module that emits business checks. A check kept in its own module is
-// still a check, and a scan that misses it passes for the wrong reason.
 const businessCheckSources = () => [source("./business-checks.js"), source("./tax-breakdown.js")].join("\n");
-
-/**
- * Every `passed("code", …)` / `failed(…)` / … the checks can emit, including
- * the case where the code is chosen into a variable first:
- *   const check = error.code === "NOT_WELL_FORMED" ? "xml_well_formed" : "format_recognised";
- *   checks.push(failed(check, …));
- * Missing that form would have wrongly reported a correct entry as stale.
- */
-function emittedChecks() {
-  const files = [businessCheckSources(), source("../invoice/technical-validation.js"), source("../invoice/official-validation.js")];
-  const pairs = new Set();
-  for (const text of files) {
-    for (const [, fn, code] of text.matchAll(/\b(passed|failed|warning|skipped|info)\("([a-z_]+)"/g)) {
-      pairs.add(`${code}:${fn.toUpperCase()}`);
-    }
-    for (const [, fn, name] of text.matchAll(/\b(passed|failed|warning|skipped|info)\(([a-zA-Z_$][\w$]*),/g)) {
-      const assignment = text.match(new RegExp(`\\b(?:const|let)\\s+${name}\\s*=([^;]*);`));
-      if (!assignment) continue;
-      for (const [, code] of assignment[1].matchAll(/"([a-z_]+)"/g)) pairs.add(`${code}:${fn.toUpperCase()}`);
-    }
-  }
-  return [...pairs].sort();
-}
 
 test("every check the server can emit has English text", () => {
   const missing = emittedChecks().filter((key) => !(key in DICTIONARIES.en.check));

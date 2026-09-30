@@ -1841,6 +1841,10 @@ Consequences:
 
 ## ADR-080 An AI model may explain why an invoice stopped; it never decides
 
+**Partly superseded by ADR-082 (2026-09-30):** which evidence is sent is now
+decided by an allowlist per check. The list of what is masked and never sent
+under "Input" below was not what the code guaranteed.
+
 Context: the system already knows why an invoice stopped, as structured
 checks with expected and found values. A reviewer still has to turn several
 of them into one picture, and exceptions are the most expensive step (25
@@ -1963,3 +1967,51 @@ questions that were never asked.
 Consequences: no invoice of the demo month changes; none of them has a line
 that cannot be recomputed. The English dictionary loses the SKIPPED text of
 this check, which can no longer occur.
+
+## ADR-082 What an AI explanation is sent is allowlisted per check
+
+Supersedes the masking part of ADR-080's input. Corrective hardening during
+the feature freeze; no behaviour is added.
+
+Context: ADR-080 sent every failed check's expected, found and reason text,
+cleaned: IBAN-shaped strings masked, e-mail addresses and the four known names
+(supplier, document supplier, buyer, company) removed. Many checks repeat what
+the document says. A monetary field, a date, the declared profile, the
+currency, the IBAN field, a tax rate, a line id or a duplicated invoice number
+went to the provider verbatim; so did the KoSIT validator's own message, which
+quotes the offending value ("'...' is not a valid value for 'decimal'"). A
+name, an address or a phone number typed into any of those fields reached the
+provider, and no pattern recognises every such value. The claim that no names
+or contact details are sent was true only of the fields designated as
+identities.
+
+Decision: `domain/ai/outbound.js` names, per check, what of `expected`,
+`actual` and `reason` may be sent: as it is, only when the application composes
+the text itself (fixed sentences, field labels, status codes, computed amounts,
+KoSIT rule codes); as a fixed text in its place (a duplicated number becomes
+"Rechnungsnummer desselben Lieferanten bereits im Bestand", the validator's
+message becomes a fixed sentence while its rule codes stay); or through a
+function (an IBAN field is sent as its first and last four characters only if
+the whole value is an IBAN, otherwise withheld). Everything else is replaced by
+"(Wert aus dem Dokument, nicht übermittelt)". A check the allowlist does not
+name sends its code, phase and severity only. The cleaning of ADR-080 still runs
+over what is sent, as a second line.
+
+A test fails when a check that can fail or warn is missing from the allowlist,
+so a new check is a decision, not a default. Another plants a marker in each of
+the fields above and asserts it is absent from the request the provider
+receives.
+
+Not changed: the evidence on screen, in the database and in the audit trail
+keeps every value, and the KoSIT report is stored as before. AI stays off by
+default.
+
+Consequences: explanations say less about some failures: a line mismatch no
+longer states its amounts, because lines are named by the document's own ids;
+a non-numeric amount no longer names its value. The verifier refuses an answer
+that cites a value it was not given, so two committed evaluation scenarios
+(duplicate, KoSIT rejection) were regenerated and their accepted answers no
+longer quote the invoice number or the rejected values. What is guaranteed is
+narrower than "no personal data": no value read from the document is sent
+unless its check is classified as composed by the application. Master data the
+application holds (an order status, a masked IBAN) can still be sent.
