@@ -15,6 +15,7 @@ import { STATES } from "../workflow/states.js";
 import { CHANGE_STATES } from "../bank-changes/rules.js";
 import { PERMISSIONS } from "../../auth/authorize.js";
 import { SOURCE_TYPES } from "../kpi/provenance.js";
+import { NEXT_STEPS } from "../ai/explanation-input.js";
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 // Every module that emits business checks. A check kept in its own module is
@@ -133,8 +134,23 @@ test("every source a dashboard figure can name has a label and an explanation in
   assert.equal(DICTIONARIES.en.ui.sourceNotMeasured, "Not measured");
 });
 
+test("every next step an AI explanation may suggest is labelled as the button it names, in both languages", () => {
+  const button = { verify_bank_account: "proposeBankAccount", request_info: "requestInfo", confirm_duplicate: "confirmDuplicate", reject: "reject" };
+  assert.deepEqual(Object.keys(button).sort(), [...NEXT_STEPS].sort());
+  for (const [lang, dict] of Object.entries(DICTIONARIES)) {
+    for (const step of NEXT_STEPS) assert.equal(dict.aiStep?.[step], dict.ui[button[step]], `${lang} ${step}`);
+  }
+});
+
+test("an AI explanation is labelled as a suggestion, never a decision, in both languages", () => {
+  assert.equal(DICTIONARIES.de.ui.aiBadge, "KI-generierter Vorschlag – keine Entscheidung");
+  assert.equal(DICTIONARIES.en.ui.aiBadge, "AI-generated suggestion – not a decision");
+  assert.equal(DICTIONARIES.de.ui.aiUnavailable, "Keine KI-Erklärung verfügbar");
+  assert.equal(DICTIONARIES.en.ui.aiUnavailable, "No AI explanation available");
+});
+
 test("the two dictionaries carry the same keys", () => {
-  for (const group of ["ui", "state", "reviewReason", "action", "matchReason", "role", "error", "changeState", "changeAction", "source", "sourceExplanation"]) {
+  for (const group of ["ui", "state", "reviewReason", "action", "matchReason", "role", "error", "changeState", "changeAction", "source", "sourceExplanation", "aiStep"]) {
     const de = Object.keys(DICTIONARIES.de[group]).sort();
     const en = Object.keys(DICTIONARIES.en[group]).sort();
     assert.deepEqual(en, de, `the ${group} groups differ`);

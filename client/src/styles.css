@@ -399,6 +399,23 @@ select {
 .stat-note { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
 .stat-source { margin-top: 6px; }
 
+/* ---------- AI explanation (ADR-080): beside the evidence, never above it ---------- */
+.ai-badge {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: var(--radius);
+  background: var(--medium-bg);
+  color: var(--medium);
+  border: 1px solid #f0dcbb;
+}
+.ai-summary { margin: 0 0 6px; font-weight: 500; }
+.ai-text { margin: 0 0 10px; color: var(--ink-2); }
+.ai-meta { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 0 0 8px; font-size: 12px; }
+.ai-meta dt { color: var(--ink-3); }
+.ai-meta dd { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 8px; }
+.ai-foot { margin: 0; }
+
 /* ---------- source of a figure (ADR-079) ---------- */
 .source-tag {
   display: inline-block;
