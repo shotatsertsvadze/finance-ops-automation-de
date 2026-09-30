@@ -219,7 +219,9 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
 - Official validation is the KoSIT validator 1.6.3 with the XRechnung 3.0.2
   configuration of 2026-08-31, pinned (ADR-078). The check reports its
   assessment; the system certifies nothing. A rejected invoice cannot be
-  processed by hand yet: the supplier sends a corrected one.
+  processed by hand yet: the supplier sends a corrected one. The call runs
+  inside the invoice's transaction, and the readiness check does not ask the
+  validator.
 - Accounting, payment and bank data are simulated.
 - Approval thresholds and savings figures are demo assumptions.
 

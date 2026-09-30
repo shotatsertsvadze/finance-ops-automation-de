@@ -206,6 +206,8 @@ described as working.
 | ~~L6 (R13)~~ | ~~The test helper could drop the development schema~~ | **Fixed 2026-09-17**: `testDeps()` refuses to run when `TEST_DATABASE_URL` equals `DATABASE_URL`. | CLOSED |
 | L9 | A supplier's previous bank account stays trusted after a new one is approved: both can be paid until retiring accounts exists (ADR-077) | Approve a change for S-1001: both IBANs are ACTIVE | OPEN |
 | L10 | The exception ranking counts the comment typed at "information received" as a reason of its own, because that return to review records the comment as its reason | Demo step 5: the ranking lists "Rückruf erledigt, Konto freigegeben" once | OPEN |
+| L11 | The official-validation call runs inside the invoice's transaction and holds its row lock for the call, 10-40 ms normally and at most `KOSIT_TIMEOUT_MS` (20 s cap). The readiness check does not ask the validator; the Docker demo runs without one, so there the check is SKIPPED (ADR-078) | Stop the daemon: `/api/health/ready` still answers 200 and a new invoice goes to review | OPEN |
+| L12 | Rarely, one full-suite run fails with pg's "timeout exceeded when trying to connect", seen in `getInvoiceDetail`. Cause not established; it passed on rerun and in isolated runs, and was seen before ADR-078 | Not reproducible on demand: seen once in Phase 1 and once in Phase 2, not in the reruns | OPEN |
 
 ## Authentication and authorization
 
