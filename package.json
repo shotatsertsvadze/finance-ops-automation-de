@@ -25,7 +25,10 @@
     "demo:record": "npm run demo:reset && DEMO_VIDEO=1 node scripts/demo-walkthrough.mjs",
     "demo:mp4": "ffmpeg -y -i demo-video/demo.webm -c:v libx264 -pix_fmt yuv420p -crf 20 -movflags +faststart demo-video/demo.mp4",
     "test": "LOG_LEVEL=warn node --env-file=.env --test --test-concurrency=1 \"server/**/*.test.js\" \"client/**/*.test.js\" \"browser/**/*.test.js\"",
-    "test:browser": "node --env-file=.env --test --test-concurrency=1 \"browser/**/*.test.js\""
+    "test:browser": "node --env-file=.env --test --test-concurrency=1 \"browser/**/*.test.js\"",
+    "test:kosit": "node --env-file=.env --test server/integrations/kosit-real.test.js",
+    "kosit:fetch": "node scripts/kosit-fetch.js",
+    "kosit": "node --env-file-if-exists=.env scripts/kosit-start.js"
   },
   "dependencies": {
     "cors": "^2.8.6",

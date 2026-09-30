@@ -11,3 +11,6 @@ dist/
 
 # Recorded demo walkthroughs; the script regenerates them.
 /demo-video/
+
+# The pinned KoSIT validator and configuration; npm run kosit:fetch brings them.
+/vendor/
