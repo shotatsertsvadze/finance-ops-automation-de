@@ -160,7 +160,7 @@ every pause if you need more room.
 
 | | |
 |---|---|
-| **View** | Metrics, scrolled to **Modelled relief** |
+| **View** | Metrics, scrolled to **Modelled savings potential** |
 | **Click** | scroll down |
 | **On screen** | the panel's own caption: *Scenario on disclosed assumptions, not a measurement* |
 

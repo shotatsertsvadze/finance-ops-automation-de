@@ -14,6 +14,7 @@ import { DICTIONARIES, auditReason, checkSentence, errorText, translateTerms } f
 import { STATES } from "../workflow/states.js";
 import { CHANGE_STATES } from "../bank-changes/rules.js";
 import { PERMISSIONS } from "../../auth/authorize.js";
+import { SOURCE_TYPES } from "../kpi/provenance.js";
 
 const source = (path) => readFileSync(new URL(path, import.meta.url), "utf8");
 // Every module that emits business checks. A check kept in its own module is
@@ -122,8 +123,18 @@ test("every bank-account change state and event has a label in both languages", 
   }
 });
 
+test("every source a dashboard figure can name has a label and an explanation in both languages", () => {
+  for (const [lang, dict] of Object.entries(DICTIONARIES)) {
+    assert.deepEqual(SOURCE_TYPES.filter((type) => !dict.source?.[type]), [], `${lang} is missing source labels`);
+    assert.deepEqual(SOURCE_TYPES.filter((type) => !dict.sourceExplanation?.[type]), [], `${lang} is missing source explanations`);
+    assert.ok(dict.ui.sourceNotMeasured, `${lang} says when nothing is measured`);
+  }
+  assert.equal(DICTIONARIES.de.ui.sourceNotMeasured, "Nicht gemessen");
+  assert.equal(DICTIONARIES.en.ui.sourceNotMeasured, "Not measured");
+});
+
 test("the two dictionaries carry the same keys", () => {
-  for (const group of ["ui", "state", "reviewReason", "action", "matchReason", "role", "error", "changeState", "changeAction"]) {
+  for (const group of ["ui", "state", "reviewReason", "action", "matchReason", "role", "error", "changeState", "changeAction", "source", "sourceExplanation"]) {
     const de = Object.keys(DICTIONARIES.de[group]).sort();
     const en = Object.keys(DICTIONARIES.en[group]).sort();
     assert.deepEqual(en, de, `the ${group} groups differ`);

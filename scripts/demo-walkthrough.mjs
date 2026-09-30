@@ -136,7 +136,7 @@ async function main() {
     "Straight-through rate, exception rate, where time goes — computed from the invoices and their check trail.", 17);
 
   // --- 2:45 the honest close ---------------------------------------------
-  await page.locator(".panel").filter({ hasText: /Modelled relief/i }).first().scrollIntoViewIfNeeded();
+  await page.locator(".panel").filter({ hasText: /Modelled savings potential/i }).first().scrollIntoViewIfNeeded();
   await beat(page, "Limitations, on screen",
     "A scenario on stated assumptions, not a measured saving. Proof of concept, synthetic data, no compliance claim.", 12);
 

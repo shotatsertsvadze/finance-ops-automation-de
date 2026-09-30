@@ -185,10 +185,10 @@ const de = {
     kpiWorkload: "Arbeitsvorrat und Fälligkeiten",
     kpiReviewOpen: "Sichtprüfung offen",
     kpiOverdue: "Überfällig",
-    kpiPerInvoice: "Bearbeitungszeit je Rechnung",
+    kpiPerInvoice: "Modellierte Bearbeitungszeit je Rechnung",
     kpiReviewDwell: "Liegezeit in der Sichtprüfung",
-    kpiEconomics: "Modellrechnung Entlastung",
-    kpiSavings: "Rechnerische Entlastung",
+    kpiEconomics: "Modelliertes Einsparpotenzial",
+    kpiSavings: "Modellierte Zeitersparnis",
     kpiManualClean: "Manuell je saubere Rechnung",
     kpiManualException: "Manuell je Ausnahme",
     kpiWithSystem: "mit System",
@@ -196,7 +196,7 @@ const de = {
     kpiAssumption: "Szenario auf offengelegten Annahmen, keine Messung",
     kpiWrongRecipient: "Falscher Rechnungsempfänger",
     kpiPoOverrun: "Betrag überschreitet die Bestellung",
-    kpiLead: (processed) => `Alle Werte sind aus den Rechnungen und ihrem Prüfprotokoll berechnet, nicht separat gezählt. Grundlage: ${processed} verarbeitete Rechnungen (synthetische Demodaten).`,
+    kpiLead: (processed) => `Alle Betriebskennzahlen sind aus den Rechnungen und ihrem Prüfprotokoll berechnet, nicht separat gezählt; das Einsparpotenzial ist modelliert. Grundlage: ${processed} verarbeitete Rechnungen.`,
     kpiApprovalMedian: "Freigabedauer (Median)",
     kpiWaitingPerson: "Wartet auf eine Person",
     kpiStpNote: (n, total) => `${n} von ${total} ohne menschlichen Eingriff`,
@@ -216,6 +216,8 @@ const de = {
     kpiPaymentsFailed: "Zahlungen fehlgeschlagen",
     kpiDueIn7: "Fällig in 7 Tagen",
     kpiPerHour: (rate) => `bei ${rate} € je Stunde`,
+    sourceLegend: "Quellen",
+    sourceNotMeasured: "Nicht gemessen",
     kpiAssumptionCaption: (n) => `Diese Zahlen folgen aus den Annahmen unten, angewendet auf ${n} Rechnungen dieser Demo. Sie sind kein gemessener Kundennutzen.`,
     unitHours: "Std.",
     unitMinutes: "Min.",
@@ -396,6 +398,21 @@ const de = {
     rejected: "Abgelehnt",
     cancelled: "Zurückgezogen",
     revalidation_completed: "Betroffene Rechnungen erneut geprüft",
+  },
+
+  // Where a dashboard figure comes from (ADR-079).
+  source: {
+    SYNTHETIC: "Synthetische Demo-Daten",
+    ASSUMPTION: "Modellannahme",
+    CUSTOMER_BASELINE: "Kunden-Baseline",
+    PILOT_RESULT: "Pilot-Ergebnis",
+  },
+
+  sourceExplanation: {
+    SYNTHETIC: "Korrekt berechnet, aber aus synthetischen Demo-Rechnungen; kein realer Prozess",
+    ASSUMPTION: "Szenario-Eingabe, nicht gemessen (docs/IST_PROCESS.md)",
+    CUSTOMER_BASELINE: "Ausgangswerte eines Kunden vor der Einführung",
+    PILOT_RESULT: "Im Pilotbetrieb gemessen",
   },
 
   role: {
@@ -674,10 +691,10 @@ const en = {
     kpiWorkload: "Work queue and due dates",
     kpiReviewOpen: "Open for review",
     kpiOverdue: "Overdue",
-    kpiPerInvoice: "Handling time per invoice",
+    kpiPerInvoice: "Modelled handling time per invoice",
     kpiReviewDwell: "Time spent waiting in review",
-    kpiEconomics: "Modelled relief",
-    kpiSavings: "Calculated relief",
+    kpiEconomics: "Modelled savings potential",
+    kpiSavings: "Modelled time saved",
     kpiManualClean: "Manual, per clean invoice",
     kpiManualException: "Manual, per exception",
     kpiWithSystem: "with the system",
@@ -685,7 +702,7 @@ const en = {
     kpiAssumption: "Scenario on disclosed assumptions, not a measurement",
     kpiWrongRecipient: "Wrong invoice recipient",
     kpiPoOverrun: "Amount exceeds the purchase order",
-    kpiLead: (processed) => `Every figure is computed from the invoices and their check trail, not counted separately. Basis: ${processed} processed invoices (synthetic demo data).`,
+    kpiLead: (processed) => `Every operational figure is computed from the invoices and their check trail, not counted separately; the savings potential is modelled. Basis: ${processed} processed invoices.`,
     kpiApprovalMedian: "Approval time (median)",
     kpiWaitingPerson: "Waiting for a person",
     kpiStpNote: (n, total) => `${n} of ${total} with no human step`,
@@ -705,6 +722,8 @@ const en = {
     kpiPaymentsFailed: "Payments failed",
     kpiDueIn7: "Due within 7 days",
     kpiPerHour: (rate) => `at ${rate} € per hour`,
+    sourceLegend: "Sources",
+    sourceNotMeasured: "Not measured",
     kpiAssumptionCaption: (n) => `These figures follow from the assumptions below, applied to the ${n} invoices in this demo. They are not a measured customer benefit.`,
     unitHours: "h",
     unitMinutes: "min",
@@ -885,6 +904,20 @@ const en = {
     rejected: "Rejected",
     cancelled: "Withdrawn",
     revalidation_completed: "Affected invoices revalidated",
+  },
+
+  source: {
+    SYNTHETIC: "Synthetic demo data",
+    ASSUMPTION: "Modelled assumption",
+    CUSTOMER_BASELINE: "Customer baseline",
+    PILOT_RESULT: "Pilot result",
+  },
+
+  sourceExplanation: {
+    SYNTHETIC: "Calculated correctly, but from synthetic demo invoices; not a real process",
+    ASSUMPTION: "Scenario input, not measured (docs/IST_PROCESS.md)",
+    CUSTOMER_BASELINE: "A customer's figures before introduction",
+    PILOT_RESULT: "Measured during a pilot",
   },
 
   role: {

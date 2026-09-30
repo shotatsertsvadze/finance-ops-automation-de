@@ -157,6 +157,45 @@ test("the savings estimate is derived from the stated assumptions and the real v
   assert.ok(a.source, "the assumptions say where they come from");
 });
 
+test("an operational figure names the synthetic demo data as its source", async () => {
+  const { provenance } = await kpis();
+  for (const figure of ["volume", "automation", "exceptions", "risk", "workload", "cycle", "economics.basis_invoices"]) {
+    assert.deepEqual(provenance.figures[figure], ["SYNTHETIC"], figure);
+  }
+  assert.equal(provenance.sources.SYNTHETIC.label, "Synthetische Demo-Daten");
+});
+
+test("the savings inputs are named as modelled assumptions", async () => {
+  const { provenance } = await kpis();
+  assert.deepEqual(provenance.figures["economics.assumptions"], ["ASSUMPTION"]);
+  assert.equal(provenance.sources.ASSUMPTION.label, "Modellannahme");
+});
+
+test("a savings figure names both of its sources: demo data and assumptions", async () => {
+  const { provenance } = await kpis();
+  for (const figure of ["economics.hours_saved", "economics.cost_saved_eur", "economics.minutes_per_invoice_now"]) {
+    assert.deepEqual(provenance.figures[figure], ["SYNTHETIC", "ASSUMPTION"], figure);
+  }
+});
+
+test("with no customer baseline and no pilot, neither is presented as measured", async () => {
+  const { provenance } = await kpis();
+  for (const type of ["CUSTOMER_BASELINE", "PILOT_RESULT"]) {
+    assert.equal(provenance.sources[type].available, false, type);
+    assert.match(provenance.sources[type].explanation, /^Nicht gemessen/, type);
+    assert.equal(provenance.sources[type].period, null, type);
+  }
+  const cited = Object.values(provenance.figures).flat();
+  assert.deepEqual(cited.filter((type) => !provenance.sources[type].available), [], "no figure rests on a source that does not exist");
+});
+
+test("every figure the dashboard is sent names its source", async () => {
+  const { generated_at, provenance, economics, ...blocks } = await kpis();
+  const figures = [...Object.keys(blocks), ...Object.keys(economics).map((key) => `economics.${key}`)];
+  assert.deepEqual(figures.filter((figure) => !provenance.figures[figure]), []);
+  assert.deepEqual(Object.keys(provenance.figures).filter((figure) => !figures.includes(figure)), [], "no stale entries");
+});
+
 test("the API serves the same figures", async () => {
   await upload(fixture("G_clean_380.xml"), "G.xml");
   const res = await clients.clerk.get("/api/dashboard/kpis");
@@ -165,6 +204,11 @@ test("the API serves the same figures", async () => {
   assert.equal(body.volume.received, 1);
   assert.equal(body.automation.straight_through, 1);
   assert.ok(body.generated_at);
+  assert.deepEqual(Object.keys(body.provenance.sources), ["SYNTHETIC", "ASSUMPTION", "CUSTOMER_BASELINE", "PILOT_RESULT"]);
+  for (const source of Object.values(body.provenance.sources)) {
+    assert.deepEqual(Object.keys(source).sort(), ["available", "explanation", "label", "period"]);
+  }
+  assert.deepEqual(body.provenance.figures["economics.cost_saved_eur"], ["SYNTHETIC", "ASSUMPTION"]);
 });
 
 test("processing time is reported separately for the path a human touched", async () => {

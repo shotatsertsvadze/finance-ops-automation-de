@@ -1790,3 +1790,47 @@ Consequences:
 - Not built: CII and ZUGFeRD (the configuration could validate CII, but the
   parser cannot read it, so it is never sent); the validator in the readiness
   check; a screen for the batch retry; the operational disposition.
+
+## ADR-079 Every dashboard figure names its source
+
+Context: ADR-027 puts the savings figure beside its assumptions, but the
+dashboard did not say which figures come from the synthetic demo data and
+which from assumptions, nor that no customer has measured anything. The only
+hint of synthetic data was a phrase in the client's own lead sentence, the
+savings panel was titled "Modellrechnung Entlastung", and one modelled figure,
+"Bearbeitungszeit je Rechnung", read like a measurement.
+
+Decision: `GET /api/dashboard/kpis` carries `provenance`, built in
+`server/domain/kpi/provenance.js`.
+- `sources` has four types, each with a German label, an explanation,
+  `available` and a `period`. SYNTHETIC is computed from the demo's synthetic
+  invoices: correctly, but not from a real process. ASSUMPTION is a modelled
+  input (`server/config/assumptions.js`). CUSTOMER_BASELINE and PILOT_RESULT
+  are `available: false` and explained as "Nicht gemessen"; `period` is null
+  for all four.
+- `figures` maps every block of the response, and each economics figure, to
+  the types it rests on. The operational blocks rest on SYNTHETIC, the savings
+  inputs on ASSUMPTION, and time saved, cost saved and minutes per invoice on
+  both.
+- Tests hold the rules: no figure cites a source that is not available, and
+  a figure added to the response without a source fails the suite.
+- The client renders labels from the codes (ADR-034). A legend of the four
+  types sits under the title, with "Nicht gemessen" beside baseline and pilot.
+  Each figure or panel carries its source tag, amber when an assumption is
+  involved. The savings panel is "Modelliertes Einsparpotenzial" and its
+  outputs are "modelliert"; baseline and pilot get a row each saying
+  "Nicht gemessen".
+- No formula and no value changed.
+
+Extension: when a baseline or a pilot result exists, its source becomes
+available with its period, and the figures that use it name it instead of
+ASSUMPTION. The values would come from the append-only measurements described
+in `docs/FINANCE_OPS_2_PLAN.md` section E.
+
+Consequences:
+- The operational figures are declared SYNTHETIC as a constant, because this
+  proof of concept holds synthetic data only. A deployment on real invoices
+  must change that declaration before its figures are read as results.
+- One source per type.
+- Not built: baseline entry, pilot ingestion, the plan's TARGET type, and the
+  Baseline | Pilot | Target table.

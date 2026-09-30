@@ -226,10 +226,15 @@ as a reason of its own, once. The ranking counts every return to review by its
 recorded reason, and that return records the comment. It is a known flaw of the
 ranking, not of the bank-account step; if asked, say so.
 
-> "Every figure is computed from the invoices and their check trail, not
-> counted separately."
+> "Every operational figure is computed from the invoices and their check
+> trail, not counted separately."
 
-Scroll to **modelled relief** and say this part out loud:
+Under the title, **Sources** lists the four kinds of number. Every figure
+carries its tag: the operational figures say **Synthetic demo data**, and
+**Customer baseline** and **Pilot result** say **Not measured**.
+
+Scroll to **Modelled savings potential**, tagged **Synthetic demo data +
+Modelled assumption**, and say this part out loud:
 
 > "This panel is a scenario on stated assumptions, not a measurement. The
 > assumptions are in `docs/IST_PROCESS.md`. I am not claiming a customer saved

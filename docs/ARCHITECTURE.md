@@ -451,7 +451,7 @@ invoice above the auto limit.
 | POST | `/api/bank/import` | 3 | imports a synthetic statement, idempotent on `external_id` |
 | GET | `/api/bank/transactions` | 3 | statement lines with match status and reason; `bank:read` (finance, admin) |
 | POST | `/api/reconciliation/run` | 3 | matches unmatched transactions against paid invoices |
-| GET | `/api/dashboard/kpis` | 4 | operational KPIs |
+| GET | `/api/dashboard/kpis` | 4 | operational KPIs and the modelled savings; `provenance` names the source of every figure: SYNTHETIC, ASSUMPTION, CUSTOMER_BASELINE, PILOT_RESULT (ADR-079) |
 
 The invoice detail (`GET /api/invoices/:id`) carries the domain's own answers
 where the screen needs them: `open_credit_amount`, `po_available_amount`,

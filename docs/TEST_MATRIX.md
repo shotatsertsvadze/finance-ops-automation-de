@@ -9,7 +9,7 @@ Legend:
 - **CI** verified by an automated job in `.github/workflows/ci.yml` outside `npm test`, job named
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (624 tests, all passing as of 2026-09-30; the three
+Run: `npm test` (630 tests, all passing as of 2026-09-30; the three
 real-validator tests skip without `KOSIT_TEST_URL` and run in CI, see
 "Official validation"). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
@@ -208,6 +208,8 @@ described as working.
 | L10 | The exception ranking counts the comment typed at "information received" as a reason of its own, because that return to review records the comment as its reason | Demo step 5: the ranking lists "Rückruf erledigt, Konto freigegeben" once | OPEN |
 | L11 | The official-validation call runs inside the invoice's transaction and holds its row lock for the call, 10-40 ms normally and at most `KOSIT_TIMEOUT_MS` (20 s cap). The readiness check does not ask the validator; the Docker demo runs without one, so there the check is SKIPPED (ADR-078) | Stop the daemon: `/api/health/ready` still answers 200 and a new invoice goes to review | OPEN |
 | L12 | Rarely, one full-suite run fails with pg's "timeout exceeded when trying to connect", seen in `getInvoiceDetail`. Cause not established; it passed on rerun and in isolated runs, and was seen before ADR-078 | Not reproducible on demand: seen once in Phase 1 and once in Phase 2, not in the reruns | OPEN |
+| L13 | The operational figures declare SYNTHETIC as a constant, because the application holds demo data only. On real invoices they would still say synthetic: before a customer or pilot deployment, their source must follow the actual dataset (ADR-079) | Read `server/domain/kpi/provenance.js`: `volume` to `cycle` map to SYNTHETIC unconditionally | OPEN |
+| L14 | A source's explanation is hover text (`title`), which touch screens do not show. The source label itself is always visible text, so the meaning never rests on colour or hover alone | Tap a source tag on a phone: no explanation appears | OPEN |
 
 ## Authentication and authorization
 
@@ -272,6 +274,15 @@ described as working.
 | K12a | Credited and settled documents are not overdue | overdue and due-soon count only OUTSTANDING_STATES | AUTO | `kpi.test.js` "no settled document is overdue" |
 | K13 | Dashboard renders over demo data | all panels, German number format, no page overflow | MANUAL | Browser, 2026-09-17, 1400 px and 375 px |
 | K14 | Release-time measurement is sound | reviewed invoices show 17,9 h to release, non-reviewed 0,005 h | MANUAL | SQL check against demo data, 2026-09-17 |
+| K15 | An operational figure (ADR-079) | volume, rates, risk, workload, cycle times and the basis count name SYNTHETIC | AUTO | `kpi.test.js` "an operational figure names the synthetic demo data" |
+| K16 | The savings inputs | name ASSUMPTION | AUTO | `kpi.test.js` "the savings inputs are named as modelled assumptions" |
+| K17 | A savings figure | time saved, cost saved and minutes per invoice name SYNTHETIC and ASSUMPTION | AUTO | `kpi.test.js` "a savings figure names both of its sources" |
+| K18 | No customer baseline, no pilot | both `available: false`, explained as "Nicht gemessen", no period; no figure cites a source that is not available | AUTO | `kpi.test.js` "with no customer baseline and no pilot" |
+| K19 | A figure without a source | every block and economics figure is mapped, and nothing stale | AUTO | `kpi.test.js` "every figure the dashboard is sent names its source"; mutation check 2026-09-30: removing `cycle` from the map fails it |
+| K20 | The API contract | `provenance` with the four sources, each with label, explanation, `available`, `period` | AUTO | `kpi.test.js` "the API serves the same figures" |
+| K21 | Source labels in both languages | a label and an explanation per type in German and English; "Nicht gemessen" / "Not measured" | AUTO | `dictionaries.test.js` |
+| K22 | Figures unchanged by the labels | every KPI and savings value identical before and after, on the same demo month | MANUAL | 2026-09-30: on one demo month, the KPI response of `main` (6cda0c2) and of this change compared; identical except the added `provenance` |
+| K23 | The labels on screen | legend, a tag per figure or panel, amber where an assumption is involved, "Nicht gemessen" for baseline and pilot; no page overflow | MANUAL | Browser, 2026-09-30, German and English, 1280 px and 390 px |
 
 ## Money path: accounting, payment, reconciliation
 

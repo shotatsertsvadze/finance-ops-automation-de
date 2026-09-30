@@ -397,6 +397,24 @@ select {
 .stat-medium { border-left-color: var(--medium); }
 .stat-value { font-family: var(--mono); font-size: 26px; white-space: nowrap; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; font-variant-numeric: tabular-nums; }
 .stat-note { font-size: 11px; color: var(--ink-3); margin-top: 3px; }
+.stat-source { margin-top: 6px; }
+
+/* ---------- source of a figure (ADR-079) ---------- */
+.source-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: var(--radius);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  border: 1px solid var(--line-strong);
+}
+.source-modelled { background: var(--medium-bg); color: var(--medium); border-color: #f0dcbb; }
+.source-absent { background: transparent; color: var(--ink-3); border-style: dashed; }
+.source-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: -8px 0 18px; font-size: 12px; color: var(--ink-3); }
+.source-pair { white-space: nowrap; }
 
 .dash-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
 
@@ -476,6 +494,9 @@ select {
 .ledger-scroll { overflow-x: auto; }
 @media (max-width: 760px) {
   .ledger { min-width: 660px; }
+  /* A long source tag goes below the title rather than squeezing it. */
+  .panel-head:has(.source-tag) { flex-wrap: wrap; }
+  .source-tag { white-space: normal; }
 }
 
 /* ---------- language switch ---------- */

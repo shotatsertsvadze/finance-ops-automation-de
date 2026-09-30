@@ -1,6 +1,7 @@
 import { loadAssumptions } from "../../config/assumptions.js";
 import { businessDate } from "../dates.js";
 import { OUTSTANDING_STATES } from "../workflow/states.js";
+import { provenance } from "./provenance.js";
 
 /**
  * Operational KPIs, computed from the invoices and their audit events.
@@ -46,6 +47,7 @@ export async function computeKpis({ pool }, env = process.env) {
         (clean * assumptions.system_minutes_clean + exceptions.count * assumptions.system_minutes_exception) / processed,
       ),
     },
+    provenance: provenance(),
   };
 }
 
