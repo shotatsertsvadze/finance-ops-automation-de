@@ -8,15 +8,30 @@ async function demoPasswordAccounts(pool) {
   return rows.filter((u) => verifyPassword(PUBLISHED_DEMO_PASSWORD, u.password_hash, u.password_salt)).map((u) => u.email);
 }
 
-/** What the connected role could do to history; empty for a role set up by grantAppRole (ADR-068). */
+const EVIDENCE_TABLES = ["audit_events", "bank_change_events", "bank_change_verifications", "bank_change_revalidations"];
+
+/** Every privilege that would let the app rewrite history, as [privilege, table]. */
+const HISTORY_PRIVILEGES = [
+  ...EVIDENCE_TABLES.flatMap((table) => ["UPDATE", "DELETE", "TRUNCATE"].map((privilege) => [privilege, table])),
+  ["DELETE", "invoices"],
+  ["UPDATE", "bank_account_changes"],
+  ["DELETE", "bank_account_changes"],
+  ["UPDATE", "supplier_bank_accounts"],
+  ["DELETE", "supplier_bank_accounts"],
+];
+
+/**
+ * What the connected role could do to history; empty for a role set up by
+ * grantAppRole (ADR-068, ADR-077). A table-level UPDATE on a change would
+ * include its proposal columns; the column grant for its decision is expected.
+ */
 async function trailWriters(pool) {
-  const { rows: [can] } = await pool.query(
-    `select has_table_privilege('finops.audit_events', 'UPDATE') as update_audit,
-            has_table_privilege('finops.audit_events', 'DELETE') as delete_audit,
-            has_table_privilege('finops.audit_events', 'TRUNCATE') as truncate_audit,
-            has_table_privilege('finops.invoices', 'DELETE') as delete_invoices`,
-  );
-  return Object.entries(can).filter(([, allowed]) => allowed).map(([name]) => name);
+  const found = [];
+  for (const [privilege, table] of HISTORY_PRIVILEGES) {
+    const { rows: [row] } = await pool.query("select has_table_privilege($1, $2) as allowed", [`finops.${table}`, privilege]);
+    if (row.allowed) found.push(`${privilege.toLowerCase()} ${table}`);
+  }
+  return found;
 }
 
 /**

@@ -1,5 +1,10 @@
 const IDENTIFIER = /^[a-z_][a-z0-9_]{0,62}$/;
 
+/** The columns of a bank-account change the workflow moves; the proposal itself is fixed. */
+export const CHANGE_DECISION_COLUMNS = [
+  "state", "verified_by", "verified_at", "decided_by", "decided_at", "decision_reason", "bank_account_id", "revalidated_at",
+];
+
 /**
  * What the app's database role may do (ADR-068): everything the app needs, and
  * nothing that would change history. The audit trail can be read and added
@@ -18,6 +23,12 @@ export async function grantAppRole(pool, role) {
     `revoke update, delete, truncate on finops.audit_events from ${role}`,
     `revoke delete, truncate on finops.invoices from ${role}`,
     `revoke insert, update, delete, truncate on finops.schema_migrations from ${role}`,
+    // Bank-account changes (ADR-077): evidence is written once; a proposal's
+    // content never changes, only its state and who decided; a trusted
+    // account is added, never altered or removed by the app.
+    `revoke update, delete, truncate on finops.bank_change_events, finops.bank_change_verifications, finops.bank_change_revalidations from ${role}`,
+    `revoke update, delete, truncate on finops.bank_account_changes, finops.supplier_bank_accounts from ${role}`,
+    `grant update (${CHANGE_DECISION_COLUMNS.join(", ")}) on finops.bank_account_changes to ${role}`,
   ];
   for (const sql of statements) await pool.query(sql);
 }

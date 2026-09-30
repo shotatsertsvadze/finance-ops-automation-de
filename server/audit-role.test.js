@@ -66,6 +66,33 @@ test("nor delete an invoice, which would take its trail with it", async () => {
   assert.ok(rows[0].n > 0, "the trail is still there");
 });
 
+test("the app role cannot rewrite a bank-account proposal, its evidence or trusted accounts", async () => {
+  for (const sql of [
+    "update finops.bank_account_changes set proposed_iban = 'DE02300209000106531065'",
+    "update finops.bank_account_changes set proposal_sha256 = repeat('b', 64)",
+    "update finops.bank_account_changes set trusted_ibans = '{}'",
+    "delete from finops.bank_account_changes",
+    "update finops.bank_change_verifications set outcome = 'CONFIRMED'",
+    "delete from finops.bank_change_verifications",
+    "update finops.bank_change_events set reason = 'geändert'",
+    "delete from finops.bank_change_events",
+    "truncate finops.bank_change_events",
+    "update finops.bank_change_revalidations set to_run_no = 99",
+    "delete from finops.bank_change_revalidations",
+    "update finops.supplier_bank_accounts set iban = 'DE02300209000106531065'",
+    "delete from finops.supplier_bank_accounts",
+  ]) {
+    await assert.rejects(() => app.query(sql), /permission denied/, sql);
+  }
+});
+
+test("but may record a change's decision, which is all the workflow updates", async () => {
+  await app.query(
+    `update finops.bank_account_changes set state = state, verified_by = verified_by, decided_by = decided_by,
+       decision_reason = decision_reason, bank_account_id = bank_account_id, revalidated_at = revalidated_at where false`,
+  );
+});
+
 test("a production start refuses a connection that could change the trail", async () => {
   const env = { NODE_ENV: "production", DEMO_MODE: "true" };
   const dist = new URL("../client", import.meta.url).pathname;
