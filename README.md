@@ -76,7 +76,8 @@ An invoice the system stopped: its IBAN is not one of the supplier's approved
 accounts, the most common invoice-fraud pattern. The characters that differ are
 marked. Because no reviewer may wave a changed IBAN through, the screen does
 not offer the release at all: the account has to be verified into master data
-first (ADR-052, ADR-071).
+first, by three different people, and the invoice is then checked again
+(ADR-052, ADR-071, ADR-077).
 
 The reasoning behind each decision is in `docs/DECISIONS.md`, every behaviour has
 a row in `docs/TEST_MATRIX.md`, and what the system does *not* do is listed under
@@ -176,7 +177,7 @@ meet an order the earlier ones already used.
 - `docs/BUSINESS_CASE.md` - demo assumptions
 - `docs/TEST_MATRIX.md` - what is verified and how
 - `docs/IMPLEMENTATION_PLAN.md` - what was built in which order
-- `docs/DEMO.md` - a ten-minute walkthrough, in order
+- `docs/DEMO.md` - a twelve-minute walkthrough, in order
 - `docs/DEMO_VIDEO.md` - three-minute video storyboard and narration
 - `docs/REFERENCE_AUDIT.md` - audit of the two reference repositories
 - `docs/CUSTOMER_DISCOVERY.md` - ICPs, interview guide, baseline model, pilot criteria
@@ -198,6 +199,8 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
 - **Reconciliation matches one statement line to one invoice.** Part payments
   and collective payments covering several invoices are not modelled; each
   becomes an exception for a person to resolve.
+- **A new bank account is added, not substituted.** A supplier's previous
+  account stays trusted, and payable, until retiring accounts is built.
 - **Authentication is demo-grade.** Real password login, sessions and a role
   matrix, but no password reset, no second factor and no SSO. Accounts are
   seeded with a shared, documented password.
@@ -303,6 +306,17 @@ reason. Sending an exception to approval never approves it: it always produces
 at least one approval step, and the person who released it cannot take that
 step. Approval steps run in order, each needs the exact role, and no one may
 decide two steps of the same invoice.
+
+## A new supplier bank account
+
+An invoice stopped because its IBAN is not on file offers **Bankverbindung zur
+Prüfung vorschlagen**; the invoice itself never changes master data. Under
+**Bankverbindungen**, a second person records a call-back on the number already
+in master data, with the IBAN the supplier reads back, and a third approves.
+The account is then added, and the invoices stopped for it are validated again
+in a new run; one waiting for information is taken by **Rechnungen erneut
+prüfen** once the information is in. Clerk and finance propose, finance and the
+CFO verify and approve, administration only reads (ADR-077).
 
 ## Money path and reconciliation
 
