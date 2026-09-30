@@ -45,6 +45,9 @@ test("an approved change offers a retry only while invoices are left", () => {
   const left = { ...approved, pending_invoices: [{ invoice_id: "i", state: "REVIEW_REQUIRED" }] };
   assert.deepEqual(changeActions(left, THIRD, may("clerk")), ["revalidate"]);
   assert.deepEqual(changeActions(left, THIRD, may("cfo")), []);
+  // A technical re-run through invoice:reprocess, which administration holds:
+  // it decides nothing about the account (ADR-077).
+  assert.deepEqual(changeActions(left, THIRD, may("admin")), ["revalidate"]);
 });
 
 test("a decided change offers nothing", () => {

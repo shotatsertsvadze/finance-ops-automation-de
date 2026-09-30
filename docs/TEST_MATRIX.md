@@ -354,7 +354,7 @@ the screen's offers in `client/src/features/bank-changes/rules.test.js`.
 | BC9 | A call-back number in the request | ignored: the number on file is recorded | AUTO | `changes.test.js`, `bank-changes.test.js` |
 | BC10 | Confirming without the IBAN read back, or with another | 409 `IBAN_READ_BACK_MISMATCH` | AUTO | `changes.test.js` |
 | BC11 | Call-back fields out of range, a time in the future or before the proposal | 400 `VERIFICATION_INVALID` naming the field | AUTO | `changes.test.js`, `bank-changes.test.js` |
-| BC12 | No call-back number on file | 409 `NO_CALLBACK_NUMBER` | AUTO | `changes.test.js` |
+| BC12 | No call-back number on file (an upgraded installation) | 409 `NO_CALLBACK_NUMBER`, nothing recorded; a number sent with the call is no fallback | AUTO | `changes.test.js` |
 | BC13 | A denied call-back | the change is rejected; nothing trusted | AUTO | `changes.test.js` |
 | BC14 | Approval without verification | 409 `CHANGE_NOT_VERIFIED`; the database refuses an approved change without a verifier | AUTO | `changes.test.js`, `schema.test.js`, `bank-changes.test.js` |
 | BC15 | The proposer approves or rejects | 409 `PROPOSER_CANNOT_DECIDE`; the database refuses it | AUTO | `changes.test.js`, `schema.test.js` |
@@ -363,10 +363,10 @@ the screen's offers in `client/src/features/bank-changes/rules.test.js`.
 | BC18 | A verification bound to another hash; a proposal altered after verification | 409 `EVIDENCE_MISMATCH`, nothing written | AUTO | `changes.test.js` |
 | BC19 | Master data changed after the proposal; the supplier blocked since | 409 `MASTER_DATA_CHANGED`; 409 `SUPPLIER_NOT_ACTIVE_FOR_CHANGE` | AUTO | `changes.test.js` |
 | BC20 | Two approvers at once; the same step repeated | one account, one approval event; a repeat by the same person returns the change unchanged, another person gets 409 `CHANGE_STATE_CONFLICT` | AUTO | `changes.test.js` |
-| BC21 | An IBAN trusted for another supplier | allowed by the database; the proposal lists the other supplier; approval refused with `SHARED_IBAN_NOT_ACKNOWLEDGED` until acknowledged, which the approval evidence records | AUTO | `schema.test.js`, `changes.test.js`, `bank-changes.test.js` |
+| BC21 | An IBAN trusted for another supplier | allowed by the database; the proposal lists the other supplier; approval refused with `SHARED_IBAN_NOT_ACKNOWLEDGED` until acknowledged, which the approval evidence records; the acknowledgement does not let an unverified change, the verifier or the proposer approve | AUTO | `schema.test.js`, `changes.test.js`, `bank-changes.test.js` |
 | BC22 | Rejected or withdrawn changes | never write master data; only the proposer withdraws; a withdrawn change no longer blocks a new one | AUTO | `changes.test.js`, `bank-changes.test.js` |
 | BC23 | An invoice with a new IBAN on its own | changes no master data and creates no proposal | AUTO | `bank-changes.test.js` |
-| BC24 | Who may do what | read: clerk, finance, CFO, admin; propose: clerk, finance; verify, approve, reject: finance, CFO; admin and manager take no step | AUTO | `bank-changes.test.js` |
+| BC24 | Who may do what | read: clerk, finance, CFO, admin; propose: clerk, finance; verify, approve, reject: finance, CFO; admin and manager take no step. The revalidation retry needs `invoice:reprocess`, so admin may ask for it: a technical re-run that decides nothing | AUTO | `bank-changes.test.js`; client `rules.test.js` |
 | BC25 | CSRF, a non-UUID id or supplier, bad input | 403 `CSRF_INVALID`; 404 with a code; 400 with a code; never 500 | AUTO | `bank-changes.test.js` |
 | BC26 | The app's own database role | runs the whole loop; cannot change a proposal, evidence, events, revalidation links or trusted accounts; may move a change's decision columns | AUTO | `audit-role.test.js` |
 | BC27 | A production start as a role that could rewrite bank-change history | refused, naming it | AUTO | `audit-role.test.js` |

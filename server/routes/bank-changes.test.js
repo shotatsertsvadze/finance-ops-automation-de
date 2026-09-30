@@ -142,7 +142,11 @@ test("a shared IBAN is approved only with the explicit acknowledgement", async (
   const res = await as.clerk.post("/api/bank-changes", { supplier_id: "10000000-0000-0000-0000-000000000002", iban: shared, comment: "Factoring" });
   const change = await res.json();
   assert.deepEqual(change.shared_with_now.map((s) => s.supplier_no), ["S-1001"]);
+  // The acknowledgement answers the warning; it is not a way past the three people.
+  const acknowledged = { acknowledge_shared_iban: true };
+  assert.equal((await (await as.finance2.post(`/api/bank-changes/${change.id}/approve`, acknowledged)).json()).code, "CHANGE_NOT_VERIFIED");
   await as.finance.post(`/api/bank-changes/${change.id}/verify`, callback({ iban_read_back: shared }));
+  assert.equal((await (await as.finance.post(`/api/bank-changes/${change.id}/approve`, acknowledged)).json()).code, "VERIFIER_CANNOT_APPROVE");
   assert.equal((await (await as.finance2.post(`/api/bank-changes/${change.id}/approve`, { acknowledge_shared_iban: "yes" })).json()).code, "SHARED_IBAN_NOT_ACKNOWLEDGED");
   assert.equal((await as.finance2.post(`/api/bank-changes/${change.id}/approve`, { acknowledge_shared_iban: true })).status, 200);
 });

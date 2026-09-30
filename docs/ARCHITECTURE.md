@@ -402,7 +402,7 @@ invoice above the auto limit.
 | POST | `/api/bank-changes/:id/verify` | 1 | records the call-back (`outcome`, `contacted_role`, `called_at`, `iban_read_back`, `reference`, `comment`); the number called comes from master data; `bank-change:verify` (finance, CFO) |
 | POST | `/api/bank-changes/:id/approve` | 1 | adds the account, then revalidates the affected invoices and returns what happened as `revalidation`; `acknowledge_shared_iban: true` when another supplier trusts the IBAN; `bank-change:approve` (finance, CFO) |
 | POST | `/api/bank-changes/:id/reject\|cancel` | 1 | ends an open change, reason required; reject needs `bank-change:approve`, cancel is the proposer's |
-| POST | `/api/bank-changes/:id/revalidate` | 1 | revalidates what an approved change left: a failure, or an invoice whose question has been answered; `invoice:reprocess` |
+| POST | `/api/bank-changes/:id/revalidate` | 1 | revalidates what an approved change left: a failure, or an invoice whose question has been answered; `invoice:reprocess` (AP clerk, finance, admin): a technical re-run, not a decision about the account |
 | POST | `/api/invoices/:id/review/accept\|reject\|request-info\|confirm-duplicate` | 2 | reviewer actions; `request-info` is also valid from READY_FOR_APPROVAL |
 | POST | `/api/invoices/:id/info-received` | 2 | INFO_REQUESTED back to REVIEW_REQUIRED |
 | POST | `/api/invoices/:id/approvals/:stepNo/approve\|reject` | 2 | approver actions |

@@ -191,7 +191,13 @@ test("a supplier with no number on file cannot be verified", async () => {
   const { change } = await propose();
   await deps.pool.query("update finops.suppliers set callback_phone = null where id = $1", [S1]);
   try {
-    await assert.rejects(verifyChange(deps, { changeId: change.id, actor: finance, ...confirmation() }), refusal("NO_CALLBACK_NUMBER"));
+    // A number supplied with the call is not a fallback for a missing one.
+    await assert.rejects(
+      verifyChange(deps, { changeId: change.id, actor: finance, ...confirmation(), contactNumber: "+49 170 0000000" }),
+      refusal("NO_CALLBACK_NUMBER"),
+    );
+    const { rows } = await deps.pool.query("select count(*)::int as n from finops.bank_change_verifications");
+    assert.equal(rows[0].n, 0);
   } finally {
     await deps.pool.query("update finops.suppliers set callback_phone = '+49 30 23125 101' where id = $1", [S1]);
   }

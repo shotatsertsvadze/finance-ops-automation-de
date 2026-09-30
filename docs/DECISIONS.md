@@ -1631,7 +1631,10 @@ Decision:
   one in force when it was proposed. Any other value stops the process: a
   two-person mode is designed for (the row and the rule take 2) but not
   enabled. Administration reads and takes no step; running the system is not
-  a business role. The rules are enforced in the domain, as constraints in
+  a business role. It may ask for the revalidation retry below, through
+  `invoice:reprocess`, which it already holds for any invoice in review: a
+  technical re-run of the checks, not a decision about the account, and it
+  ends at a signer like any other. The rules are enforced in the domain, as constraints in
   the database and, for what to offer, on the screen.
 - **Call-back trust model.** Verification is one method only: a call-back on
   `suppliers.callback_phone`, the number already on file. The server copies

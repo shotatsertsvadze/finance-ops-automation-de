@@ -316,7 +316,8 @@ in master data, with the IBAN the supplier reads back, and a third approves.
 The account is then added, and the invoices stopped for it are validated again
 in a new run; one waiting for information is taken by **Rechnungen erneut
 prüfen** once the information is in. Clerk and finance propose, finance and the
-CFO verify and approve, administration only reads (ADR-077).
+CFO verify and approve; administration takes no step and may only ask for the
+technical revalidation retry (ADR-077).
 
 ## Money path and reconciliation
 
