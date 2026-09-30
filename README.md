@@ -60,13 +60,17 @@ The interface is German by default and switches to English.
   severity, expected, actual, reason, recommended_action`, so a reviewer is shown
   what was expected and what the document actually carried, with the differing
   characters marked for things like a changed IBAN.
-- **Fail closed.** Missing, malformed or uncertain data routes to review, never to
-  approval. A few checks cannot be overridden at all: a reviewer is there to judge
-  business facts, not to supply arithmetic the document never did.
+- **Fail closed.** A failed check routes the invoice to review, and data that
+  is missing, malformed or cannot be read is reported as a failed check, not
+  skipped: an unreadable amount, a line that cannot be recomputed (ADR-081), a
+  required validator that does not answer (ADR-078). A few checks cannot be
+  overridden at all: a reviewer is there to judge business facts, not to supply
+  arithmetic the document never did.
 - **Amounts are recomputed, not read.** Discounts, surcharges and prepayments are
   computed along EN 16931's calculation chain, and every line is recomputed from
   its quantity and unit price - exactly, not in floating point, because the
-  tolerance is one cent (ADR-047, ADR-048).
+  tolerance is one cent (ADR-047, ADR-048). A line that cannot be recomputed
+  stops the invoice (ADR-081).
 - **Nothing is inferred.** Routing is a pure function of the check results and the
   amount policy. No model decides anything, and none sits anywhere near the
   payment path.
@@ -120,10 +124,13 @@ KOSIT_JAVA=/path/to/java npm run kosit   # daemon on 127.0.0.1:8081; leave KOSIT
 
 AI explanation (optional, off by default): a reviewer can ask for a short
 explanation of why an invoice stopped, shown beside the checks and verified
-against them first. It sends masked check evidence to Anthropic
-(`claude-sonnet-4-6`), so it needs a key with paid API access and should not
-see real invoice data without a provider and data-processing review. Nothing
-else needs it: the demo, the tests, CI and Docker run without a key.
+against them first. It sends Anthropic (`claude-sonnet-4-6`) only the check
+evidence an allowlist names: text the application composes, and IBANs as their
+first and last four characters. Values read from the document, the KoSIT
+message and supplier or buyer identities are withheld (ADR-082). It needs a
+key with paid API access and should not see real invoice data without a
+provider and data-processing review. Nothing else needs it: the demo, the
+tests, CI and Docker run without a key.
 
 ```bash
 # in .env: AI_EXPLANATIONS=true and ANTHROPIC_API_KEY=...
