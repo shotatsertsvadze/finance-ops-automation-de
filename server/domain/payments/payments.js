@@ -76,9 +76,9 @@ export async function createPaymentInstruction({ pool }, { invoiceId, actor }) {
     if (!invoice.supplier_iban_raw) throw new RuleError(422, "NO_IBAN", "Ohne IBAN kann keine Zahlung angewiesen werden");
     const creditorIban = await verifiedCreditorIban(client, invoice);
 
-    // Booked credits of the same supplier reduce what leaves the bank. Read
-    // and locked inside this transaction, so two payments to one supplier
-    // cannot both spend the same credit (ADR-050).
+    // Booked credits of the same supplier reduce what leaves the bank. Locked
+    // first and read after the lock, inside this transaction, so two payments
+    // to one supplier cannot both spend the same credit (ADR-050, ADR-083).
     const credits = await openCreditsFor(client, invoice.supplier_id, invoice.currency ?? "EUR", invoiceId);
     const plan = planNetting(invoice.gross_amount, credits);
     if (plan.payableCents === null) {

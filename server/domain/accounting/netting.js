@@ -46,10 +46,23 @@ function byAgeThenNumber(a, b) {
   return String(a.credit.invoice_number ?? "").localeCompare(String(b.credit.invoice_number ?? ""));
 }
 
+const CREDITS_OF_SUPPLIER = `from finops.invoices i
+     where i.supplier_id = $1
+       and i.document_type = 'CREDIT_NOTE'
+       and i.state = 'CREDITED'
+       and coalesce(i.currency, 'EUR') = $2
+       and i.id is distinct from $3`;
+
 /**
  * Booked credit notes of this supplier that still have something left, locked
  * for update. The lock matters: two payments to the same supplier running
  * together would otherwise both read the same open balance and both spend it.
+ *
+ * Locked first, read second (ADR-083). Under READ COMMITTED a statement reads
+ * from the snapshot it started with, so a balance computed in the statement
+ * that waited for the lock is the balance from before the other payment
+ * committed. The second statement starts after the lock is held and sees it.
+ * It reads only the notes it locked, in the same order every caller locks them.
  *
  * `excludeInvoiceId` keeps an invoice from netting against itself, which a
  * credit note would otherwise do when its own payment is instructed. The
@@ -57,21 +70,24 @@ function byAgeThenNumber(a, b) {
  */
 export async function openCreditsFor(client, supplierId, currency = "EUR", excludeInvoiceId = null, { lock = true } = {}) {
   if (!supplierId) return [];
+  const params = [supplierId, currency, excludeInvoiceId];
+  let locked = null;
+  if (lock) {
+    const { rows } = await client.query(
+      `select i.id ${CREDITS_OF_SUPPLIER} order by i.issue_date, i.invoice_number for update of i`, params,
+    );
+    locked = rows.map((row) => row.id);
+  }
   const { rows } = await client.query(
     `select i.id, i.invoice_number, i.issue_date,
             (i.gross_amount - coalesce((
               select sum(a.amount) from finops.credit_applications a
               where a.credit_note_id = i.id and a.released_at is null
             ), 0))::text as open_amount
-     from finops.invoices i
-     where i.supplier_id = $1
-       and i.document_type = 'CREDIT_NOTE'
-       and i.state = 'CREDITED'
-       and coalesce(i.currency, 'EUR') = $2
-       and i.id is distinct from $3
-     order by i.issue_date, i.invoice_number
-     ${lock ? "for update of i" : ""}`,
-    [supplierId, currency, excludeInvoiceId],
+     ${CREDITS_OF_SUPPLIER}
+       and ($4::uuid[] is null or i.id = any($4))
+     order by i.issue_date, i.invoice_number`,
+    [...params, locked],
   );
   return rows.filter((row) => Number(row.open_amount) > 0);
 }

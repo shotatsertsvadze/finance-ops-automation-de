@@ -315,6 +315,8 @@ described as working.
 | M21 | An invoice the credits cover entirely | 409 `FULLY_CREDITED`; settles through its own action | AUTO | `netting-path.test.js` |
 | M22 | Settling an invoice with a remainder | 409 `NOT_FULLY_CREDITED`, nothing consumed | AUTO | `netting-path.test.js` |
 | M23 | A credit applied twice to one invoice | refused by the unique index | AUTO | `netting-path.test.js` |
+| M23a | Two sessions reach the same credit note at once, the second waiting for the first's lock: payment against payment, settlement against payment, payment against settlement | the credit is spent once; the second sees only what the first left (119.00 of 357.00 after a settlement; nothing after a payment, so it pays in full); an invoice the spent credit no longer covers is refused `NOT_FULLY_CREDITED` and stays ACCOUNTING_READY (ADR-083) | AUTO | `netting-path.test.js` "payment against payment", "settlement against payment", "payment against settlement"; a third session holds the ledger table so the first stops with its locks held |
+| M23b | Two payment instructions at once, unforced, five runs | never more applied than the credit; one netted, one in full | AUTO | `netting-path.test.js` "unforced, repeated"; before ADR-083 the credit was spent twice in 20 of 20 runs |
 | M24 | What was applied is on the audit trail | gross, amount applied and the credit notes used | AUTO | `netting-path.test.js` |
 | M25 | A netted payment reconciles | bank line -476.00 matched against the instruction, no rule changed | MANUAL | End-to-end probe, 2026-09-18: imported, matched, RECONCILED |
 | M26 | A partly used credit keeps its remainder | 476.00 credit, 119.00 applied, 357.00 left | AUTO | `netting-path.test.js` |

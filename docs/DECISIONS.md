@@ -989,6 +989,10 @@ is a larger piece of work and is named here rather than half-built.
 
 ## ADR-050 A booked credit reduces the next payment, and the ledger says which
 
+**Partly superseded by ADR-083 (2026-09-30):** reading the credits `for update`
+did not stop two payments spending the same credit; the balance is now read
+after the lock is held. The sentence on the lock below did not hold.
+
 Completes ADR-049, which booked credit notes and left settlement outside the
 system. A credit note now offsets the next payment to the same supplier.
 
@@ -2015,3 +2019,41 @@ longer quote the invoice number or the rejected values. What is guaranteed is
 narrower than "no personal data": no value read from the document is sent
 unless its check is classified as composed by the application. Master data the
 application holds (an order status, a masked IBAN) can still be sent.
+
+## ADR-083 A credit's balance is read after its lock is held
+
+Supersedes the locking sentence of ADR-050. Corrective hardening during the
+feature freeze; no behaviour is added.
+
+Context: `openCreditsFor` computed each credit note's open balance (its gross
+amount less the sum of its applications) in the same statement that locked it
+`for update`. PostgreSQL runs at READ COMMITTED here, and a statement reads
+from the snapshot it took when it started. A second payment that started its
+statement while the first held the lock waited, got the row once the first
+committed, and returned the balance from its own, earlier snapshot. The first
+payment had not changed the credit-note row, only inserted into
+`credit_applications`, so nothing made PostgreSQL re-read it. Two payments
+to one supplier at once spent the same credit twice (in 20 of 20 unforced
+runs), and a settlement could close an invoice with credit a payment had just
+spent. The unique index on (credit note, invoice) stops one invoice using a
+credit twice, not two invoices sharing one.
+
+Decision: lock first, read second. One statement locks the supplier's booked
+credit notes `for update`, in the order the netting uses (issue date, then
+number); a second statement, whose snapshot starts after the locks are held,
+computes their open balances, and reads only the notes it locked. The credit
+applications are written while the locks are held, in the same transaction.
+Both paths that consume credit, the payment instruction and settlement by
+credit, go through this one function.
+
+Rejected: SERIALIZABLE, which would need retry handling the transactions do not
+have; REPEATABLE READ, which keeps the earlier snapshot and so the stale
+balance; an advisory lock, which is a second mechanism for what the row lock
+already serialises; a stored balance with a check constraint, which needs a
+migration and belongs to a pilot, not to this fix.
+
+Consequences: payments to the same supplier that hold open credits run one
+after another at that point, which they already did while waiting for the
+lock. No demo figure changes: the demo instructs its payments one at a time.
+Tests hold the first session at its write with a third session, so the
+interleaving is forced rather than hoped for.
