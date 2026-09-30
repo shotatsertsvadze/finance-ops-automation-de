@@ -5,6 +5,8 @@ import InboxView from "./features/inbox/InboxView.jsx";
 import InvoiceDetail from "./features/invoice/InvoiceDetail.jsx";
 import PaymentsView from "./features/payments/PaymentsView.jsx";
 import DashboardView from "./features/dashboard/DashboardView.jsx";
+import BankChangesView from "./features/bank-changes/BankChangesView.jsx";
+import BankChangeDetail from "./features/bank-changes/BankChangeDetail.jsx";
 import LoginView from "./features/auth/LoginView.jsx";
 import { useSession } from "./lib/useSession.js";
 import { useI18n } from "./lib/i18n.js";
@@ -65,6 +67,12 @@ export default function App() {
           <NavLink to="/zahlungen">
             {t("navPayments")} <span className="nav-count">{counts.openMoney}</span>
           </NavLink>
+          {may("bank-change:read") && (
+            <>
+              <div className="nav-group label">{t("navMasterData")}</div>
+              <NavLink to="/bankverbindungen">{t("navBankChanges")}</NavLink>
+            </>
+          )}
         </nav>
         <div className="rail-foot">
           <LanguageSwitch />
@@ -85,6 +93,8 @@ export default function App() {
           <Route path="/dashboard" element={<DashboardView />} />
           <Route path="/zahlungen" element={<PaymentsView may={may} onChanged={refresh} />} />
           <Route path="/rechnung/:id" element={<InvoiceDetail may={may} onChanged={refresh} />} />
+          <Route path="/bankverbindungen" element={<BankChangesView may={may} />} />
+          <Route path="/bankverbindungen/:id" element={<BankChangeDetail user={user} may={may} />} />
         </Routes>
       </main>
     </div>

@@ -4,9 +4,11 @@ import { getInvoice } from "../../lib/api.js";
 import { groupIban } from "../../lib/format.js";
 import { useI18n } from "../../lib/i18n.js";
 import StateChip from "../../components/StateChip.jsx";
+import Fact from "../../components/Fact.jsx";
 import StateSpine from "./StateSpine.jsx";
 import EvidenceRow from "./EvidenceRow.jsx";
 import ActionPanel from "./ActionPanel.jsx";
+import InvoiceBankPanel from "../bank-changes/InvoiceBankPanel.jsx";
 
 export default function InvoiceDetail({ may, onChanged }) {
   const { t, errorText, role, action, reviewReason, auditReason, formatDate, formatDateTime, formatMoney } = useI18n();
@@ -143,6 +145,8 @@ export default function InvoiceDetail({ may, onChanged }) {
               onChanged();
             }}
           />
+
+          <InvoiceBankPanel invoice={invoice} may={may} />
 
           {invoice.review_reason && (
             <section className="panel">
@@ -299,14 +303,5 @@ export default function InvoiceDetail({ may, onChanged }) {
         </div>
       </div>
     </>
-  );
-}
-
-function Fact({ label, value, mono }) {
-  return (
-    <div className="fact">
-      <span className="label">{label}</span>
-      <span className={`fact-value${mono ? " mono" : ""}`}>{value}</span>
-    </div>
   );
 }

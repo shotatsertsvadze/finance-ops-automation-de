@@ -52,6 +52,8 @@ export function LanguageProvider({ children }) {
       state: (code) => dict.state[code] ?? code,
       action: (code) => dict.action[code] ?? code,
       role: (code) => dict.role[code] ?? code,
+      changeState: (code) => dict.changeState[code] ?? code,
+      changeAction: (code) => dict.changeAction[code] ?? code,
       reviewReason: (code) => dict.reviewReason[code] ?? code,
       matchReason: (code) => dict.matchReason[code] ?? code,
       checkSentence: (result) => checkSentence(dict, result),
