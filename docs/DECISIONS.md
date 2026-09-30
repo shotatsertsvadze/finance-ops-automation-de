@@ -1916,3 +1916,10 @@ Consequences:
 - Not built: automatic generation, feedback on explanations, other providers,
   explanations outside review. The plan's pilot decides whether it stays: if
   exceptions take no less time with it, it is removed.
+- Status, 2026-09-30: The AI exception-explanation capability is implemented
+  and structurally tested with deterministic grounding tests and a stand-in
+  provider. It is disabled by default and does not participate in invoice
+  routing, approval, master-data changes, payment or reconciliation.
+  Real-provider quality and acceptance-rate evaluation against the configured
+  Anthropic model is still pending because external paid API usage is not
+  enabled for this project. `npm run ai:eval` stays for when it is.

@@ -80,8 +80,9 @@ them is **official validation (KoSIT)**: acceptable.
 > nothing against it. It is the business check, against our own master data,
 > that sees it pays the wrong account."
 
-**Optional, only with `AI_EXPLANATIONS=true` and a key** (off by default, and
-the rest of this demo does not need it). Below the checks, **KI-Erklärung**,
+**Optional, and not part of the standard demo:** it needs `AI_EXPLANATIONS=true`
+and an Anthropic key with paid API access, and has not been evaluated against
+the real model. Off by default; skip this paragraph otherwise. Below the checks, **KI-Erklärung**,
 labelled *KI-generierter Vorschlag – keine Entscheidung*. Press **Erklärung
 erzeugen**: a short summary, the checks it refers to, and the possible next
 step **Bankverbindung zur Prüfung vorschlagen**. Generate it before recording;
@@ -270,9 +271,10 @@ Do not improvise. It is written down, with the reasoning, in
 - A verified bank account is added to master data; the supplier's previous
   account stays trusted until retiring accounts is built.
 - Authentication is demo-grade: no password reset, second factor or SSO.
-- The AI explanation is optional and off by default. It explains, never
-  decides; a contradiction in its free text is caught only by a phrase list,
-  which is why the checks stay on screen above it.
+- The AI explanation is optional, off by default and not yet evaluated
+  against the real model. It explains, never decides; a contradiction in its
+  free text is caught only by a phrase list, which is why the checks stay on
+  screen above it.
 
 ## If a demo goes wrong
 

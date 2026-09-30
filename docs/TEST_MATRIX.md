@@ -211,7 +211,7 @@ described as working.
 | L13 | The operational figures declare SYNTHETIC as a constant, because the application holds demo data only. On real invoices they would still say synthetic: before a customer or pilot deployment, their source must follow the actual dataset (ADR-079) | Read `server/domain/kpi/provenance.js`: `volume` to `cycle` map to SYNTHETIC unconditionally | OPEN |
 | L14 | A source's explanation is hover text (`title`), which touch screens do not show. The source label itself is always visible text, so the meaning never rests on colour or hover alone | Tap a source tag on a phone: no explanation appears | OPEN |
 | L15 | Whether an AI explanation contradicts the evidence in free text is checked only by a phrase list; facts, the set of failures, cited checks and steps are checked exactly. Negation is read per clause, so a double negation ("kein Grund, warum sie nicht bezahlt werden kann") is taken as negated (ADR-080) | An answer such as "the order has room left" without a number passes the verifier | OPEN |
-| L16 | The AI explanation has not been run against the real model here; its acceptance rate is unmeasured | `npm run ai:eval` needs `ANTHROPIC_API_KEY` | OPEN |
+| L16 | Real-provider quality and acceptance rate of the AI explanation are unmeasured: it is structurally tested with a stand-in provider only, because paid API usage is not enabled for this project (ADR-080) | `npm run ai:eval`, 2026-09-30: every request refused by the API (account without API credit); no answer was generated | OPEN |
 
 ## Authentication and authorization
 
@@ -418,7 +418,7 @@ real model.
 | AI21 | The record | insert-only for the app role; a production start checks it | AUTO | `audit-role.test.js` |
 | AI22 | The evaluation scenarios | IBAN mismatch, PO overrun, duplicate, KoSIT rejection, two failures: every good answer accepted in German and English, every bad one refused by its rule; the committed inputs equal what the pipeline produces | AUTO | `grounding.test.js`; `explanations.test.js` "the committed evaluation inputs" |
 | AI23 | The panel | below the checks; DE and EN; a refused answer reads "Keine KI-Erklärung verfügbar" with a retry; no panel for an invoice that passed; no button for a manager; no overflow at 390 px | MANUAL | Browser, 2026-09-30, with the stand-in provider |
-| AI24 | The real model | `npm run ai:eval` over the five scenarios in both languages | MANUAL | Not run: no API key on this machine |
+| AI24 | The real model | `npm run ai:eval` over the five scenarios in both languages, three runs each | OPEN | Pending: paid API usage is not enabled for this project; see L16 |
 
 ## Bank-account changes (ADR-077)
 
