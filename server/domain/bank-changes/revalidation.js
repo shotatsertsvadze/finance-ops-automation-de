@@ -5,6 +5,7 @@ import { SYSTEM } from "../workflow/transitions.js";
 import { log } from "../../log.js";
 import { approveChange } from "./changes.js";
 import { lockChange, stateConflict, writeChangeEvent } from "./trail.js";
+import { pendingInvoices } from "./queries.js";
 
 /**
  * Approving commits master data first; the invoices it concerns are validated
@@ -15,23 +16,6 @@ export async function approveAndRevalidate(deps, input) {
   const approved = await approveChange(deps, input);
   const revalidation = await revalidateChange(deps, input.changeId, SYSTEM);
   return { ...approved, revalidation };
-}
-
-/**
- * Invoices of the change's supplier that carry its IBAN, are still open for a
- * decision and have not been revalidated for this change yet. INFO_REQUESTED
- * is among them only to be reported: a person's open question is answered by
- * a person, and then the retry takes it.
- */
-async function candidates(pool, change) {
-  const { rows } = await pool.query(
-    `select i.id, i.invoice_number from finops.invoices i
-     where i.supplier_id = $1 and i.supplier_iban_raw = $2 and i.state in ('REVIEW_REQUIRED', 'INFO_REQUESTED')
-       and not exists (select 1 from finops.bank_change_revalidations r where r.change_id = $3 and r.invoice_id = i.id)
-     order by i.received_at, i.id`,
-    [change.supplier_id, change.proposed_iban, change.id],
-  );
-  return rows;
 }
 
 async function failedIbanMatch(client, invoiceId, runNo) {
@@ -84,7 +68,9 @@ export async function revalidateChange(deps, changeId, actor) {
   if (change.state !== "APPROVED") throw stateConflict(change);
 
   const result = { revalidated: [], waiting: [], failed: [] };
-  for (const { id, invoice_number: invoiceNumber } of await candidates(deps.pool, change)) {
+  // INFO_REQUESTED is among them only to be reported: a person's open
+  // question is answered by a person, and then the retry takes it.
+  for (const { invoice_id: id, invoice_number: invoiceNumber } of await pendingInvoices(deps.pool, change)) {
     try {
       const outcome = await revalidateOne(deps, change, id, actor);
       if (outcome === "waiting") result.waiting.push({ invoice_id: id, invoice_number: invoiceNumber });
