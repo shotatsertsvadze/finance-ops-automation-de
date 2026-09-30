@@ -503,7 +503,7 @@ select {
     padding: 8px 14px;
     white-space: nowrap;
   }
-  .nav a[aria-current="page"] { border-left: 0; border-bottom-color: var(--high); }
+  .nav a[aria-current="page"] { border-left: 0; border-bottom-color: #8fa8e0; }
   /* The footer holds the sign-out control, so it stays reachable on a phone.
      Only the disclaimer is dropped. */
   .rail-foot { display: block; margin-top: 0; padding: 0 16px 10px; }
