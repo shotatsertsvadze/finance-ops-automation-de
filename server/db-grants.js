@@ -29,6 +29,8 @@ export async function grantAppRole(pool, role) {
     `revoke update, delete, truncate on finops.bank_change_events, finops.bank_change_verifications, finops.bank_change_revalidations from ${role}`,
     `revoke update, delete, truncate on finops.bank_account_changes, finops.supplier_bank_accounts from ${role}`,
     `grant update (${CHANGE_DECISION_COLUMNS.join(", ")}) on finops.bank_account_changes to ${role}`,
+    // The official validator's answers are evidence, written once (ADR-078).
+    `revoke update, delete, truncate on finops.official_validations from ${role}`,
   ];
   for (const sql of statements) await pool.query(sql);
 }

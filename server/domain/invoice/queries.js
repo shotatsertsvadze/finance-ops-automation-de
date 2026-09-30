@@ -58,7 +58,7 @@ export async function getInvoiceDetail(pool, id) {
     [id],
   );
   if (!invoice) return null;
-  const [lines, results, decision, steps, events, accounting, payment, bankTx, openCredit, poAvailable, bankChanges] = await Promise.all([
+  const [lines, results, decision, steps, events, accounting, payment, bankTx, openCredit, poAvailable, bankChanges, officialRuns] = await Promise.all([
     pool.query("select * from finops.invoice_lines where invoice_id = $1 order by line_no", [id]),
     pool.query(
       `select * from finops.validation_results where invoice_id = $1
@@ -81,6 +81,12 @@ export async function getInvoiceDetail(pool, id) {
     openCreditCents(pool, invoice),
     invoice.purchase_order_id ? availableCents(pool, invoice.purchase_order_id, id, { lock: false }) : null,
     changesForInvoice(pool, invoice),
+    // The latest official validation, without the raw report (ADR-078).
+    pool.query(
+      `select run_no, outcome, verdict, http_status, validator_version, configuration_version, scenario, document_sha256,
+              reported_document_sha256, messages, error, duration_ms, report_sha256, validated_at
+       from finops.official_validations where invoice_id = $1 order by run_no desc limit 1`, [id],
+    ),
   ]);
   const { file_path, parsed, ...rest } = invoice;
   return {
@@ -97,6 +103,7 @@ export async function getInvoiceDetail(pool, id) {
     payable_blockers: payableBlockers(invoice, results.rows.filter((r) => r.status === "FAILED").map((r) => r.check_code)),
     // Proposals to trust the IBAN this invoice carries (ADR-077).
     bank_changes: bankChanges,
+    official_validation: officialRuns.rows[0] ?? null,
     routing: decision.rows[0] ?? null,
     // The live round; the rounds before it, cancelled, as the record (ADR-067).
     approval_steps: steps.rows.filter((s) => s.round === currentRound(steps.rows)),

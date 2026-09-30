@@ -8,7 +8,9 @@ async function demoPasswordAccounts(pool) {
   return rows.filter((u) => verifyPassword(PUBLISHED_DEMO_PASSWORD, u.password_hash, u.password_salt)).map((u) => u.email);
 }
 
-const EVIDENCE_TABLES = ["audit_events", "bank_change_events", "bank_change_verifications", "bank_change_revalidations"];
+const EVIDENCE_TABLES = [
+  "audit_events", "bank_change_events", "bank_change_verifications", "bank_change_revalidations", "official_validations",
+];
 
 /** Every privilege that would let the app rewrite history, as [privilege, table]. */
 const HISTORY_PRIVILEGES = [
@@ -44,6 +46,10 @@ export async function deploymentProblems({ pool, env, clientDir }) {
   const problems = [];
   if (!existsSync(path.join(clientDir, "index.html"))) {
     problems.push(`Kein gebauter Client in ${clientDir}: zuerst npm run build`);
+  }
+  // Without it every invoice would fail closed into review (ADR-078).
+  if (!env.KOSIT_URL) {
+    problems.push("Kein offizieller Validator konfiguriert: KOSIT_URL setzen (npm run kosit startet ihn lokal)");
   }
   const trail = await trailWriters(pool);
   if (trail.length) {

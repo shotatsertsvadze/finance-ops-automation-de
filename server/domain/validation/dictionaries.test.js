@@ -28,7 +28,7 @@ const businessCheckSources = () => [source("./business-checks.js"), source("./ta
  * Missing that form would have wrongly reported a correct entry as stale.
  */
 function emittedChecks() {
-  const files = [businessCheckSources(), source("../invoice/technical-validation.js")];
+  const files = [businessCheckSources(), source("../invoice/technical-validation.js"), source("../invoice/official-validation.js")];
   const pairs = new Set();
   for (const text of files) {
     for (const [, fn, code] of text.matchAll(/\b(passed|failed|warning|skipped|info)\("([a-z_]+)"/g)) {

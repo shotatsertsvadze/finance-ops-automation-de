@@ -96,7 +96,7 @@ test("nor delete an invoice, which would take its trail with it", async () => {
   assert.ok(rows[0].n > 0, "the trail is still there");
 });
 
-test("the app role cannot rewrite a bank-account proposal, its evidence or trusted accounts", async () => {
+test("the app role cannot rewrite a bank-account proposal, official validation evidence or trusted accounts", async () => {
   for (const sql of [
     "update finops.bank_account_changes set proposed_iban = 'DE02300209000106531065'",
     "update finops.bank_account_changes set proposal_sha256 = repeat('b', 64)",
@@ -110,6 +110,10 @@ test("the app role cannot rewrite a bank-account proposal, its evidence or trust
     "update finops.bank_change_revalidations set to_run_no = 99",
     "delete from finops.bank_change_revalidations",
     "update finops.supplier_bank_accounts set iban = 'DE02300209000106531065'",
+    "update finops.official_validations set verdict = 'ACCEPTED'",
+    "update finops.official_validations set report = null, report_sha256 = null",
+    "delete from finops.official_validations",
+    "truncate finops.official_validations",
     "delete from finops.supplier_bank_accounts",
   ]) {
     await assert.rejects(() => app.query(sql), /permission denied/, sql);
@@ -124,7 +128,7 @@ test("but may record a change's decision, which is all the workflow updates", as
 });
 
 test("a production start refuses a connection that could change the trail", async () => {
-  const env = { NODE_ENV: "production", DEMO_MODE: "true" };
+  const env = { NODE_ENV: "production", DEMO_MODE: "true", KOSIT_URL: "http://127.0.0.1:8081" };
   const dist = new URL("../client", import.meta.url).pathname;
   const asOwner = await deploymentProblems({ pool: deps.pool, env, clientDir: dist });
   assert.ok(asOwner.some((p) => /Prüfpfad/.test(p)), asOwner.join("; "));

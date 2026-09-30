@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { NotFoundError, TransitionError } from "../errors.js";
 import { withTransaction } from "../../db.js";
 import { runTechnicalValidation } from "../invoice/technical-validation.js";
+import { saveOfficialValidation, validateOfficially } from "../invoice/official-validation.js";
 import { runBusinessChecks } from "../validation/business-checks.js";
 import { loadMasterData } from "../validation/lookup.js";
 import { decide } from "../routing/decide.js";
@@ -20,6 +21,12 @@ const sha256 = (buffer) => createHash("sha256").update(buffer).digest("hex");
  * that means (ADR-044).
  */
 const UNFINISHED_INTAKE = ["RECEIVED", "VALIDATING"];
+
+/**
+ * Deps built without a validator: none configured, and required in
+ * production, so a caller that forgot it fails closed there (ADR-078).
+ */
+const UNCONFIGURED = { client: null, required: process.env.NODE_ENV === "production" };
 
 /**
  * Stores the upload and creates the invoice in RECEIVED, or in DUPLICATE when
@@ -106,7 +113,7 @@ export async function processInvoice(deps, invoiceId, actor = SYSTEM) {
  * something about the run commits both or neither. `cause` goes into the
  * start event's evidence: what asked for this run.
  */
-export async function processInTransaction(client, { storage, policy, company }, invoiceId, actor = SYSTEM, cause = {}) {
+export async function processInTransaction(client, { storage, policy, company, officialValidator = UNCONFIGURED }, invoiceId, actor = SYSTEM, cause = {}) {
   const { rows: [invoice] } = await client.query("select * from finops.invoices where id = $1 for update", [invoiceId]);
   if (!invoice) throw new NotFoundError("INVOICE_NOT_FOUND", `Rechnung ${invoiceId} nicht gefunden`);
   if (!REPROCESSABLE_STATES.includes(invoice.state)) {
@@ -123,11 +130,18 @@ export async function processInTransaction(client, { storage, policy, company },
 
   const buffer = await storage.read(invoice.file_path);
   const technical = runTechnicalValidation(buffer);
-  await saveChecks(client, invoiceId, runNo, "TECHNICAL", technical.checks);
+  // After the parser, before the business checks: only a document the parser
+  // could read is sent, and a FAILED answer is a technical failure (ADR-078).
+  const official = await validateOfficially(officialValidator, {
+    buffer, name: invoiceId, documentSha256: invoice.file_sha256, readable: Boolean(technical.parsed),
+  });
+  const technicalChecks = [...technical.checks, official.check];
+  await saveChecks(client, invoiceId, runNo, "TECHNICAL", technicalChecks);
+  if (official.record) await saveOfficialValidation(client, invoiceId, runNo, official.record);
   if (technical.parsed) await saveExtractedFields(client, invoiceId, technical.parsed);
 
-  if (!technical.passed) {
-    const decision = decide({ technicalChecks: technical.checks, businessChecks: [], grossCents: null, policy, hadException: invoice.had_exception });
+  if (!technical.passed || official.check.status === "FAILED") {
+    const decision = decide({ technicalChecks, businessChecks: [], grossCents: null, policy, hadException: invoice.had_exception });
     await saveDecision(client, invoiceId, runNo, decision, policy);
     await markException(client, invoiceId, decision.targetState);
     await transition(client, { invoiceId, to: decision.targetState, actor: SYSTEM, action: "technical_validation_failed", reason: decision.reviewReason, reviewReason: decision.reviewReason, evidence: { run_no: runNo, reasons: decision.reasons } });
@@ -140,7 +154,7 @@ export async function processInTransaction(client, { storage, policy, company },
   await client.query("update finops.invoices set supplier_id = $2, purchase_order_id = $3 where id = $1", [invoiceId, business.supplierId, business.purchaseOrderId]);
 
   const decision = decide({
-    technicalChecks: technical.checks, businessChecks: business.checks,
+    technicalChecks, businessChecks: business.checks,
     grossCents: business.grossCents, policy, hadException: invoice.had_exception,
   });
   await saveDecision(client, invoiceId, runNo, decision, policy);

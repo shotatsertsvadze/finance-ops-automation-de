@@ -13,7 +13,7 @@ import { hashPassword } from "../auth/passwords.js";
 import { deploymentProblems } from "./deployment.js";
 
 let deps, clientDir;
-const PRODUCTION = { NODE_ENV: "production" };
+const PRODUCTION = { NODE_ENV: "production", KOSIT_URL: "http://127.0.0.1:8081" };
 
 before(async () => {
   deps = await testDeps();
@@ -54,4 +54,11 @@ test("production refuses to start without the built client", async () => {
   const found = await problems({ ...PRODUCTION, DEMO_MODE: "true" }, path.join(clientDir, "missing"));
   assert.equal(found.length, 1);
   assert.match(found[0], /npm run build/);
+});
+
+test("production refuses to start without an official validator", async () => {
+  // Every invoice would fail closed; better to say so once, at the start (ADR-078).
+  const found = await problems({ NODE_ENV: "production", DEMO_MODE: "true" });
+  assert.equal(found.length, 1);
+  assert.match(found[0], /KOSIT_URL/);
 });

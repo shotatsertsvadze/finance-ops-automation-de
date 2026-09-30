@@ -16,6 +16,7 @@ import { createPool } from "../server/db.js";
 import { createStorage } from "../server/storage/files.js";
 import { loadPolicy } from "../server/config/policy.js";
 import { loadCompany } from "../server/config/company.js";
+import { officialValidatorFromEnv } from "../server/integrations/kosit.js";
 import { handleUpload } from "../server/domain/intake/intake.js";
 import { decideApprovalStep, decideReview } from "../server/domain/approvals/approvals.js";
 import { createAccountingRecord } from "../server/domain/accounting/accounting.js";
@@ -464,6 +465,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     storage: createStorage(process.env.STORAGE_DIR ?? "./storage"),
     policy: loadPolicy(),
     company: loadCompany(),
+    officialValidator: officialValidatorFromEnv(),
   };
   generateDemoData(deps, { count: Number(process.env.DEMO_COUNT ?? 70) })
     .then((summary) => {

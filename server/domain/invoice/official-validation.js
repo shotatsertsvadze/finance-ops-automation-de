@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { SEVERITY, failed, passed, skipped } from "../checks.js";
 import { KOSIT_PINS } from "../../integrations/kosit-pins.js";
 import { readReport } from "./kosit-report.js";
@@ -99,4 +100,17 @@ export async function validateOfficially(validator, { buffer, name, documentSha2
     reported_document_sha256: report.documentSha256, messages: report.messages,
   };
   return { check: verdictCheck(record), record };
+}
+
+/** Kept beside the run's check results; insert-only, like the audit trail. */
+export async function saveOfficialValidation(client, invoiceId, runNo, record) {
+  const reportSha256 = record.report === null ? null : createHash("sha256").update(record.report).digest("hex");
+  await client.query(
+    `insert into finops.official_validations (invoice_id, run_no, outcome, verdict, http_status, validator_version,
+       configuration_version, scenario, document_sha256, reported_document_sha256, messages, error, duration_ms, report, report_sha256)
+     values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+    [invoiceId, runNo, record.outcome, record.verdict, record.http_status, record.validator_version, record.configuration_version,
+      record.scenario, record.document_sha256, record.reported_document_sha256, JSON.stringify(record.messages), record.error,
+      record.duration_ms, record.report, reportSha256],
+  );
 }

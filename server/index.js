@@ -8,6 +8,7 @@ import { createStorage } from "./storage/files.js";
 import { loadPolicy } from "./config/policy.js";
 import { loadCompany } from "./config/company.js";
 import { deploymentProblems } from "./config/deployment.js";
+import { officialValidatorFromEnv } from "./integrations/kosit.js";
 import { log } from "./log.js";
 
 // API_PORT, not PORT: the UI dev server and some hosts set PORT for
@@ -19,6 +20,7 @@ const deps = {
   storage: createStorage(process.env.STORAGE_DIR ?? "./storage"),
   policy: loadPolicy(),
   company: loadCompany(),
+  officialValidator: officialValidatorFromEnv(),
 };
 
 // Loopback by default. Exposing a demo on every interface should be a
