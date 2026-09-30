@@ -13,7 +13,10 @@ import AiExplanation from "./AiExplanation.jsx";
 import { STEP_TONE, chip } from "../../lib/tones.js";
 
 export default function InvoiceDetail({ may, onChanged }) {
-  const { t, errorText, role, action, reviewReason, auditReason, formatDate, formatDateTime, formatMoney } = useI18n();
+  const {
+    t, errorText, role, action, reviewReason, auditReason, formatDate, formatDateTime, formatMoney,
+    state: stateLabel, stepStatus, paymentStatus, channel,
+  } = useI18n();
   const { id } = useParams();
   const [invoice, setInvoice] = useState(null);
   const [error, setError] = useState(null);
@@ -60,7 +63,7 @@ export default function InvoiceDetail({ may, onChanged }) {
           <h1 className="mono">{invoice.invoice_number ?? invoice.original_filename}</h1>
           <p>
             {invoice.document_type === "CREDIT_NOTE" ? `${t("documentCreditNote")} · ` : ""}
-            {invoice.supplier_name ?? invoice.supplier_name_raw ?? "Lieferant nicht zugeordnet"}
+            {invoice.supplier_name ?? invoice.supplier_name_raw ?? t("supplierUnassigned")}
             {invoice.supplier_no ? ` · ${invoice.supplier_no}` : ""}
           </p>
         </div>
@@ -125,7 +128,7 @@ export default function InvoiceDetail({ may, onChanged }) {
             <div className="panel-body">
               <div className="facts">
                 <Fact label={t("fieldReceivedAt")} value={formatDateTime(invoice.received_at)} mono />
-                <Fact label={t("fieldChannel")} value={invoice.source_channel} />
+                <Fact label={t("fieldChannel")} value={channel(invoice.source_channel)} />
                 <Fact label={t("fieldFile")} value={invoice.original_filename} />
                 <Fact label="SHA-256" value={invoice.file_sha256.slice(0, 32) + "…"} mono />
               </div>
@@ -186,7 +189,7 @@ export default function InvoiceDetail({ may, onChanged }) {
                   )}
                   {invoice.payment && (
                     <>
-                      <Fact label={t("fieldPaymentStatus")} value={invoice.payment.status} mono />
+                      <Fact label={t("fieldPaymentStatus")} value={paymentStatus(invoice.payment.status)} />
                       <Fact label={t("fieldReference")} value={invoice.payment.provider_ref ?? "—"} mono />
                     </>
                   )}
@@ -224,7 +227,7 @@ export default function InvoiceDetail({ may, onChanged }) {
                         <span className="step-no">{step.step_no}</span>
                         <span>{role(step.required_role)}</span>
                         <span className={chip(STEP_TONE[step.status])}>
-                          {step.status === "PENDING" ? t("stepOpen") : step.status}
+                          {stepStatus(step.status)}
                         </span>
                         {step.actor_name && <span className="hint">{step.actor_name}</span>}
                       </div>
@@ -295,7 +298,7 @@ export default function InvoiceDetail({ may, onChanged }) {
                         <span className={`actor actor-${event.actor_type.toLowerCase()}`}>
                           {event.actor_type === "SYSTEM" ? t("actorSystem") : event.actor_name ?? t("actorPerson")}
                         </span>{" "}
-                        {event.from_state ? `${event.from_state} → ${event.to_state}` : event.to_state}
+                        {event.from_state ? `${stateLabel(event.from_state)} → ${stateLabel(event.to_state)}` : stateLabel(event.to_state)}
                         {event.reason ? ` · ${auditReason(event.reason)}` : ""}
                       </div>
                     </div>

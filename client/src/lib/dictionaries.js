@@ -219,6 +219,7 @@ const de = {
     sourceLegend: "Quellen",
     sourceNotMeasured: "Nicht gemessen",
     // AI explanation (ADR-080): a suggestion beside the evidence, never a decision.
+    supplierUnassigned: "Lieferant nicht zugeordnet",
     aiTitle: "KI-Erklärung",
     aiBadge: "KI-generierter Vorschlag – keine Entscheidung",
     aiGenerate: "Erklärung erzeugen",
@@ -426,6 +427,13 @@ const de = {
     CUSTOMER_BASELINE: "Ausgangswerte eines Kunden vor der Einführung",
     PILOT_RESULT: "Im Pilotbetrieb gemessen",
   },
+
+  // Values the database stores as codes, named for the screen.
+  checkStatus: { PASSED: "Bestanden", FAILED: "Fehlgeschlagen", WARNING: "Hinweis", SKIPPED: "Nicht geprüft", INFO: "Information" },
+  severity: { HIGH: "hoch", MEDIUM: "mittel", LOW: "niedrig", INFO: "Info" },
+  stepStatus: { PENDING: "offen", APPROVED: "freigegeben", REJECTED: "abgelehnt", CANCELLED: "aufgehoben" },
+  paymentStatus: { PENDING: "angewiesen", EXECUTED: "ausgeführt", FAILED: "fehlgeschlagen" },
+  channel: { UPLOAD: "Upload", EMAIL: "E-Mail" },
 
   // A next step an AI explanation may name, worded as the button it means.
   aiStep: {
@@ -747,6 +755,7 @@ const en = {
     kpiPerHour: (rate) => `at ${rate} € per hour`,
     sourceLegend: "Sources",
     sourceNotMeasured: "Not measured",
+    supplierUnassigned: "Supplier not matched",
     aiTitle: "AI explanation",
     aiBadge: "AI-generated suggestion – not a decision",
     aiGenerate: "Generate explanation",
@@ -953,6 +962,12 @@ const en = {
     CUSTOMER_BASELINE: "A customer's figures before introduction",
     PILOT_RESULT: "Measured during a pilot",
   },
+
+  checkStatus: { PASSED: "Passed", FAILED: "Failed", WARNING: "Warning", SKIPPED: "Not checked", INFO: "Information" },
+  severity: { HIGH: "high", MEDIUM: "medium", LOW: "low", INFO: "info" },
+  stepStatus: { PENDING: "open", APPROVED: "approved", REJECTED: "rejected", CANCELLED: "cancelled" },
+  paymentStatus: { PENDING: "instructed", EXECUTED: "executed", FAILED: "failed" },
+  channel: { UPLOAD: "Upload", EMAIL: "E-mail" },
 
   aiStep: {
     verify_bank_account: "Propose bank account for verification",
@@ -1237,13 +1252,33 @@ export function errorText(dict, { code, message, details }) {
   return entry(params);
 }
 
+// Role and channel codes inside the few sentences the server writes with
+// them, named as the rest of the screen names them. Only these templates:
+// a comment a person typed keeps their words, codes included.
+const ROLE_CODES = /\b(AP_CLERK|MANAGER|FINANCE|CFO|ADMIN)\b/g;
+const CODE_TEMPLATES = [
+  [/^((?:Eingang über|Received via) )([A-Z_]+)$/, (dict, m) => m[1] + (dict.channel[m[2]] ?? m[2])],
+  [/^((?:Freigabe durch|Approval by) )(.+)( (?:laut Betragsstufe|per amount tier))$/, (dict, m) => m[1] + roles(dict, m[2]) + m[3]],
+  [/^(.+ -> )([A-Z_+]+)$/, (dict, m) => m[1] + roles(dict, m[2])],
+];
+const roles = (dict, text) => text.replace(ROLE_CODES, (code) => dict.role[code]);
+
+function nameCodes(dict, text) {
+  for (const [pattern, name] of CODE_TEMPLATES) {
+    const match = text.match(pattern);
+    if (match) return name(dict, match);
+  }
+  return text;
+}
+
 /** Translates German free text the server sends: check evidence and audit reasons. */
 export function translateTerms(dict, value) {
-  if (!value || dict.terms.length === 0) return value;
-  return dict.terms.reduce(
+  if (!value) return value;
+  const translated = dict.terms.reduce(
     (text, [from, to]) => (from instanceof RegExp ? text.replace(from, to) : text.split(from).join(to)),
     value,
   );
+  return nameCodes(dict, translated);
 }
 
 /**

@@ -8,7 +8,7 @@ import { useI18n } from "../../lib/i18n.js";
  * changed bank account can be read at a glance instead of character-counted.
  */
 export default function EvidenceRow({ result }) {
-  const { t, checkSentence, term } = useI18n();
+  const { t, checkSentence, term, checkStatus, severity } = useI18n();
   const tone = result.status.toLowerCase();
   const showCompare = result.status === "FAILED" && (result.expected || result.actual);
   const markable = result.status === "FAILED" && isSingleIdentifier(result.expected) && isSingleIdentifier(result.actual);
@@ -20,8 +20,8 @@ export default function EvidenceRow({ result }) {
         <div className="ev-head">
           <span className="ev-code">{result.check_code}</span>
           <span className="ev-status">
-            {result.status}
-            {result.severity !== "INFO" && result.status === "FAILED" ? ` · ${result.severity}` : ""}
+            {checkStatus(result.status)}
+            {result.severity !== "INFO" && result.status === "FAILED" ? ` · ${severity(result.severity)}` : ""}
           </span>
         </div>
         <p className="ev-reason">{checkSentence(result)}</p>

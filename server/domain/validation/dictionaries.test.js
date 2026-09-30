@@ -149,8 +149,42 @@ test("an AI explanation is labelled as a suggestion, never a decision, in both l
   assert.equal(DICTIONARIES.en.ui.aiUnavailable, "No AI explanation available");
 });
 
+/** The values of a database enum, read from the migration that creates it. */
+function enumValues(type) {
+  for (const file of readdirSync(new URL("../../../db/migrations/", import.meta.url))) {
+    const match = source(`../../../db/migrations/${file}`).match(new RegExp(`create type finops\\.${type} as enum \\(([^)]*)\\)`));
+    if (match) return [...match[1].matchAll(/'([A-Z_]+)'/g)].map((m) => m[1]);
+  }
+  throw new Error(`enum ${type} not found`);
+}
+
+test("every check status, severity, approval-step status and payment status has a label in both languages", () => {
+  for (const [group, type] of [["checkStatus", "check_status"], ["severity", "check_severity"], ["stepStatus", "approval_step_status"], ["paymentStatus", "payment_status"]]) {
+    const values = enumValues(type);
+    assert.ok(values.length >= 3, type);
+    for (const [lang, dict] of Object.entries(DICTIONARIES)) {
+      assert.deepEqual(values.filter((v) => !dict[group]?.[v]), [], `${lang} ${group}`);
+    }
+  }
+});
+
+test("the intake channels the system writes have a label in both languages", () => {
+  for (const dict of Object.values(DICTIONARIES)) assert.ok(dict.channel.UPLOAD && dict.channel.EMAIL);
+  assert.equal(DICTIONARIES.de.channel.EMAIL, "E-Mail");
+});
+
+test("codes inside a stored audit reason or evidence text are named in the reader's language", () => {
+  const { de, en } = DICTIONARIES;
+  assert.equal(translateTerms(de, "Eingang über EMAIL"), "Eingang über E-Mail");
+  assert.equal(translateTerms(de, "Freigabe durch MANAGER + FINANCE laut Betragsstufe"), "Freigabe durch Kostenstellenleitung + Finanzen laut Betragsstufe");
+  assert.equal(translateTerms(de, "2499.00 EUR -> MANAGER+FINANCE"), "2499.00 EUR -> Kostenstellenleitung+Finanzen");
+  assert.equal(translateTerms(en, "Eingang über UPLOAD"), "Received via Upload");
+  assert.equal(translateTerms(en, "Freigabe durch MANAGER laut Betragsstufe"), "Approval by Cost centre manager per amount tier");
+  assert.equal(translateTerms(de, "Lieferant ist BLOCKED"), "Lieferant ist BLOCKED", "only roles and channels are codes it names");
+});
+
 test("the two dictionaries carry the same keys", () => {
-  for (const group of ["ui", "state", "reviewReason", "action", "matchReason", "role", "error", "changeState", "changeAction", "source", "sourceExplanation", "aiStep"]) {
+  for (const group of ["ui", "state", "reviewReason", "action", "matchReason", "role", "error", "changeState", "changeAction", "source", "sourceExplanation", "aiStep", "checkStatus", "severity", "stepStatus", "paymentStatus", "channel"]) {
     const de = Object.keys(DICTIONARIES.de[group]).sort();
     const en = Object.keys(DICTIONARIES.en[group]).sort();
     assert.deepEqual(en, de, `the ${group} groups differ`);
@@ -257,7 +291,7 @@ test("every audit reason the server writes is translated, with nothing German le
     const english = auditReason(DICTIONARIES.en, reason);
     assert.ok(!/[äöüßÄÖÜ]/.test(english), `not translated: ${reason} -> ${english}`);
   }
-  assert.match(auditReason(DICTIONARIES.en, "Eingang über EMAIL"), /^Received via EMAIL$/);
+  assert.match(auditReason(DICTIONARIES.en, "Eingang über EMAIL"), /^Received via E-mail$/);
   assert.match(auditReason(DICTIONARIES.en, "Zahlung 1330.84 EUR angewiesen"), /^Payment of 1330\.84 EUR instructed$/);
   assert.equal(auditReason(DICTIONARIES.en, "SUPPLIER_IBAN_MATCH"), "IBAN differs from master data");
 });
@@ -267,6 +301,8 @@ test("a comment a person typed is left in their own words", () => {
   // German to an English reader.
   const comment = "Mit Lieferant telefonisch geklärt";
   assert.equal(auditReason(DICTIONARIES.en, comment), comment);
+  const withCodes = "Rückfrage an FINANCE per EMAIL";
+  assert.equal(auditReason(DICTIONARIES.de, withCodes), withCodes, "codes in a typed comment are the person's words");
 });
 
 // ------------------------------------------------------------- refusals ----
