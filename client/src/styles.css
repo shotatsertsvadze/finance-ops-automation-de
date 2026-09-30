@@ -152,6 +152,13 @@ a { color: inherit; }
 .page-head h1 { font-size: 22px; }
 .page-head p { margin: 4px 0 0; color: var(--ink-3); font-size: 13px; max-width: 62ch; }
 
+/* ---------- invoice summary: what, how much, by when, where it stands ---------- */
+.summary { flex-wrap: wrap; row-gap: 12px; }
+.summary-facts { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 28px; margin: 0; }
+.summary-facts > div { display: grid; gap: 3px; }
+.summary-facts dd { margin: 0; font-size: 14px; }
+.summary-amount { font-size: 18px; font-weight: 600; }
+
 /* ---------- panel ---------- */
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
 .panel-head {

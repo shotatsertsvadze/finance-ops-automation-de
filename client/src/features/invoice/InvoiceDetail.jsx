@@ -58,7 +58,8 @@ export default function InvoiceDetail({ may, onChanged }) {
   return (
     <>
       <Link to="/" className="back">{t("backToInbox")}</Link>
-      <div className="page-head" style={{ marginTop: 8 }}>
+      {/* What it is, how much, by when, and where it stands, before anything else. */}
+      <div className="page-head summary" style={{ marginTop: 8 }}>
         <div>
           <h1 className="mono">{invoice.invoice_number ?? invoice.original_filename}</h1>
           <p>
@@ -67,7 +68,20 @@ export default function InvoiceDetail({ may, onChanged }) {
             {invoice.supplier_no ? ` · ${invoice.supplier_no}` : ""}
           </p>
         </div>
-        <StateChip state={invoice.state} />
+        <dl className="summary-facts">
+          <div>
+            <dt className="label">{t(invoice.document_type === "CREDIT_NOTE" ? "fieldCreditAmount" : "fieldAmountDue")}</dt>
+            <dd className="summary-amount mono">{formatMoney(invoice.gross_amount)}</dd>
+          </div>
+          <div>
+            <dt className="label">{t("fieldDueDate")}</dt>
+            <dd className="mono">{formatDate(invoice.due_date)}</dd>
+          </div>
+          <div>
+            <dt className="label">{t("status")}</dt>
+            <dd><StateChip state={invoice.state} /></dd>
+          </div>
+        </dl>
       </div>
 
       <div className="detail">
@@ -141,18 +155,9 @@ export default function InvoiceDetail({ may, onChanged }) {
           </section>
         </div>
 
+        {/* Why it stopped, the evidence for it, then what can be done: the
+            order a reviewer reads in. Everything else follows. */}
         <div className="detail-stack">
-          <ActionPanel
-            invoice={invoice}
-            may={may}
-            onDone={() => {
-              load();
-              onChanged();
-            }}
-          />
-
-          <InvoiceBankPanel invoice={invoice} may={may} />
-
           {invoice.review_reason && (
             <section className="panel">
               <div className="panel-head">
@@ -168,6 +173,42 @@ export default function InvoiceDetail({ may, onChanged }) {
               </div>
             </section>
           )}
+
+          <section className="panel">
+            <div className="panel-head">
+              <span className="label">{t("panelEvidence")}</span>
+              <span className="hint">
+                {failed.length > 0 ? t("evidenceFailed", failed.length, results.length) : t("evidenceAllPassed", results.length)}
+              </span>
+            </div>
+            <div className="evidence">
+              {failed.map((result) => (
+                <EvidenceRow key={result.id} result={result} />
+              ))}
+              {showPassed && rest.map((result) => <EvidenceRow key={result.id} result={result} />)}
+            </div>
+            {rest.length > 0 && (
+              <div className="panel-body" style={{ borderTop: "1px solid var(--line)", paddingTop: 10, paddingBottom: 10 }}>
+                <button className="ev-toggle" onClick={() => setShowPassed((v) => !v)}>
+                  {showPassed ? t("hidePassed") : t("showPassed", rest.length)}
+                </button>
+              </div>
+            )}
+            {results.length === 0 && <p className="empty">{t("notCheckedDuplicate")}</p>}
+          </section>
+
+          <ActionPanel
+            invoice={invoice}
+            may={may}
+            onDone={() => {
+              load();
+              onChanged();
+            }}
+          />
+
+          <InvoiceBankPanel invoice={invoice} may={may} />
+
+          <AiExplanation invoiceId={invoice.id} runNo={results[0]?.run_no} state={invoice.state} may={may} />
 
           {(invoice.accounting_record || invoice.payment) && (
             <section className="panel">
@@ -259,31 +300,6 @@ export default function InvoiceDetail({ may, onChanged }) {
               </div>
             </section>
           )}
-
-          <section className="panel">
-            <div className="panel-head">
-              <span className="label">{t("panelEvidence")}</span>
-              <span className="hint">
-                {failed.length > 0 ? t("evidenceFailed", failed.length, results.length) : t("evidenceAllPassed", results.length)}
-              </span>
-            </div>
-            <div className="evidence">
-              {failed.map((result) => (
-                <EvidenceRow key={result.id} result={result} />
-              ))}
-              {showPassed && rest.map((result) => <EvidenceRow key={result.id} result={result} />)}
-            </div>
-            {rest.length > 0 && (
-              <div className="panel-body" style={{ borderTop: "1px solid var(--line)", paddingTop: 10, paddingBottom: 10 }}>
-                <button className="ev-toggle" onClick={() => setShowPassed((v) => !v)}>
-                  {showPassed ? t("hidePassed") : t("showPassed", rest.length)}
-                </button>
-              </div>
-            )}
-            {results.length === 0 && <p className="empty">{t("notCheckedDuplicate")}</p>}
-          </section>
-
-          <AiExplanation invoiceId={invoice.id} runNo={results[0]?.run_no} state={invoice.state} may={may} />
 
           <section className="panel">
             <div className="panel-head"><span className="label">{t("panelHistory")}</span></div>
