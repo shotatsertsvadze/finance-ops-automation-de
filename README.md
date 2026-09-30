@@ -45,8 +45,9 @@ are recorded in `docs/PHASE_0_INDEPENDENT_REVIEW.md` and
 
 ![The operational metrics view, showing straight-through processing rate, exception reasons, cycle times, risk signals, the work queue and the modelled savings, each figure tagged with its source](docs/screenshots/dashboard.png)
 
-The metrics view after a demo run of 70 synthetic invoices. Every figure is
-derived from the invoices and their check trail rather than counted separately.
+The metrics view after a demo run of 70 synthetic invoices. Every operational
+figure is derived from the invoices and their check trail rather than counted
+separately; the savings are modelled, and each figure is tagged with its source.
 The interface is German by default and switches to English.
 
 ## What is worth looking at
@@ -374,7 +375,7 @@ The same seed produces the same invoices, amounts and relative timings. The
 dates are not fixed: the month ends today, so regenerating on another day
 shifts them and rewrites the committed statement. The data is synthetic.
 
-Every dashboard figure is computed from the invoices and their audit events.
+Every operational figure is computed from the invoices and their audit events.
 There is no counter to drift. Each figure names its source: synthetic demo
 data, a modelled assumption, or both. The savings panel is a modelled
 potential, not a measured benefit. Customer baseline and pilot result read

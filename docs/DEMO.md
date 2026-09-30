@@ -226,8 +226,8 @@ as a reason of its own, once. The ranking counts every return to review by its
 recorded reason, and that return records the comment. It is a known flaw of the
 ranking, not of the bank-account step; if asked, say so.
 
-> "Every figure is computed from the invoices and their check trail, not
-> counted separately."
+> "Every operational figure is computed from the invoices and their check
+> trail, not counted separately."
 
 Under the title, **Sources** lists the four kinds of number. Every figure
 carries its tag: the operational figures say **Synthetic demo data**, and
