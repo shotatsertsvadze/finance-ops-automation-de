@@ -550,7 +550,8 @@ expired, and signing in again stays on the same page (ADR-057).
   comments), and exactly what was
   sent is stored. The answer is verified before it is shown and changes
   nothing; a production start with AI on and no key is refused. A real
-  deployment needs a provider and data-processing review first (ADR-080).
+  deployment needs a provider and data-processing review first. Structurally
+  tested with a stand-in provider; real-provider evaluation is pending (ADR-080).
 - A new supplier bank account needs three different people and a call-back
   on the number already in master data; administration takes no step, and no
   number is ever read from the request (ADR-077).

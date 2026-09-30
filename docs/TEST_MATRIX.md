@@ -389,8 +389,9 @@ in `server/integrations/kosit-real.test.js`.
 
 ## AI exception explanation (ADR-080)
 
-CI runs these with a stand-in provider (`test-support/ai.js`); no test calls a
-real model.
+The capability is optional, off by default and non-authoritative. CI runs
+these with a stand-in provider (`test-support/ai.js`); no test calls a real
+model, and real-provider evaluation is pending (L16, AI24).
 
 | # | Case | Expected | Status | Evidence |
 |---|---|---|---|---|
