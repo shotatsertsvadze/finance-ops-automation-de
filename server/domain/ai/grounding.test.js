@@ -76,6 +76,36 @@ test("decision language is refused in either language, whatever the requested on
   }
 });
 
+test("a negated release, approval or payment is a statement of the block, not a decision", () => {
+  for (const text of [
+    "Die Rechnung kann nicht freigegeben werden.", "Die Rechnung darf nicht bezahlt werden.", "Sie sollte keinesfalls überwiesen werden.",
+    "Bitte die Rechnung nicht freigeben.", "The invoice cannot be approved.", "The invoice can not be approved.",
+    "It should not be paid.", "It must never be released.", "Do not release the invoice.", "Don't pay it.",
+  ]) {
+    assert.deepEqual(verify({ explanation: text }).reasons, [], text);
+  }
+});
+
+test("a positive release, approval or payment is still refused, even after an unrelated negation", () => {
+  for (const text of [
+    "Die Rechnung kann freigegeben werden.", "Die Rechnung kann bezahlt werden.", "Sie darf überwiesen werden.", "Bitte die Rechnung freigeben.",
+    "The invoice can be approved.", "It can be released.", "It can be paid.", "Release the invoice.", "Pay it.",
+    "Die IBAN stimmt nicht; die Rechnung kann freigegeben werden.", "Die Bestellung ist nicht betroffen, die Rechnung kann bezahlt werden.",
+    "The IBAN is not trusted, but the invoice can be paid.", "Nothing is missing and it can be approved.",
+  ]) {
+    assert.ok(rules(verify({ explanation: text })).includes("DECISION"), text);
+  }
+});
+
+test("saying what may not happen to the money is not a claim that it happened", () => {
+  for (const text of ["Die Rechnung darf nicht bezahlt werden.", "It should not be paid."]) {
+    assert.ok(!rules(verify({ explanation: text })).includes("PAYMENT_CLAIM"), text);
+  }
+  for (const text of ["Die Rechnung wurde bezahlt.", "Sie ist bereits überwiesen.", "It has been paid.", "It was transferred."]) {
+    assert.ok(rules(verify({ explanation: text })).includes("PAYMENT_CLAIM"), text);
+  }
+});
+
 test("a trusted account may still be called approved or freigegeben: only a decision about the invoice is refused", () => {
   assert.deepEqual(verify({ explanation: "Die IBAN gehört nicht zu den freigegebenen Bankverbindungen." }).reasons, []);
 });

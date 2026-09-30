@@ -12,21 +12,49 @@ export const SCHEMA_VERSION = "finops.ai-explanation/1";
 export const LIMITS = { summary: 200, explanation: 700 };
 const FIELDS = ["summary", "explanation", "failed_checks", "cited_checks", "next_step", "language"];
 
-// What the invoice may or should have done to it, in either language. A
-// sentence such as "kann nicht freigegeben werden" is refused as well: the
-// prompt asks for no statement about releasing or paying at all.
+// What may or should be done to the invoice, in either language. Negated in
+// its own clause ("kann nicht freigegeben werden", "do not pay it") it states
+// the block and is allowed; a negation in an earlier clause does not count
+// ("stimmt nicht; die Rechnung kann freigegeben werden" is refused).
 const FEW_WORDS = "(?:\\p{L}+\\s+){0,3}";
-const phrase = (words) => new RegExp(`(?<!\\p{L})${words}(?!\\p{L})`, "iu");
-const DECISION_PATTERNS = [
+const phrase = (words, flags = "iu") => new RegExp(`(?<!\\p{L})${words}(?!\\p{L})`, flags);
+const ACTIONS = [
   `(kann|können|darf|dürfen|sollte|sollten|muss|müssen)\\s+${FEW_WORDS}(freigegeben|genehmigt|bezahlt|überwiesen)\\s+werden`,
   `(rechnung|sie)\\s+${FEW_WORDS}(freigeben|genehmigen|bezahlen|überweisen)`,
-  "(freigeben|genehmigen|bezahlen|überweisen)\\s+sie",
-  "unbedenklich", "keine bedenken", "ist in ordnung",
   `(can|could|may|should|must)\\s+${FEW_WORDS}(be\\s+)?(approved|released|paid)`,
-  "(approve|release|pay)\\s+(the\\s+invoice|it)", "safe to (pay|approve|release)", "no (issues|concerns|problems)",
-  "nothing to worry",
-].map(phrase);
-const PAYMENT_CLAIM = phrase("(bezahlt|überwiesen|gezahlt|paid|transferred)");
+  "(approve|release|pay)\\s+(the\\s+invoice|it)",
+].map((words) => phrase(words, "giu"));
+// Verdicts about the invoice itself; no negation makes these safe to say.
+const VERDICTS = [
+  "(freigeben|genehmigen|bezahlen|überweisen)\\s+sie", "unbedenklich", "keine bedenken", "ist in ordnung",
+  "safe to (pay|approve|release)", "no (issues|concerns|problems)", "nothing to worry",
+].map((words) => phrase(words));
+const NEGATION = phrase("(nicht|kein\\p{L}*|keinesfalls|nie|niemals|not|never|cannot|can't|don't|mustn't|shouldn't|won't)");
+const CLAUSE_BREAK = new RegExp("[.;,:!?]|(?<!\\p{L})(und|aber|sondern|doch|jedoch|and|but|however)(?!\\p{L})", "giu");
+
+/** The text of the clause a match sits in, up to the end of the match. */
+function clauseOf(text, match) {
+  const before = text.slice(0, match.index);
+  const breaks = [...before.matchAll(CLAUSE_BREAK)];
+  const start = breaks.length ? breaks.at(-1).index + breaks.at(-1)[0].length : 0;
+  return text.slice(start, match.index + match[0].length);
+}
+
+/** The first phrase that decides about the invoice, or null. */
+function decision(text) {
+  for (const pattern of VERDICTS) {
+    const match = text.match(pattern);
+    if (match) return match[0];
+  }
+  for (const pattern of ACTIONS) {
+    for (const match of text.matchAll(pattern)) if (!NEGATION.test(clauseOf(text, match))) return match[0];
+  }
+  return null;
+}
+
+// That money moved: a participle, but not "bezahlt werden" or "be paid",
+// which say what may happen, not what did.
+const PAYMENT_CLAIM = phrase("((bezahlt|überwiesen|gezahlt)(?!\\s+werden)|(?<!\\bbe\\s)(paid|transferred))");
 const PAID_IN_EVIDENCE = phrase("(paid|bezahlt)");
 const CONTACT = [/\bhttps?:\/\//i, /\bwww\./i, /[^\s@]+@[^\s@]+\.[^\s@]+/, /\+\s?\d/];
 
@@ -121,8 +149,8 @@ export function verifyExplanation(input, output) {
   ];
   if (ungrounded.length) refuse("UNGROUNDED", [...new Set(ungrounded)].join(", "));
   if (CONTACT.some((pattern) => pattern.test(text))) refuse("CONTACT", "Link, E-Mail-Adresse oder Telefonnummer");
-  const decision = DECISION_PATTERNS.find((pattern) => pattern.test(text));
-  if (decision) refuse("DECISION", text.match(decision)[0]);
+  const decided = decision(text);
+  if (decided) refuse("DECISION", decided);
   if (PAYMENT_CLAIM.test(text) && !PAID_IN_EVIDENCE.test(evidence.corpus)) refuse("PAYMENT_CLAIM", text.match(PAYMENT_CLAIM)[0]);
 
   return { accepted: reasons.length === 0, reasons };
