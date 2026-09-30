@@ -46,3 +46,13 @@ export function proposalHash({ supplierId, iban, bic, trustedIbans, sourceInvoic
   };
   return createHash("sha256").update(JSON.stringify(bound)).digest("hex");
 }
+
+/** The hash of a stored change, recomputed from its columns at approval. */
+export const hashOfChange = (change) => proposalHash({
+  supplierId: change.supplier_id,
+  iban: change.proposed_iban,
+  bic: change.proposed_bic,
+  trustedIbans: change.trusted_ibans,
+  sourceInvoiceId: change.source_invoice_id,
+  requiredDistinctActors: change.required_distinct_actors,
+});
