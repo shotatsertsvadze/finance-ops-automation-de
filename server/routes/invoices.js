@@ -13,6 +13,7 @@ import { bookCredit } from "../domain/accounting/credit-notes.js";
 import { settleByCredit } from "../domain/accounting/netting.js";
 import { resolveReconciliation } from "../domain/reconciliation/reconciliation.js";
 import { cancelInvoice } from "../domain/cancellation/cancel.js";
+import { currentExplanation, requestExplanation } from "../domain/ai/explanations.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -111,6 +112,24 @@ export function invoicesRouter(deps) {
         .set("Content-Security-Policy", "default-src 'none'; sandbox; frame-ancestors 'none'")
         .set("Referrer-Policy", "no-referrer");
       res.send(await deps.storage.read(row.file_path));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // An AI explanation of why the invoice stopped: a suggestion beside the
+  // evidence, never part of it (ADR-080). The invoice detail does not carry it.
+  router.get("/:id/ai-explanation", async (req, res, next) => {
+    try {
+      res.json(await currentExplanation(deps, req.params.id, req.query.language));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/ai-explanation", requirePermission("review:decide"), async (req, res, next) => {
+    try {
+      res.json(await requestExplanation(deps, req.params.id, req.query.language, req.actor));
     } catch (error) {
       next(error);
     }

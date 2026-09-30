@@ -62,3 +62,14 @@ test("production refuses to start without an official validator", async () => {
   assert.equal(found.length, 1);
   assert.match(found[0], /KOSIT_URL/);
 });
+
+test("production refuses AI explanations switched on without a key (ADR-080)", async () => {
+  const found = await problems({ ...PRODUCTION, DEMO_MODE: "true", AI_EXPLANATIONS: "true" });
+  assert.equal(found.length, 1);
+  assert.match(found[0], /ANTHROPIC_API_KEY/);
+});
+
+test("AI explanations off need no key, and on with a key start normally", async () => {
+  assert.deepEqual(await problems({ ...PRODUCTION, DEMO_MODE: "true" }), []);
+  assert.deepEqual(await problems({ ...PRODUCTION, DEMO_MODE: "true", AI_EXPLANATIONS: "true", ANTHROPIC_API_KEY: "k" }), []);
+});

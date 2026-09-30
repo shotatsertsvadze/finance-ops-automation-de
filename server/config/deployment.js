@@ -53,6 +53,10 @@ export async function deploymentProblems({ pool, env, clientDir }) {
   if (!env.KOSIT_URL) {
     problems.push("Kein offizieller Validator konfiguriert: KOSIT_URL setzen (npm run kosit startet ihn lokal)");
   }
+  // Switched on, it would only ever fail; a start should say so once (ADR-080).
+  if (env.AI_EXPLANATIONS === "true" && !env.ANTHROPIC_API_KEY) {
+    problems.push("KI-Erklärungen eingeschaltet, aber kein ANTHROPIC_API_KEY gesetzt: Schlüssel setzen oder AI_EXPLANATIONS weglassen");
+  }
   const trail = await trailWriters(pool);
   if (trail.length) {
     problems.push(`Die Datenbankrolle kann den Prüfpfad ändern (${trail.join(", ")}); als eigene Rolle verbinden, eingerichtet mit npm run db:grant`);

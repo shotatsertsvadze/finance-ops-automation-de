@@ -432,6 +432,9 @@ const de = {
    */
   error: {
     INVOICE_NOT_FOUND: "Rechnung nicht gefunden",
+    AI_DISABLED: "KI-Erklärungen sind nicht eingeschaltet.",
+    AI_NOT_APPLICABLE: "Erklärt wird nur eine Rechnung in der Sichtprüfung mit fehlgeschlagener Prüfung.",
+    AI_LANGUAGE_UNKNOWN: "Die KI-Erklärung gibt es auf Deutsch oder Englisch.",
     // Changes to a supplier's trusted bank accounts (ADR-077).
     SUPPLIER_NOT_FOUND: "Lieferant nicht gefunden",
     SUPPLIER_NOT_ACTIVE_FOR_CHANGE: "Lieferant ist nicht aktiv: keine neue Bankverbindung",
@@ -931,6 +934,9 @@ const en = {
 
   error: {
     INVOICE_NOT_FOUND: "Invoice not found",
+    AI_DISABLED: "AI explanations are switched off.",
+    AI_NOT_APPLICABLE: "Only an invoice in review with a failed check can be explained.",
+    AI_LANGUAGE_UNKNOWN: "The AI explanation is available in German or English.",
     // Changes to a supplier's trusted bank accounts (ADR-077).
     SUPPLIER_NOT_FOUND: "Supplier not found",
     SUPPLIER_NOT_ACTIVE_FOR_CHANGE: "The supplier is not active: no new bank account",
