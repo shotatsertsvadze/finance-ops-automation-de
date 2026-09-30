@@ -1121,7 +1121,6 @@ const en = {
     "dates_valid:FAILED": "A date is not a valid calendar date",
     "line_amounts_consistent:PASSED": "Every line amount follows from its quantity and unit price",
     "line_amounts_consistent:FAILED": "A line amount does not follow from its quantity and unit price",
-    "line_amounts_consistent:SKIPPED": "Not every line could be recomputed",
     "credit_note_reference:PASSED": "The credit note names the invoice it credits",
     "credit_note_reference:FAILED": "The credit note names no invoice, so which liability it reduces is open",
     "totals_consistent:PASSED": "The totals add up, discounts and prepayments included",

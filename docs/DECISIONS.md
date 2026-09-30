@@ -892,6 +892,10 @@ supplier's own arithmetic error inside a line.
 
 ## ADR-048 A line amount is recomputed, not taken on trust
 
+**Partly superseded by ADR-081 (2026-09-30):** a line that cannot be
+recomputed is FAILED, not SKIPPED. The first supporting decision below no
+longer holds.
+
 Completes ADR-047 and closes the last of L3's totals half.
 
 ADR-047 verifies the chain from the line total to the amount due, and that
@@ -1923,3 +1927,39 @@ Consequences:
   Real-provider quality and acceptance-rate evaluation against the configured
   Anthropic model is still pending because external paid API usage is not
   enabled for this project. `npm run ai:eval` stays for when it is.
+
+## ADR-081 A line that cannot be recomputed stops the invoice
+
+Supersedes the first supporting decision of ADR-048. Corrective hardening
+during the feature freeze; no behaviour is added.
+
+Context: ADR-048 reported a line it could not recompute as SKIPPED, so that
+a mixture of verified and unverifiable lines was not shown as PASSED. That was
+right about the report and wrong about the consequence. Routing stops only on
+FAILED checks, and a SKIPPED check is severity INFO. A missing quantity or unit
+price is not a numeric error either: `amounts_numeric` asks whether a stated
+value is a number, not whether it is stated. So an invoice whose line had no
+quantity passed every check that ran, and under the auto-approve limit it was
+APPROVED without a person.
+
+This held only where no validator is configured (development, the Docker demo,
+the tests). With a validator required, the pinned KoSIT rules reject such a
+document first (BR-22, BR-26, PEPPOL-EN16931-R121, checked against 1.6.3 with
+XRechnung 3.0.2), and an unreachable validator fails closed (ADR-078). The
+protection was real in production, but it came from the external rule set,
+not from this application's own rule.
+
+Decision: a line whose quantity, unit price, base quantity, declared amount or
+line allowances cannot be read into a product is an issue of
+`line_amounts_consistent`, FAILED with severity HIGH, stated as "Position n:
+Menge oder Einzelpreis nicht lesbar". It stays overridable, like a
+miscalculated line: a reviewer can read the order and judge it.
+
+Not changed: SKIPPED keeps its meaning everywhere else. A check that does not
+apply (no purchase order, an unknown supplier) is not evidence against the
+invoice, and making every SKIPPED block routing would stop invoices for
+questions that were never asked.
+
+Consequences: no invoice of the demo month changes; none of them has a line
+that cannot be recomputed. The English dictionary loses the SKIPPED text of
+this check, which can no longer occur.

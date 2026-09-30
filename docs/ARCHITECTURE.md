@@ -402,7 +402,7 @@ invoice make sense for Nordwerk":
 | `po_exists` | HIGH | PO reference present but unknown |
 | `po_supplier_match` | HIGH | PO belongs to another supplier |
 | `po_amount_within_tolerance` | HIGH | net amount exceeds PO remaining amount by more than tolerance |
-| `line_amounts_consistent` | HIGH | a line's declared amount differs from quantity x unit price / base quantity - allowances + charges by more than 0.01; overridable, unlike the totals chain |
+| `line_amounts_consistent` | HIGH | a line's declared amount differs from quantity x unit price / base quantity - allowances + charges by more than 0.01, or a line cannot be recomputed (quantity, price or base quantity missing or unreadable, ADR-081); overridable, unlike the totals chain |
 | `credit_note_reference` | MEDIUM | a credit note names no invoice (asked only of credit notes) |
 | `totals_consistent` | HIGH | any link of the EN 16931 chain is off by more than 0.01: lines vs. declared line total, allowances and charges vs. their totals, lines - allowances + charges vs. net, net + VAT vs. gross, gross - prepaid + rounding vs. the amount due |
 | `tax_breakdown_bookable` | HIGH | no per-rate breakdown, a rate without a tax key (e.g. reverse charge), a rate's tax not base x rate within 0.01, or the breakdown not summing exactly to net and VAT; not overridable (ADR-053) |

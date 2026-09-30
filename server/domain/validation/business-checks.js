@@ -166,8 +166,9 @@ export function runBusinessChecks(parsed, master, policy, company) {
   // deriving it, because the chain sums exactly those declared amounts. A line
   // reading "10 x 5.00 = 500.00" leaves every total consistent and overpays by
   // a factor of ten, so each line is recomputed from what it states (ADR-048).
+  // A line that cannot be recomputed is an issue too: nothing anchors its
+  // amount, and routing does not stop on a SKIPPED check (ADR-081).
   const lineIssues = [];
-  const unchecked = [];
   for (const line of parsed.lines) {
     const label = `Position ${line.lineNo}`;
     const adjustments = line.allowanceCharges ?? [];
@@ -180,7 +181,7 @@ export function runBusinessChecks(parsed, master, policy, company) {
     const off = sumOf(adjustments.filter((a) => a.isCharge === false).map((a) => a.amount));
     const on = sumOf(adjustments.filter((a) => a.isCharge === true).map((a) => a.amount));
     if (declared === null || priced === null || off === null || on === null) {
-      unchecked.push(`${label}: Menge oder Einzelpreis nicht lesbar`);
+      lineIssues.push(`${label}: Menge oder Einzelpreis nicht lesbar`);
       continue;
     }
     const computed = priced - off + on;
@@ -194,13 +195,6 @@ export function runBusinessChecks(parsed, master, policy, company) {
     checks.push(failed("line_amounts_consistent", SEVERITY.HIGH, {
       expected: lineRule, actual: lineIssues.join("; "),
       reason: "Positionsbeträge folgen nicht aus Menge und Einzelpreis",
-    }));
-  } else if (unchecked.length) {
-    // Some lines agree and others could not be recomputed. Reporting that as
-    // passed would claim every line was verified.
-    checks.push(skipped("line_amounts_consistent", {
-      expected: lineRule, actual: unchecked.join("; "),
-      reason: "Nicht alle Positionen konnten nachgerechnet werden",
     }));
   } else {
     checks.push(passed("line_amounts_consistent", SEVERITY.HIGH, {

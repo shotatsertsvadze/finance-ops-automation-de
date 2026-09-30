@@ -126,7 +126,8 @@ browser).
 | B14 | A line amount that does not follow from quantity and price | `line_amounts_consistent` HIGH, totals still PASSED | AUTO | `business-checks.test.js` |
 | B15 | A price stated per base quantity | PASSED; the base quantity divides the price | AUTO | `business-checks.test.js` |
 | B16 | A line discount the line amount reflects, and one it ignores | PASSED, then FAILED | AUTO | `business-checks.test.js` |
-| B17 | A line that cannot be recomputed | SKIPPED, not PASSED | AUTO | `business-checks.test.js` |
+| B17 | A line that cannot be recomputed: no quantity, no price, a base quantity of zero | `line_amounts_consistent` FAILED HIGH, "Menge oder Einzelpreis nicht lesbar"; overridable like B18 (ADR-081, was SKIPPED under ADR-048) | AUTO | `business-checks.test.js` |
+| B17a | The same invoice under the auto-approve limit, no validator configured | REVIEW_REQUIRED, `LINE_AMOUNTS_CONSISTENT`, never APPROVED; with a required validator missing or unreachable it still stops first as `TECHNICAL_VALIDATION_FAILED` | AUTO | `intake.test.js` |
 | B18 | A reviewer may accept a miscalculated line | not in payableBlockers, unlike `totals_consistent` | AUTO | `business-checks.test.js` |
 | B19 | Quantity times price is exact, not floating point | half a cent rounds away from zero; no precision lost on large lines | AUTO | `money.test.js` |
 | B20 | Fixture I behaves as the README table promises | no FAILED check, 499.80 EUR due, approved automatically | AUTO | `business-checks.test.js` |
