@@ -33,3 +33,26 @@ export function invoiceBankEntry(invoice, may) {
     && ["REVIEW_REQUIRED", "INFO_REQUESTED"].includes(invoice.state);
   return { show, canPropose };
 }
+
+/**
+ * The three steps of a new bank account (ADR-077) as the screen draws them:
+ * who did each and when, and which one is next. Read from the change as it
+ * stands; nothing here decides who may act.
+ */
+export function changeSteps(change) {
+  const verification = change.verification;
+  const denied = verification?.outcome === "DENIED";
+  const ended = ["APPROVED", "REJECTED", "CANCELLED"].includes(change.state);
+  const open = (next) => ({ tone: next ? "attention" : "neutral", actor: null, at: null });
+  const callback = verification
+    ? { tone: denied ? "failed" : "done", actor: change.verified_by_name ?? null, at: change.verified_at ?? null }
+    : open(!ended);
+  const approval = change.state === "APPROVED" ? { tone: "done", actor: change.decided_by_name, at: change.decided_at }
+    : change.state === "REJECTED" && !denied ? { tone: "failed", actor: change.decided_by_name, at: change.decided_at }
+    : open(change.state === "VERIFIED");
+  return [
+    { key: "proposal", tone: "done", actor: change.proposed_by_name, at: change.proposed_at },
+    { key: "callback", ...callback },
+    { key: "approval", ...approval },
+  ];
+}

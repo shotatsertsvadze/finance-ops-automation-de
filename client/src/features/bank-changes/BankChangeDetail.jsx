@@ -9,7 +9,7 @@ import Fact from "../../components/Fact.jsx";
 import StateChip from "../../components/StateChip.jsx";
 import ChangeChip from "./ChangeChip.jsx";
 import VerifyForm from "./VerifyForm.jsx";
-import { changeActions } from "./rules.js";
+import { changeActions, changeSteps } from "./rules.js";
 
 export default function BankChangeDetail({ user, may }) {
   const { t, errorText } = useI18n();
@@ -56,6 +56,7 @@ export default function BankChangeDetail({ user, may }) {
         </div>
         <ChangeChip state={change.state} />
       </div>
+      <ChangeProgress change={change} />
       <div className="detail">
         <div className="detail-stack">
           <ProposalPanel change={change} />
@@ -70,6 +71,34 @@ export default function BankChangeDetail({ user, may }) {
           <HistoryPanel events={change.events} />
         </div>
       </div>
+    </>
+  );
+}
+
+const STEP_NAME = { proposal: "stepProposal", callback: "stepCallback", approval: "stepApproval" };
+const STEP_STATUS = { done: "stepDone", failed: "stepRefused", attention: "stepNext" };
+
+/** Three people, three steps: who did each, when, and what is next (ADR-077). */
+function ChangeProgress({ change }) {
+  const { t, formatDateTime } = useI18n();
+  const ended = ["APPROVED", "REJECTED", "CANCELLED"].includes(change.state);
+  return (
+    <>
+      <ol className="change-steps" aria-label={t("changeProgress")}>
+        {changeSteps(change).map((step, i) => (
+          <li key={step.key} className={`change-step is-${step.tone}`}>
+            <span className="change-step-no">{i + 1}</span>
+            <div>
+              <div className="change-step-name">
+                {t(STEP_NAME[step.key])}
+                <span className="change-step-status"> · {t(STEP_STATUS[step.tone] ?? (ended ? "stepNotReached" : "stepOpen"))}</span>
+              </div>
+              {step.actor && <div className="change-step-meta">{step.actor} · {formatDateTime(step.at)}</div>}
+            </div>
+          </li>
+        ))}
+      </ol>
+      <p className="hint change-steps-note">{t("policyPersons", change.required_distinct_actors)}</p>
     </>
   );
 }

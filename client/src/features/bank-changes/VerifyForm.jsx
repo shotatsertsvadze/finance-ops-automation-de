@@ -38,7 +38,11 @@ export default function VerifyForm({ change, busy, onSubmit }) {
 
   return (
     <>
-      <p className="action-prompt">{t("callNumberOnFile", change.callback_phone)}</p>
+      <div className="callback">
+        <span className="label">{t("callbackNumberLabel")}</span>
+        <div className="callback-number mono">{change.callback_phone}</div>
+        <p className="hint">{t("callbackOnlyThisNumber")}</p>
+      </div>
       {field(t("fieldContactedRole"), <input value={role} maxLength={100} onChange={(e) => setRole(e.target.value)} />)}
       {field(t("fieldCalledAt"), <input type="datetime-local" value={calledAt} onChange={(e) => setCalledAt(e.target.value)} />)}
       {field(t("fieldIbanReadBack"), <input className="mono" value={readBack} onChange={(e) => setReadBack(e.target.value)} />)}
