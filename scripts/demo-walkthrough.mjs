@@ -115,7 +115,8 @@ async function main() {
     "Expected the approved account, found another, with the characters that differ marked. Seconds, not an eye test.", 18);
 
   // --- 1:50 the human decision and the trail -----------------------------
-  await page.getByRole("textbox", { name: /reason/i })
+  // The decision panel's reason; the bank-account panel has one of its own.
+  await page.locator(".panel").filter({ hasText: "Your decision" }).getByRole("textbox", { name: /reason/i })
     .fill("Call back the supplier on the number in our master data.");
   await beat(page, "A person decides, and states why",
     "A new bank account cannot be waved through. The way on is a call-back and verified master data.", 8);
