@@ -197,6 +197,27 @@ test("only the minimised evidence leaves the system, exactly as recorded", async
   assert.doesNotMatch(sent, /\b[A-Z]{2}\d{2}[A-Z0-9]{12,30}\b/, "no full IBAN of any kind");
 });
 
+test("no supplier's number, name or VAT id leaves the system, even when a check is about which supplier it is", async () => {
+  const { rows: suppliers } = await deps.pool.query("select supplier_no, legal_name, vat_id from finops.suppliers");
+  const identities = suppliers.flatMap((s) => [s.supplier_no, s.legal_name, s.vat_id]).filter(Boolean);
+  for (const [what, change, failed] of [
+    ["an order of another supplier", (xml) => xml.replace("PO-2026-0201", "PO-2026-0303"), "po_supplier_match"],
+    ["an unknown supplier", (xml) => xml.replace("DE234567890", "DE777777777").replaceAll("Havel Logistik GmbH", "Ein Einzelunternehmer"), "supplier_known"],
+  ]) {
+    const id = await uploadChanged("B_iban_changed_2499.xml", change);
+    const fake = withProvider(replies.timeout);
+    await requestExplanation(deps, id, "de", REVIEWER);
+    const input = sentInput(fake.calls[0]);
+    assert.ok(input.failed.some((c) => c.check === failed), `${what}: ${failed} is explained`);
+    const sent = `${fake.calls[0].system}\n${fake.calls[0].message}`;
+    for (const identity of [...identities, "DE777777777", "Ein Einzelunternehmer"]) assert.ok(!sent.includes(identity), `${what}: ${identity}`);
+    const { rows: [kept] } = await deps.pool.query(
+      "select actual from finops.validation_results where invoice_id = $1 and check_code = $2", [id, failed],
+    );
+    assert.match(kept.actual, /S-10\d\d|DE777777777/, `${what}: the evidence itself still names the supplier`);
+  }
+});
+
 test("no workflow, routing, approval, master-data or payment code imports the AI modules", () => {
   const root = fileURLToPath(new URL("../../", import.meta.url));
   const allowed = new Set(["domain/ai", "integrations/ai-explainer.js", "routes/invoices.js", "index.js", "test-support"]);
@@ -213,6 +234,14 @@ test("no workflow, routing, approval, master-data or payment code imports the AI
   walk(root);
   assert.deepEqual(offenders, []);
 });
+
+/** A fixture changed before upload, alone in the invoice table. */
+async function uploadChanged(file, change) {
+  await deps.pool.query("delete from finops.invoices");
+  const xml = readFileSync(new URL(`../../../fixtures/xrechnung/${file}`, import.meta.url), "utf8");
+  const upload = { buffer: Buffer.from(change(xml)), originalFilename: file, sourceChannel: "UPLOAD", actor: human(USERS.clerk) };
+  return (await handleUpload({ ...deps, officialValidator: standInValidator() }, upload)).id;
+}
 
 /** G goes straight through to APPROVED: nothing stopped it, so there is nothing to explain. */
 async function uploadApproved() {

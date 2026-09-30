@@ -14,6 +14,14 @@ const STEP_FOR_CHECK = { supplier_iban_match: "verify_bank_account", duplicate_i
 const ALWAYS = ["request_info", "reject"];
 export const NEXT_STEPS = [...Object.values(STEP_FOR_CHECK), ...ALWAYS];
 
+// Checks about which supplier it is. The provider needs the relationship, not
+// the identity, so their values are replaced by what they establish; the
+// reason stays. The evidence on screen and in the database is unchanged.
+const DESCRIBED = {
+  supplier_known: { expected: "Lieferant im Stammdatenbestand", actual: "keine eindeutige Zuordnung" },
+  po_supplier_match: { expected: "Bestellung des Rechnungsstellers", actual: "Bestellung eines anderen Lieferanten" },
+};
+
 const MAX_TEXT = 240;
 const IBAN = /\b[A-Z]{2}\d{2}(?: ?[A-Z0-9]{4}){2,7}(?: ?[A-Z0-9]{1,3})?\b/g;
 const EMAIL = /[^\s@]+@[^\s@]+\.[^\s@]+/g;
@@ -39,7 +47,8 @@ const usableNames = (names) => [...new Set(names.filter((n) => typeof n === "str
 export function buildExplanationInput({ invoice, runNo, checks, names = [] }, language) {
   const redact = usableNames(names);
   const withStatus = (status) => checks.filter((c) => c.status === status);
-  const evidence = (c, fields) => Object.fromEntries(fields.map((f) => [f, f === "check" ? c.check_code : clean(c[f], redact)]));
+  const evidence = (c, fields) => Object.fromEntries(fields.map((f) =>
+    [f, f === "check" ? c.check_code : DESCRIBED[c.check_code]?.[f] ?? clean(c[f], redact)]));
   const failed = withStatus("FAILED");
   return {
     schema: INPUT_SCHEMA,

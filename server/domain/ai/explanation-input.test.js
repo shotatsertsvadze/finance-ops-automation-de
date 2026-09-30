@@ -59,7 +59,23 @@ test("a spaced IBAN is masked too, and a VAT id is not mistaken for one", () => 
 test("names and e-mail addresses do not leave the system", () => {
   const sent = JSON.stringify(input());
   for (const secret of ["Havel Logistik GmbH", "Nordwerk GmbH", "billing@havel-logistik.example"]) assert.ok(!sent.includes(secret), secret);
-  assert.equal(input().failed[1].expected, "S-1002 [Name]");
+});
+
+test("a supplier relationship is described, never identified: no supplier number, name or VAT id", () => {
+  const evidence = {
+    ...EVIDENCE,
+    checks: [
+      check("BUSINESS", "supplier_known", "FAILED", "bekannte USt-IdNr. oder eindeutiger Firmenname", "DE777777777 / Ein Einzelunternehmer",
+        "USt-IdNr. der Rechnung ist keinem Lieferanten zugeordnet"),
+      check("BUSINESS", "po_supplier_match", "FAILED", "S-1002 Havel Logistik GmbH", "PO-2026-0303 gehört zu S-1003 Spree IT-Systeme AG",
+        "Bestellung gehört zu einem anderen Lieferanten"),
+    ],
+  };
+  const [unknown, otherOrder] = input("de", evidence).failed;
+  assert.deepEqual([unknown.expected, unknown.actual], ["Lieferant im Stammdatenbestand", "keine eindeutige Zuordnung"]);
+  assert.deepEqual([otherOrder.expected, otherOrder.actual], ["Bestellung des Rechnungsstellers", "Bestellung eines anderen Lieferanten"]);
+  assert.equal(unknown.reason, "USt-IdNr. der Rechnung ist keinem Lieferanten zugeordnet", "the reason still says why");
+  assert.doesNotMatch(JSON.stringify(input("de", evidence)), /S-100\d|DE777777777|Einzelunternehmer|Spree|Havel/);
 });
 
 test("text read from a document is cleaned and cut short", () => {
