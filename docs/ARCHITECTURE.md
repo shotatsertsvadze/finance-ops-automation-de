@@ -31,17 +31,20 @@ flowchart LR
     AQ --> ACC
     ACC --> PAY[Payment simulation]
     PAY --> REC[Reconciliation]
+    RQ -.->|a reviewer asks| AIX[AI explanation\nmasked evidence, verified, never authoritative]
     subgraph DB[PostgreSQL schema finops]
         INV[(invoices)]
         VAL[(validation_results)]
         APP[(approval_steps)]
         AUD[(audit_events)]
         OV[(official_validations)]
+        AIT[(ai_explanations)]
         MD[(suppliers, bank accounts, purchase orders, users)]
     end
     INTAKE --> INV
     TECH --> VAL
     OFF --> OV
+    AIX -.-> AIT
     BIZ --> VAL
     ROUTE --> APP
     ROUTE --> AUD
@@ -51,7 +54,8 @@ flowchart LR
 
 Every arrow that changes `invoices.state` goes through `transition()` in
 `server/domain/workflow/transitions.js`, which writes the audit event in the
-same database transaction.
+same database transaction. The dotted AI branch writes only its own table;
+no arrow leads from it into the workflow (ADR-080).
 
 ## 3. Repository layout
 
@@ -75,7 +79,8 @@ finance-ops-automation-de/
     db.js                  pool, withTransaction, type parsers
     log.js request-log.js  JSON log lines; request id and one line per request
     auth/                  passwords (scrypt), sessions (cookie + CSRF), authorize (role matrix), set-password
-    integrations/          kosit.js (transport to the validator daemon), kosit-pins.js (versions and SHA-256)
+    integrations/          kosit.js (transport to the validator daemon), kosit-pins.js (versions and SHA-256),
+                           ai-explainer.js (transport to the AI provider, ADR-080)
     config/                policy.js, company.js, assumptions.js, tax-keys.js, deployment.js
     domain/
       errors.js            TransitionError (409), NotFoundError (404), RuleError (own status)
@@ -88,6 +93,8 @@ finance-ops-automation-de/
       approvals/           review and approval decisions, binding, final re-check
       purchase-orders/     commitments.js (capacity ledger)
       bank-changes/        a new supplier bank account: proposal, call-back verification, approval, revalidation (ADR-077)
+      ai/                  AI explanation of a stopped invoice: evidence.js, explanation-input.js (minimised,
+                           masked), prompt.js, grounding.js (the verifier), explanations.js (ADR-080)
       accounting/ payments/ cancellation/ reconciliation/ kpi/
     routes/                auth, session, health, invoices, master-data, bank-changes, money
     storage/               files.js (store/read original file)
@@ -115,6 +122,7 @@ erDiagram
     invoices ||--o{ approval_steps : requires
     invoices ||--o{ audit_events : "every transition"
     invoices ||--o{ official_validations : "per run"
+    invoices ||--o{ ai_explanations : "per run and language, beside the evidence"
     invoices ||--o| invoices : duplicate_of
     suppliers ||--o{ bank_account_changes : "proposed for"
     bank_account_changes ||--o| bank_change_verifications : "call-back"
@@ -158,6 +166,14 @@ Key columns (full definitions in `db/migrations/0001_core.sql`):
   names, normalised `messages` (step, level, rule code, text), `error`,
   `duration_ms`, the raw `report` and its `report_sha256`. Insert-only for the
   app role (ADR-078).
+- `ai_explanations` (migration `0024_ai_explanations.sql`): one row per
+  attempt to have an AI model explain why an invoice stopped: the cache key
+  (`invoice_id`, `run_no`, `input_sha256`, `prompt_version`, `schema_version`,
+  `provider`, `model`, `language`), the exact masked `input` sent, `status`
+  (ACCEPTED, REJECTED, FAILED), the structured `output`, `rejection_reasons`,
+  a sanitised `error`, duration, token counts and `requested_by`. One accepted
+  row per key; insert-only for the app role. Not evidence: nothing reads it
+  but the panel that shows it (ADR-080).
 - `bank_account_changes` (migration `0022_bank_account_changes.sql`): one
   proposal to trust a new IBAN for a supplier. The proposal (`proposed_iban`,
   `trusted_ibans` at the time, `shared_with`, `source_invoice_id`, `reason`,
@@ -447,6 +463,8 @@ invoice above the auto limit.
 | POST | `/api/invoices/:id/payment/retry` | 3 | PAYMENT_FAILED back to ACCOUNTING_READY, to instruct or settle again |
 | POST | `/api/invoices/:id/cancel` | 3 | stops an APPROVED, ACCOUNTING_READY or PAYMENT_FAILED invoice, reason required; reverses a booking |
 | POST | `/api/invoices/:id/reconciliation/resolve` | 3 | closes a reconciliation exception, reason required |
+| GET | `/api/invoices/:id/ai-explanation?language=de\|en` | 4 | `{enabled:false}` when off; otherwise whether the invoice can be explained and its accepted explanation for the current run, language and model (ADR-080) |
+| POST | `/api/invoices/:id/ai-explanation?language=de\|en` | 4 | asks the AI provider on demand, verifies and records the answer; returns it only if accepted, else `UNAVAILABLE`; `review:decide`; 409 `AI_DISABLED` or `AI_NOT_APPLICABLE` |
 | GET | `/api/accounting/export` | 3 | CSV of all booking lines; `?profile=spreadsheet` neutralises formula cells (ADR-045); `accounting:export` (finance, admin) |
 | POST | `/api/bank/import` | 3 | imports a synthetic statement, idempotent on `external_id` |
 | GET | `/api/bank/transactions` | 3 | statement lines with match status and reason; `bank:read` (finance, admin) |
@@ -489,6 +507,10 @@ expired, and signing in again stays on the same page (ADR-057).
 - `domain/reconciliation/matching.js` is a pure function, so the matching policy
   can be changed and tested without touching persistence.
 - `storage/files.js` hides local disk vs. bucket.
+- `integrations/ai-explainer.js` is the transport to the AI provider:
+  `explain({system, message, tool})` returns the structured answer or why
+  there is none. Another provider is another object with that method; the
+  input, prompt and verifier in `domain/ai/` stay as they are (ADR-080).
 
 ## 9. Security and privacy (MVP)
 
@@ -522,6 +544,12 @@ expired, and signing in again stays on the same page (ADR-057).
   127.0.0.1 only; a deployment reaches it on an internal address and never
   exposes it. Its answers are evidence insert-only for the app role; a
   production start is refused without `KOSIT_URL` (ADR-078).
+- AI explanations are off unless `AI_EXPLANATIONS=true`. When a reviewer asks,
+  only masked check evidence leaves the system (IBANs as first and last four
+  characters, no names, contacts, document or comments), and exactly what was
+  sent is stored. The answer is verified before it is shown and changes
+  nothing; a production start with AI on and no key is refused. A real
+  deployment needs a provider and data-processing review first (ADR-080).
 - A new supplier bank account needs three different people and a call-back
   on the number already in master data; administration takes no step, and no
   number is ever read from the request (ADR-077).
