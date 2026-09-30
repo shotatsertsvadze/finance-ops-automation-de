@@ -10,9 +10,13 @@ import EvidenceRow from "./EvidenceRow.jsx";
 import ActionPanel from "./ActionPanel.jsx";
 import InvoiceBankPanel from "../bank-changes/InvoiceBankPanel.jsx";
 import AiExplanation from "./AiExplanation.jsx";
+import { STEP_TONE, chip } from "../../lib/tones.js";
 
 export default function InvoiceDetail({ may, onChanged }) {
-  const { t, errorText, role, action, reviewReason, auditReason, formatDate, formatDateTime, formatMoney } = useI18n();
+  const {
+    t, errorText, role, action, reviewReason, auditReason, formatDate, formatDateTime, formatMoney,
+    state: stateLabel, stepStatus, paymentStatus, channel,
+  } = useI18n();
   const { id } = useParams();
   const [invoice, setInvoice] = useState(null);
   const [error, setError] = useState(null);
@@ -54,16 +58,30 @@ export default function InvoiceDetail({ may, onChanged }) {
   return (
     <>
       <Link to="/" className="back">{t("backToInbox")}</Link>
-      <div className="page-head" style={{ marginTop: 8 }}>
+      {/* What it is, how much, by when, and where it stands, before anything else. */}
+      <div className="page-head summary" style={{ marginTop: 8 }}>
         <div>
           <h1 className="mono">{invoice.invoice_number ?? invoice.original_filename}</h1>
           <p>
             {invoice.document_type === "CREDIT_NOTE" ? `${t("documentCreditNote")} · ` : ""}
-            {invoice.supplier_name ?? invoice.supplier_name_raw ?? "Lieferant nicht zugeordnet"}
+            {invoice.supplier_name ?? invoice.supplier_name_raw ?? t("supplierUnassigned")}
             {invoice.supplier_no ? ` · ${invoice.supplier_no}` : ""}
           </p>
         </div>
-        <StateChip state={invoice.state} />
+        <dl className="summary-facts">
+          <div>
+            <dt className="label">{t(invoice.document_type === "CREDIT_NOTE" ? "fieldCreditAmount" : "fieldAmountDue")}</dt>
+            <dd className="summary-amount mono">{formatMoney(invoice.gross_amount)}</dd>
+          </div>
+          <div>
+            <dt className="label">{t("fieldDueDate")}</dt>
+            <dd className="mono">{formatDate(invoice.due_date)}</dd>
+          </div>
+          <div>
+            <dt className="label">{t("status")}</dt>
+            <dd><StateChip state={invoice.state} /></dd>
+          </div>
+        </dl>
       </div>
 
       <div className="detail">
@@ -124,7 +142,7 @@ export default function InvoiceDetail({ may, onChanged }) {
             <div className="panel-body">
               <div className="facts">
                 <Fact label={t("fieldReceivedAt")} value={formatDateTime(invoice.received_at)} mono />
-                <Fact label={t("fieldChannel")} value={invoice.source_channel} />
+                <Fact label={t("fieldChannel")} value={channel(invoice.source_channel)} />
                 <Fact label={t("fieldFile")} value={invoice.original_filename} />
                 <Fact label="SHA-256" value={invoice.file_sha256.slice(0, 32) + "…"} mono />
               </div>
@@ -137,18 +155,9 @@ export default function InvoiceDetail({ may, onChanged }) {
           </section>
         </div>
 
+        {/* Why it stopped, the evidence for it, then what can be done: the
+            order a reviewer reads in. Everything else follows. */}
         <div className="detail-stack">
-          <ActionPanel
-            invoice={invoice}
-            may={may}
-            onDone={() => {
-              load();
-              onChanged();
-            }}
-          />
-
-          <InvoiceBankPanel invoice={invoice} may={may} />
-
           {invoice.review_reason && (
             <section className="panel">
               <div className="panel-head">
@@ -164,6 +173,42 @@ export default function InvoiceDetail({ may, onChanged }) {
               </div>
             </section>
           )}
+
+          <section className="panel">
+            <div className="panel-head">
+              <span className="label">{t("panelEvidence")}</span>
+              <span className="hint">
+                {failed.length > 0 ? t("evidenceFailed", failed.length, results.length) : t("evidenceAllPassed", results.length)}
+              </span>
+            </div>
+            <div className="evidence">
+              {failed.map((result) => (
+                <EvidenceRow key={result.id} result={result} />
+              ))}
+              {showPassed && rest.map((result) => <EvidenceRow key={result.id} result={result} />)}
+            </div>
+            {rest.length > 0 && (
+              <div className="panel-body" style={{ borderTop: "1px solid var(--line)", paddingTop: 10, paddingBottom: 10 }}>
+                <button className="ev-toggle" onClick={() => setShowPassed((v) => !v)}>
+                  {showPassed ? t("hidePassed") : t("showPassed", rest.length)}
+                </button>
+              </div>
+            )}
+            {results.length === 0 && <p className="empty">{t("notCheckedDuplicate")}</p>}
+          </section>
+
+          <ActionPanel
+            invoice={invoice}
+            may={may}
+            onDone={() => {
+              load();
+              onChanged();
+            }}
+          />
+
+          <InvoiceBankPanel invoice={invoice} may={may} />
+
+          <AiExplanation invoiceId={invoice.id} runNo={results[0]?.run_no} state={invoice.state} may={may} />
 
           {(invoice.accounting_record || invoice.payment) && (
             <section className="panel">
@@ -185,7 +230,7 @@ export default function InvoiceDetail({ may, onChanged }) {
                   )}
                   {invoice.payment && (
                     <>
-                      <Fact label={t("fieldPaymentStatus")} value={invoice.payment.status} mono />
+                      <Fact label={t("fieldPaymentStatus")} value={paymentStatus(invoice.payment.status)} />
                       <Fact label={t("fieldReference")} value={invoice.payment.provider_ref ?? "—"} mono />
                     </>
                   )}
@@ -222,8 +267,8 @@ export default function InvoiceDetail({ may, onChanged }) {
                       <div className="step-line">
                         <span className="step-no">{step.step_no}</span>
                         <span>{role(step.required_role)}</span>
-                        <span className={`chip ${step.status === "PENDING" ? "chip-wait" : "chip-ok"}`}>
-                          {step.status === "PENDING" ? t("stepOpen") : step.status}
+                        <span className={chip(STEP_TONE[step.status])}>
+                          {stepStatus(step.status)}
                         </span>
                         {step.actor_name && <span className="hint">{step.actor_name}</span>}
                       </div>
@@ -257,31 +302,6 @@ export default function InvoiceDetail({ may, onChanged }) {
           )}
 
           <section className="panel">
-            <div className="panel-head">
-              <span className="label">{t("panelEvidence")}</span>
-              <span className="hint">
-                {failed.length > 0 ? t("evidenceFailed", failed.length, results.length) : t("evidenceAllPassed", results.length)}
-              </span>
-            </div>
-            <div className="evidence">
-              {failed.map((result) => (
-                <EvidenceRow key={result.id} result={result} />
-              ))}
-              {showPassed && rest.map((result) => <EvidenceRow key={result.id} result={result} />)}
-            </div>
-            {rest.length > 0 && (
-              <div className="panel-body" style={{ borderTop: "1px solid var(--line)", paddingTop: 10, paddingBottom: 10 }}>
-                <button className="ev-toggle" onClick={() => setShowPassed((v) => !v)}>
-                  {showPassed ? t("hidePassed") : t("showPassed", rest.length)}
-                </button>
-              </div>
-            )}
-            {results.length === 0 && <p className="empty">{t("notCheckedDuplicate")}</p>}
-          </section>
-
-          <AiExplanation invoiceId={invoice.id} runNo={results[0]?.run_no} state={invoice.state} may={may} />
-
-          <section className="panel">
             <div className="panel-head"><span className="label">{t("panelHistory")}</span></div>
             <div className="panel-body">
               <ul className="timeline">
@@ -294,7 +314,7 @@ export default function InvoiceDetail({ may, onChanged }) {
                         <span className={`actor actor-${event.actor_type.toLowerCase()}`}>
                           {event.actor_type === "SYSTEM" ? t("actorSystem") : event.actor_name ?? t("actorPerson")}
                         </span>{" "}
-                        {event.from_state ? `${event.from_state} → ${event.to_state}` : event.to_state}
+                        {event.from_state ? `${stateLabel(event.from_state)} → ${stateLabel(event.to_state)}` : stateLabel(event.to_state)}
                         {event.reason ? ` · ${auditReason(event.reason)}` : ""}
                       </div>
                     </div>

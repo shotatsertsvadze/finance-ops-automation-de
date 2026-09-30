@@ -1,5 +1,6 @@
 import { useI18n } from "../../lib/i18n.js";
 import { pathFor } from "./actions.js";
+import { STATE_TONE } from "../../lib/tones.js";
 
 /**
  * The happy path as a vertical spine, with the invoice's actual position on
@@ -8,13 +9,13 @@ import { pathFor } from "./actions.js";
  * stage where the invoice actually stopped.
  */
 const OFF_PATH = {
-  REVIEW_REQUIRED: { after: "VALIDATING", tone: "blocked" },
-  INFO_REQUESTED: { after: "VALIDATING", tone: "blocked" },
-  REJECTED: { after: "VALIDATING", tone: "blocked" },
-  DUPLICATE: { after: "RECEIVED", tone: "blocked" },
-  RECONCILIATION_EXCEPTION: { after: "PAID", tone: "blocked" },
-  CANCELLED: { after: "APPROVED", tone: "blocked" },
-  PAYMENT_FAILED: { after: "PAYMENT_PENDING", tone: "blocked" },
+  REVIEW_REQUIRED: { after: "VALIDATING" },
+  INFO_REQUESTED: { after: "VALIDATING" },
+  REJECTED: { after: "VALIDATING" },
+  DUPLICATE: { after: "RECEIVED" },
+  RECONCILIATION_EXCEPTION: { after: "PAID" },
+  CANCELLED: { after: "APPROVED" },
+  PAYMENT_FAILED: { after: "PAYMENT_PENDING" },
 };
 
 export default function StateSpine({ state, reviewReason, pendingRole, documentType = "INVOICE" }) {
@@ -39,7 +40,7 @@ export default function StateSpine({ state, reviewReason, pendingRole, documentT
       nodes.push({
         key: state,
         name: stateLabel(state),
-        className: off.tone,
+        className: `off ${STATE_TONE[state]}`,
         note: reviewReason ? reasonLabel(reviewReason) : null,
       });
     }

@@ -2,8 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { importBankStatement, listBankTransactions, runReconciliation } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
-
-const STATUS_TONE = { MATCHED: "chip-ok", EXCEPTION: "chip-review", UNMATCHED: "chip-neutral" };
+import { TX_TONE, chip } from "../../lib/tones.js";
 
 /**
  * Bank side of the process: what came in, what it was matched to, and why a
@@ -131,7 +130,7 @@ export default function PaymentsView({ may, onChanged }) {
                       )}
                     </td>
                     <td>
-                      <span className={`chip ${STATUS_TONE[tx.status]}`}>{statusLabel[tx.status]}</span>
+                      <span className={chip(TX_TONE[tx.status])}>{statusLabel[tx.status]}</span>
                       {tx.match_reason && (
                         <div style={{ marginTop: 4 }}>
                           <span className="blocker">{matchReason(tx.match_reason)}</span>

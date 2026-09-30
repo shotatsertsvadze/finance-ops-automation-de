@@ -5,7 +5,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { changeActions, invoiceBankEntry } from "./rules.js";
+import { changeActions, changeSteps, invoiceBankEntry } from "./rules.js";
 
 const PROPOSER = { id: "p" };
 const VERIFIER = { id: "v" };
@@ -82,4 +82,28 @@ test("nothing is shown for an invoice whose IBAN matched, or whose supplier is u
 
 test("a decided invoice is not proposed from", () => {
   assert.equal(invoiceBankEntry(stoppedInvoice({ state: "REJECTED" }), may("clerk")).canPropose, false);
+});
+
+const at = (s) => `2026-09-30T${s}:00Z`;
+const tones = (c) => changeSteps(c).map((s) => [s.key, s.tone]);
+
+test("a new proposal: proposed by one person, the call-back is next, the approval after it", () => {
+  const steps = changeSteps({ state: "PROPOSED", proposed_by_name: "Anna", proposed_at: at("09:00") });
+  assert.deepEqual(steps.map((s) => [s.key, s.tone, s.actor]), [["proposal", "done", "Anna"], ["callback", "attention", null], ["approval", "neutral", null]]);
+  assert.equal(steps[0].at, at("09:00"));
+});
+
+test("verified: two steps done by their own people, the approval is next", () => {
+  const steps = changeSteps({ state: "VERIFIED", proposed_by_name: "Anna", proposed_at: at("09:00"),
+    verified_by_name: "Mira", verified_at: at("10:00"), verification: { outcome: "CONFIRMED" } });
+  assert.deepEqual(steps.map((s) => [s.key, s.tone, s.actor]), [["proposal", "done", "Anna"], ["callback", "done", "Mira"], ["approval", "attention", null]]);
+});
+
+test("approved, rejected, denied or withdrawn each show where it ended", () => {
+  const base = { proposed_by_name: "Anna", proposed_at: at("09:00"), verified_by_name: "Mira", verified_at: at("10:00"), verification: { outcome: "CONFIRMED" } };
+  assert.deepEqual(tones({ ...base, state: "APPROVED", decided_by_name: "Sabine", decided_at: at("11:00") }), [["proposal", "done"], ["callback", "done"], ["approval", "done"]]);
+  assert.deepEqual(tones({ ...base, state: "REJECTED", decided_by_name: "Sabine", decided_at: at("11:00") }), [["proposal", "done"], ["callback", "done"], ["approval", "failed"]]);
+  assert.deepEqual(tones({ ...base, state: "REJECTED", verification: { outcome: "DENIED" }, decided_by_name: null }), [["proposal", "done"], ["callback", "failed"], ["approval", "neutral"]]);
+  assert.deepEqual(tones({ state: "CANCELLED", proposed_by_name: "Anna", proposed_at: at("09:00"), decided_by_name: "Anna", decided_at: at("09:30") }),
+    [["proposal", "done"], ["callback", "neutral"], ["approval", "neutral"]]);
 });

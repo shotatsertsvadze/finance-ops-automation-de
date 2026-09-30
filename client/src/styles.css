@@ -6,7 +6,7 @@
 :root {
   --ink: #12161f;
   --ink-2: #39404f;
-  --ink-3: #6b7383;
+  --ink-3: #5f6878;
   --paper: #f7f8fa;
   --surface: #ffffff;
   --surface-2: #f0f2f6;
@@ -15,7 +15,7 @@
 
   --high: #c4142b;
   --high-bg: #fdeceE;
-  --medium: #b8730a;
+  --medium: #8a5a00;
   --medium-bg: #fdf3e3;
   --ok: #0f7b4f;
   --ok-bg: #e8f4ef;
@@ -93,11 +93,12 @@ a { color: inherit; }
   border-left: 2px solid transparent;
 }
 .nav a:hover { color: #fff; background: #1b2130; }
-.nav a[aria-current="page"] { color: #fff; background: #1b2130; border-left-color: var(--high); font-weight: 500; }
+.nav a[aria-current="page"] { color: #fff; background: #1b2130; border-left-color: #8fa8e0; font-weight: 500; }
+.rail .label { color: #8b94a6; }
 .nav-count { font-family: var(--mono); font-size: 11px; color: #8b94a6; }
 .nav a[aria-current="page"] .nav-count { color: #fff; }
 
-.rail-foot { margin-top: auto; padding: 0 20px; font-size: 10px; color: #6b7383; line-height: 1.6; }
+.rail-foot { margin-top: auto; padding: 0 20px; font-size: 10px; color: #8b94a6; line-height: 1.6; }
 .rail-foot p { margin: 14px 0 0; }
 
 .session { display: grid; gap: 1px; padding-bottom: 4px; border-bottom: 1px solid #262e3d; }
@@ -151,6 +152,51 @@ a { color: inherit; }
 .page-head h1 { font-size: 22px; }
 .page-head p { margin: 4px 0 0; color: var(--ink-3); font-size: 13px; max-width: 62ch; }
 
+/* ---------- invoice summary: what, how much, by when, where it stands ---------- */
+.summary { flex-wrap: wrap; row-gap: 12px; }
+.summary-facts { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 28px; margin: 0; }
+.summary-facts > div { display: grid; gap: 3px; }
+.summary-facts dd { margin: 0; font-size: 14px; }
+.summary-amount { font-size: 18px; font-weight: 600; }
+
+/* ---------- bank-account change: three people, three steps (ADR-077) ---------- */
+.change-steps { list-style: none; margin: 0 0 6px; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.change-step {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--line-strong);
+  border-radius: var(--radius);
+}
+.change-step.is-done { border-top-color: var(--ok); }
+.change-step.is-attention { border-top-color: var(--medium); }
+.change-step.is-failed { border-top-color: var(--high); }
+.change-step-no {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-3);
+}
+.change-step-name { font-size: 13px; font-weight: 600; }
+.change-step-status { font-weight: 500; color: var(--ink-3); }
+.change-step.is-done .change-step-status { color: var(--ok); }
+.change-step.is-attention .change-step-status { color: var(--medium); }
+.change-step.is-failed .change-step-status { color: var(--high); }
+.change-step-meta { font-size: 12px; color: var(--ink-3); margin-top: 2px; }
+.change-steps-note { margin: 0 0 18px; }
+.callback { margin-bottom: 12px; }
+.callback-number { font-size: 18px; font-weight: 600; margin-top: 2px; }
+.callback .hint { margin: 4px 0 0; }
+
 /* ---------- panel ---------- */
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
 .panel-head {
@@ -194,7 +240,8 @@ a { color: inherit; }
 .supplier-sub { color: var(--ink-3); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The blocking reason sits in the list: no click needed to learn why. */
-.blocker { display: inline-flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--high); }
+.blocker { display: inline-flex; align-items: baseline; gap: 6px; font-size: 12px; color: var(--medium); }
+.blocker.is-failed { color: var(--high); }
 .blocker::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; transform: translateY(-2px); flex: none; }
 .blocker.is-wait { color: var(--ink-3); }
 
@@ -209,9 +256,11 @@ a { color: inherit; }
   white-space: nowrap;
   border: 1px solid transparent;
 }
-.chip-review { background: var(--high-bg); color: var(--high); border-color: #f3c9cf; }
-.chip-wait { background: var(--medium-bg); color: var(--medium); border-color: #f0dcbb; }
-.chip-ok { background: var(--ok-bg); color: var(--ok); border-color: #c2ded3; }
+/* Tones from lib/tones.js: one meaning per colour. */
+.chip-attention { background: var(--medium-bg); color: var(--medium); border-color: #f0dcbb; }
+.chip-failed { background: var(--high-bg); color: var(--high); border-color: #f3c9cf; }
+.chip-done { background: var(--ok-bg); color: var(--ok); border-color: #c2ded3; }
+.chip-active { background: var(--accent-bg); color: var(--accent); border-color: #cdd8f0; }
 .chip-neutral { background: var(--surface-2); color: var(--ink-2); border-color: var(--line-strong); }
 
 /* ---------- upload ---------- */
@@ -296,12 +345,15 @@ select {
 .spine li.done::before { background: var(--ink-3); border-color: var(--ink-3); }
 .spine li.done::after { background: var(--line-strong); }
 .spine li.current::before { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
-.spine li.blocked::before { background: var(--high); border-color: var(--high); box-shadow: 0 0 0 3px var(--high-bg); }
+.spine li.off.attention::before { background: var(--medium); border-color: var(--medium); box-shadow: 0 0 0 3px var(--medium-bg); }
+.spine li.off.failed::before { background: var(--high); border-color: var(--high); box-shadow: 0 0 0 3px var(--high-bg); }
+.spine li.off.neutral::before { background: var(--ink-3); border-color: var(--ink-3); }
 .spine-name { font-size: 13px; color: var(--ink-3); }
 .spine li.done .spine-name { color: var(--ink-2); }
-.spine li.current .spine-name, .spine li.blocked .spine-name { color: var(--ink); font-weight: 600; }
+.spine li.current .spine-name, .spine li.off .spine-name { color: var(--ink); font-weight: 600; }
 .spine-note { font-size: 11px; color: var(--ink-3); margin-top: 1px; }
-.spine li.blocked .spine-note { color: var(--high); }
+.spine li.off.attention .spine-note { color: var(--medium); }
+.spine li.off.failed .spine-note { color: var(--high); }
 
 /* ---------- facts ---------- */
 .facts { display: grid; grid-template-columns: 1fr; gap: 10px; }
@@ -331,7 +383,8 @@ select {
 .ev.is-warning .ev-status { color: var(--medium); }
 .ev.is-passed .ev-status { color: var(--ok); }
 .ev.is-skipped .ev-status, .ev.is-info .ev-status { color: var(--ink-3); }
-.ev-reason { font-size: 13px; color: var(--ink-2); margin-top: 3px; }
+.ev-reason { font-size: 13px; color: var(--ink); font-weight: 500; margin: 0; }
+.ev-meta { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
 
 .ev-compare {
   display: inline-grid;
@@ -489,7 +542,7 @@ select {
     padding: 8px 14px;
     white-space: nowrap;
   }
-  .nav a[aria-current="page"] { border-left: 0; border-bottom-color: var(--high); }
+  .nav a[aria-current="page"] { border-left: 0; border-bottom-color: #8fa8e0; }
   /* The footer holds the sign-out control, so it stays reachable on a phone.
      Only the disclaimer is dropped. */
   .rail-foot { display: block; margin-top: 0; padding: 0 16px 10px; }
@@ -499,6 +552,7 @@ select {
 
   .page-head h1 { font-size: 19px; }
   .facts-split { grid-template-columns: 1fr; }
+  .change-steps { grid-template-columns: 1fr; }
 
   /* On a phone the decision and its evidence come before the orientation
      panels; otherwise a reviewer scrolls past the whole spine to reach the

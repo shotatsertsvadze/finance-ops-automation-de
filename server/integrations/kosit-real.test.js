@@ -87,6 +87,11 @@ test("the demo month: 65 acceptable, exactly the 5 malformed ones not, and every
      order by i.invoice_number`,
   );
   assert.equal(verdicts.length, 70, "one validation per demo invoice");
+  // The malformed ones included: they name an order like every other invoice.
+  const { rows: orders } = await deps.pool.query(
+    "select invoice_number from finops.invoices where po_reference_raw is null or po_reference_raw !~ '^DEMO-PO-'",
+  );
+  assert.deepEqual(orders, [], "every generated document names a real order");
   assert.equal(verdicts.filter((v) => v.verdict === "ACCEPTED").length, 65);
   assert.deepEqual(verdicts.filter((v) => v.verdict === "REJECTED").map((v) => v.invoice_number),
     ["DEMO-2026-01002", "DEMO-2026-01026", "DEMO-2026-01037", "DEMO-2026-01048", "DEMO-2026-01053"]);

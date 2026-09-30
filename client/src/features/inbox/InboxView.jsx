@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { listInvoices } from "../../lib/api.js";
+import { STATE_TONE } from "../../lib/tones.js";
 import { useI18n } from "../../lib/i18n.js";
 import StateChip from "../../components/StateChip.jsx";
 import UploadPanel from "../upload/UploadPanel.jsx";
@@ -118,7 +119,7 @@ export default function InboxView({ view, onChanged }) {
 function Blocker({ invoice }) {
   const { t, reviewReason } = useI18n();
   if (invoice.review_reason) {
-    return <span className="blocker">{reviewReason(invoice.review_reason)}</span>;
+    return <span className={`blocker is-${STATE_TONE[invoice.state]}`}>{reviewReason(invoice.review_reason)}</span>;
   }
   if (invoice.pending_steps > 0) {
     return (

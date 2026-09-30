@@ -219,7 +219,7 @@ export async function generateDemoData(deps, { count = 70, seed = 42, statementF
     const issueDate = iso(new Date(receivedAt.getTime() - 86400000));
     const dueDate = iso(new Date(receivedAt.getTime() + 30 * 86400000));
     const xml = scenario === "malformed"
-      ? invoiceXml({ number, issueDate, dueDate, supplier, iban: supplier.iban, netCents, po: supplier.po })
+      ? invoiceXml({ number, issueDate, dueDate, supplier, iban: supplier.iban, netCents, po: order })
           .replace(/<cbc:TaxExclusiveAmount[^<]*<\/cbc:TaxExclusiveAmount>/, '<cbc:TaxExclusiveAmount currencyID="EUR">nicht-lesbar</cbc:TaxExclusiveAmount>')
       : invoiceXml({
           number, issueDate, dueDate, supplier,
