@@ -66,7 +66,7 @@ every pause if you need more room.
 |---|---|
 | **View** | Invoice detail for INV-2026-00433 |
 | **Click** | the invoice number in the list |
-| **On screen** | Check trail: **22 checks, nothing to report** |
+| **On screen** | Check trail: **23 checks, nothing to report** |
 
 > "Twenty-two checks, and the ones it passed are recorded too, not only the
 > failures. Nothing here was approved by default."

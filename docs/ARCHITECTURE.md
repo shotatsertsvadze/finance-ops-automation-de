@@ -21,7 +21,8 @@ flowchart LR
     API --> INTAKE[intake.js\nstore file, hash, RECEIVED]
     INTAKE --> TECH[technical validation\nXML safety, UBL structure, required fields]
     TECH --> PARSE[parse-xrechnung.js\nUBL adapter]
-    PARSE --> BIZ[business validation\nsupplier, IBAN, PO, duplicate, totals, threshold]
+    PARSE --> OFF[official validation\nKoSIT daemon on 127.0.0.1 or an internal address]
+    OFF --> BIZ[business validation\nsupplier, IBAN, PO, duplicate, totals, threshold]
     BIZ --> ROUTE[routing/decide.js\ndeterministic policy]
     ROUTE -->|REVIEW_REQUIRED| RQ[Review queue]
     ROUTE -->|READY_FOR_APPROVAL| AQ[Approval queue]
@@ -35,10 +36,12 @@ flowchart LR
         VAL[(validation_results)]
         APP[(approval_steps)]
         AUD[(audit_events)]
+        OV[(official_validations)]
         MD[(suppliers, bank accounts, purchase orders, users)]
     end
     INTAKE --> INV
     TECH --> VAL
+    OFF --> OV
     BIZ --> VAL
     ROUTE --> APP
     ROUTE --> AUD
@@ -63,21 +66,25 @@ finance-ops-automation-de/
   fixtures/bank/           synthetic bank statement for the tests
   db/migrations/           append-only SQL, applied by scripts/migrate.js under an advisory lock; an applied file that changed stops the run (ADR-061)
   db/seed/                 synthetic master data (users, suppliers, IBANs, POs) and call-back numbers
-  scripts/                 migrate.js, seed.js, reset.js, set-password.js, demo-data.js, demo-walkthrough.mjs
+  scripts/                 migrate.js, seed.js, reset.js, set-password.js, demo-data.js, demo-walkthrough.mjs,
+                           kosit-fetch.js and kosit-start.js (the pinned validator, ADR-078)
+  vendor/kosit/            the pinned KoSIT jar and configuration, fetched and verified (gitignored)
   server/
     index.js               starts the HTTP server; refuses an unsafe production start
     app.js                 createApp(): express app without listen (used by tests)
     db.js                  pool, withTransaction, type parsers
     log.js request-log.js  JSON log lines; request id and one line per request
     auth/                  passwords (scrypt), sessions (cookie + CSRF), authorize (role matrix), set-password
+    integrations/          kosit.js (transport to the validator daemon), kosit-pins.js (versions and SHA-256)
     config/                policy.js, company.js, assumptions.js, tax-keys.js, deployment.js
     domain/
       errors.js            TransitionError (409), NotFoundError (404), RuleError (own status)
-      invoice/             xml-safety.js, parse-xrechnung.js (UBL adapter), technical-validation.js, queries.js
+      invoice/             xml-safety.js, parse-xrechnung.js (UBL adapter), technical-validation.js,
+                           official-validation.js and kosit-report.js (what a KoSIT answer means), queries.js
       validation/          business-checks.js, tax-breakdown.js, lookup.js (each check returns a CheckResult)
       routing/             decide.js (pure)
       workflow/            states.js (transitions and phases), transitions.js (transition(), audit), eligibility.js
-      intake/              intake.js (orchestration of one upload)
+      intake/              intake.js (orchestration of one upload), official-retry.js
       approvals/           review and approval decisions, binding, final re-check
       purchase-orders/     commitments.js (capacity ledger)
       bank-changes/        a new supplier bank account: proposal, call-back verification, approval, revalidation (ADR-077)
@@ -107,6 +114,7 @@ erDiagram
     invoices ||--o{ routing_decisions : "per run"
     invoices ||--o{ approval_steps : requires
     invoices ||--o{ audit_events : "every transition"
+    invoices ||--o{ official_validations : "per run"
     invoices ||--o| invoices : duplicate_of
     suppliers ||--o{ bank_account_changes : "proposed for"
     bank_account_changes ||--o| bank_change_verifications : "call-back"
@@ -143,6 +151,13 @@ Key columns (full definitions in `db/migrations/0001_core.sql`):
   person can be excluded from approving it (migration `0002_review_actor.sql`).
 - `audit_events`: `occurred_at`, `actor_type` (SYSTEM|HUMAN), `actor_id`,
   `action`, `from_state`, `to_state`, `reason`, `evidence jsonb`.
+- `official_validations` (migration `0023_official_validations.sql`): what the
+  official validator said in one run: `outcome`, `verdict` (only for an
+  answer), `http_status`, `validator_version`, `configuration_version`,
+  `scenario`, `document_sha256` and the `reported_document_sha256` the report
+  names, normalised `messages` (step, level, rule code, text), `error`,
+  `duration_ms`, the raw `report` and its `report_sha256`. Insert-only for the
+  app role (ADR-078).
 - `bank_account_changes` (migration `0022_bank_account_changes.sql`): one
   proposal to trust a new IBAN for a supplier. The proposal (`proposed_iban`,
   `trusted_ibans` at the time, `shared_with`, `source_invoice_id`, `reason`,
@@ -188,6 +203,9 @@ Database-enforced invariants:
 - `unique (invoice_id, round, step_no)` on approval steps (migration
   `0021_approval_rounds.sql`).
 - `check (actor_type = 'SYSTEM' or actor_id is not null)` on audit events.
+- Official validations: one per run (`unique (invoice_id, run_no)`); a verdict
+  exactly when the validator gave one, and only when the report names this
+  document's hash; a raw report always with its hash.
 - Bank-account changes: the verifier is not the proposer; an approved change
   has a verifier, an approver who is not the proposer, under the three-person
   policy not the verifier either, and the account it added; a rejection has a
@@ -342,6 +360,18 @@ process this as a structured invoice":
 | `dates_valid` | HIGH | issue or due date is not a real calendar date in `YYYY-MM-DD` |
 | `invoice_type_code` | warning | type code is neither 380 (invoice) nor 381 (credit note); reported only then |
 
+Official validation (`domain/invoice/official-validation.js`, ADR-078) asks the
+KoSIT validator, pinned to 1.6.3 with the XRechnung 3.0.2 configuration of
+2026-08-31, about every document the parser could read:
+
+| check_code | severity | fails when |
+|---|---|---|
+| `official_validation` | HIGH | the validator rejects the document, or gives no trustworthy verdict: timeout, unreachable, 422 or another status, a report that is unreadable, contradicts its status, comes from another validator version or rule configuration, or names another document. SKIPPED, and saying so, only outside production with no validator configured, or when the document was not readable. Not overridable |
+
+Its record, with the raw report, is kept per run in `official_validations`.
+After an outage, `POST /api/invoices/official-validation/retry` validates again
+every invoice in review whose latest run got no verdict, once.
+
 Business validation (`domain/validation/business-checks.js`) answers "does this
 invoice make sense for Nordwerk":
 
@@ -367,7 +397,8 @@ invoice make sense for Nordwerk":
 
 Routing (`domain/routing/decide.js`, pure function):
 
-1. Any technical FAILED → `REVIEW_REQUIRED`, reason `TECHNICAL_VALIDATION_FAILED`.
+1. Any technical FAILED, the official validation included → `REVIEW_REQUIRED`,
+   reason `TECHNICAL_VALIDATION_FAILED`; the business checks do not run.
 2. Any business FAILED with severity HIGH or MEDIUM → `REVIEW_REQUIRED`, reason is
    the first HIGH check code (or MEDIUM if no HIGH).
 3. Otherwise, gross amount ≤ `AUTO_APPROVE_LIMIT` → `APPROVED` (actor SYSTEM,
@@ -395,6 +426,7 @@ invoice above the auto limit.
 | GET | `/api/invoices/:id` | 1 | invoice, lines, latest validation results, routing decision, approval steps, audit events |
 | GET | `/api/invoices/:id/file` | 1 | original XML |
 | POST | `/api/invoices/:id/reprocess` | 1 | re-run validation from RECEIVED/VALIDATING/REVIEW_REQUIRED |
+| POST | `/api/invoices/official-validation/retry` | 1 | after a validator outage: validates again, as a new run, every invoice in review whose latest run got no verdict; does nothing while the validator's health endpoint is down; `invoice:reprocess` (ADR-078) |
 | GET | `/api/master-data/suppliers`, `/purchase-orders` | 1 | read-only master data, IBANs included; `master-data:read` (AP clerk, finance, admin; ADR-064) |
 | GET | `/api/users` | 1 | names and roles, any signed-in user |
 | GET | `/api/bank-changes`, `/api/bank-changes/:id` | 1 | bank-account changes, open first; the detail carries the trusted accounts, the call-back, events, revalidated and pending invoices; `bank-change:read` (AP clerk, finance, CFO, admin) |
@@ -424,8 +456,9 @@ invoice above the auto limit.
 The invoice detail (`GET /api/invoices/:id`) carries the domain's own answers
 where the screen needs them: `open_credit_amount`, `po_available_amount`,
 `payable_blockers` (what stops a release from review, ADR-071),
-`approval_history` (earlier approval rounds, ADR-067) and `bank_changes`
-(changes proposing the IBAN the invoice carries, ADR-077).
+`approval_history` (earlier approval rounds, ADR-067), `bank_changes`
+(changes proposing the IBAN the invoice carries, ADR-077) and
+`official_validation` (the latest record, without the raw report, ADR-078).
 
 Identity: a session cookie set by `POST /api/auth/login`, stored hashed; every
 state-changing request must echo the CSRF token (ADR-029). Everything under
@@ -441,10 +474,11 @@ expired, and signing in again stays on the same page (ADR-057).
 - `domain/invoice/parse-xrechnung.js` exports `parseInvoiceXml(buffer)` returning a
   format-neutral `ParsedInvoice`. A CII/ZUGFeRD parser will implement the same
   output; the detector in `technical-validation.js` chooses the parser.
-- An official EN 16931 / XRechnung validator (e.g. the KoSIT validator) is not
-  wired and has no stub yet; it would sit beside `technical-validation.js`.
-  Until then the system reports "profile declared" and "structure checked",
-  never "compliant".
+- `integrations/kosit.js` is the transport to the KoSIT validator daemon, and
+  `domain/invoice/kosit-report.js` the only reader of its report format; the
+  mapping to a check is `official-validation.js`. Another validator, or a new
+  report format, changes those two files. The check reports the validator's
+  assessment; the system still never says "compliant" (ADR-008, ADR-078).
 - `domain/accounting/accounting.js` builds vendor-neutral booking lines, one
   per tax rate of the document, under one document number (ADR-053);
   `exportAccountingCsv()` is one formatter over them, and a DATEV or SAP
@@ -484,6 +518,10 @@ expired, and signing in again stays on the same page (ADR-057).
   only add verifications, events, revalidation links and bank accounts, and
   may neither alter nor remove a trusted account. A production start refuses
   a connection that could do any of it (ADR-068, ADR-077).
+- The KoSIT daemon has no authentication. `npm run kosit` binds it to
+  127.0.0.1 only; a deployment reaches it on an internal address and never
+  exposes it. Its answers are evidence insert-only for the app role; a
+  production start is refused without `KOSIT_URL` (ADR-078).
 - A new supplier bank account needs three different people and a call-back
   on the number already in master data; administration takes no step, and no
   number is ever read from the request (ADR-077).

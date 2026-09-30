@@ -1700,3 +1700,93 @@ Consequences:
   administration (ADR-064).
 - An upgraded installation has no call-back numbers until they are entered in
   the database; verification is refused (`NO_CALLBACK_NUMBER`) until then.
+
+## ADR-078 Official validation by a pinned KoSIT validator; its verdict is evidence
+
+Extends ADR-003 and ADR-052. Keeps ADR-008: the check reports the
+validator's assessment, it claims no compliance.
+
+Context: the system checked only the profile an invoice declares and the
+structure it needs, so "is this a valid XRechnung" had no authoritative
+answer. The spike of 30 September showed the KoSIT validator 1.6.3 with the
+XRechnung configuration of 2026-08-31 (XRechnung 3.0.2) running on the Java 17
+already on the machine; as a daemon it starts in seconds and then answers in
+10-40 ms, where a JVM per document takes about 5 s.
+
+Decision:
+- **Execution.** One long-running KoSIT daemon, called over HTTP with the
+  original bytes; never a JVM per invoice. `npm run kosit` starts it for
+  development and CI on 127.0.0.1 only; a deployment points `KOSIT_URL` at an
+  internal address. The daemon has no authentication, so it is never exposed.
+  `server/integrations/kosit.js` is transport only: status 200 accepted, 406
+  rejected, 422 unprocessable, any other status an error, no answer within
+  `KOSIT_TIMEOUT_MS` (default 10 s, at most 20 s) a timeout, no connection
+  unavailable.
+- **Pinned versions.** `server/integrations/kosit-pins.js` names the
+  validator jar and the configuration archive by version, URL and SHA-256.
+  `npm run kosit:fetch` refuses other bytes; `npm run kosit` refuses to start
+  unverified ones. Every report must name the pinned engine, and its matched
+  scenario the pinned rule sets (XRechnung schematron 2.6.0 for 3.0.2,
+  EN 16931 UBL 1.3.16); otherwise the answer is not trusted. Upgrading is a
+  change to that file, a re-run of the fixtures, the real-validator tests and
+  the demo, and an ADR; a daemon upgraded without it fails closed.
+- **Place in the pipeline.** After the XML safety gate and the parser, before
+  the business checks. Only a document the parser could read is sent;
+  unsafe or unreadable input never is. The answer is one technical check,
+  `official_validation`. FAILED is a technical failure: the invoice goes to
+  review with `TECHNICAL_VALIDATION_FAILED`, and the business checks do not
+  run for that run.
+- **Fail closed.** Only a readable report that agrees with the HTTP status,
+  comes from the pinned validator and configuration, and names this
+  document's SHA-256 is a verdict. Accepted is PASSED. Rejected, a timeout, an
+  unavailable validator, a 422, any other status, and any answer that is not
+  a trustworthy report are FAILED. Outside production, with no `KOSIT_URL`,
+  the check is SKIPPED and says the document was not validated officially. A
+  production start without `KOSIT_URL` is refused, and code that builds its
+  dependencies without a validator fails closed in production.
+- **The verdict is immutable evidence.** `official_validation` joins the
+  checks no reviewer can override (ADR-052's list). Nothing turns FAILED into
+  PASSED, and neither the check nor its record is ever updated. This phase
+  does not permit processing a rejected invoice by hand: the way on is a
+  corrected document from the supplier (request information, or reject) or,
+  when there was no verdict, a retry. If manual processing is permitted
+  later, it is a separate operational disposition such as
+  `ACCEPT_FOR_MANUAL_PROCESSING`, with actor, reason and audit evidence, that
+  changes how the document is handled and never rewrites the verdict; unsafe
+  or unreadable input stays non-overridable either way.
+- **Evidence.** `official_validations` holds one row per run that asked the
+  validator or had to: outcome, verdict, HTTP status, validator and
+  configuration version, scenario, the document's hash and the one the
+  report names, normalised messages (step, level, rule code, text), the error
+  when there was no verdict, the duration, and the raw report with its
+  SHA-256. The app's database role may only insert it, and a production start
+  checks that (ADR-068). The application reads the normalised columns; the
+  invoice detail carries the latest record without the raw report. The
+  report's line numbers stay in the raw report only: the daemon re-reads the
+  document, so they do not point into the stored original.
+- **Retry.** A single invoice is validated again by reprocessing it, as a new
+  run beside the old one. After an outage, `POST
+  /api/invoices/official-validation/retry` asks the daemon's health first and
+  does nothing while it is down; otherwise it takes every invoice in review
+  whose latest run got no verdict, each under its lock and re-checked there,
+  so a replayed or concurrent retry runs nothing twice. Invoices waiting for a
+  person's answer are left alone.
+- **Tests and CI.** Unit and pipeline tests use a stand-in whose answers are
+  real reports re-addressed to the document. `kosit-real.test.js` runs the
+  fixtures, the intake path and the whole demo month against the real daemon;
+  it skips without `KOSIT_TEST_URL` and fails instead when
+  `KOSIT_TEST_REQUIRED=true`. CI installs Java 17, fetches and caches the
+  pinned artifacts, starts the daemon and runs the suite with both set. The
+  Docker demo runs in development mode without a validator, so there the
+  check is SKIPPED.
+
+Consequences:
+- An invoice that arrives while the validator is down goes to review, and
+  having been an exception it needs a signature even after a clean retry
+  (ADR-020).
+- Every invoice has one more check in its evidence.
+- The call runs inside the invoice's transaction and holds its row lock for
+  10-40 ms normally, bounded by the timeout.
+- Not built: CII and ZUGFeRD (the configuration could validate CII, but the
+  parser cannot read it, so it is never sent); the validator in the readiness
+  check; a screen for the batch retry; the operational disposition.
