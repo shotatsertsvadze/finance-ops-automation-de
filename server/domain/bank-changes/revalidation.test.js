@@ -9,11 +9,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { USERS, resetBankChanges, testDeps } from "../../test-support/db.js";
 import { buildInvoiceXml } from "../../test-support/invoice-xml.js";
-import { handleUpload } from "../intake/intake.js";
+import { handleUpload, processInvoice } from "../intake/intake.js";
 import { decideReview } from "../approvals/approvals.js";
 import { human } from "../workflow/transitions.js";
 import { proposeChange, verifyChange } from "./changes.js";
 import { approveAndRevalidate, revalidateChange } from "./revalidation.js";
+import { pendingInvoices } from "./queries.js";
 
 const S1 = "10000000-0000-0000-0000-000000000001";
 const S2 = "10000000-0000-0000-0000-000000000002";
@@ -203,6 +204,25 @@ test("a crash before the link leaves no run behind, and the retry runs the invoi
   const third = await revalidateChange(deps, change.id, clerk);
   assert.deepEqual(third.revalidated, []);
   assert.deepEqual(await runs(b), [1, 2], "a retry after completion adds no run");
+});
+
+test("an invoice re-validated by hand in the meantime is no longer pending", async () => {
+  // The reviewer pressed "Erneut prüfen" instead of the change's retry: the
+  // IBAN now passes, the order overrun keeps it in review. Nothing is left
+  // for the change to do, so it must not wait for it forever.
+  const id = await upload(buildInvoiceXml({ number: "RV-HAND", netCents: 100000, iban: H_IBAN }), "hand.xml");
+  await decideReview(deps, { invoiceId: id, action: "request-info", actor: clerk, comment: "Rückruf" });
+  const change = await verifiedChange(S1, H_IBAN);
+  await approve(change);
+  await decideReview(deps, { invoiceId: id, action: "info-received", actor: clerk, comment: "erledigt" });
+  await processInvoice(deps, id, clerk);
+  assert.equal((await invoice(id)).state, "REVIEW_REQUIRED");
+
+  assert.deepEqual(await pendingInvoices(deps.pool, change), []);
+  const retry = await revalidateChange(deps, change.id, clerk);
+  assert.deepEqual(retry, { revalidated: [], waiting: [], failed: [] });
+  const { rows: [done] } = await deps.pool.query("select revalidated_at from finops.bank_account_changes where id = $1", [change.id]);
+  assert.ok(done.revalidated_at);
 });
 
 test("only an approved change revalidates", async () => {

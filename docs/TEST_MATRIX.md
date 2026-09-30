@@ -9,7 +9,7 @@ Legend:
 - **CI** verified by an automated job in `.github/workflows/ci.yml` outside `npm test`, job named
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (577 tests, all passing as of 2026-09-30). Database tests need
+Run: `npm test` (578 tests, all passing as of 2026-09-30). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
 
 ## High-priority business risks
@@ -376,6 +376,7 @@ the screen's offers in `client/src/features/bank-changes/rules.test.js`.
 | BC31 | An invoice with an open question | reported as waiting, untouched; "information received" validates nothing; the retry then revalidates it, as the person who asked | AUTO | `revalidation.test.js` |
 | BC32 | An invoice rejected in the meantime; another supplier's or IBAN's invoice | skipped, no run | AUTO | `revalidation.test.js` |
 | BC33 | A crash between the new run and its link | neither committed; the retry runs the invoice once; two retries at once run it once; a retry after completion adds nothing | AUTO | `revalidation.test.js`; mutation check 2026-09-30: committing the run apart from its link failed this test |
+| BC39 | An affected invoice re-validated by hand before the change's retry, still in review for another reason | no longer pending; the retry does nothing and marks the change complete | AUTO | `revalidation.test.js` |
 | BC34 | Revalidation of a change not approved | 409 `CHANGE_STATE_CONFLICT` | AUTO | `revalidation.test.js`, `bank-changes.test.js` |
 | BC35 | What the screens offer | verify only to another person, approve only to a third, withdraw only to the proposer, nothing to admin, retry only while invoices are left; the invoice offers a proposal or links to the change | AUTO | client `rules.test.js` |
 | BC36 | Every change state, event and refusal in both languages | labels present in German and English | AUTO | `dictionaries.test.js` |

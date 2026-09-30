@@ -57,14 +57,19 @@ export async function changeDetail(pool, id) {
 
 /**
  * Invoices of the change's supplier that carry its IBAN, are still open for a
- * decision and have not been revalidated for this change: what a retry would
- * take, and what waits for a person.
+ * decision, were last stopped by that IBAN, and have not been revalidated for
+ * this change: what a retry would take, and what waits for a person. One
+ * re-validated by hand since has nothing left for the change to do.
  */
 export async function pendingInvoices(db, change) {
   const { rows } = await db.query(
     `select i.id as invoice_id, i.invoice_number, i.state from finops.invoices i
      where i.supplier_id = $1 and i.supplier_iban_raw = $2 and i.state in ('REVIEW_REQUIRED', 'INFO_REQUESTED')
        and not exists (select 1 from finops.bank_change_revalidations r where r.change_id = $3 and r.invoice_id = i.id)
+       and exists (
+         select 1 from finops.validation_results v
+         where v.invoice_id = i.id and v.check_code = 'supplier_iban_match' and v.status = 'FAILED'
+           and v.run_no = (select max(run_no) from finops.validation_results where invoice_id = i.id))
      order by i.received_at, i.id`,
     [change.supplier_id, change.proposed_iban, change.id],
   );
