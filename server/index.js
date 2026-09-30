@@ -9,6 +9,7 @@ import { loadPolicy } from "./config/policy.js";
 import { loadCompany } from "./config/company.js";
 import { deploymentProblems } from "./config/deployment.js";
 import { officialValidatorFromEnv } from "./integrations/kosit.js";
+import { aiExplanationsFromEnv } from "./integrations/ai-explainer.js";
 import { log } from "./log.js";
 
 // API_PORT, not PORT: the UI dev server and some hosts set PORT for
@@ -21,6 +22,7 @@ const deps = {
   policy: loadPolicy(),
   company: loadCompany(),
   officialValidator: officialValidatorFromEnv(),
+  ai: aiExplanationsFromEnv(),
 };
 
 // Loopback by default. Exposing a demo on every interface should be a

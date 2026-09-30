@@ -20,6 +20,8 @@ const HISTORY_PRIVILEGES = [
   ["DELETE", "bank_account_changes"],
   ["UPDATE", "supplier_bank_accounts"],
   ["DELETE", "supplier_bank_accounts"],
+  // Not evidence, but the record of what left the system (ADR-080).
+  ...["UPDATE", "DELETE", "TRUNCATE"].map((privilege) => [privilege, "ai_explanations"]),
 ];
 
 /**
@@ -50,6 +52,10 @@ export async function deploymentProblems({ pool, env, clientDir }) {
   // Without it every invoice would fail closed into review (ADR-078).
   if (!env.KOSIT_URL) {
     problems.push("Kein offizieller Validator konfiguriert: KOSIT_URL setzen (npm run kosit startet ihn lokal)");
+  }
+  // Switched on, it would only ever fail; a start should say so once (ADR-080).
+  if (env.AI_EXPLANATIONS === "true" && !env.ANTHROPIC_API_KEY) {
+    problems.push("KI-Erklärungen eingeschaltet, aber kein ANTHROPIC_API_KEY gesetzt: Schlüssel setzen oder AI_EXPLANATIONS weglassen");
   }
   const trail = await trailWriters(pool);
   if (trail.length) {

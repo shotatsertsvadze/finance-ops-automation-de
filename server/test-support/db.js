@@ -5,6 +5,7 @@ import { createPool } from "../db.js";
 import { createStorage } from "../storage/files.js";
 import { loadPolicy } from "../config/policy.js";
 import { loadCompany } from "../config/company.js";
+import { aiExplanationsFromEnv } from "../integrations/ai-explainer.js";
 import { reset } from "../../scripts/reset.js";
 // Imported as well as re-exported: a bare `export ... from` does not bind it locally.
 import { DEMO_PASSWORD, seed } from "../../scripts/seed.js";
@@ -28,7 +29,11 @@ export async function testDeps() {
   const storage = createStorage(await mkdtemp(path.join(tmpdir(), "finops-test-")));
   // No validator unless a test brings one (test-support/kosit.js); the real
   // one is exercised by kosit-real.test.js, never by accident through .env.
-  return { pool, storage, policy: loadPolicy({}), company: loadCompany({}), officialValidator: { client: null, required: false } };
+  // AI is off in the same way; test-support/ai.js has the stand-in.
+  return {
+    pool, storage, policy: loadPolicy({}), company: loadCompany({}), officialValidator: { client: null, required: false },
+    ai: aiExplanationsFromEnv({}),
+  };
 }
 
 /**

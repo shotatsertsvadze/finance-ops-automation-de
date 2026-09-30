@@ -28,7 +28,8 @@
     "test:browser": "node --env-file=.env --test --test-concurrency=1 \"browser/**/*.test.js\"",
     "test:kosit": "node --env-file=.env --test server/integrations/kosit-real.test.js",
     "kosit:fetch": "node scripts/kosit-fetch.js",
-    "kosit": "node --env-file-if-exists=.env scripts/kosit-start.js"
+    "kosit": "node --env-file-if-exists=.env scripts/kosit-start.js",
+    "ai:eval": "node --env-file-if-exists=.env scripts/ai-eval.js"
   },
   "dependencies": {
     "cors": "^2.8.6",

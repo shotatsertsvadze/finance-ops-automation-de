@@ -118,6 +118,18 @@ KOSIT_JAVA=/path/to/java npm run kosit   # daemon on 127.0.0.1:8081; leave KOSIT
 # then in .env: KOSIT_URL=http://127.0.0.1:8081
 ```
 
+AI explanation (optional, off by default): a reviewer can ask for a short
+explanation of why an invoice stopped, shown beside the checks and verified
+against them first. It sends masked check evidence to Anthropic
+(`claude-sonnet-4-6`), so it needs a key with paid API access and should not
+see real invoice data without a provider and data-processing review. Nothing
+else needs it: the demo, the tests, CI and Docker run without a key.
+
+```bash
+# in .env: AI_EXPLANATIONS=true and ANTHROPIC_API_KEY=...
+npm run ai:eval             # the five evaluation scenarios against the real model (costs money)
+```
+
 Tests:
 
 ```bash
@@ -223,6 +235,15 @@ These are reproduced and accepted, not hidden. Full list with reproductions in
   processed by hand yet: the supplier sends a corrected one. The call runs
   inside the invoice's transaction, and the readiness check does not ask the
   validator.
+- The AI exception-explanation capability is implemented and structurally
+  tested with deterministic grounding tests and a stand-in provider. It is
+  disabled by default and does not participate in invoice routing, approval,
+  master-data changes, payment or reconciliation. Real-provider quality and
+  acceptance-rate evaluation against the configured Anthropic model is still
+  pending because external paid API usage is not enabled for this project.
+  Its answers are checked for facts, the set of failures and the steps it may
+  name; other contradictions in free text are caught only by a phrase list
+  (ADR-080).
 - Accounting, payment and bank data are simulated.
 - Approval thresholds and savings figures are demo assumptions.
 

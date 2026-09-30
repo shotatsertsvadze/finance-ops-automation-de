@@ -13,6 +13,12 @@ Customer discovery, the ICPs and the baseline model are in
 
 ## Course Final Scope — 15 October 2026
 
+**Status: FEATURE FREEZE since 2026-09-30**, reached early with the merge of the
+AI exception explanation (ADR-080). From here on only: bug fixes,
+documentation, course-final material, demo stabilisation, presentation and
+slides, video updates, rehearsal, and minor UI polish that adds no behaviour.
+No new product feature.
+
 15 October 2026 is the internal feature freeze. The presentation and
 submission window is 15-23 October; it is kept for documentation, demo
 stabilisation, presentation, rehearsal, video, bug fixing and final
@@ -31,7 +37,7 @@ course, this section wins.
 | Core, not dropped | Course documentation (`docs/course/`) | stakeholders, risks, data protection, method and timeline, rollout, reflection; short |
 | Core, not dropped | Stable demo | `docs/DEMO.md` verified against a fresh run, including the new fraud-story steps |
 | Important, reducible | BI / ROI source labels (section E) | every figure labelled synthetic, assumption, baseline or pilot; "nicht gemessen" where nothing is measured. **Implemented 2026-09-30 (ADR-079)** on `feat/bi-source-labels` |
-| Important, reducible | AI exception explanation (section D) | grounding check and stored suggestion, plain text, off by default; no authority over state, approval, master data or payments |
+| Important, reducible | AI exception explanation (section D) | grounding check and stored suggestion, plain text, off by default; no authority over state, approval, master data or payments. **Implemented 2026-09-30 (ADR-080)**: off by default, non-authoritative, structurally tested with a stand-in provider; real-provider evaluation pending |
 
 Customer discovery is not on the course's critical path. The interview guide
 and measurement framework (`docs/CUSTOMER_DISCOVERY.md`) stay in the repository
@@ -77,9 +83,9 @@ be presented at any point, including early in the window.
 | Thu 1 - Wed 7 Oct | master-data loop: tests first, migration, domain, API, minimal screens, ADR, DEMO step for the fraud story | B uploaded, proposed, called back, approved, re-validated and signed, all through the UI. Implemented early, 2026-09-30, on `feat/master-data-iban-control` (ADR-077) |
 | Thu 8 - Fri 9 Oct | KoSIT adapter as a technical check; tests with a stub, one integration test that skips without the validator; CI runs it for real | every fixture carries an official validation result. Implemented early, 2026-09-30 (ADR-078) |
 | Mon 12 Oct | BI source labels | no figure without its provenance. Implemented early, 2026-09-30 (ADR-079) |
-| Tue 13 - Wed 14 Oct | AI exception explanation | an ungrounded answer is never shown |
+| Tue 13 - Wed 14 Oct | AI exception explanation | an ungrounded answer is never shown. Implemented early, 2026-09-30 (ADR-080), off by default; real-provider evaluation pending (no paid API usage) |
 | Thu 15 Oct | bug fixing, early course drafts | |
-| **Thu 15 Oct, end of day** | **feature freeze** | everything merged is green and verified |
+| **Thu 15 Oct, end of day** | **feature freeze** | everything merged is green and verified. Reached early, 2026-09-30 |
 
 The conformance fix, originally part of the KoSIT slot, is already done, so the
 two KoSIT days hold only the adapter.
@@ -424,6 +430,18 @@ Design:
 AI never approves, never changes source or master data, never touches bank
 details, never pays, never reconciles. None of its outputs is an input to
 routing, eligibility or any transition.
+
+**As built (ADR-080)**, it differs from the design above in five places:
+- A refused or failed answer shows "Keine KI-Erklärung verfügbar", not a
+  deterministic template: the check reasons are already on the screen.
+- IBANs are masked to their first and last four characters, and the supplier
+  name is not sent: a sole trader's name is personal data, and the
+  explanation does not need it.
+- No feedback table yet; the pilot measures handling time directly.
+- The explanation is generated in the reader's language, German or English,
+  and cached per language.
+- The model is `claude-sonnet-4-6` by default, and the cache key includes the
+  model, so a model change never reuses an older model's answer.
 
 ## E. BI / ROI 2.0
 

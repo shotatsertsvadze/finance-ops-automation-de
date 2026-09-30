@@ -9,6 +9,7 @@ import StateSpine from "./StateSpine.jsx";
 import EvidenceRow from "./EvidenceRow.jsx";
 import ActionPanel from "./ActionPanel.jsx";
 import InvoiceBankPanel from "../bank-changes/InvoiceBankPanel.jsx";
+import AiExplanation from "./AiExplanation.jsx";
 
 export default function InvoiceDetail({ may, onChanged }) {
   const { t, errorText, role, action, reviewReason, auditReason, formatDate, formatDateTime, formatMoney } = useI18n();
@@ -277,6 +278,8 @@ export default function InvoiceDetail({ may, onChanged }) {
             )}
             {results.length === 0 && <p className="empty">{t("notCheckedDuplicate")}</p>}
           </section>
+
+          <AiExplanation invoiceId={invoice.id} runNo={results[0]?.run_no} state={invoice.state} may={may} />
 
           <section className="panel">
             <div className="panel-head"><span className="label">{t("panelHistory")}</span></div>

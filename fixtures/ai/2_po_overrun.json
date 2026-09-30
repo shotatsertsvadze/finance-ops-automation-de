@@ -1,0 +1,145 @@
+{
+  "scenario": "2_po_overrun",
+  "description": "C: the net amount exceeds what is left on the purchase order, tolerance included.",
+  "input": {
+    "schema": "finops.ai-explanation-input/1",
+    "language": "de",
+    "document": {
+      "kind": "INVOICE",
+      "state": "REVIEW_REQUIRED",
+      "review_reason": "PO_AMOUNT_WITHIN_TOLERANCE",
+      "run_no": 1
+    },
+    "failed": [
+      {
+        "check": "po_amount_within_tolerance",
+        "phase": "BUSINESS",
+        "severity": "HIGH",
+        "expected": "<= 5100.00 EUR (verfügbar 5000.00 + Toleranz 2 %)",
+        "actual": "8500.00 EUR",
+        "reason": "Nettobetrag überschreitet den offenen Bestellwert"
+      }
+    ],
+    "warnings": [],
+    "passed": [
+      "xml_well_formed",
+      "format_recognised",
+      "xrechnung_profile_declared",
+      "required_fields_present",
+      "amounts_numeric",
+      "dates_valid",
+      "official_validation",
+      "supplier_known",
+      "supplier_active",
+      "buyer_is_us",
+      "supplier_iban_match",
+      "duplicate_invoice_number",
+      "po_reference_present",
+      "po_exists",
+      "po_supplier_match",
+      "line_amounts_consistent",
+      "totals_consistent",
+      "tax_breakdown_bookable",
+      "currency_expected",
+      "required_fields_complete",
+      "payment_terms_match"
+    ],
+    "not_checked": [],
+    "allowed_next_steps": [
+      "request_info",
+      "reject"
+    ]
+  },
+  "good": [
+    {
+      "summary": "Der Nettobetrag übersteigt den offenen Bestellwert.",
+      "explanation": "Die Rechnung hat einen Nettobetrag von 8.500,00 EUR. Auf der Bestellung sind 5.000,00 EUR verfügbar, mit 2 % Toleranz also höchstens 5.100,00 EUR. Die übrigen Prüfungen sind bestanden.",
+      "failed_checks": [
+        "po_amount_within_tolerance"
+      ],
+      "cited_checks": [
+        "po_amount_within_tolerance"
+      ],
+      "next_step": "request_info",
+      "language": "de"
+    },
+    {
+      "summary": "The net amount exceeds what is left on the purchase order.",
+      "explanation": "The invoice's net amount is 8,500.00 EUR. The order has 5,000.00 EUR available, at most 5,100.00 EUR with the 2 % tolerance. The other checks passed.",
+      "failed_checks": [
+        "po_amount_within_tolerance"
+      ],
+      "cited_checks": [
+        "po_amount_within_tolerance"
+      ],
+      "next_step": "request_info",
+      "language": "en"
+    }
+  ],
+  "bad": [
+    {
+      "why": "an amount that is not in the evidence",
+      "rule": "UNGROUNDED",
+      "output": {
+        "summary": "Der Betrag übersteigt die Bestellung.",
+        "explanation": "Auf der Bestellung sind noch 6.000,00 EUR offen.",
+        "failed_checks": [
+          "po_amount_within_tolerance"
+        ],
+        "cited_checks": [
+          "po_amount_within_tolerance"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    },
+    {
+      "why": "a purchase order number that was never sent",
+      "rule": "UNGROUNDED",
+      "output": {
+        "summary": "Der Betrag übersteigt die Bestellung.",
+        "explanation": "Die Bestellung PO-2026-0999 ist ausgeschöpft.",
+        "failed_checks": [
+          "po_amount_within_tolerance"
+        ],
+        "cited_checks": [
+          "po_amount_within_tolerance"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    },
+    {
+      "why": "reassurance",
+      "rule": "DECISION",
+      "output": {
+        "summary": "Der Betrag übersteigt die Bestellung.",
+        "explanation": "Die Überschreitung von 8.500,00 EUR ist geringfügig und unbedenklich.",
+        "failed_checks": [
+          "po_amount_within_tolerance"
+        ],
+        "cited_checks": [
+          "po_amount_within_tolerance"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    },
+    {
+      "why": "a step for another failure",
+      "rule": "NEXT_STEP",
+      "output": {
+        "summary": "Der Betrag übersteigt die Bestellung.",
+        "explanation": "Der Nettobetrag übersteigt den Bestellwert.",
+        "failed_checks": [
+          "po_amount_within_tolerance"
+        ],
+        "cited_checks": [
+          "po_amount_within_tolerance"
+        ],
+        "next_step": "verify_bank_account",
+        "language": "de"
+      }
+    }
+  ]
+}

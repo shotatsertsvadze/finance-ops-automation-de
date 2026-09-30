@@ -1,0 +1,126 @@
+{
+  "scenario": "5_iban_and_po_overrun",
+  "description": "C with B's untrusted IBAN: two failures at once, the bank account and the order.",
+  "input": {
+    "schema": "finops.ai-explanation-input/1",
+    "language": "de",
+    "document": {
+      "kind": "INVOICE",
+      "state": "REVIEW_REQUIRED",
+      "review_reason": "SUPPLIER_IBAN_MATCH",
+      "run_no": 1
+    },
+    "failed": [
+      {
+        "check": "supplier_iban_match",
+        "phase": "BUSINESS",
+        "severity": "HIGH",
+        "expected": "DE02 **** 5030",
+        "actual": "DE02 **** 1065",
+        "reason": "IBAN weicht von den freigegebenen Bankverbindungen des Lieferanten ab (Betrugsrisiko)"
+      },
+      {
+        "check": "po_amount_within_tolerance",
+        "phase": "BUSINESS",
+        "severity": "HIGH",
+        "expected": "<= 5100.00 EUR (verfügbar 5000.00 + Toleranz 2 %)",
+        "actual": "8500.00 EUR",
+        "reason": "Nettobetrag überschreitet den offenen Bestellwert"
+      }
+    ],
+    "warnings": [],
+    "passed": [
+      "xml_well_formed",
+      "format_recognised",
+      "xrechnung_profile_declared",
+      "required_fields_present",
+      "amounts_numeric",
+      "dates_valid",
+      "official_validation",
+      "supplier_known",
+      "supplier_active",
+      "buyer_is_us",
+      "duplicate_invoice_number",
+      "po_reference_present",
+      "po_exists",
+      "po_supplier_match",
+      "line_amounts_consistent",
+      "totals_consistent",
+      "tax_breakdown_bookable",
+      "currency_expected",
+      "required_fields_complete",
+      "payment_terms_match"
+    ],
+    "not_checked": [],
+    "allowed_next_steps": [
+      "verify_bank_account",
+      "request_info",
+      "reject"
+    ]
+  },
+  "good": [
+    {
+      "summary": "Zwei Prüfungen schlagen fehl: die Bankverbindung und der Bestellwert.",
+      "explanation": "Die Rechnung nennt das Konto DE02 **** 1065, hinterlegt ist DE02 **** 5030. Außerdem übersteigt der Nettobetrag von 8.500,00 EUR den Bestellwert von höchstens 5.100,00 EUR.",
+      "failed_checks": [
+        "supplier_iban_match",
+        "po_amount_within_tolerance"
+      ],
+      "cited_checks": [
+        "supplier_iban_match",
+        "po_amount_within_tolerance"
+      ],
+      "next_step": "verify_bank_account",
+      "language": "de"
+    },
+    {
+      "summary": "Two checks fail: the bank account and the order amount.",
+      "explanation": "The invoice names DE02 **** 1065, while the account on file is DE02 **** 5030. Its net amount of 8,500.00 EUR also exceeds the order's limit of 5,100.00 EUR.",
+      "failed_checks": [
+        "supplier_iban_match",
+        "po_amount_within_tolerance"
+      ],
+      "cited_checks": [
+        "supplier_iban_match",
+        "po_amount_within_tolerance"
+      ],
+      "next_step": "verify_bank_account",
+      "language": "en"
+    }
+  ],
+  "bad": [
+    {
+      "why": "one failure left out",
+      "rule": "FAILED_CHECKS",
+      "output": {
+        "summary": "Die Bankverbindung weicht ab.",
+        "explanation": "Die Rechnung nennt DE02 **** 1065 statt DE02 **** 5030.",
+        "failed_checks": [
+          "supplier_iban_match"
+        ],
+        "cited_checks": [
+          "supplier_iban_match"
+        ],
+        "next_step": "verify_bank_account",
+        "language": "de"
+      }
+    },
+    {
+      "why": "an amount that is not in the evidence",
+      "rule": "UNGROUNDED",
+      "output": {
+        "summary": "Zwei Prüfungen schlagen fehl.",
+        "explanation": "Der Nettobetrag von 8.600,00 EUR übersteigt die Bestellung; die IBAN weicht ab.",
+        "failed_checks": [
+          "supplier_iban_match",
+          "po_amount_within_tolerance"
+        ],
+        "cited_checks": [
+          "supplier_iban_match"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    }
+  ]
+}

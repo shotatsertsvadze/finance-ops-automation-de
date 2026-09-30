@@ -1834,3 +1834,92 @@ Consequences:
 - One source per type.
 - Not built: baseline entry, pilot ingestion, the plan's TARGET type, and the
   Baseline | Pilot | Target table.
+
+## ADR-080 An AI model may explain why an invoice stopped; it never decides
+
+Context: the system already knows why an invoice stopped, as structured
+checks with expected and found values. A reviewer still has to turn several
+of them into one picture, and exceptions are the most expensive step (25
+minutes against 6 in the assumptions). ADR-006 kept AI out of the XRechnung
+path; this amends it by placing AI beside the path, never in it.
+
+Decision: a reviewer can ask for an explanation of an invoice in
+`REVIEW_REQUIRED` with at least one failed check. The model restates evidence
+the deterministic system produced; nothing reads its answer.
+- **Input** (`domain/ai/explanation-input.js`): the latest run's failed checks
+  and warnings with expected, found and reason; other checks by code only;
+  the invoice's kind, state, review reason and run; and the next steps that
+  never move an invoice on (`verify_bank_account`, `confirm_duplicate`,
+  `request_info`, `reject`). IBANs are masked to their first and last four
+  characters; supplier, buyer and company names and e-mail addresses are
+  removed; the checks about which supplier it is (`supplier_known`,
+  `po_supplier_match`) are sent as the relationship they establish ("keine
+  eindeutige Zuordnung", "Bestellung eines anderen Lieferanten"), without any
+  supplier number, name or VAT id; text is cleaned and cut to 240 characters.
+  The evidence on screen and in the database keeps them. Never sent: the
+  document, file name, path or hash, full IBANs, names, addresses, contacts,
+  call-back numbers, bank-account changes, the KoSIT report, comments, users,
+  payment or statement data, earlier runs.
+- **Output**, forced through one tool: summary (200 characters), explanation
+  (700), the exact failed checks, the checks cited, an offered next step or
+  none, the language. The next step is shown in the words of the button it
+  names, from our dictionaries, never the model's.
+- **Verification** (`domain/ai/grounding.js`), before anything is shown: the
+  schema and language; exactly the failed checks; only known checks cited; an
+  offered step; every date, number and identifier in the text present in the
+  evidence, in German or English notation; no link, e-mail address or phone
+  number; no phrase that approves, releases or pays, or calls the invoice
+  fine, unless a negation in the same clause states the block ("kann nicht
+  freigegeben werden", "do not pay it"; a negation in an earlier clause does
+  not count); no claim that money moved unless the evidence says so, where
+  "bezahlt werden" or "be paid" says what may happen, not what did. A refused
+  answer is stored as REJECTED and never shown.
+- **Provider**: `integrations/ai-explainer.js`, Anthropic, `claude-sonnet-4-6`
+  by default (`AI_MODEL`), temperature 0, 800 output tokens, 20 s timeout, no
+  retries, no extended thinking. Failures keep a status, error type or cause,
+  never the provider's text or the key.
+- **Persistence**: `ai_explanations`, insert-only for the app role, one row
+  per attempt with the exact input sent. An accepted answer is served again
+  for the same invoice, run, input hash, prompt version, schema version,
+  provider, model and language; a new run, another model or the other
+  language is a new explanation. Nothing is written to invoices, checks,
+  routing, approvals, master data or the audit trail.
+- **Failure**: switched off, unconfigured, unreachable, slow, malformed or
+  refused, the answer is "Keine KI-Erklärung verfügbar" and nothing else
+  changes. The provider is called with no database connection held.
+- **Off by default** (`AI_EXPLANATIONS=true` switches it on). A production
+  start with it on and no `ANTHROPIC_API_KEY` is refused.
+- **Evaluation**: five scenarios in `fixtures/ai/` (IBAN mismatch, PO overrun,
+  duplicate, KoSIT rejection, two failures at once), each with answers the
+  verifier must accept and answers it must refuse, run in CI with a stand-in
+  provider. `npm run ai:eval` runs them against the real model by hand.
+
+Why here and not in approval, routing or payment: an explanation can be
+checked against the facts it was given, and a wrong one costs a reviewer a
+moment, with the evidence beside it. A decision to approve, route or pay has
+nothing to check it against but the rules the system already applies
+deterministically, and a wrong one moves money. So the model explains, and
+nothing it says is an input to any rule, state or payment. A test fails if
+workflow, routing, approval, master-data or payment code imports it.
+
+Consequences:
+- Only as good as its verification. Facts, form and the set of failures are
+  checked; whether free text contradicts the evidence in some other way is
+  caught only by the phrase list, which is best effort. The checks stay on
+  screen above the explanation for that reason.
+- The explanation is stored in the reader's language, the one exception to
+  German-only stored text.
+- Masked evidence leaves the system for an external provider. Before real
+  invoice data, a deployment needs a provider and data-processing review, a
+  processing agreement and a check of the provider's retention; nothing here
+  claims GDPR compliance.
+- Not built: automatic generation, feedback on explanations, other providers,
+  explanations outside review. The plan's pilot decides whether it stays: if
+  exceptions take no less time with it, it is removed.
+- Status, 2026-09-30: The AI exception-explanation capability is implemented
+  and structurally tested with deterministic grounding tests and a stand-in
+  provider. It is disabled by default and does not participate in invoice
+  routing, approval, master-data changes, payment or reconciliation.
+  Real-provider quality and acceptance-rate evaluation against the configured
+  Anthropic model is still pending because external paid API usage is not
+  enabled for this project. `npm run ai:eval` stays for when it is.

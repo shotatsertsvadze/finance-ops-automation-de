@@ -120,6 +120,17 @@ test("the app role cannot rewrite a bank-account proposal, official validation e
   }
 });
 
+test("the app role cannot rewrite or remove a record of what was sent to the AI provider", async () => {
+  for (const sql of [
+    "update finops.ai_explanations set status = 'ACCEPTED'",
+    "update finops.ai_explanations set input = '{}'::jsonb",
+    "delete from finops.ai_explanations",
+    "truncate finops.ai_explanations",
+  ]) {
+    await assert.rejects(() => app.query(sql), /permission denied/, sql);
+  }
+});
+
 test("but may record a change's decision, which is all the workflow updates", async () => {
   await app.query(
     `update finops.bank_account_changes set state = state, verified_by = verified_by, decided_by = decided_by,

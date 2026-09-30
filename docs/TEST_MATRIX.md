@@ -9,7 +9,7 @@ Legend:
 - **CI** verified by an automated job in `.github/workflows/ci.yml` outside `npm test`, job named
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (630 tests, all passing as of 2026-09-30; the three
+Run: `npm test` (712 tests, all passing as of 2026-09-30; the three
 real-validator tests skip without `KOSIT_TEST_URL` and run in CI, see
 "Official validation"). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
@@ -210,6 +210,8 @@ described as working.
 | L12 | Rarely, one full-suite run fails with pg's "timeout exceeded when trying to connect", seen in `getInvoiceDetail`. Cause not established; it passed on rerun and in isolated runs, and was seen before ADR-078 | Not reproducible on demand: seen once in Phase 1 and once in Phase 2, not in the reruns | OPEN |
 | L13 | The operational figures declare SYNTHETIC as a constant, because the application holds demo data only. On real invoices they would still say synthetic: before a customer or pilot deployment, their source must follow the actual dataset (ADR-079) | Read `server/domain/kpi/provenance.js`: `volume` to `cycle` map to SYNTHETIC unconditionally | OPEN |
 | L14 | A source's explanation is hover text (`title`), which touch screens do not show. The source label itself is always visible text, so the meaning never rests on colour or hover alone | Tap a source tag on a phone: no explanation appears | OPEN |
+| L15 | Whether an AI explanation contradicts the evidence in free text is checked only by a phrase list; facts, the set of failures, cited checks and steps are checked exactly. Negation is read per clause, so a double negation ("kein Grund, warum sie nicht bezahlt werden kann") is taken as negated (ADR-080) | An answer such as "the order has room left" without a number passes the verifier | OPEN |
+| L16 | Real-provider quality and acceptance rate of the AI explanation are unmeasured: it is structurally tested with a stand-in provider only, because paid API usage is not enabled for this project (ADR-080) | `npm run ai:eval`, 2026-09-30: every request refused by the API (account without API credit); no answer was generated | OPEN |
 
 ## Authentication and authorization
 
@@ -384,6 +386,40 @@ in `server/integrations/kosit-real.test.js`.
 | OV25 | `npm run kosit:fetch` and `npm run kosit` | fetch verifies both SHA-256s and keeps verified files; start refuses a missing or altered artifact, a missing Java, the macOS stub `/usr/bin/java`, and a non-local `KOSIT_URL`; the daemon listens on 127.0.0.1 only | MANUAL | 2026-09-30, with Homebrew openjdk@17 through `KOSIT_JAVA`; `lsof` shows 127.0.0.1:8081 |
 | OV26 | CI and the real validator | Java 17, the pinned artifacts fetched and cached, the daemon started before `npm test` with the real tests required | CI | `ci.yml` job `test` |
 | OV27 | The check in English | an entry for PASSED, FAILED and SKIPPED | AUTO | `dictionaries.test.js` |
+
+## AI exception explanation (ADR-080)
+
+The capability is optional, off by default and non-authoritative. CI runs
+these with a stand-in provider (`test-support/ai.js`); no test calls a real
+model, and real-provider evaluation is pending (L16, AI24).
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| AI1 | Off (the default) | the endpoint says `{enabled:false}`, a request is refused with `AI_DISABLED`, nothing recorded; the invoice detail is identical with AI on or off | AUTO | `explanations.test.js` "off"; `ai-explanation.test.js` |
+| AI2 | On without a key | the attempt is FAILED, "Kein API-Schlüssel konfiguriert", nothing else changes; a production start is refused | AUTO | `explanations.test.js`; `deployment.test.js` |
+| AI3 | Timeout, unreachable provider | FAILED, recorded, "unavailable"; state, checks, routing, audit and approval steps unchanged | AUTO | `explanations.test.js` "a timeout", "an unreachable provider" |
+| AI4 | An answer that is not the agreed JSON | REJECTED (SCHEMA), never returned | AUTO | `explanations.test.js`; `grounding.test.js` |
+| AI5 | A cited check that does not exist | REJECTED (UNKNOWN_CHECK) | AUTO | `grounding.test.js` |
+| AI6 | An invented IBAN, amount, PO number, date or rule code, in German or English notation | REJECTED (UNGROUNDED); a figure from the evidence in either notation passes | AUTO | `grounding.test.js` |
+| AI7 | A failure left out, or a passed check named as the failure | REJECTED (FAILED_CHECKS) | AUTO | `grounding.test.js` scenarios 1, 3, 4, 5 |
+| AI8 | A next step not offered, or one that would move the invoice on | REJECTED (NEXT_STEP); the steps offered never include accept, approve or pay | AUTO | `grounding.test.js`; `explanation-input.test.js` |
+| AI9 | Decision language, a contact route, a payment claimed without evidence | REJECTED (DECISION, CONTACT, PAYMENT_CLAIM); a trusted account may still be called "freigegeben" | AUTO | `grounding.test.js` |
+| AI9a | A negated release, approval or payment | "kann nicht freigegeben werden", "cannot be approved", "should not be paid", "do not release the invoice" pass; "kann freigegeben werden", "can be approved", "pay it", and a positive clause after an unrelated negation ("stimmt nicht; die Rechnung kann freigegeben werden") are refused; "bezahlt werden" is not a payment claim, "wurde bezahlt" is | AUTO | `grounding.test.js` |
+| AI10 | A grounded answer | ACCEPTED, stored, served again without a second call | AUTO | `explanations.test.js` |
+| AI11 | Labelled as AI and not a decision | the API marks `ai_generated: true` with provider and model; the badge reads "KI-generierter Vorschlag – keine Entscheidung" / "AI-generated suggestion – not a decision" | AUTO | `explanations.test.js`; `dictionaries.test.js` |
+| AI12 | A newer validation run | the old run's explanation is kept but not shown as current; asking again explains run 2 | AUTO | `explanations.test.js` "an explanation belongs to its validation run" |
+| AI13 | What leaves the system | exactly the recorded input: no full IBAN, name, file name, path or e-mail; keys exactly the contract. No supplier number, name or VAT id, even when a check is about which supplier it is (an order of another supplier, an unknown supplier): those are sent as the relationship; the stored evidence still names them | AUTO | `explanations.test.js` "only the minimised evidence", "no supplier's number, name or VAT id"; `explanation-input.test.js` |
+| AI14 | Language and model in the cache key | German and English are separate explanations; another model never reuses an accepted answer | AUTO | `explanations.test.js`; mutation check 2026-09-30: without the model in the key, 12 tests fail |
+| AI15 | Verification switched off | a refused answer would be shown | AUTO | mutation check 2026-09-30: accepting every answer fails 2 tests |
+| AI16 | Two requests at once | one accepted row | AUTO | `explanations.test.js` |
+| AI17 | The provider call and the database | no connection held while waiting | AUTO | `explanations.test.js` |
+| AI18 | No authority | no workflow, routing, approval, master-data or payment module imports the AI modules | AUTO | `explanations.test.js` "no workflow ... imports" |
+| AI19 | Who may ask | `review:decide` asks; anyone who reads the invoice reads the answer; an unknown language is 400 | AUTO | `ai-explanation.test.js` |
+| AI20 | The adapter | pinned `claude-sonnet-4-6`, temperature 0, forced tool, 800 tokens, no extended thinking; no provider text or key in an error; timeout and unreachable are failures | AUTO | `ai-explainer.test.js` |
+| AI21 | The record | insert-only for the app role; a production start checks it | AUTO | `audit-role.test.js` |
+| AI22 | The evaluation scenarios | IBAN mismatch, PO overrun, duplicate, KoSIT rejection, two failures: every good answer accepted in German and English, every bad one refused by its rule; the committed inputs equal what the pipeline produces | AUTO | `grounding.test.js`; `explanations.test.js` "the committed evaluation inputs" |
+| AI23 | The panel | below the checks; DE and EN; a refused answer reads "Keine KI-Erklärung verfügbar" with a retry; no panel for an invoice that passed; no button for a manager; no overflow at 390 px | MANUAL | Browser, 2026-09-30, with the stand-in provider |
+| AI24 | The real model | `npm run ai:eval` over the five scenarios in both languages, three runs each | OPEN | Pending: paid API usage is not enabled for this project; see L16 |
 
 ## Bank-account changes (ADR-077)
 
