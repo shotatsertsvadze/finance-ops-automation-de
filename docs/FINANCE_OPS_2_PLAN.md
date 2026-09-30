@@ -30,7 +30,7 @@ course, this section wins.
 | Core, not dropped | KoSIT official validation (section C, row 1) | every uploaded invoice carries the official result; fail closed when the validator is unreachable. **Implemented 2026-09-30 (ADR-078)** on `feat/kosit-official-validation` |
 | Core, not dropped | Course documentation (`docs/course/`) | stakeholders, risks, data protection, method and timeline, rollout, reflection; short |
 | Core, not dropped | Stable demo | `docs/DEMO.md` verified against a fresh run, including the new fraud-story steps |
-| Important, reducible | BI / ROI source labels (section E) | every figure labelled synthetic, assumption, baseline or pilot; "nicht gemessen" where nothing is measured |
+| Important, reducible | BI / ROI source labels (section E) | every figure labelled synthetic, assumption, baseline or pilot; "nicht gemessen" where nothing is measured. **Implemented 2026-09-30 (ADR-079)** on `feat/bi-source-labels` |
 | Important, reducible | AI exception explanation (section D) | grounding check and stored suggestion, plain text, off by default; no authority over state, approval, master data or payments |
 
 Customer discovery is not on the course's critical path. The interview guide
@@ -76,7 +76,7 @@ be presented at any point, including early in the window.
 | Wed 30 Sep | KoSIT feasibility spike; fixtures and demo generator made XRechnung-conformant | done: the validator runs here from the installed Java 17; KoSIT accepts every invoice meant to be valid (fixtures A-E, G-J; 65 of 70 generated) and rejects only the malformed ones |
 | Thu 1 - Wed 7 Oct | master-data loop: tests first, migration, domain, API, minimal screens, ADR, DEMO step for the fraud story | B uploaded, proposed, called back, approved, re-validated and signed, all through the UI. Implemented early, 2026-09-30, on `feat/master-data-iban-control` (ADR-077) |
 | Thu 8 - Fri 9 Oct | KoSIT adapter as a technical check; tests with a stub, one integration test that skips without the validator; CI runs it for real | every fixture carries an official validation result. Implemented early, 2026-09-30 (ADR-078) |
-| Mon 12 Oct | BI source labels | no figure without its provenance |
+| Mon 12 Oct | BI source labels | no figure without its provenance. Implemented early, 2026-09-30 (ADR-079) |
 | Tue 13 - Wed 14 Oct | AI exception explanation | an ungrounded answer is never shown |
 | Thu 15 Oct | bug fixing, early course drafts | |
 | **Thu 15 Oct, end of day** | **feature freeze** | everything merged is green and verified |
@@ -440,6 +440,10 @@ pilot, every figure needs to say where it comes from.
 | BASELINE | the partner's process before the pilot | entered with method, period, sample size, who measured |
 | PILOT | measured during the pilot | computed by the system, or the same time log as the baseline |
 | TARGET | agreed with the partner before the pilot | entered with date and who agreed |
+
+The source labels are built (ADR-079) with the types SYNTHETIC, ASSUMPTION,
+CUSTOMER_BASELINE and PILOT_RESULT; the last two read "nicht gemessen". TARGET,
+the measurements below and the Baseline | Pilot | Target view are not built.
 
 Stored as rows in `measurements` (metric, value, unit, provenance, period,
 method, sample size, source, recorded by, recorded at), append-only. A

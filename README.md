@@ -43,7 +43,7 @@ GoBD compliance. What it deliberately does not do is listed under
 are recorded in `docs/PHASE_0_INDEPENDENT_REVIEW.md` and
 `docs/PROJECT_REVIEW_2026-09-17.md`.
 
-![The operational metrics view, showing straight-through processing rate, exception reasons, cycle times, risk signals and the work queue](docs/screenshots/dashboard.png)
+![The operational metrics view, showing straight-through processing rate, exception reasons, cycle times, risk signals, the work queue and the modelled savings, each figure tagged with its source](docs/screenshots/dashboard.png)
 
 The metrics view after a demo run of 70 synthetic invoices. Every figure is
 derived from the invoices and their check trail rather than counted separately.
@@ -375,8 +375,10 @@ dates are not fixed: the month ends today, so regenerating on another day
 shifts them and rewrites the committed statement. The data is synthetic.
 
 Every dashboard figure is computed from the invoices and their audit events.
-There is no counter to drift. The savings estimate is a scenario shown together
-with the assumptions that produce it, not a measured benefit.
+There is no counter to drift. Each figure names its source: synthetic demo
+data, a modelled assumption, or both. The savings panel is a modelled
+potential, not a measured benefit. Customer baseline and pilot result read
+"not measured", because nothing has been measured (ADR-079).
 
 ## Licence
 
