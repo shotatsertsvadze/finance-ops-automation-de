@@ -383,7 +383,8 @@ select {
 .ev.is-warning .ev-status { color: var(--medium); }
 .ev.is-passed .ev-status { color: var(--ok); }
 .ev.is-skipped .ev-status, .ev.is-info .ev-status { color: var(--ink-3); }
-.ev-reason { font-size: 13px; color: var(--ink-2); margin-top: 3px; }
+.ev-reason { font-size: 13px; color: var(--ink); font-weight: 500; margin: 0; }
+.ev-meta { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
 
 .ev-compare {
   display: inline-grid;

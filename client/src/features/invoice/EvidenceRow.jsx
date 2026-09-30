@@ -17,14 +17,15 @@ export default function EvidenceRow({ result }) {
     <div className={`ev is-${tone}`}>
       <div className="ev-bar" />
       <div className="ev-body">
+        {/* What the check found, in words, leads; its internal code follows. */}
         <div className="ev-head">
-          <span className="ev-code">{result.check_code}</span>
+          <p className="ev-reason">{checkSentence(result)}</p>
           <span className="ev-status">
             {checkStatus(result.status)}
             {result.severity !== "INFO" && result.status === "FAILED" ? ` · ${severity(result.severity)}` : ""}
           </span>
         </div>
-        <p className="ev-reason">{checkSentence(result)}</p>
+        <div className="ev-meta mono">{result.check_code}</div>
 
         {showCompare && (
           <dl className="ev-compare">
