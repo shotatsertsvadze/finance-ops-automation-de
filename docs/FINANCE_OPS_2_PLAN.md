@@ -34,7 +34,7 @@ course, this section wins.
 |---|---|---|
 | Core, not dropped | Master-data control loop, supplier IBAN change only (section B) | proposal, independent call-back, approval, audited update, re-validation of the affected invoices; no supplier block, retire action or PO correction. **Implemented 2026-09-30 (ADR-077)** as "verify and add a new trusted supplier bank account" |
 | Core, not dropped | KoSIT official validation (section C, row 1) | every uploaded invoice carries the official result; fail closed when the validator is unreachable. **Implemented 2026-09-30 (ADR-078)** on `feat/kosit-official-validation` |
-| Core, not dropped | Course documentation (`docs/course/`) | stakeholders, risks, data protection, method and timeline, rollout, reflection; short |
+| Core, not dropped | Course documentation (`docs/course/`) | stakeholders, risks, data protection, method and timeline, rollout, reflection; short. **Drafted 2026-09-30** in German as three files: `COURSE_FINAL_DE.md`, `RISIKO_UND_DATENSCHUTZ_DE.md`, `ROLLOUT_UND_REFLEXION_DE.md` |
 | Core, not dropped | Stable demo | `docs/DEMO.md` verified against a fresh run, including the new fraud-story steps |
 | Important, reducible | BI / ROI source labels (section E) | every figure labelled synthetic, assumption, baseline or pilot; "nicht gemessen" where nothing is measured. **Implemented 2026-09-30 (ADR-079)** on `feat/bi-source-labels` |
 | Important, reducible | AI exception explanation (section D) | grounding check and stored suggestion, plain text, off by default; no authority over state, approval, master data or payments. **Implemented 2026-09-30 (ADR-080)**: off by default, non-authoritative, structurally tested with a stand-in provider; real-provider evaluation pending |
