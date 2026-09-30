@@ -127,6 +127,19 @@ function bookedActions(invoice, step) {
   };
 }
 
+/**
+ * The one button to fill among those offered: the step that moves the
+ * invoice on, or, in a review that cannot be released, the step it expects
+ * next. Presentation only: which actions are offered is decided above.
+ */
+export function primaryAction(invoice, offered) {
+  const key = offered.find((a) => a.tone === "ok")?.key
+    ?? (invoice.state === "REVIEW_REQUIRED"
+      ? (invoice.review_reason === "DUPLICATE_INVOICE_NUMBER" ? "confirm-duplicate" : "request-info")
+      : null);
+  return offered.some((a) => a.key === key) ? key : null;
+}
+
 const INVOICE_PATH = ["RECEIVED", "VALIDATING", "READY_FOR_APPROVAL", "APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED"];
 // A credit note shares the path up to the booking and then ends. Showing it
 // the invoice path would promise a payment that is never coming.

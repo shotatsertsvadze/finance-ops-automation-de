@@ -4,7 +4,7 @@ import {
   instructPayment, bookCredit, settleByCredit, reportInfoReceived, reprocessInvoice, resolveReconciliation,
 } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
-import { availableActions } from "./actions.js";
+import { availableActions, primaryAction } from "./actions.js";
 
 /**
  * What this person can do with this invoice right now, and what the system
@@ -95,6 +95,7 @@ export default function ActionPanel({ invoice, may, onDone }) {
   }
 
   const needsComment = permitted.some((a) => a.needsComment);
+  const primary = primaryAction(invoice, permitted);
 
   return (
     <section className="panel">
@@ -121,7 +122,7 @@ export default function ActionPanel({ invoice, may, onDone }) {
           {permitted.map((action) => (
             <button
               key={action.key}
-              className={`btn ${action.tone === "ok" ? "" : action.tone === "high" ? "btn-danger" : "btn-ghost"}`}
+              className={`btn ${action.key === primary ? "" : action.tone === "high" ? "btn-danger" : "btn-ghost"}`}
               disabled={busy}
               onClick={() => run(action.run)}
             >

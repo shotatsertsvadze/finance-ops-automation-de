@@ -12,7 +12,7 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { availableActions, pathFor } from "./actions.js";
+import { availableActions, pathFor, primaryAction } from "./actions.js";
 
 const invoice = (over = {}) => ({
   state: "ACCOUNTING_READY", document_type: "INVOICE", approval_steps: [],
@@ -170,4 +170,30 @@ test("a failed payment is instructed again or stopped", () => {
   const result = availableActions(invoice({ state: "PAYMENT_FAILED" }));
   assert.deepEqual(result.actions.map((a) => a.key), ["retry", "cancel"]);
   assert.equal(result.prompt.key, "hintPaymentFailed");
+});
+
+test("each context fills at most one button, never a destructive one, and offers the same actions as before", () => {
+  const every = ["REVIEW_REQUIRED", "INFO_REQUESTED", "APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAYMENT_FAILED", "RECONCILIATION_EXCEPTION"];
+  for (const state of every) {
+    const offered = availableActions(invoice({ state })).actions;
+    const key = primaryAction(invoice({ state }), offered);
+    assert.ok(key === null || offered.some((a) => a.key === key), state);
+    assert.notEqual(offered.find((a) => a.key === key)?.tone, "high", `${state}: the filled button is never the destructive one`);
+  }
+});
+
+test("the filled button is the step that moves the invoice on, or the one a stopped review expects", () => {
+  const primary = (over) => { const inv = invoice(over); return primaryAction(inv, availableActions(inv).actions); };
+  assert.equal(primary({ state: "REVIEW_REQUIRED" }), "accept");
+  const stuck = { state: "REVIEW_REQUIRED", payable_blockers: ["supplier_iban_match"] };
+  assert.equal(primary({ ...stuck, review_reason: "SUPPLIER_IBAN_MATCH" }), "request-info");
+  assert.equal(primary({ ...stuck, review_reason: "DUPLICATE_INVOICE_NUMBER" }), "confirm-duplicate");
+  assert.equal(primary({ state: "ACCOUNTING_READY" }), "pay");
+  assert.equal(primary({ state: "PAYMENT_PENDING" }), "confirm");
+});
+
+test("a primary the viewer may not use is simply not filled", () => {
+  const inv = invoice({ state: "REVIEW_REQUIRED", payable_blockers: ["x"], review_reason: "SUPPLIER_IBAN_MATCH" });
+  const withoutRequest = availableActions(inv).actions.filter((a) => a.key !== "request-info");
+  assert.equal(primaryAction(inv, withoutRequest), null);
 });
