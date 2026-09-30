@@ -1,0 +1,159 @@
+{
+  "scenario": "4_kosit_rejection",
+  "description": "F: the official validator rejects the document, and the parser finds fields missing and values that are not numbers.",
+  "input": {
+    "schema": "finops.ai-explanation-input/1",
+    "language": "de",
+    "document": {
+      "kind": "INVOICE",
+      "state": "REVIEW_REQUIRED",
+      "review_reason": "TECHNICAL_VALIDATION_FAILED",
+      "run_no": 1
+    },
+    "failed": [
+      {
+        "check": "required_fields_present",
+        "phase": "TECHNICAL",
+        "severity": "HIGH",
+        "expected": "Rechnungsnummer (cbc:ID), Rechnungsdatum (cbc:IssueDate), Lieferantenname, Währung (cbc:DocumentCurrencyCode), Zahlbetrag (cbc:PayableAmount), Nettobetrag (cbc:TaxExclusiveAmount), Steuerbetrag (cbc:TaxAmount), Rechnungspositionen",
+        "actual": "fehlt: Lieferantenname, Zahlbetrag (cbc:PayableAmount), Nettobetrag (cbc:TaxExclusiveAmount)",
+        "reason": "Pflichtfelder fehlen: Lieferantenname, Zahlbetrag (cbc:PayableAmount), Nettobetrag (cbc:TaxExclusiveAmount)"
+      },
+      {
+        "check": "amounts_numeric",
+        "phase": "TECHNICAL",
+        "severity": "HIGH",
+        "expected": "Dezimalzahlen mit Punkt",
+        "actual": "taxAmount=19,00, line 1 quantity=zwei",
+        "reason": "Beträge oder Mengen sind nicht numerisch"
+      },
+      {
+        "check": "official_validation",
+        "phase": "TECHNICAL",
+        "severity": "HIGH",
+        "expected": "KoSIT 1.6.3, xrechnung-3.0.2-validator-configuration-2026-08-31: annehmbar",
+        "actual": "nicht annehmbar: 5 Fehler (cvc-datatype-valid.1.2.1, cvc-complex-type.2.2, cvc-complex-type.2.4.a)",
+        "reason": "KoSIT: '19,00' is not a valid value for 'decimal'."
+      }
+    ],
+    "warnings": [],
+    "passed": [
+      "xml_well_formed",
+      "format_recognised",
+      "xrechnung_profile_declared",
+      "dates_valid"
+    ],
+    "not_checked": [],
+    "allowed_next_steps": [
+      "request_info",
+      "reject"
+    ]
+  },
+  "good": [
+    {
+      "summary": "Der offizielle KoSIT-Validator lehnt das Dokument ab, und es fehlen Pflichtangaben.",
+      "explanation": "KoSIT meldet 5 Fehler, darunter, dass '19,00' kein gültiger Dezimalwert ist. Außerdem fehlen Lieferantenname, Zahlbetrag und Nettobetrag, und die Menge 'zwei' ist keine Zahl. Der Lieferant muss eine korrigierte Rechnung senden.",
+      "failed_checks": [
+        "required_fields_present",
+        "amounts_numeric",
+        "official_validation"
+      ],
+      "cited_checks": [
+        "official_validation",
+        "required_fields_present",
+        "amounts_numeric"
+      ],
+      "next_step": "request_info",
+      "language": "de"
+    },
+    {
+      "summary": "The official KoSIT validator rejects the document, and required details are missing.",
+      "explanation": "KoSIT reports 5 errors, among them that '19,00' is not a valid decimal. The supplier name, payable amount and net amount are missing, and the quantity 'zwei' is not a number. The supplier needs to send a corrected invoice.",
+      "failed_checks": [
+        "required_fields_present",
+        "amounts_numeric",
+        "official_validation"
+      ],
+      "cited_checks": [
+        "official_validation",
+        "required_fields_present",
+        "amounts_numeric"
+      ],
+      "next_step": "request_info",
+      "language": "en"
+    }
+  ],
+  "bad": [
+    {
+      "why": "the official rejection left out",
+      "rule": "FAILED_CHECKS",
+      "output": {
+        "summary": "Es fehlen Pflichtangaben.",
+        "explanation": "Lieferantenname, Zahlbetrag und Nettobetrag fehlen.",
+        "failed_checks": [
+          "required_fields_present",
+          "amounts_numeric"
+        ],
+        "cited_checks": [
+          "required_fields_present"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    },
+    {
+      "why": "a link to follow",
+      "rule": "CONTACT",
+      "output": {
+        "summary": "KoSIT lehnt das Dokument ab.",
+        "explanation": "Laden Sie eine korrigierte Datei unter https://portal.example.com hoch.",
+        "failed_checks": [
+          "required_fields_present",
+          "amounts_numeric",
+          "official_validation"
+        ],
+        "cited_checks": [
+          "official_validation"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    },
+    {
+      "why": "a rule code KoSIT did not report",
+      "rule": "UNGROUNDED",
+      "output": {
+        "summary": "KoSIT lehnt das Dokument ab.",
+        "explanation": "KoSIT meldet einen Verstoß gegen BR-DE-15.",
+        "failed_checks": [
+          "required_fields_present",
+          "amounts_numeric",
+          "official_validation"
+        ],
+        "cited_checks": [
+          "official_validation"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    },
+    {
+      "why": "paying despite the rejection",
+      "rule": "DECISION",
+      "output": {
+        "summary": "KoSIT lehnt das Dokument ab.",
+        "explanation": "Die Rechnung kann trotzdem bezahlt werden, die Fehler sind formal.",
+        "failed_checks": [
+          "required_fields_present",
+          "amounts_numeric",
+          "official_validation"
+        ],
+        "cited_checks": [
+          "official_validation"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    }
+  ]
+}

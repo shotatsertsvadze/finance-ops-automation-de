@@ -1,0 +1,231 @@
+{
+  "scenario": "1_iban_mismatch",
+  "description": "B: the invoice names a bank account the supplier has not got on file as trusted.",
+  "input": {
+    "schema": "finops.ai-explanation-input/1",
+    "language": "de",
+    "document": {
+      "kind": "INVOICE",
+      "state": "REVIEW_REQUIRED",
+      "review_reason": "SUPPLIER_IBAN_MATCH",
+      "run_no": 1
+    },
+    "failed": [
+      {
+        "check": "supplier_iban_match",
+        "phase": "BUSINESS",
+        "severity": "HIGH",
+        "expected": "DE02 **** 2051",
+        "actual": "DE02 **** 1065",
+        "reason": "IBAN weicht von den freigegebenen Bankverbindungen des Lieferanten ab (Betrugsrisiko)"
+      }
+    ],
+    "warnings": [],
+    "passed": [
+      "xml_well_formed",
+      "format_recognised",
+      "xrechnung_profile_declared",
+      "required_fields_present",
+      "amounts_numeric",
+      "dates_valid",
+      "official_validation",
+      "supplier_known",
+      "supplier_active",
+      "buyer_is_us",
+      "duplicate_invoice_number",
+      "po_reference_present",
+      "po_exists",
+      "po_supplier_match",
+      "po_amount_within_tolerance",
+      "line_amounts_consistent",
+      "totals_consistent",
+      "tax_breakdown_bookable",
+      "currency_expected",
+      "required_fields_complete",
+      "payment_terms_match"
+    ],
+    "not_checked": [],
+    "allowed_next_steps": [
+      "verify_bank_account",
+      "request_info",
+      "reject"
+    ]
+  },
+  "good": [
+    {
+      "summary": "Die IBAN auf der Rechnung gehört nicht zu den hinterlegten Bankverbindungen des Lieferanten.",
+      "explanation": "Die Rechnung nennt das Konto DE02 **** 1065, hinterlegt ist DE02 **** 2051. Eine abweichende Bankverbindung ist ein typisches Betrugsmuster. Summen, Bestellung und die offizielle Validierung sind bestanden; offen ist allein die Bankverbindung.",
+      "failed_checks": [
+        "supplier_iban_match"
+      ],
+      "cited_checks": [
+        "supplier_iban_match",
+        "totals_consistent",
+        "po_amount_within_tolerance",
+        "official_validation"
+      ],
+      "next_step": "verify_bank_account",
+      "language": "de"
+    },
+    {
+      "summary": "The invoice names a bank account that is not one of the supplier's trusted accounts.",
+      "explanation": "It asks for payment to DE02 **** 1065, while the account on file is DE02 **** 2051. A changed bank account is a common fraud pattern. Totals, the purchase order and the official validation passed; only the bank account is in question.",
+      "failed_checks": [
+        "supplier_iban_match"
+      ],
+      "cited_checks": [
+        "supplier_iban_match",
+        "totals_consistent",
+        "official_validation"
+      ],
+      "next_step": "verify_bank_account",
+      "language": "en"
+    }
+  ],
+  "bad": [
+    {
+      "why": "a full IBAN, which was never sent",
+      "rule": "UNGROUNDED",
+      "output": {
+        "summary": "Die IBAN weicht ab.",
+        "explanation": "Die Rechnung nennt DE02300209000106531065 statt der hinterlegten Bankverbindung.",
+        "failed_checks": [
+          "supplier_iban_match"
+        ],
+        "cited_checks": [
+          "supplier_iban_match"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    },
+    {
+      "why": "a phone number to call",
+      "rule": "CONTACT",
+      "output": {
+        "summary": "Die IBAN weicht ab.",
+        "explanation": "Rufen Sie den Lieferanten unter +49 30 1234567 an und lassen Sie sich die IBAN bestätigen.",
+        "failed_checks": [
+          "supplier_iban_match"
+        ],
+        "cited_checks": [
+          "supplier_iban_match"
+        ],
+        "next_step": "verify_bank_account",
+        "language": "de"
+      }
+    },
+    {
+      "why": "the failure left out",
+      "rule": "FAILED_CHECKS",
+      "output": {
+        "summary": "Die Rechnung ist rechnerisch korrekt.",
+        "explanation": "Summen und Bestellung sind bestanden.",
+        "failed_checks": [],
+        "cited_checks": [
+          "totals_consistent"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    },
+    {
+      "why": "a passed check claimed as the failure",
+      "rule": "FAILED_CHECKS",
+      "output": {
+        "summary": "Die Summen stimmen nicht.",
+        "explanation": "Die Summen der Rechnung sind nicht konsistent.",
+        "failed_checks": [
+          "totals_consistent"
+        ],
+        "cited_checks": [
+          "totals_consistent"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    },
+    {
+      "why": "a decision",
+      "rule": "DECISION",
+      "output": {
+        "summary": "Die IBAN weicht ab.",
+        "explanation": "Die Rechnung kann freigegeben werden, sobald der Lieferant die neue Bankverbindung per E-Mail bestätigt.",
+        "failed_checks": [
+          "supplier_iban_match"
+        ],
+        "cited_checks": [
+          "supplier_iban_match"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    },
+    {
+      "why": "a next step the screen does not offer",
+      "rule": "NEXT_STEP",
+      "output": {
+        "summary": "Die IBAN weicht ab.",
+        "explanation": "Die Bankverbindung weicht von der hinterlegten ab.",
+        "failed_checks": [
+          "supplier_iban_match"
+        ],
+        "cited_checks": [
+          "supplier_iban_match"
+        ],
+        "next_step": "accept",
+        "language": "de"
+      }
+    },
+    {
+      "why": "a check that does not exist",
+      "rule": "UNKNOWN_CHECK",
+      "output": {
+        "summary": "Die IBAN weicht ab.",
+        "explanation": "Die Bankverbindung weicht von der hinterlegten ab.",
+        "failed_checks": [
+          "supplier_iban_match"
+        ],
+        "cited_checks": [
+          "supplier_iban_match",
+          "iban_blacklist"
+        ],
+        "next_step": null,
+        "language": "de"
+      }
+    },
+    {
+      "why": "the wrong language",
+      "rule": "LANGUAGE",
+      "output": {
+        "summary": "The IBAN differs.",
+        "explanation": "The bank account differs from the one on file.",
+        "failed_checks": [
+          "supplier_iban_match"
+        ],
+        "cited_checks": [
+          "supplier_iban_match"
+        ],
+        "next_step": null,
+        "language": "en"
+      }
+    },
+    {
+      "why": "a field outside the contract",
+      "rule": "SCHEMA",
+      "output": {
+        "summary": "Die IBAN weicht ab.",
+        "explanation": "Die Bankverbindung weicht ab.",
+        "failed_checks": [
+          "supplier_iban_match"
+        ],
+        "cited_checks": [
+          "supplier_iban_match"
+        ],
+        "next_step": null,
+        "language": "de",
+        "confidence": 0.97
+      }
+    }
+  ]
+}
