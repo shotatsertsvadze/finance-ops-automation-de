@@ -14,6 +14,17 @@ const num = (name, value, fallback) => {
 };
 const bool = (value, fallback) => (value === undefined || value === "" ? fallback : value === "true");
 
+/**
+ * How many distinct people a change to a supplier's bank accounts needs
+ * (ADR-077). Stored per change, so two could be allowed later without
+ * touching the rules; until that decision is made, anything but three stops
+ * the process rather than quietly weakening the control.
+ */
+const bankChangeActors = (value) => {
+  if (value === undefined || value === "" || value === "3") return 3;
+  throw new Error(`POLICY_BANK_CHANGE_DISTINCT_ACTORS muss 3 sein, ein anderer Wert ist nicht freigegeben: "${value}"`);
+};
+
 export function loadPolicy(env = process.env) {
   const policy = {
     version: "demo-2026-09",
@@ -24,6 +35,7 @@ export function loadPolicy(env = process.env) {
     poToleranceMinCents: num("POLICY_PO_TOLERANCE_MIN", env.POLICY_PO_TOLERANCE_MIN, 10) * 100,
     poRequiredAboveCents: num("POLICY_PO_REQUIRED_ABOVE", env.POLICY_PO_REQUIRED_ABOVE, 500) * 100,
     fourEyesAfterReview: bool(env.POLICY_FOUR_EYES_AFTER_REVIEW, true),
+    bankChangeDistinctActors: bankChangeActors(env.POLICY_BANK_CHANGE_DISTINCT_ACTORS),
     allowedCurrencies: ["EUR"],
     totalsToleranceCents: 1,
   };
