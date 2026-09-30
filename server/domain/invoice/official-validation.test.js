@@ -82,6 +82,11 @@ test("a report from another rule configuration fails closed", async () => {
   await invalid({ outcome: "ACCEPTED", httpStatus: 200, report: ACCEPTED.replaceAll("xrechnung-3.0.2-schematron-2.6.0", "xrechnung-3.0.2-schematron-2.7.0") }, A, /Konfiguration/);
 });
 
+test("an acceptance that names no rule configuration fails closed", async () => {
+  const unnamed = ACCEPTED.replace(/<rep:scenarioMatched[\s\S]*<\/rep:scenarioMatched>/, "");
+  await invalid({ outcome: "ACCEPTED", httpStatus: 200, report: unnamed }, A, /Konfiguration/);
+});
+
 test("a body that is not a report fails closed", async () => {
   for (const report of ["", "not xml", "<html><body>Proxy error</body></html>", "<rep:report"]) {
     await invalid({ outcome: "ACCEPTED", httpStatus: 200, report }, A, /Prüfbericht/);

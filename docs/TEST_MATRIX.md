@@ -9,7 +9,7 @@ Legend:
 - **CI** verified by an automated job in `.github/workflows/ci.yml` outside `npm test`, job named
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (623 tests, all passing as of 2026-09-30; the three
+Run: `npm test` (624 tests, all passing as of 2026-09-30; the three
 real-validator tests skip without `KOSIT_TEST_URL` and run in CI, see
 "Official validation"). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
@@ -349,7 +349,7 @@ in `server/integrations/kosit-real.test.js`.
 | OV3 | A report that contradicts its HTTP status | FAILED, no verdict recorded | AUTO | `official-validation.test.js` |
 | OV4 | A report about another document | FAILED: its SHA-256 is not this document's | AUTO | `official-validation.test.js` |
 | OV5 | A report from another validator version | FAILED | AUTO | `official-validation.test.js` |
-| OV6 | A report from another rule configuration | FAILED | AUTO | `official-validation.test.js` |
+| OV6 | A report from another rule configuration, or an acceptance naming none | FAILED | AUTO | `official-validation.test.js` |
 | OV7 | A body that is not a report (empty, text, HTML, truncated) | FAILED | AUTO | `official-validation.test.js` |
 | OV8 | No answer within the timeout, or a body that stalls | TIMEOUT, FAILED | AUTO | `kosit.test.js`, `official-validation.test.js` |
 | OV9 | Validator not running | UNAVAILABLE, FAILED; an invoice that would auto-approve goes to review | AUTO | `kosit.test.js`, `official-intake.test.js` |

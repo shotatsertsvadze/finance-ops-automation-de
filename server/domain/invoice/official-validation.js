@@ -34,8 +34,10 @@ function distrust(report, attempt, documentSha256) {
   if (report.assessment !== attempt.outcome) return `Bewertung im Bericht (${report.assessment}) widerspricht dem HTTP-Status ${attempt.httpStatus}`;
   if (report.engine !== KOSIT_PINS.validator.engine) return `Validator-Version ${report.engine ?? "unbekannt"} statt ${KOSIT_PINS.validator.engine}`;
   // The matched scenario names the rule sets it applied; another configuration
-  // names others. No scenario is a rejection of its own and names none.
-  if (report.scenario && !KOSIT_PINS.configuration.rules.every((rules) => attempt.report.includes(rules))) {
+  // names others. No scenario is a rejection of its own and names none; an
+  // acceptance must always name them.
+  const named = report.scenario || report.assessment === "ACCEPTED";
+  if (named && !KOSIT_PINS.configuration.rules.every((rules) => attempt.report.includes(rules))) {
     return `Konfiguration weicht von ${KOSIT_PINS.configuration.version} ab`;
   }
   if (report.documentSha256 !== documentSha256) return "der Bericht betrifft ein anderes Dokument (SHA-256 weicht ab)";
