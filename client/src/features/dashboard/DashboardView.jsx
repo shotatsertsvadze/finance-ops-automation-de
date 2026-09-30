@@ -4,7 +4,7 @@ import { getKpis } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
 
 export default function DashboardView() {
-  const { t, errorText, reviewReason, formatNumber, term } = useI18n();
+  const { t, errorText, reviewReason, formatNumber, term, source } = useI18n();
   // Numbers follow the chosen language: decimal comma in German, point in English.
   const num = (value, digits = 1) => formatNumber(value, { minimumFractionDigits: digits, maximumFractionDigits: digits });
   const int = (value) => formatNumber(value);
@@ -28,8 +28,10 @@ export default function DashboardView() {
   if (error) return <p className="error">{error}</p>;
   if (!kpi) return <p className="empty">{t("loading")}</p>;
 
-  const { volume, automation, exceptions, risk, workload, cycle, economics } = kpi;
+  const { volume, automation, exceptions, risk, workload, cycle, economics, provenance } = kpi;
   const a = economics.assumptions;
+  const from = (figure) => <SourceTag types={provenance.figures[figure]} />;
+  const unmeasured = Object.entries(provenance.sources).filter(([, source]) => !source.available);
 
   return (
     <>
@@ -39,24 +41,28 @@ export default function DashboardView() {
           <p>{t("kpiLead", int(volume.processed))}</p>
         </div>
       </div>
+      <SourceLegend sources={provenance.sources} />
 
       <section className="kpi-row">
         <Stat label={t("kpiStp")} value={pct(automation.stp_rate)}
-              note={t("kpiStpNote", int(automation.straight_through), int(volume.processed))} tone="ok" />
+              note={t("kpiStpNote", int(automation.straight_through), int(volume.processed))} tone="ok"
+              source={from("automation")} />
         <Stat label={t("kpiExceptionRate")} value={pct(exceptions.rate)}
-              note={t("kpiExceptionNote", int(exceptions.count))} tone={exceptions.rate > 0.25 ? "high" : "neutral"} />
+              note={t("kpiExceptionNote", int(exceptions.count))} tone={exceptions.rate > 0.25 ? "high" : "neutral"}
+              source={from("exceptions")} />
         <Stat label={t("kpiApprovalMedian")} value={duration(cycle.median_approval_hours)}
-              note={t("kpiApprovalNote", int(cycle.approved_count))} />
+              note={t("kpiApprovalNote", int(cycle.approved_count))} source={from("cycle")} />
         <Stat label={t("kpiWaitingPerson")} value={int(workload.awaiting_review + workload.awaiting_approval)}
               note={t("kpiWaitingNote", int(workload.awaiting_review), int(workload.awaiting_approval))}
-              tone={workload.awaiting_review + workload.awaiting_approval > 0 ? "medium" : "neutral"} />
+              tone={workload.awaiting_review + workload.awaiting_approval > 0 ? "medium" : "neutral"}
+              source={from("workload")} />
       </section>
 
       <div className="dash-grid">
         <section className="panel">
           <div className="panel-head">
-            <span className="label">{t("kpiExceptionReasons")}</span>
-            <span className="hint">{t("kpiExceptionReasonsSub")}</span>
+            <div><span className="label">{t("kpiExceptionReasons")}</span><div className="hint">{t("kpiExceptionReasonsSub")}</div></div>
+            {from("exceptions")}
           </div>
           <div className="panel-body">
             {exceptions.by_reason.length === 0 ? (
@@ -68,7 +74,7 @@ export default function DashboardView() {
         </section>
 
         <section className="panel">
-          <div className="panel-head"><span className="label">{t("kpiCycleTimes")}</span></div>
+          <div className="panel-head"><span className="label">{t("kpiCycleTimes")}</span>{from("cycle")}</div>
           <div className="panel-body">
             <dl className="metric-list">
               <Metric label={t("kpiIntakeToApproval")} value={duration(cycle.median_processing_hours)} />
@@ -84,8 +90,8 @@ export default function DashboardView() {
 
         <section className="panel">
           <div className="panel-head">
-            <span className="label">{t("kpiRiskSignals")}</span>
-            <span className="hint">{t("kpiRiskSub")}</span>
+            <div><span className="label">{t("kpiRiskSignals")}</span><div className="hint">{t("kpiRiskSub")}</div></div>
+            {from("risk")}
           </div>
           <div className="panel-body">
             <dl className="metric-list">
@@ -99,7 +105,7 @@ export default function DashboardView() {
         </section>
 
         <section className="panel">
-          <div className="panel-head"><span className="label">{t("kpiWorkload")}</span></div>
+          <div className="panel-head"><span className="label">{t("kpiWorkload")}</span>{from("workload")}</div>
           <div className="panel-body">
             <dl className="metric-list">
               <Metric label={t("kpiReviewOpen")} value={workload.awaiting_review} link="/sichtpruefung" />
@@ -118,8 +124,8 @@ export default function DashboardView() {
 
       <section className="panel" style={{ marginTop: 18 }}>
         <div className="panel-head">
-          <span className="label">{t("kpiEconomics")}</span>
-          <span className="hint">{t("kpiAssumption")}</span>
+          <div><span className="label">{t("kpiEconomics")}</span><div className="hint">{t("kpiAssumption")}</div></div>
+            {from("economics.hours_saved")}
         </div>
         <div className="panel-body">
           <div className="econ">
@@ -138,7 +144,7 @@ export default function DashboardView() {
           </div>
           <table className="assumptions">
             <caption className="hint">
-              {t("kpiAssumptionCaption", int(economics.basis_invoices))}
+              {t("kpiAssumptionCaption", int(economics.basis_invoices))} {from("economics.assumptions")}
             </caption>
             <tbody>
               <tr><th>{t("kpiManualClean")}</th><td className="num mono">{a.manual_minutes_clean} {t("unitMinutes")}</td>
@@ -146,6 +152,9 @@ export default function DashboardView() {
               <tr><th>{t("kpiManualException")}</th><td className="num mono">{a.manual_minutes_exception} {t("unitMinutes")}</td>
                   <th>{t("kpiWithSystem")}</th><td className="num mono">{a.system_minutes_exception} {t("unitMinutes")}</td></tr>
               <tr><th>{t("kpiSource")}</th><td colSpan={3}>{term(a.source)}</td></tr>
+              {unmeasured.map(([type]) => (
+                <tr key={type}><th>{source(type)}</th><td colSpan={3}><NotMeasured type={type} /></td></tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -176,13 +185,46 @@ function ReasonBars({ data, label, format }) {
   );
 }
 
-function Stat({ label, value, note, tone }) {
+function Stat({ label, value, note, tone, source }) {
   return (
     <div className={`stat${tone ? ` stat-${tone}` : ""}`}>
       <div className="label">{label}</div>
       <div className="stat-value">{value}</div>
       {note && <div className="stat-note">{note}</div>}
+      <div className="stat-source">{source}</div>
     </div>
+  );
+}
+
+/**
+ * The sources a figure rests on (ADR-079). A figure built on an assumption is
+ * marked as modelled, so it never reads as a measurement.
+ */
+function SourceTag({ types }) {
+  const { source, sourceExplanation } = useI18n();
+  const modelled = types.includes("ASSUMPTION");
+  return (
+    <span className={`source-tag${modelled ? " source-modelled" : ""}`} title={types.map(sourceExplanation).join(" + ")}>
+      {types.map(source).join(" + ")}
+    </span>
+  );
+}
+
+function NotMeasured({ type }) {
+  const { t, sourceExplanation } = useI18n();
+  return <span className="source-tag source-absent" title={sourceExplanation(type)}>{t("sourceNotMeasured")}</span>;
+}
+
+/** Every kind of source once, including those with nothing measured yet. */
+function SourceLegend({ sources }) {
+  const { t, source } = useI18n();
+  return (
+    <p className="source-legend">
+      <span className="label">{t("sourceLegend")}</span>
+      {Object.entries(sources).map(([type, { available }]) => available
+        ? <SourceTag key={type} types={[type]} />
+        : <span key={type} className="source-pair">{source(type)}: <NotMeasured type={type} /></span>)}
+    </p>
   );
 }
 

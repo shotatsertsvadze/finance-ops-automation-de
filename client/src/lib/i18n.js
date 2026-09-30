@@ -56,6 +56,8 @@ export function LanguageProvider({ children }) {
       changeAction: (code) => dict.changeAction[code] ?? code,
       reviewReason: (code) => dict.reviewReason[code] ?? code,
       matchReason: (code) => dict.matchReason[code] ?? code,
+      source: (code) => dict.source[code] ?? code,
+      sourceExplanation: (code) => dict.sourceExplanation[code] ?? code,
       checkSentence: (result) => checkSentence(dict, result),
       term: (value) => translateTerms(dict, value),
       auditReason: (reason) => auditReason(dict, reason),
