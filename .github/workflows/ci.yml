@@ -64,7 +64,39 @@ jobs:
       # the accessibility rules take effect - would go unchecked here.
       - run: npx playwright install --with-deps chromium
 
+      # The real, pinned KoSIT validator (ADR-078). The artifacts are cached by
+      # the pins file and checked against its SHA-256 on every run.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: actions/cache@v4
+        with:
+          path: vendor/kosit
+          key: kosit-${{ hashFiles('server/integrations/kosit-pins.js') }}
+
+      - run: npm run kosit:fetch
+
+      - name: Start the validator and wait until it answers
+        run: |
+          nohup npm run kosit > kosit.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fs http://127.0.0.1:8081/server/health > /dev/null && exit 0
+            sleep 1
+          done
+          cat kosit.log
+          exit 1
+
+      # KOSIT_TEST_REQUIRED: the real-validator tests fail rather than skip,
+      # so this job cannot pass without having exercised the validator.
       - run: npm test
+        env:
+          KOSIT_TEST_URL: http://127.0.0.1:8081
+          KOSIT_TEST_REQUIRED: "true"
+
+      - if: failure()
+        run: cat kosit.log || true
 
       # The suite never imports the client's entry point, so a broken build
       # would ship with this badge still green.
