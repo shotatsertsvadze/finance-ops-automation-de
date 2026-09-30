@@ -1852,7 +1852,11 @@ the deterministic system produced; nothing reads its answer.
   never move an invoice on (`verify_bank_account`, `confirm_duplicate`,
   `request_info`, `reject`). IBANs are masked to their first and last four
   characters; supplier, buyer and company names and e-mail addresses are
-  removed; text is cleaned and cut to 240 characters. Never sent: the
+  removed; the checks about which supplier it is (`supplier_known`,
+  `po_supplier_match`) are sent as the relationship they establish ("keine
+  eindeutige Zuordnung", "Bestellung eines anderen Lieferanten"), without any
+  supplier number, name or VAT id; text is cleaned and cut to 240 characters.
+  The evidence on screen and in the database keeps them. Never sent: the
   document, file name, path or hash, full IBANs, names, addresses, contacts,
   call-back numbers, bank-account changes, the KoSIT report, comments, users,
   payment or statement data, earlier runs.
@@ -1865,7 +1869,10 @@ the deterministic system produced; nothing reads its answer.
   offered step; every date, number and identifier in the text present in the
   evidence, in German or English notation; no link, e-mail address or phone
   number; no phrase that approves, releases or pays, or calls the invoice
-  fine; no claim that money moved unless the evidence says so. A refused
+  fine, unless a negation in the same clause states the block ("kann nicht
+  freigegeben werden", "do not pay it"; a negation in an earlier clause does
+  not count); no claim that money moved unless the evidence says so, where
+  "bezahlt werden" or "be paid" says what may happen, not what did. A refused
   answer is stored as REJECTED and never shown.
 - **Provider**: `integrations/ai-explainer.js`, Anthropic, `claude-sonnet-4-6`
   by default (`AI_MODEL`), temperature 0, 800 output tokens, 20 s timeout, no

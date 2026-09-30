@@ -546,7 +546,8 @@ expired, and signing in again stays on the same page (ADR-057).
   production start is refused without `KOSIT_URL` (ADR-078).
 - AI explanations are off unless `AI_EXPLANATIONS=true`. When a reviewer asks,
   only masked check evidence leaves the system (IBANs as first and last four
-  characters, no names, contacts, document or comments), and exactly what was
+  characters; no supplier number, name or VAT id, no contacts, document or
+  comments), and exactly what was
   sent is stored. The answer is verified before it is shown and changes
   nothing; a production start with AI on and no key is refused. A real
   deployment needs a provider and data-processing review first (ADR-080).

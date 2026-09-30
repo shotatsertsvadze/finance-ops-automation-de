@@ -9,7 +9,7 @@ Legend:
 - **CI** verified by an automated job in `.github/workflows/ci.yml` outside `npm test`, job named
 - **OPEN** not yet tested, a real gap
 
-Run: `npm test` (707 tests, all passing as of 2026-09-30; the three
+Run: `npm test` (712 tests, all passing as of 2026-09-30; the three
 real-validator tests skip without `KOSIT_TEST_URL` and run in CI, see
 "Official validation"). Database tests need
 `TEST_DATABASE_URL` and rebuild the `finops` schema in that database.
@@ -210,7 +210,7 @@ described as working.
 | L12 | Rarely, one full-suite run fails with pg's "timeout exceeded when trying to connect", seen in `getInvoiceDetail`. Cause not established; it passed on rerun and in isolated runs, and was seen before ADR-078 | Not reproducible on demand: seen once in Phase 1 and once in Phase 2, not in the reruns | OPEN |
 | L13 | The operational figures declare SYNTHETIC as a constant, because the application holds demo data only. On real invoices they would still say synthetic: before a customer or pilot deployment, their source must follow the actual dataset (ADR-079) | Read `server/domain/kpi/provenance.js`: `volume` to `cycle` map to SYNTHETIC unconditionally | OPEN |
 | L14 | A source's explanation is hover text (`title`), which touch screens do not show. The source label itself is always visible text, so the meaning never rests on colour or hover alone | Tap a source tag on a phone: no explanation appears | OPEN |
-| L15 | Whether an AI explanation contradicts the evidence in free text is checked only by a phrase list; facts, the set of failures, cited checks and steps are checked exactly (ADR-080) | An answer such as "the order has room left" without a number passes the verifier | OPEN |
+| L15 | Whether an AI explanation contradicts the evidence in free text is checked only by a phrase list; facts, the set of failures, cited checks and steps are checked exactly. Negation is read per clause, so a double negation ("kein Grund, warum sie nicht bezahlt werden kann") is taken as negated (ADR-080) | An answer such as "the order has room left" without a number passes the verifier | OPEN |
 | L16 | The AI explanation has not been run against the real model here; its acceptance rate is unmeasured | `npm run ai:eval` needs `ANTHROPIC_API_KEY` | OPEN |
 
 ## Authentication and authorization
@@ -403,10 +403,11 @@ real model.
 | AI7 | A failure left out, or a passed check named as the failure | REJECTED (FAILED_CHECKS) | AUTO | `grounding.test.js` scenarios 1, 3, 4, 5 |
 | AI8 | A next step not offered, or one that would move the invoice on | REJECTED (NEXT_STEP); the steps offered never include accept, approve or pay | AUTO | `grounding.test.js`; `explanation-input.test.js` |
 | AI9 | Decision language, a contact route, a payment claimed without evidence | REJECTED (DECISION, CONTACT, PAYMENT_CLAIM); a trusted account may still be called "freigegeben" | AUTO | `grounding.test.js` |
+| AI9a | A negated release, approval or payment | "kann nicht freigegeben werden", "cannot be approved", "should not be paid", "do not release the invoice" pass; "kann freigegeben werden", "can be approved", "pay it", and a positive clause after an unrelated negation ("stimmt nicht; die Rechnung kann freigegeben werden") are refused; "bezahlt werden" is not a payment claim, "wurde bezahlt" is | AUTO | `grounding.test.js` |
 | AI10 | A grounded answer | ACCEPTED, stored, served again without a second call | AUTO | `explanations.test.js` |
 | AI11 | Labelled as AI and not a decision | the API marks `ai_generated: true` with provider and model; the badge reads "KI-generierter Vorschlag – keine Entscheidung" / "AI-generated suggestion – not a decision" | AUTO | `explanations.test.js`; `dictionaries.test.js` |
 | AI12 | A newer validation run | the old run's explanation is kept but not shown as current; asking again explains run 2 | AUTO | `explanations.test.js` "an explanation belongs to its validation run" |
-| AI13 | What leaves the system | exactly the recorded input: no full IBAN, name, file name, path or e-mail; keys exactly the contract. A supplier number is sent where a check's evidence names one, as the internal reference it is | AUTO | `explanations.test.js` "only the minimised evidence"; `explanation-input.test.js` |
+| AI13 | What leaves the system | exactly the recorded input: no full IBAN, name, file name, path or e-mail; keys exactly the contract. No supplier number, name or VAT id, even when a check is about which supplier it is (an order of another supplier, an unknown supplier): those are sent as the relationship; the stored evidence still names them | AUTO | `explanations.test.js` "only the minimised evidence", "no supplier's number, name or VAT id"; `explanation-input.test.js` |
 | AI14 | Language and model in the cache key | German and English are separate explanations; another model never reuses an accepted answer | AUTO | `explanations.test.js`; mutation check 2026-09-30: without the model in the key, 12 tests fail |
 | AI15 | Verification switched off | a refused answer would be shown | AUTO | mutation check 2026-09-30: accepting every answer fails 2 tests |
 | AI16 | Two requests at once | one accepted row | AUTO | `explanations.test.js` |
