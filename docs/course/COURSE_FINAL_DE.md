@@ -353,7 +353,7 @@ ADR-083).
 | 2 | Härtung sowie Dokumentations- und Baseline-Bereinigung | 23.–29.09.2026 | Kontrollen nachgeschärft (IBAN nie durchwinkbar, Funktionstrennung bei Zahlungen, geschützter Prüfpfad, sicherer Produktionsstart), Demo mit einem Befehl, Dokumentation an einen frischen Demolauf angeglichen |
 | 3 | XRechnung-Konformität der Testdaten und KoSIT-Vorbereitung | 29.–30.09.2026 | Plan für die Kursphase, KoSIT-Spike; Test- und Demodaten so korrigiert, dass der offizielle Prüfer alle gültig gemeinten Rechnungen akzeptiert |
 | 4 | IBAN-Stammdaten-Kontrollworkflow | 30.09.2026 | Drei-Personen-Prozess für neue Bankverbindungen mit Revalidierung (PR #8, ADR-077) |
-| 5 | Produktionsnahe KoSIT-Integration | 30.09.2026 | offizielle Prüfung jeder Rechnung, versionsgebunden, fail closed, Wiederholung nach Ausfall (PR #9, ADR-078) |
+| 5 | Produktionsnahe KoSIT-Integration | 30.09.2026 | offizielle Prüfung jeder Rechnung, versionsgebunden; Ausfälle und zentrale Validierungsfehler führen nicht zu einer automatischen Freigabe; Wiederholung nach Ausfall (PR #9, ADR-078) |
 | 6 | KPI-Provenienz | 30.09.2026 | jede Kennzahl nennt ihre Quelle; „nicht gemessen“, wo nichts gemessen ist (PR #10, ADR-079) |
 | 7 | Optionale KI-Ausnahmeerklärung | 30.09.2026 | erklärt, entscheidet nicht; standardmäßig aus (PR #11, ADR-080) |
 | 8 | UI/UX-Polish | 30.09.2026 | einheitliche Statusfarben, keine Sprachmischung, klarere Rechnungs- und Bankverbindungsansicht, ohne Verhaltensänderung (PR #12) |
