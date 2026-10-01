@@ -66,7 +66,7 @@ jobs:
 
       # The real, pinned KoSIT validator (ADR-078). The artifacts are cached by
       # the pins file and checked against its SHA-256 on every run.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 17
