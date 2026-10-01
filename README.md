@@ -2,10 +2,10 @@
 
 [![tests](https://github.com/shotatsertsvadze/finance-ops-automation-de/actions/workflows/ci.yml/badge.svg)](https://github.com/shotatsertsvadze/finance-ops-automation-de/actions/workflows/ci.yml)
 
-**At a glance:** Node 22, Express 5, PostgreSQL 14, React 19. 489 automated
-tests: unit, integration against a real database, and browser. 76 decision
-records. `docker compose up` gives a running demo with a month of synthetic
-invoices on http://localhost:4400.
+**At a glance:** Node 22, Express 5, PostgreSQL 14, React 19. 745 automated
+tests: unit, integration against a real database, browser, and the real KoSIT
+validator. 83 decision records. `docker compose up` gives a running demo with a
+month of synthetic invoices on http://localhost:4400.
 
 ## Why this exists
 
@@ -213,6 +213,8 @@ meet an order the earlier ones already used.
 - `docs/REFERENCE_AUDIT.md` - audit of the two reference repositories
 - `docs/CUSTOMER_DISCOVERY.md` - ICPs, interview guide, baseline model, pilot criteria
 - `docs/FINANCE_OPS_2_PLAN.md` - the next phase: master-data control, integrations, AI, ROI
+- `docs/course/` - course-final package in German: overview and automation, risks and data
+  protection, rollout and reflection
 
 ## Known limits
 
