@@ -41,8 +41,8 @@ Unternehmen noch Handarbeit:
 - **Technische Prüfung:** Ist die Datei überhaupt eine gültige E-Rechnung?
 - **Lieferantenprüfung:** Kennen wir diesen Lieferanten, und ist er aktiv?
 - **Prüfung der Bankverbindung:** Stimmt die IBAN mit unseren Stammdaten
-  überein? Eine geänderte Bankverbindung ist das häufigste Muster beim
-  Rechnungsbetrug.
+  überein? Eine geänderte Bankverbindung ist ein typisches und besonders
+  relevantes Betrugsrisiko.
 - **Bestellprüfung:** Gibt es eine Bestellung, und passt der Betrag?
 - **Freigabe:** Wer muss zustimmen, und hat er es getan?
 - **Ausnahmebehandlung:** Wer kümmert sich um die Rechnung, die nicht passt?
@@ -174,7 +174,7 @@ IBAN-Abweichung
 | **Deterministische Regeln** | Jede Prüfung liefert ein strukturiertes Ergebnis: Status, Schwere, erwartet, gefunden, Grund, empfohlener nächster Schritt. Das Routing ist eine reine Funktion dieser Ergebnisse und der Betragsregeln. |
 | **Zustandsmaschine** | Jede Rechnung hat genau einen Status. Welche Wechsel erlaubt sind, steht in einer festen Tabelle. Der Status ändert sich nur über eine einzige Funktion, die gleichzeitig den Prüfpfad schreibt. Für Bankverbindungsänderungen gibt es eine eigene, gleich aufgebaute Zustandsmaschine. |
 | **Routing** | Auffällige Rechnungen gehen in die Prüfung, saubere in die passende Freigabestufe oder direkt weiter. Jede Warteschlange zeigt, wer handeln muss und warum. |
-| **Human-in-the-loop** | Menschen entscheiden dort, wo Urteilsvermögen gefragt ist: Ausnahmen, Freigaben, neue Bankverbindungen, unklare Zahlungseingänge. Der Bildschirm bietet nur an, was der Server auch erlauben würde. |
+| **Human-in-the-loop** | Menschen entscheiden dort, wo Urteilsvermögen gefragt ist: Ausnahmen, Freigaben, neue Bankverbindungen, unklare Zahlungseingänge. Die Oberfläche orientiert sich an Rolle und Status. Verbindlich entscheidet jedoch immer der Server, ob eine Aktion für die konkrete Rechnung und Person zulässig ist. |
 | **Retry** | Nach einem Ausfall des KoSIT-Prüfers werden die betroffenen Rechnungen gezielt neu geprüft, angestoßen über die Schnittstelle; eine Schaltfläche dafür fehlt noch. Eine fehlgeschlagene Zahlung kann als neuer Versuch erneut angewiesen werden. Eine abgebrochene Verarbeitung wird beim erneuten Hochladen derselben Datei fortgesetzt. |
 | **Idempotenz und Parallelität** | Kritische Zahlungs- und Verrechnungsabläufe verwenden serverseitige Sperren und Datenbanktransaktionen, um wiederholte oder parallele Verarbeitung kontrolliert zu behandeln. Beispiele: Dieselbe Datei wird als Duplikat erkannt. Jede Zahlungsanweisung hat einen eigenen Idempotenzschlüssel, und pro Rechnung ist höchstens eine Zahlung aktiv. Eine Gutschrift wird auch bei zwei gleichzeitigen Zahlungen nur einmal verrechnet. Ein Kontoauszug kann gefahrlos zweimal importiert werden. |
 | **Auditierbarkeit** | Jeder Statuswechsel wird mit Person, Zeitpunkt, Grund und Beleg gespeichert, in derselben Datenbanktransaktion. Prüfergebnisse bleiben pro Prüflauf erhalten. Eine Freigabe ist an das Dokument, den Prüflauf und den Betrag gebunden, für die sie erteilt wurde. |
@@ -373,7 +373,8 @@ Dokumentation, Demo-Stabilisierung, Präsentation und Probe reserviert.
 
 - End-to-End-Rechnungsworkflow vom Eingang bis zur Abstimmung
 - technische Validierung (Struktur, Pflichtfelder, sichere XML-Verarbeitung)
-- offizielle KoSIT-Validierung, versionsgebunden und fail closed
+- offizielle KoSIT-Validierung, versionsgebunden; Ausfälle und zentrale
+  Validierungsfehler führen nicht zu einer automatischen Freigabe
 - fachliche Prüfung gegen Lieferanten, Bankverbindungen und Bestellungen,
   mit Nachrechnen aller Beträge
 - Freigabeworkflow mit Betragsstufen und Funktionstrennung

@@ -21,7 +21,7 @@ Pilotbetrieb mit echten Rechnungen. Sie sind nicht gemessen.
 | 1 | **Falsche Lieferanten-Bankverbindung** (z. B. gefälschte Mitteilung „neue Bankverbindung“) | mittel | hoch | Die IBAN jeder Rechnung wird mit den hinterlegten Konten verglichen. Eine Abweichung stoppt die Rechnung und lässt sich nicht übersteuern. Ein neues Konto braucht Vorschlag, Rückruf unter der hinterlegten Nummer und Freigabe durch drei verschiedene Personen. Bei der Zahlungsanweisung wird das Konto erneut geprüft. | Das alte Konto bleibt vertrauenswürdig, bis ein Stilllegen gebaut ist. Ist schon die hinterlegte Rückrufnummer falsch, oder wird der Anruf selbst manipuliert, greift die Kontrolle nicht. |
 | 2 | **Unzulässige Freigabe** – Verletzung des Vier-Augen- oder Drei-Personen-Prinzips | niedrig | hoch | Funktionstrennung wird auf dem Server erzwungen, nicht nur in der Oberfläche: Wer prüft, gibt nicht frei; wer einreicht, gibt nicht frei; niemand entscheidet zwei Stufen; wer freigibt, zahlt nicht. Für Bankverbindungen sichert die Datenbank die drei Personen zusätzlich ab. Jede Freigabe ist an Dokument, Prüflauf und Betrag gebunden. | Absprachen zwischen mehreren Personen verhindert keine Software. Die Anmeldung ist auf Demo-Niveau (siehe Risiko 6). |
 | 3 | **Fehlerhafte oder ungültige E-Rechnung** | hoch | mittel | Technische Prüfung, offizielle KoSIT-Prüfung und das Nachrechnen aller Beträge. Besteht eine Rechnung eine Prüfung nicht, geht sie in die manuelle Prüfung, nicht in die Freigabe. Unvollständige oder nicht zuverlässig prüfbare Rechnungspositionen werden nicht automatisch freigegeben, sondern zur manuellen Prüfung weitergeleitet. Rechenfehler in den Summen lassen sich nicht übersteuern. | Nur XRechnung in UBL-Syntax wird gelesen; CII und ZUGFeRD fehlen. Eine abgelehnte Rechnung kann nicht von Hand weiterverarbeitet werden; der Lieferant muss eine korrigierte schicken. |
-| 4 | **Ausfall des externen Validators** (KoSIT) | mittel | mittel | Fail closed: Ohne gültige Antwort gilt die Rechnung als nicht geprüft und geht in die Prüfung. Das lässt sich nicht übersteuern. Version und Konfiguration sind festgelegt und per Prüfsumme gesichert; eine abweichende Antwort wird nicht akzeptiert. Nach dem Ausfall werden die betroffenen Rechnungen gezielt neu geprüft. Im Produktionsmodus startet die Anwendung ohne Validator nicht. | Während eines Ausfalls wächst die Prüfwarteschlange. Die Wiederholung gibt es nur über die Schnittstelle, noch ohne Schaltfläche. Die Bereitschaftsprüfung der Anwendung fragt den Validator nicht ab. |
+| 4 | **Ausfall des externen Validators** (KoSIT) | mittel | mittel | Transportfehler, Nichterreichbarkeit sowie zentrale Versions- und Dokumentabweichungen führen in die Prüfung. Das lässt sich nicht übersteuern. Version und Konfiguration sind festgelegt und per Prüfsumme gesichert. Nach dem Ausfall werden die betroffenen Rechnungen gezielt neu geprüft. Im Produktionsmodus startet die Anwendung ohne Validator nicht. | Für ungewöhnlich aufgebaute Validatorantworten besteht noch weiterer Härtungsbedarf. Während eines Ausfalls wächst die Prüfwarteschlange. Die Wiederholung gibt es nur über die Schnittstelle, noch ohne Schaltfläche. Die Bereitschaftsprüfung der Anwendung fragt den Validator nicht ab. |
 | 5 | **Inkonsistente Stammdaten** | mittel | mittel | Jede Rechnung wird gegen die aktuellen Stammdaten geprüft. Vor jeder Freigabe laufen die fachlichen Prüfungen erneut. Bankverbindungen ändern sich nur über den kontrollierten Prozess. | Pflege und Import von Lieferanten und Bestellungen sind nicht gebaut. Eine Bestellung ist ein einzelner Restbetrag, ohne Teillieferungen. Die Datenqualität beim Kunden bleibt eine Voraussetzung. |
 | 6 | **Unberechtigter Zugriff oder unberechtigte Aktion** | mittel | hoch | Anmeldung mit gehashten Passwörtern und Sitzungscookies, Schutz gegen gefälschte Anfragen (CSRF), gebremste Fehlversuche, Sicherheits-Header. Eine Rechtematrix wird bei jeder Aktion auf dem Server geprüft. Im Produktionsmodus kann die Anwendung den Prüfpfad nicht ändern und startet nicht mit dem Demo-Passwort. | Keine Mehr-Faktor-Anmeldung, kein SSO, kein Passwort-Zurücksetzen. Hosting, Netzwerk und Betrieb sind nicht gehärtet, weil es noch keinen Produktionsbetrieb gibt. |
 | 7 | **Falsche Abstimmung** | mittel | mittel | Eine Kontoauszugszeile wird nur zugeordnet, wenn sie die eindeutige Zahlungs-ID nennt und der Betrag stimmt. Ein bloß gleicher Betrag reicht nie; das wird eine Ausnahme. Ausnahmen klärt ein Mensch, mit Begründung. | Teil- und Sammelzahlungen werden immer zu Ausnahmen, also zu Handarbeit. Kontoauszüge sind bisher synthetisch; echte Bankformate (camt.053) fehlen. |
@@ -33,11 +33,10 @@ Pilotbetrieb mit echten Rechnungen. Sie sind nicht gemessen.
 ### Einordnung
 
 Die wichtigsten Finanzrisiken – falsche Bankverbindung, unzulässige Freigabe,
-ungültige Rechnung – sind durch Kontrollen abgedeckt, die im Code erzwungen
-und getestet sind. Das größte offene Risiko liegt nicht in der Kontrolllogik,
-sondern in dem, was für einen echten Betrieb noch fehlt: echte
-Schnittstellen, gehärteter Betrieb, Anmeldung auf Unternehmensniveau und ein
-Datenschutzkonzept für echte Daten.
+ungültige Rechnung – werden durch Kontrollen adressiert, die im Code erzwungen
+werden. Die zentralen Finanzkontrollen sind umgesetzt und getestet. Für einen
+echten Pilot bleiben neben Integrationen und Betrieb auch einzelne
+Härtungspunkte bei Berechtigungen und Randfällen der Validierung offen.
 
 ---
 
@@ -82,10 +81,10 @@ noch fehlt.
 **Rollen und Berechtigungen**
 
 - Eine zentrale Rechtematrix, auf dem Server bei jeder Aktion geprüft.
-- Bankdaten und Buchhaltungsdaten sieht nur, wer sie für die Arbeit braucht:
-  Stammdaten mit IBANs lesen Kreditorenbuchhaltung, Finanzen und
-  Administration; Kontoauszüge und Buchungsexport nur Finanzen und
-  Administration.
+- Dedizierte Stammdaten-, Kontoauszugs- und Buchhaltungsfunktionen sind
+  rollenbasiert geschützt. Vor einem echten Pilot muss zusätzlich die
+  Rechnungsdetailansicht so eingeschränkt werden, dass jede Rolle nur die
+  für ihre Aufgabe erforderlichen Finanzdaten erhält.
 - Die Administration betreibt das System, nimmt aber an keiner
   Bankverbindungsänderung teil.
 
@@ -93,9 +92,10 @@ noch fehlt.
 
 - Jede Statusänderung wird mit Person, Zeitpunkt, Grund und Beleg
   gespeichert.
-- Im Produktionsmodus darf die Anwendung den Prüfpfad nur ergänzen. Ändern
-  oder Löschen ist ihr auf Datenbankebene nicht erlaubt; ein Start mit zu
-  weitreichenden Rechten wird verweigert.
+- Im vorgesehenen Produktionsprofil darf die Anwendungsrolle den Prüfpfad
+  nur ergänzen. Die Anwendung prüft beim Start zentrale Tabellenrechte;
+  zusätzliche Datenbank-Härtung ist vor einem echten Pilot weiterhin
+  erforderlich.
 - Die Originaldatei jeder Rechnung wird unverändert aufbewahrt. Die
   Schnittstelle bietet kein Löschen an.
 
