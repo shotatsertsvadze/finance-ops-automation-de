@@ -442,7 +442,7 @@ const de = {
   severity: { HIGH: "hoch", MEDIUM: "mittel", LOW: "niedrig", INFO: "Info" },
   stepStatus: { PENDING: "offen", APPROVED: "freigegeben", REJECTED: "abgelehnt", CANCELLED: "aufgehoben" },
   paymentStatus: { PENDING: "angewiesen", EXECUTED: "ausgeführt", FAILED: "fehlgeschlagen" },
-  channel: { UPLOAD: "Upload", EMAIL: "E-Mail" },
+  channel: { UPLOAD: "Upload", EMAIL: "E-Mail", FORM: "Formular" },
 
   // A next step an AI explanation may name, worded as the button it means.
   aiStep: {
@@ -985,7 +985,7 @@ const en = {
   severity: { HIGH: "high", MEDIUM: "medium", LOW: "low", INFO: "info" },
   stepStatus: { PENDING: "open", APPROVED: "approved", REJECTED: "rejected", CANCELLED: "cancelled" },
   paymentStatus: { PENDING: "instructed", EXECUTED: "executed", FAILED: "failed" },
-  channel: { UPLOAD: "Upload", EMAIL: "E-mail" },
+  channel: { UPLOAD: "Upload", EMAIL: "E-mail", FORM: "Form" },
 
   aiStep: {
     verify_bank_account: "Propose bank account for verification",

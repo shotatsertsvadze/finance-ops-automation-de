@@ -641,6 +641,7 @@ findings themselves.
 | I20 | Every refusal is thrown with a code | no bare refusal | AUTO | `dictionaries.test.js` |
 | I21 | A refusal names states and roles as the screen does | "in state Approved", not "APPROVED" | AUTO | `dictionaries.test.js` |
 | I22 | An unknown code falls back to the server's sentence | German rather than nothing | AUTO | `dictionaries.test.js` |
+| I25 | Every intake channel is named in words | UPLOAD, EMAIL and the n8n FORM, in both languages and in the audit sentence | AUTO | `dictionaries.test.js` |
 | I23 | The English guard catches German without umlauts | a German word in an English entry fails | MANUAL | Mutation check, 2026-09-17: "Freigabeschritt" passed the old guard, fails the new one |
 | I24 | A refusal is visible in English end to end | sign-in and a business-gate 409 both read in English | MANUAL | Browser, 2026-09-17: "Email address or password is wrong"; "Not approved: a business check has failed since the invoice was submitted" |
 

@@ -362,3 +362,14 @@ test("an internal error shows the reference the server logged it under", () => {
   assert.equal(errorText(DICTIONARIES.de, error), "Interner Fehler (Referenz r-1)");
   assert.equal(errorText(DICTIONARIES.en, error), "Internal error (reference r-1)");
 });
+
+test("every intake channel, including the n8n form, is named in words in both languages", () => {
+  // The n8n workflow sends EMAIL or FORM; the upload in the app sends UPLOAD.
+  for (const channel of ["UPLOAD", "EMAIL", "FORM"]) {
+    for (const [lang, dict] of Object.entries(DICTIONARIES)) {
+      assert.ok(dict.channel[channel], `${lang}: ${channel} has no label`);
+    }
+  }
+  assert.equal(auditReason(DICTIONARIES.de, "Eingang über FORM"), "Eingang über Formular");
+  assert.equal(auditReason(DICTIONARIES.en, "Eingang über FORM"), "Received via Form");
+});
