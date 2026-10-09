@@ -509,6 +509,7 @@ it is checked by `npm test` rather than by opening a browser.
 | U15 | Every action names a permission | no button that always fails | AUTO | `actions.test.js` |
 | U16 | The progress path per document | credit notes and settled invoices never show payment stages | AUTO | `actions.test.js` |
 | U17 | Role filtering in the browser | a cost-centre manager sees only the approval actions | MANUAL | Two-role probe, 2026-09-18 |
+| U18 | Confirming a duplicate is offered only when the invoice number was seen before | offered when `duplicate_invoice_number` failed, not on an IBAN stop | AUTO | `actions.test.js` |
 
 | # | Case | Expected | Status | Evidence |
 |---|---|---|---|---|

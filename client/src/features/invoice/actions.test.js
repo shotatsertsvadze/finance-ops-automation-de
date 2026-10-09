@@ -22,15 +22,24 @@ const keys = (inv) => availableActions(inv).actions.map((a) => a.key);
 
 test("a review offers the decisions a reviewer makes", () => {
   assert.deepEqual(keys(invoice({ state: "REVIEW_REQUIRED" })),
-    ["accept", "request-info", "confirm-duplicate", "reject", "reprocess"]);
+    ["accept", "request-info", "reject", "reprocess"]);
 });
 
 test("a review whose failures no reviewer may override offers no release", () => {
   // The server refuses the release with NOT_PAYABLE_ELIGIBLE; the button would
   // always fail (ADR-071).
   const result = availableActions(invoice({ state: "REVIEW_REQUIRED", payable_blockers: ["supplier_iban_match"] }));
-  assert.deepEqual(result.actions.map((a) => a.key), ["request-info", "confirm-duplicate", "reject", "reprocess"]);
+  assert.deepEqual(result.actions.map((a) => a.key), ["request-info", "reject", "reprocess"]);
   assert.equal(result.prompt.key, "hintNotReleasable");
+});
+
+test("confirming a duplicate is offered only when the invoice number was seen before", () => {
+  const checked = (status) => invoice({
+    state: "REVIEW_REQUIRED",
+    validation: { technical: [], business: [{ check_code: "duplicate_invoice_number", status }] },
+  });
+  assert.ok(keys(checked("FAILED")).includes("confirm-duplicate"));
+  assert.ok(!keys(checked("PASSED")).includes("confirm-duplicate"));
 });
 
 test("an approval step offers approve and reject, and names the step", () => {
@@ -187,7 +196,8 @@ test("the filled button is the step that moves the invoice on, or the one a stop
   assert.equal(primary({ state: "REVIEW_REQUIRED" }), "accept");
   const stuck = { state: "REVIEW_REQUIRED", payable_blockers: ["supplier_iban_match"] };
   assert.equal(primary({ ...stuck, review_reason: "SUPPLIER_IBAN_MATCH" }), "request-info");
-  assert.equal(primary({ ...stuck, review_reason: "DUPLICATE_INVOICE_NUMBER" }), "confirm-duplicate");
+  const seenBefore = { technical: [], business: [{ check_code: "duplicate_invoice_number", status: "FAILED" }] };
+  assert.equal(primary({ ...stuck, review_reason: "DUPLICATE_INVOICE_NUMBER", validation: seenBefore }), "confirm-duplicate");
   assert.equal(primary({ state: "ACCOUNTING_READY" }), "pay");
   assert.equal(primary({ state: "PAYMENT_PENDING" }), "confirm");
 });
