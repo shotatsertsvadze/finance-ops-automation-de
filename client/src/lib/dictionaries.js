@@ -50,7 +50,6 @@ const de = {
     uploadTitle: "XRechnung hochladen",
     uploadPick: "Datei auswählen",
     uploadOnlyXml: "Nur XML. Die Datei wird unverändert gespeichert.",
-    uploadFixtures: "Beispieldateien liegen in fixtures/xrechnung/.",
     uploadDone: (name) => `${name} verarbeitet.`,
 
     colInvoice: "Rechnung",
@@ -598,7 +597,6 @@ const en = {
     uploadTitle: "Upload an XRechnung",
     uploadPick: "Choose file",
     uploadOnlyXml: "XML only. The file is stored exactly as received.",
-    uploadFixtures: "Sample files are in fixtures/xrechnung/.",
     uploadDone: (name) => `${name} processed.`,
 
     colInvoice: "Invoice",

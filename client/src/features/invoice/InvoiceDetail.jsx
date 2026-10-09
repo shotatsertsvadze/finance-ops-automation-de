@@ -197,6 +197,10 @@ export default function InvoiceDetail({ may, onChanged }) {
             {results.length === 0 && <p className="empty">{t("notCheckedDuplicate")}</p>}
           </section>
 
+          {/* A changed IBAN has one way on, and it is not a review decision:
+              it sits right under the evidence that asks for it. */}
+          <InvoiceBankPanel invoice={invoice} may={may} />
+
           <ActionPanel
             invoice={invoice}
             may={may}
@@ -205,8 +209,6 @@ export default function InvoiceDetail({ may, onChanged }) {
               onChanged();
             }}
           />
-
-          <InvoiceBankPanel invoice={invoice} may={may} />
 
           <AiExplanation invoiceId={invoice.id} runNo={results[0]?.run_no} state={invoice.state} may={may} />
 

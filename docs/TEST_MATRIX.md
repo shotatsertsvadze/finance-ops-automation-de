@@ -528,6 +528,7 @@ it is checked by `npm test` rather than by opening a browser.
 | U13 | Binding line does not overflow at 375 px | scrollWidth equals clientWidth | MANUAL | Browser, 2026-09-17, measured in page |
 | U14 | A request refused for want of a session signs the client out | `NOT_SIGNED_IN` reports it; a wrong password (`SIGN_IN_REFUSED`) and a 403 do not | AUTO | `client/src/lib/api.test.js` (ADR-057) |
 | U15 | An expired session returns to sign-in, not to empty data | before: payments page showed "0 Umsätze importiert" over 38 lines; after: sign-in with the expiry note, none on a first visit, and signing in again lands on the same page | MANUAL | Browser, 2026-09-23: session expired in the database, then navigated |
+| U19 | On an IBAN stop the bank-account panel follows the evidence | order: blocking reason, check trail, bank account, decision; check code muted; no fixture path in the upload area | MANUAL | Browser, 2026-10-09: DEMO-2026-01014 as Jonas Weber, screenshot |
 
 ## Independent review 2026-09-17
 

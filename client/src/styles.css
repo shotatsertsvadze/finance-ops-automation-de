@@ -384,7 +384,8 @@ select {
 .ev.is-passed .ev-status { color: var(--ok); }
 .ev.is-skipped .ev-status, .ev.is-info .ev-status { color: var(--ink-3); }
 .ev-reason { font-size: 13px; color: var(--ink); font-weight: 500; margin: 0; }
-.ev-meta { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+/* The internal check code is for support and audit, not for the reader. */
+.ev-meta { font-size: 10px; color: var(--ink-3); opacity: .65; margin-top: 2px; }
 
 .ev-compare {
   display: inline-grid;
