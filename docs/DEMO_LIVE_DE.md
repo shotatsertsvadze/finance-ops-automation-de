@@ -74,7 +74,7 @@ Ab hier nichts mehr in Finance-Ops hochladen.
 | 4 | Finance-Ops Posteingang (neu laden) | oben HL-2026-7731 „Sichtprüfung“, darunter INV-2026-00433 „Freigegeben“ |
 | 5 | INV-2026-00433 öffnen | Verlauf: Eingang (Anna Berger, n8n-Konto), danach nur SYSTEM, „Automatisch freigegeben“ |
 | 6 | HL-2026-7731 öffnen | „Was blockiert“, Erwartet/Gefunden mit markierten Ziffern, direkt darunter „Bankverbindung“ (ab `polish/demo-ui`; vorher steht sie unter „Ihre Entscheidung“) |
-| 7 | „Alle 22 bestandenen Prüfungen anzeigen“, wieder einklappen | eine Prüfung fehlgeschlagen, der Rest ohne Befund |
+| 7 | „Übrige 22 Prüfungen anzeigen (20 bestanden)“, wieder einklappen | eine Prüfung fehlgeschlagen, 20 bestanden, dazu ein Hinweis und die ausgeschaltete offizielle Prüfung |
 | 8 | zurück zu Folie 9 | – |
 
 Zuletzt so durchgelaufen am 11.10.2026 (E-Mail-Weg, beide Ergebnisse wie
@@ -98,9 +98,9 @@ Sprachumschaltung, KI-Erklärung (ausgeschaltet).
 - Über das n8n-Formular eingegangene Rechnungen zeigen den Kanal in
   Finance-Ops als Code `FORM` statt als Wort, bis der Branch
   `polish/demo-ui` gemergt ist (danach „Formular“).
-- „Alle 22 bestandenen Prüfungen“ zählt auch die übersprungene offizielle
-  KoSIT-Prüfung und einen reinen Hinweis mit. In der Liste selbst stehen sie
-  korrekt als „Nicht geprüft“ bzw. Hinweis.
+- Bis `polish/demo-ui` gemergt ist, heißt der Schalter in der Prüfspur noch
+  „Alle 22 bestandenen Prüfungen anzeigen“ und zählt die übersprungene
+  offizielle Prüfung und einen Hinweis mit.
 - `npm run demo:reset` schreibt `client/public/demo/statement_2026-09.json`
   mit neuen Daten. Diese Änderung nicht committen.
 - Der Eingang per n8n läuft unter dem Konto von Anna Berger; im Verlauf steht
