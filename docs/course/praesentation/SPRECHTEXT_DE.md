@@ -166,13 +166,13 @@ unter der Auto-Grenze, automatisch freigegeben. Jonas musste nichts tun.
 in einem Satz. Darunter der Beleg: erwartet, gefunden, die abweichenden
 Ziffern markiert. Jonas muss nichts suchen oder vergleichen.
 
-[„Alle 22 bestandenen Prüfungen anzeigen“ klicken.] Alles andere ist in
-Ordnung: 22 Prüfungen bestanden, eine nicht.
+[„Alle 22 bestandenen Prüfungen anzeigen“ klicken.] Alles andere ist ohne
+Befund. Nur diese eine Prüfung ist fehlgeschlagen. [Wieder einklappen.]
 
 [Zurück nach oben scrollen, auf das Panel „Bankverbindung“ zeigen.] Und direkt
 darunter der nächste Schritt: Die neue Bankverbindung wird zur Prüfung
 vorgeschlagen. Die Rechnung selbst kann Jonas nicht freigeben, auch nicht mit
-einer Begründung. Was dann passiert, zeige ich auf der nächsten Folie.
+einer Begründung. Was dann passiert, zeige ich gleich.
 
 [Zurück zu den Folien.]
 
@@ -226,7 +226,7 @@ Was nehme ich mit? Erstens: Die schwierigste Frage war nicht, was man
 automatisiert. Sondern wo ein Mensch entscheiden muss, und wer genau.
 Zweitens: Feste Regeln sind erklärbar. Jede Entscheidung lässt sich begründen,
 und das schafft Vertrauen bei Finance. Drittens, ganz praktisch: Eine Demo
-braucht Betriebsdisziplin. Die temporäre Tunnel-Adresse ist zweimal
+braucht Betriebsdisziplin. Die temporäre Tunnel-Adresse ist mehrfach
 weggefallen. Daraus ist eine feste Checkliste geworden.
 
 Die nächsten Schritte wären ein Pilot mit echten, anonymisierten
@@ -287,6 +287,11 @@ XRechnung-Prüfung im Betrieb. → Backup B5.
 **Ist das rechtskonform (GoBD, DSGVO, EN 16931)?**
 Dazu mache ich bewusst keine Aussage. Das wäre im Pilot mit Fachleuten zu
 prüfen.
+
+**Wie schnell geht das?**
+Im Test am 11.10.2026 lief eine n8n-Ausführung 2 bis 4 Sekunden, von der
+Abholung der Mail bis zur Zeile im Sheet. Wie lange das Postfach braucht, bis
+n8n die Mail abholt, habe ich nicht gemessen. → Backup B1.
 
 **Wie viele Tests gibt es?**
 Über 740 automatisierte Tests, dazu 83 dokumentierte
