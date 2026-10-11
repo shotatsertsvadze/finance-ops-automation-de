@@ -190,7 +190,7 @@ export default function InvoiceDetail({ may, onChanged }) {
             {rest.length > 0 && (
               <div className="panel-body" style={{ borderTop: "1px solid var(--line)", paddingTop: 10, paddingBottom: 10 }}>
                 <button className="ev-toggle" onClick={() => setShowPassed((v) => !v)}>
-                  {showPassed ? t("hidePassed") : t("showPassed", rest.length)}
+                  {showPassed ? t("hidePassed") : t("showPassed", rest.length, rest.filter((r) => r.status === "PASSED").length)}
                 </button>
               </div>
             )}
