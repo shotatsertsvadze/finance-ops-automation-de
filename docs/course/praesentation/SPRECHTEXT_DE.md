@@ -93,8 +93,8 @@ maschinenlesbar. Regeln lassen sich sauber und nachvollziehbar prüfen.
 Zweitens kann ich sie vollständig vorführen, mit synthetischen Testdaten.
 Keine echten Kunden, keine echten Konten.
 
-Und drittens ist sie aktuell: Seit Januar 2025 müssen Unternehmen in
-Deutschland E-Rechnungen empfangen können.
+Und drittens ist sie aktuell: Seit Januar 2025 müssen inländische Unternehmen
+E-Rechnungen empfangen können.
 
 ## 6 · Für wen: Jonas (1:00)
 
@@ -123,8 +123,8 @@ werden gestoppt und kommen zu Jonas, jeweils mit dem Grund, warum.
 Bei größeren Beträgen braucht eine saubere Rechnung zusätzlich eine
 Freigabe-Unterschrift. Von Hand prüfen muss sie aber niemand mehr.
 
-Wichtig: Es entscheiden feste Geschäftsregeln. Gleiche Rechnung, gleiches
-Ergebnis. Es gibt eine optionale KI-Erklärung, die eine Ausnahme verständlicher
+Wichtig: Es entscheiden feste Geschäftsregeln. Bei gleichen Daten und gleichen
+Regeln kommt immer dasselbe heraus, und jede Entscheidung hat einen Grund. Es gibt eine optionale KI-Erklärung, die eine Ausnahme verständlicher
 formulieren kann, aber sie entscheidet nichts.
 
 [Übergang: Mail-Programm öffnen, beide Entwürfe absenden, zurück zu Folie 8.]
@@ -159,8 +159,10 @@ dem Grund „IBAN weicht von den freigegebenen Bankverbindungen ab“.
 gestoppte Rechnung, Status Sichtprüfung, darunter die freigegebene.
 
 **INV-2026-00433 (40 s).** Die saubere Rechnung zuerst. Im Verlauf sieht man:
-Nach dem Eingang hat nur das System gearbeitet. Alle Prüfungen bestanden,
-unter der Auto-Grenze, automatisch freigegeben. Jonas musste nichts tun.
+Nach dem Eingang hat nur das System gearbeitet. Keine Prüfung ist
+fehlgeschlagen, der Betrag liegt unter der Auto-Grenze, also automatisch
+freigegeben. Jonas musste nichts tun. Die offizielle KoSIT-Prüfung ist in der
+Demo ausgeschaltet; im Betrieb liefe sie mit.
 
 **HL-2026-7731 (2:00).** Jetzt die interessante. Ganz oben: „Was blockiert“,
 in einem Satz. Darunter der Beleg: erwartet, gefunden, die abweichenden
@@ -205,7 +207,8 @@ Eine Rechnung, die einmal gestoppt war, wird nie automatisch freigegeben. Ein
 Mensch unterschreibt.
 
 Drei verschiedene Personen sind die Regel, die ich für dieses Projekt gewählt
-habe. Das ist einstellbar und keine Pflicht für jedes Unternehmen. Der Punkt
+habe, und so ist es im System fest eingestellt. Für jedes Unternehmen
+vorschreiben würde ich das nicht. Der Punkt
 ist: Wer vorschlägt, darf nicht selbst prüfen oder freigeben.
 
 ## 11 · Geschäftlicher Nutzen (1:15)
@@ -232,8 +235,9 @@ braucht Betriebsdisziplin. Die temporäre Tunnel-Adresse ist mehrfach
 weggefallen. Daraus ist eine feste Checkliste geworden.
 
 Die nächsten Schritte wären ein Pilot mit echten, anonymisierten
-Rechnungsdaten eines Unternehmens, ein stabiler Betrieb statt Tunnel mit der
-offiziellen XRechnung-Prüfung und die Anbindung an Buchhaltung und Bank.
+Rechnungsdaten eines Unternehmens, ein stabiler Betrieb statt Tunnel, bei dem
+die offizielle KoSIT-Prüfung dauerhaft mitläuft, und echte Anbindungen an
+Buchhaltung und Bank.
 
 ## 13 · Abschluss (0:25)
 
@@ -253,7 +257,7 @@ der Rückruf. Das System sorgt nur dafür, dass vorher nicht gezahlt wird.
 
 **Warum entscheidet keine KI?**
 Weil die Entscheidung nachvollziehbar und wiederholbar sein muss. Feste Regeln
-liefern für dieselbe Rechnung immer dasselbe Ergebnis. Die KI darf eine
+liefern bei gleichen Daten immer dasselbe Ergebnis und nennen den Grund. Die KI darf eine
 Ausnahme erklären, sie ist standardmäßig aus. → Backup B2.
 
 **Was macht n8n genau? Warum nicht alles in n8n?**
@@ -263,8 +267,9 @@ dort getestet und gelten unabhängig davon, ob eine Rechnung per Mail, Formular
 oder Upload kommt. → Backup B3.
 
 **Warum drei Personen? Ist das nicht zu viel?**
-Das ist die Regel, die ich für das Projekt gewählt habe. Sie ist einstellbar;
-ein Zwei-Personen-Modus ist vorbereitet, aber nicht aktiviert. Der Kern ist
+Das ist die Regel, die ich für das Projekt gewählt habe, und sie ist im
+System fest auf drei gesetzt. Ein Zwei-Personen-Modus ist im Datenmodell
+vorbereitet, aber bewusst nicht freigegeben. Der Kern ist
 die Trennung: Wer vorschlägt, prüft und gibt nicht selbst frei.
 
 **Kann jemand den Rückruf einfach behaupten?**
@@ -282,9 +287,11 @@ ZUGFeRD sind vorgesehen, aber nicht gebaut.
 
 **Ist das produktionsreif?**
 Nein, es ist ein Proof of Concept mit synthetischen Daten. Es läuft lokal,
-für die Demo über einen temporären Tunnel. Für den Betrieb fehlen ein fester
-Server, die Anbindung an Buchhaltung und Bank und die offizielle
-XRechnung-Prüfung im Betrieb. → Backup B5.
+für die Demo über einen temporären Tunnel. Buchungen gehen als CSV-Export
+raus, Kontoauszüge kommen als Import, Zahlungen sind simuliert. Für den Betrieb
+fehlen ein fester Server, echte Anbindungen an Buchhaltung und Bank und eine
+dauerhaft laufende KoSIT-Prüfung, die eingebaut, in der Demo aber aus ist.
+→ Backup B5.
 
 **Ist das rechtskonform (GoBD, DSGVO, EN 16931)?**
 Dazu mache ich bewusst keine Aussage. Das wäre im Pilot mit Fachleuten zu
