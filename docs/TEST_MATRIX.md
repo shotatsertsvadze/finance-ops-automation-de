@@ -509,6 +509,8 @@ it is checked by `npm test` rather than by opening a browser.
 | U15 | Every action names a permission | no button that always fails | AUTO | `actions.test.js` |
 | U16 | The progress path per document | credit notes and settled invoices never show payment stages | AUTO | `actions.test.js` |
 | U17 | Role filtering in the browser | a cost-centre manager sees only the approval actions | MANUAL | Two-role probe, 2026-09-18 |
+| U18 | Confirming a duplicate is offered only when the invoice number was seen before | offered when `duplicate_invoice_number` failed, not on an IBAN stop | AUTO | `actions.test.js` |
+| U20 | On an IBAN stop the bank-account proposal is the only filled button | decision panel fills none when the viewer may propose; otherwise 'Rückfrage stellen' stays primary | AUTO | `actions.test.js`; Browser, 2026-10-11, DEMO-2026-01014 as Jonas Weber |
 
 | # | Case | Expected | Status | Evidence |
 |---|---|---|---|---|
@@ -527,6 +529,7 @@ it is checked by `npm test` rather than by opening a browser.
 | U13 | Binding line does not overflow at 375 px | scrollWidth equals clientWidth | MANUAL | Browser, 2026-09-17, measured in page |
 | U14 | A request refused for want of a session signs the client out | `NOT_SIGNED_IN` reports it; a wrong password (`SIGN_IN_REFUSED`) and a 403 do not | AUTO | `client/src/lib/api.test.js` (ADR-057) |
 | U15 | An expired session returns to sign-in, not to empty data | before: payments page showed "0 Umsätze importiert" over 38 lines; after: sign-in with the expiry note, none on a first visit, and signing in again lands on the same page | MANUAL | Browser, 2026-09-23: session expired in the database, then navigated |
+| U19 | On an IBAN stop the bank-account panel follows the evidence | order: blocking reason, check trail, bank account, decision; check code muted; no fixture path in the upload area | MANUAL | Browser, 2026-10-09: DEMO-2026-01014 as Jonas Weber, screenshot |
 
 ## Independent review 2026-09-17
 
@@ -640,6 +643,8 @@ findings themselves.
 | I20 | Every refusal is thrown with a code | no bare refusal | AUTO | `dictionaries.test.js` |
 | I21 | A refusal names states and roles as the screen does | "in state Approved", not "APPROVED" | AUTO | `dictionaries.test.js` |
 | I22 | An unknown code falls back to the server's sentence | German rather than nothing | AUTO | `dictionaries.test.js` |
+| I25 | Every intake channel is named in words | UPLOAD, EMAIL and the n8n FORM, in both languages and in the audit sentence | AUTO | `dictionaries.test.js` |
+| I26 | The check-trail toggle counts only passed checks as passed | 'Übrige 22 Prüfungen anzeigen (20 bestanden)' when some were skipped or informational; 'Alle n bestandenen' only when all passed | AUTO | `dictionaries.test.js`; Browser, 2026-10-11 |
 | I23 | The English guard catches German without umlauts | a German word in an English entry fails | MANUAL | Mutation check, 2026-09-17: "Freigabeschritt" passed the old guard, fails the new one |
 | I24 | A refusal is visible in English end to end | sign-in and a business-gate 409 both read in English | MANUAL | Browser, 2026-09-17: "Email address or password is wrong"; "Not approved: a business check has failed since the invoice was submitted" |
 

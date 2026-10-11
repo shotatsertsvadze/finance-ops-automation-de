@@ -15,6 +15,9 @@ const bookingNo = (invoice) => invoice.accounting_record?.document_no ?? "";
 
 // Offered until money is on its way: fraud found after the signature needs a
 // way out that is not the payment (ADR-054).
+const duplicateSuspected = (invoice) => (invoice.validation?.business ?? [])
+  .some((r) => r.check_code === "duplicate_invoice_number" && r.status === "FAILED");
+
 const cancel = () => action("cancel", "invoice:cancel", { tone: "high", needsComment: true });
 
 /**
@@ -33,7 +36,9 @@ export function availableActions(invoice) {
         actions: [
           ...(releasable ? [action("accept", "review:decide", { tone: "ok" })] : []),
           action("request-info", "review:decide", { needsComment: true }),
-          action("confirm-duplicate", "review:decide", { needsComment: true }),
+          // Offered where it answers the question the checks raised, not on
+          // every stop: on a changed IBAN it reads as a way out.
+          ...(duplicateSuspected(invoice) ? [action("confirm-duplicate", "review:decide", { needsComment: true })] : []),
           action("reject", "review:decide", { tone: "high", needsComment: true }),
           action("reprocess", "invoice:reprocess"),
         ],
@@ -132,7 +137,9 @@ function bookedActions(invoice, step) {
  * invoice on, or, in a review that cannot be released, the step it expects
  * next. Presentation only: which actions are offered is decided above.
  */
-export function primaryAction(invoice, offered) {
+export function primaryAction(invoice, offered, { bankProposalOffered = false } = {}) {
+  // Proposing the bank account is then the way on, and its button is filled.
+  if (bankProposalOffered) return null;
   const key = offered.find((a) => a.tone === "ok")?.key
     ?? (invoice.state === "REVIEW_REQUIRED"
       ? (invoice.review_reason === "DUPLICATE_INVOICE_NUMBER" ? "confirm-duplicate" : "request-info")

@@ -22,15 +22,24 @@ const keys = (inv) => availableActions(inv).actions.map((a) => a.key);
 
 test("a review offers the decisions a reviewer makes", () => {
   assert.deepEqual(keys(invoice({ state: "REVIEW_REQUIRED" })),
-    ["accept", "request-info", "confirm-duplicate", "reject", "reprocess"]);
+    ["accept", "request-info", "reject", "reprocess"]);
 });
 
 test("a review whose failures no reviewer may override offers no release", () => {
   // The server refuses the release with NOT_PAYABLE_ELIGIBLE; the button would
   // always fail (ADR-071).
   const result = availableActions(invoice({ state: "REVIEW_REQUIRED", payable_blockers: ["supplier_iban_match"] }));
-  assert.deepEqual(result.actions.map((a) => a.key), ["request-info", "confirm-duplicate", "reject", "reprocess"]);
+  assert.deepEqual(result.actions.map((a) => a.key), ["request-info", "reject", "reprocess"]);
   assert.equal(result.prompt.key, "hintNotReleasable");
+});
+
+test("confirming a duplicate is offered only when the invoice number was seen before", () => {
+  const checked = (status) => invoice({
+    state: "REVIEW_REQUIRED",
+    validation: { technical: [], business: [{ check_code: "duplicate_invoice_number", status }] },
+  });
+  assert.ok(keys(checked("FAILED")).includes("confirm-duplicate"));
+  assert.ok(!keys(checked("PASSED")).includes("confirm-duplicate"));
 });
 
 test("an approval step offers approve and reject, and names the step", () => {
@@ -187,9 +196,19 @@ test("the filled button is the step that moves the invoice on, or the one a stop
   assert.equal(primary({ state: "REVIEW_REQUIRED" }), "accept");
   const stuck = { state: "REVIEW_REQUIRED", payable_blockers: ["supplier_iban_match"] };
   assert.equal(primary({ ...stuck, review_reason: "SUPPLIER_IBAN_MATCH" }), "request-info");
-  assert.equal(primary({ ...stuck, review_reason: "DUPLICATE_INVOICE_NUMBER" }), "confirm-duplicate");
+  const seenBefore = { technical: [], business: [{ check_code: "duplicate_invoice_number", status: "FAILED" }] };
+  assert.equal(primary({ ...stuck, review_reason: "DUPLICATE_INVOICE_NUMBER", validation: seenBefore }), "confirm-duplicate");
   assert.equal(primary({ state: "ACCOUNTING_READY" }), "pay");
   assert.equal(primary({ state: "PAYMENT_PENDING" }), "confirm");
+});
+
+test("on an IBAN stop the bank-account proposal is the one filled button", () => {
+  // The bank panel's "propose" is the way on (ADR-077); a second filled button
+  // in the decision panel would compete with it.
+  const inv = invoice({ state: "REVIEW_REQUIRED", payable_blockers: ["supplier_iban_match"], review_reason: "SUPPLIER_IBAN_MATCH" });
+  const offered = availableActions(inv).actions;
+  assert.equal(primaryAction(inv, offered, { bankProposalOffered: true }), null);
+  assert.equal(primaryAction(inv, offered, { bankProposalOffered: false }), "request-info");
 });
 
 test("a primary the viewer may not use is simply not filled", () => {

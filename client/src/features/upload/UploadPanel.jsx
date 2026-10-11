@@ -47,7 +47,6 @@ export default function UploadPanel({ onUploaded }) {
           <button className="btn" onClick={() => inputRef.current?.click()} disabled={busy}>
             {busy ? t("checking") : t("uploadPick")}
           </button>
-          <span className="hint">{t("uploadFixtures")}</span>
         </div>
       </div>
     </div>

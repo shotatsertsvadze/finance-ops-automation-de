@@ -5,6 +5,7 @@ import {
 } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
 import { availableActions, primaryAction } from "./actions.js";
+import { invoiceBankEntry } from "../bank-changes/rules.js";
 
 /**
  * What this person can do with this invoice right now, and what the system
@@ -95,7 +96,7 @@ export default function ActionPanel({ invoice, may, onDone }) {
   }
 
   const needsComment = permitted.some((a) => a.needsComment);
-  const primary = primaryAction(invoice, permitted);
+  const primary = primaryAction(invoice, permitted, { bankProposalOffered: invoiceBankEntry(invoice, may).canPropose });
 
   return (
     <section className="panel">

@@ -190,12 +190,16 @@ export default function InvoiceDetail({ may, onChanged }) {
             {rest.length > 0 && (
               <div className="panel-body" style={{ borderTop: "1px solid var(--line)", paddingTop: 10, paddingBottom: 10 }}>
                 <button className="ev-toggle" onClick={() => setShowPassed((v) => !v)}>
-                  {showPassed ? t("hidePassed") : t("showPassed", rest.length)}
+                  {showPassed ? t("hidePassed") : t("showPassed", rest.length, rest.filter((r) => r.status === "PASSED").length)}
                 </button>
               </div>
             )}
             {results.length === 0 && <p className="empty">{t("notCheckedDuplicate")}</p>}
           </section>
+
+          {/* A changed IBAN has one way on, and it is not a review decision:
+              it sits right under the evidence that asks for it. */}
+          <InvoiceBankPanel invoice={invoice} may={may} />
 
           <ActionPanel
             invoice={invoice}
@@ -205,8 +209,6 @@ export default function InvoiceDetail({ may, onChanged }) {
               onChanged();
             }}
           />
-
-          <InvoiceBankPanel invoice={invoice} may={may} />
 
           <AiExplanation invoiceId={invoice.id} runNo={results[0]?.run_no} state={invoice.state} may={may} />
 

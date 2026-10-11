@@ -50,7 +50,6 @@ const de = {
     uploadTitle: "XRechnung hochladen",
     uploadPick: "Datei auswählen",
     uploadOnlyXml: "Nur XML. Die Datei wird unverändert gespeichert.",
-    uploadFixtures: "Beispieldateien liegen in fixtures/xrechnung/.",
     uploadDone: (name) => `${name} verarbeitet.`,
 
     colInvoice: "Rechnung",
@@ -82,8 +81,8 @@ const de = {
     panelBooking: "Buchung und Zahlung",
     panelIncomingPayment: "Zahlungseingang",
     notCheckedDuplicate: "Diese Rechnung wurde nicht geprüft (Duplikat).",
-    hidePassed: "Bestandene Prüfungen ausblenden",
-    showPassed: (n) => `Alle ${n} bestandenen Prüfungen anzeigen`,
+    hidePassed: "Übrige Prüfungen ausblenden",
+    showPassed: (n, passed) => (passed === n ? `Alle ${n} bestandenen Prüfungen anzeigen` : `Übrige ${n} Prüfungen anzeigen (${passed} bestanden)`),
     evidenceAllPassed: (n) => `${n} Prüfungen, keine Beanstandung`,
     evidenceFailed: (failed, total) => `${failed} von ${total} Prüfungen fehlgeschlagen`,
     expected: "Erwartet",
@@ -442,7 +441,7 @@ const de = {
   severity: { HIGH: "hoch", MEDIUM: "mittel", LOW: "niedrig", INFO: "Info" },
   stepStatus: { PENDING: "offen", APPROVED: "freigegeben", REJECTED: "abgelehnt", CANCELLED: "aufgehoben" },
   paymentStatus: { PENDING: "angewiesen", EXECUTED: "ausgeführt", FAILED: "fehlgeschlagen" },
-  channel: { UPLOAD: "Upload", EMAIL: "E-Mail" },
+  channel: { UPLOAD: "Upload", EMAIL: "E-Mail", FORM: "Formular" },
 
   // A next step an AI explanation may name, worded as the button it means.
   aiStep: {
@@ -598,7 +597,6 @@ const en = {
     uploadTitle: "Upload an XRechnung",
     uploadPick: "Choose file",
     uploadOnlyXml: "XML only. The file is stored exactly as received.",
-    uploadFixtures: "Sample files are in fixtures/xrechnung/.",
     uploadDone: (name) => `${name} processed.`,
 
     colInvoice: "Invoice",
@@ -630,8 +628,8 @@ const en = {
     panelBooking: "Booking and payment",
     panelIncomingPayment: "Incoming payment",
     notCheckedDuplicate: "This invoice was not checked (duplicate).",
-    hidePassed: "Hide passed checks",
-    showPassed: (n) => `Show all ${n} passed checks`,
+    hidePassed: "Hide the other checks",
+    showPassed: (n, passed) => (passed === n ? `Show all ${n} passed checks` : `Show the other ${n} checks (${passed} passed)`),
     evidenceAllPassed: (n) => `${n} checks, nothing to report`,
     evidenceFailed: (failed, total) => `${failed} of ${total} checks failed`,
     expected: "Expected",
@@ -985,7 +983,7 @@ const en = {
   severity: { HIGH: "high", MEDIUM: "medium", LOW: "low", INFO: "info" },
   stepStatus: { PENDING: "open", APPROVED: "approved", REJECTED: "rejected", CANCELLED: "cancelled" },
   paymentStatus: { PENDING: "instructed", EXECUTED: "executed", FAILED: "failed" },
-  channel: { UPLOAD: "Upload", EMAIL: "E-mail" },
+  channel: { UPLOAD: "Upload", EMAIL: "E-mail", FORM: "Form" },
 
   aiStep: {
     verify_bank_account: "Propose bank account for verification",

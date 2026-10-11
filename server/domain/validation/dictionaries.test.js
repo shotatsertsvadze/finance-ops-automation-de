@@ -362,3 +362,23 @@ test("an internal error shows the reference the server logged it under", () => {
   assert.equal(errorText(DICTIONARIES.de, error), "Interner Fehler (Referenz r-1)");
   assert.equal(errorText(DICTIONARIES.en, error), "Internal error (reference r-1)");
 });
+
+test("every intake channel, including the n8n form, is named in words in both languages", () => {
+  // The n8n workflow sends EMAIL or FORM; the upload in the app sends UPLOAD.
+  for (const channel of ["UPLOAD", "EMAIL", "FORM"]) {
+    for (const [lang, dict] of Object.entries(DICTIONARIES)) {
+      assert.ok(dict.channel[channel], `${lang}: ${channel} has no label`);
+    }
+  }
+  assert.equal(auditReason(DICTIONARIES.de, "Eingang über FORM"), "Eingang über Formular");
+  assert.equal(auditReason(DICTIONARIES.en, "Eingang über FORM"), "Received via Form");
+});
+
+test("the check-trail toggle calls only passed checks passed, in both languages", () => {
+  // 22 checks besides the failed one: 20 passed, one not checked, one info.
+  const [de, en] = [DICTIONARIES.de.ui, DICTIONARIES.en.ui];
+  assert.equal(de.showPassed(22, 20), "Übrige 22 Prüfungen anzeigen (20 bestanden)");
+  assert.equal(en.showPassed(22, 20), "Show the other 22 checks (20 passed)");
+  assert.equal(de.showPassed(23, 23), "Alle 23 bestandenen Prüfungen anzeigen");
+  assert.equal(en.showPassed(23, 23), "Show all 23 passed checks");
+});
