@@ -100,8 +100,8 @@ Deutschland E-Rechnungen empfangen können.
 
 Damit es konkret wird, habe ich eine Person erfunden: Jonas Weber, im
 Finance-Team der Nordwerk GmbH. Nordwerk ist ein ausgedachter Mittelständler
-mit rund 2.000 Eingangsrechnungen im Monat. Das ist eine Annahme, keine
-gemessene Zahl.
+mit rund 2.000 Eingangsrechnungen im Monat, also etwa 100 an jedem
+Arbeitstag. Das ist eine Annahme, keine gemessene Zahl.
 
 Jonas' Alltag heute: Er öffnet jeden Anhang und legt ihn ab, tippt Daten ab,
 prüft Lieferant und IBAN mit dem Auge, sucht die Bestellung und läuft
@@ -112,16 +112,16 @@ ansehen? Wenn ja, warum genau? Und was ist der nächste Schritt?
 
 ## 7 · Vorher / Nachher (1:15)
 
-Genau das ändert meine Anwendung. Oben der Ablauf heute: fünf Schritte, alle
-in Orange, also alle von einem Menschen.
+Genau das ändert meine Anwendung. Links der Ablauf heute: zehn Rechnungen,
+und alle zehn landen bei Jonas. Er prüft jede einzelne von Hand.
 
-Unten der Ablauf mit Finance-Ops. Blau bedeutet: das macht das System. Es
-übernimmt den Eingang, prüft, ob die Datei vollständig und lesbar ist, prüft
-die Geschäftsregeln, also Lieferant, IBAN, Bestellung und Beträge, und
-entscheidet: weiter oder stoppen, immer mit Grund.
+Rechts mit Finance-Ops. Blau ist das System: Es übernimmt den Eingang, prüft
+die Datei und die Geschäftsregeln, also Lieferant, IBAN, Bestellung und
+Beträge. In unserem Modell laufen acht von zehn einfach durch, grün. Zwei
+werden gestoppt und kommen zu Jonas, jeweils mit dem Grund, warum.
 
-Jonas kommt erst ganz rechts ins Spiel. Und zwar nur, wenn eine Regel
-anschlägt oder der Betrag eine Grenze überschreitet.
+Bei größeren Beträgen braucht eine saubere Rechnung zusätzlich eine
+Freigabe-Unterschrift. Von Hand prüfen muss sie aber niemand mehr.
 
 Wichtig: Es entscheiden feste Geschäftsregeln. Gleiche Rechnung, gleiches
 Ergebnis. Es gibt eine optionale KI-Erklärung, die eine Ausnahme verständlicher
