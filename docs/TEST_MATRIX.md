@@ -47,6 +47,7 @@ real-validator tests skip without `KOSIT_TEST_URL` and run in CI, see
 | R22 | An approver without the required role is refused | 403, step stays PENDING | AUTO | `approvals.test.js` "an approver whose role does not match" |
 | R23 | Steps are decided in order | 409 on an out-of-order step | AUTO | `approvals.test.js` "steps must be decided in order" |
 | R24 | A decided step cannot be decided twice | 409 | AUTO | `approvals.test.js` "an already-decided step cannot be decided again" |
+| R25 | A state change or event on an unknown invoice | 404 `INVOICE_NOT_FOUND`, not a ReferenceError | AUTO | `transitions.test.js` |
 
 ## Fixtures
 
