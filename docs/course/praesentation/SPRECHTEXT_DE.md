@@ -184,7 +184,8 @@ einer Begründung. Was dann passiert, zeige ich gleich.
 
 Kurz zusammengefasst, was wir gerade gesehen haben: kein Rätselraten. Der
 Grund steht in einem Satz da, der Beleg direkt daneben, und der nächste
-Schritt steht darunter. Alles andere ist bestanden und auf Wunsch sichtbar.
+Schritt steht darunter. Alles andere ist ohne Befund und auf Wunsch
+sichtbar.
 
 ## 10 · Menschliche Kontrolle (1:20)
 
