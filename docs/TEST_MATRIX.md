@@ -510,6 +510,7 @@ it is checked by `npm test` rather than by opening a browser.
 | U16 | The progress path per document | credit notes and settled invoices never show payment stages | AUTO | `actions.test.js` |
 | U17 | Role filtering in the browser | a cost-centre manager sees only the approval actions | MANUAL | Two-role probe, 2026-09-18 |
 | U18 | Confirming a duplicate is offered only when the invoice number was seen before | offered when `duplicate_invoice_number` failed, not on an IBAN stop | AUTO | `actions.test.js` |
+| U20 | On an IBAN stop the bank-account proposal is the only filled button | decision panel fills none when the viewer may propose; otherwise 'Rückfrage stellen' stays primary | AUTO | `actions.test.js`; Browser, 2026-10-11, DEMO-2026-01014 as Jonas Weber |
 
 | # | Case | Expected | Status | Evidence |
 |---|---|---|---|---|

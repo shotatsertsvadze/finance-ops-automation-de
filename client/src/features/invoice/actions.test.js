@@ -202,6 +202,15 @@ test("the filled button is the step that moves the invoice on, or the one a stop
   assert.equal(primary({ state: "PAYMENT_PENDING" }), "confirm");
 });
 
+test("on an IBAN stop the bank-account proposal is the one filled button", () => {
+  // The bank panel's "propose" is the way on (ADR-077); a second filled button
+  // in the decision panel would compete with it.
+  const inv = invoice({ state: "REVIEW_REQUIRED", payable_blockers: ["supplier_iban_match"], review_reason: "SUPPLIER_IBAN_MATCH" });
+  const offered = availableActions(inv).actions;
+  assert.equal(primaryAction(inv, offered, { bankProposalOffered: true }), null);
+  assert.equal(primaryAction(inv, offered, { bankProposalOffered: false }), "request-info");
+});
+
 test("a primary the viewer may not use is simply not filled", () => {
   const inv = invoice({ state: "REVIEW_REQUIRED", payable_blockers: ["x"], review_reason: "SUPPLIER_IBAN_MATCH" });
   const withoutRequest = availableActions(inv).actions.filter((a) => a.key !== "request-info");

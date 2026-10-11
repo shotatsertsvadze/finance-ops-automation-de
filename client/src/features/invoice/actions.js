@@ -137,7 +137,9 @@ function bookedActions(invoice, step) {
  * invoice on, or, in a review that cannot be released, the step it expects
  * next. Presentation only: which actions are offered is decided above.
  */
-export function primaryAction(invoice, offered) {
+export function primaryAction(invoice, offered, { bankProposalOffered = false } = {}) {
+  // Proposing the bank account is then the way on, and its button is filled.
+  if (bankProposalOffered) return null;
   const key = offered.find((a) => a.tone === "ok")?.key
     ?? (invoice.state === "REVIEW_REQUIRED"
       ? (invoice.review_reason === "DUPLICATE_INVOICE_NUMBER" ? "confirm-duplicate" : "request-info")
