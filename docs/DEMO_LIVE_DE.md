@@ -70,7 +70,7 @@ Ab hier nichts mehr in Finance-Ops hochladen.
 |---|---|---|
 | 1 | Am Ende von Folie 7: Mail 1, dann Mail 2 senden, zurück zu Folie 8 | Die Mails sind unterwegs, während Folie 8 erklärt wird |
 | 2 | n8n, Workflow (30–45 s), dann Reiter „Executions“ | Ablauf einmal erklären; zwei Ausführungen „Success“ |
-| 3 | Sheet | zwei neue Zeilen: „Automatisch freigegeben · Freigegeben“ und „Zur Prüfung · Sichtprüfung“ mit Grund „IBAN weicht … ab (Betrugsrisiko)“, Kanal „E-Mail“ |
+| 3 | Sheet | zwei neue Zeilen, Betrag als „380,00 €“ bzw. „2.499,00 €“: „Automatisch freigegeben · Freigegeben“ und „Zur Prüfung · Sichtprüfung“ mit Grund „IBAN weicht … ab (Betrugsrisiko)“, Kanal „E-Mail“ |
 | 4 | Finance-Ops Posteingang (neu laden) | oben HL-2026-7731 „Sichtprüfung“, darunter INV-2026-00433 „Freigegeben“ |
 | 5 | INV-2026-00433 öffnen | Verlauf: Eingang (Anna Berger, n8n-Konto), danach nur SYSTEM, „Automatisch freigegeben“ |
 | 6 | HL-2026-7731 öffnen | „Was blockiert“, Erwartet/Gefunden mit markierten Ziffern, direkt darunter „Bankverbindung“ (ab `polish/demo-ui`; vorher steht sie unter „Ihre Entscheidung“) |
@@ -98,8 +98,6 @@ Sprachumschaltung, KI-Erklärung (ausgeschaltet).
 - Über das n8n-Formular eingegangene Rechnungen zeigen den Kanal in
   Finance-Ops als Code `FORM` statt als Wort, bis der Branch
   `polish/demo-ui` gemergt ist (danach „Formular“).
-- Im Sheet steht der Betrag mit Punkt (`2499.00 EUR`), nicht im deutschen
-  Format. Das kommt aus dem n8n-Knoten „Ergebnis vorbereiten“.
 - „Alle 22 bestandenen Prüfungen“ zählt auch die übersprungene offizielle
   KoSIT-Prüfung und einen reinen Hinweis mit. In der Liste selbst stehen sie
   korrekt als „Nicht geprüft“ bzw. Hinweis.
