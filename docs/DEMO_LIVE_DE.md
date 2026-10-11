@@ -88,9 +88,9 @@ Sprachumschaltung, KI-Erklärung (ausgeschaltet).
 
 | Situation | Dann |
 |---|---|
-| Nach 60 s keine Zeile im Sheet | n8n-Formular öffnen (Production-URL im Knoten „Rechnung per Formular“), beide Dateien nacheinander hochladen |
-| n8n oder Tunnel nicht erreichbar | In Finance-Ops „Datei auswählen“, beide Dateien hochladen. Kanal zeigt dann „Upload“ |
-| Finance-Ops selbst nicht erreichbar | Ersatzvideo, dann Folie 9 und Backup-Folie B1 |
+| Nach 60 s keine Zeile im Sheet | Zuerst Finance-Ops-Posteingang neu laden. Sind beide Rechnungen schon da, dort weiterzeigen (nur das Sheet hängt). Sonst nur die **fehlende** Datei über das n8n-Formular hochladen (Production-URL im Knoten „Rechnung per Formular“). Eine schon verarbeitete Datei noch einmal zu senden erzeugt ein Duplikat und verschiebt die Reihenfolge im Posteingang |
+| n8n oder Tunnel nicht erreichbar | Erst im Posteingang prüfen, was schon angekommen ist, dann nur die fehlende Datei in Finance-Ops über „Datei auswählen“ hochladen. Kanal zeigt dann „Upload“ |
+| Finance-Ops selbst nicht erreichbar | Ersatzvideo, dann Folie 9 und Backup-Folie B1 (dort stehen die n8n-Ausführungen 112221 und 112248 vom 11.10.) |
 | Mail kommt nach dem Ersatzweg doch noch an | Sie wird als Duplikat erfasst. Harmlos, nicht kommentieren |
 
 ## Bekannte Kleinigkeiten (nicht zeigen, bei Nachfrage erklären)
