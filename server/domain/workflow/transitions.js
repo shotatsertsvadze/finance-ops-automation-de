@@ -1,5 +1,5 @@
 import { canTransition } from "./states.js";
-import { TransitionError } from "../errors.js";
+import { NotFoundError, TransitionError } from "../errors.js";
 import { syncCommitment } from "../purchase-orders/commitments.js";
 
 export const SYSTEM = { type: "SYSTEM", id: null };
