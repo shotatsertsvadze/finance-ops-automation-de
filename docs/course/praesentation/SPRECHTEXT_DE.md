@@ -166,8 +166,10 @@ unter der Auto-Grenze, automatisch freigegeben. Jonas musste nichts tun.
 in einem Satz. Darunter der Beleg: erwartet, gefunden, die abweichenden
 Ziffern markiert. Jonas muss nichts suchen oder vergleichen.
 
-[„Alle 22 bestandenen Prüfungen anzeigen“ klicken.] Alles andere ist ohne
-Befund. Nur diese eine Prüfung ist fehlgeschlagen. [Wieder einklappen.]
+[„Übrige 22 Prüfungen anzeigen“ klicken.] Alles andere ist ohne Befund:
+20 bestanden, dazu ein reiner Hinweis und die offizielle Prüfung, die in der
+Demo ausgeschaltet ist. Nur diese eine Prüfung ist fehlgeschlagen.
+[Wieder einklappen.]
 
 [Zurück nach oben scrollen, auf das Panel „Bankverbindung“ zeigen.] Und direkt
 darunter der nächste Schritt: Die neue Bankverbindung wird zur Prüfung
