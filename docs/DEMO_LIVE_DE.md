@@ -16,10 +16,11 @@ vorbereiten“).
 
 - [ ] Kompletter Durchlauf auf dem Präsentationslaptop, im Netz, das vor Ort
       genutzt wird (im Zweifel Handy-Hotspot). Dreimal, jeweils ab „Am Morgen“.
-- [ ] Ersatzvideo prüfen: Der App-Teil liegt als
-      `docs/course/praesentation/ersatzvideo_app.mp4` vor (38 s, aufgenommen
-      am 11.10.2026). Den Teil Mail → n8n → Sheet selbst mit QuickTime
-      aufnehmen (Bildschirmaufnahme, etwa 30 s) und davorsetzen.
+- [ ] Ersatzvideo prüfen: Der App-Teil (38 s, aufgenommen am 11.10.2026) ist
+      in die Präsentation eingebettet, auf der Folie „Aufzeichnung“ direkt
+      nach Folie 8. Quelle: `docs/course/praesentation/ersatzvideo_app.mp4`.
+      Den Teil Mail → n8n → Sheet selbst mit QuickTime aufnehmen
+      (Bildschirmaufnahme, etwa 30 s); er wird davorgesetzt.
 - [ ] Am Beamer prüfen: Browser-Zoom 125 % lesbar? Sonst 150 %.
 
 ## Am Morgen (spätestens 60 Minuten vorher)
@@ -75,7 +76,7 @@ Ab hier nichts mehr in Finance-Ops hochladen.
 | 5 | INV-2026-00433 öffnen | Verlauf: Eingang (Anna Berger, n8n-Konto), danach nur SYSTEM, „Automatisch freigegeben“ |
 | 6 | HL-2026-7731 öffnen | „Was blockiert“, Erwartet/Gefunden mit markierten Ziffern, direkt darunter „Bankverbindung“ (ab `polish/demo-ui`; vorher steht sie unter „Ihre Entscheidung“) |
 | 7 | „Übrige 22 Prüfungen anzeigen (20 bestanden)“, wieder einklappen | eine Prüfung fehlgeschlagen, 20 bestanden, dazu ein Hinweis und die ausgeschaltete offizielle Prüfung |
-| 8 | zurück zu Folie 9 | – |
+| 8 | zurück zu den Folien, zweimal weiter zu Folie 9 (die Folie „Aufzeichnung“ überspringen) | – |
 
 Zuletzt so durchgelaufen am 11.10.2026 (E-Mail-Weg, beide Ergebnisse wie
 erwartet; n8n-Ausführungen 3,5 s und 2,3 s). Die Belege stehen auf Backup-Folie
@@ -90,7 +91,7 @@ Sprachumschaltung, KI-Erklärung (ausgeschaltet).
 |---|---|
 | Nach 60 s keine Zeile im Sheet | Zuerst Finance-Ops-Posteingang neu laden. Sind beide Rechnungen schon da, dort weiterzeigen (nur das Sheet hängt). Sonst nur die **fehlende** Datei über das n8n-Formular hochladen (Production-URL im Knoten „Rechnung per Formular“). Eine schon verarbeitete Datei noch einmal zu senden erzeugt ein Duplikat und verschiebt die Reihenfolge im Posteingang |
 | n8n oder Tunnel nicht erreichbar | Erst im Posteingang prüfen, was schon angekommen ist, dann nur die fehlende Datei in Finance-Ops über „Datei auswählen“ hochladen. Kanal zeigt dann „Upload“ |
-| Finance-Ops selbst nicht erreichbar | Ersatzvideo, dann Folie 9 und Backup-Folie B1 (dort stehen die n8n-Ausführungen 112221 und 112248 vom 11.10.) |
+| Finance-Ops selbst nicht erreichbar | Auf Folie 8 einmal weiter zur Folie „Aufzeichnung“, Klick ins Video startet es. Dann Folie 9 und Backup-Folie B1 (dort stehen die n8n-Ausführungen 112221 und 112248 vom 11.10.) |
 | Mail kommt nach dem Ersatzweg doch noch an | Sie wird als Duplikat erfasst. Harmlos, nicht kommentieren |
 
 ## Bekannte Kleinigkeiten (nicht zeigen, bei Nachfrage erklären)
