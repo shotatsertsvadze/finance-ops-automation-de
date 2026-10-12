@@ -16,7 +16,7 @@ vorbereiten“).
 
 - [ ] Kompletter Durchlauf auf dem Präsentationslaptop, im Netz, das vor Ort
       genutzt wird (im Zweifel Handy-Hotspot). Dreimal, jeweils ab „Am Morgen“.
-- [ ] Ersatzvideo prüfen: Der App-Teil (38 s, aufgenommen am 11.10.2026) ist
+- [ ] Ersatzvideo prüfen: Der App-Teil (82 s, aufgenommen am 12.10.2026) ist
       in die Präsentation eingebettet, auf der Folie „Aufzeichnung“ direkt
       nach Folie 8. Quelle: `docs/course/praesentation/ersatzvideo_app.mp4`.
       Den Teil Mail → n8n → Sheet selbst mit QuickTime aufnehmen
