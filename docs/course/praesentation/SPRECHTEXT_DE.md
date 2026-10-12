@@ -143,7 +143,8 @@ Ergebnis. Schauen wir es uns an.
 
 ## Live-Demo (5:00)
 
-Ablauf und Ersatzwege: `docs/DEMO_LIVE_DE.md`.
+Ablauf und Ersatzwege: `docs/DEMO_LIVE_DE.md`. Klappt die Live-Demo nicht: auf
+Folie 8 einmal weiter, dort läuft die Aufzeichnung des App-Teils.
 
 **n8n (30–45 s).** Hier ist der Ablauf in n8n. Links kommt die Mail an, in der
 Mitte meldet sich n8n bei Finance-Ops an und übergibt die Datei, rechts wird
@@ -178,7 +179,7 @@ darunter der nächste Schritt: Die neue Bankverbindung wird zur Prüfung
 vorgeschlagen. Die Rechnung selbst kann Jonas nicht freigeben, auch nicht mit
 einer Begründung. Was dann passiert, zeige ich gleich.
 
-[Zurück zu den Folien.]
+[Zurück zu den Folien, zweimal weiter: Die Folie „Aufzeichnung“ überspringen.]
 
 ## 9 · Was Jonas bei einer Ausnahme sieht (0:40)
 
