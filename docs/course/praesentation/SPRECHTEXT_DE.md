@@ -209,8 +209,8 @@ Und dann kommt eine zweite, eigene Entscheidung: die Freigabe der Rechnung.
 Eine Rechnung, die einmal gestoppt war, wird nie automatisch freigegeben. Ein
 Mensch unterschreibt.
 
-Drei verschiedene Personen sind die Regel, die ich für dieses Projekt gewählt
-habe, und so ist es im System fest eingestellt. Für jedes Unternehmen
+Das ist das bekannte Vier-Augen-Prinzip, in diesem Projekt bewusst mit drei
+Personen, und so ist es im System fest eingestellt. Für jedes Unternehmen
 vorschreiben würde ich das nicht. Der Punkt
 ist: Wer vorschlägt, darf nicht selbst prüfen oder freigeben.
 
