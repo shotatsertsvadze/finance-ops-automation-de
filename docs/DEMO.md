@@ -1,9 +1,9 @@
 # Demo walkthrough
 
 Twelve minutes, in order. For the three-minute video cut, with narration and
-recording instructions, see `docs/DEMO_VIDEO.md`. For the five-minute live
-demo of the course presentation (e-mail, n8n, Google Sheets), see
-`docs/DEMO_LIVE_DE.md`.
+recording instructions, see `docs/DEMO_VIDEO.md`. For the course presentation,
+whose demo is a recorded video (e-mail, n8n, Google Sheets, app), see
+`docs/PRAESENTATIONSTAG_DE.md`.
 
 Every figure below comes from `npm run db:demo` with its default seed, which is
 reproducible: the invoice numbers named here are the ones you will see. Steps
