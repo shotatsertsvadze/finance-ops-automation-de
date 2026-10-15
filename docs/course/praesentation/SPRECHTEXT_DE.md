@@ -8,7 +8,7 @@ Klammern sind Regieanweisungen.
 | Folie | Inhalt | Dauer | Uhr |
 |---|---|---|---|
 | 1 | Titel | 0:20 | 0:20 |
-| 2 | Würden Sie diese Rechnung bezahlen? | 0:50 | 1:10 |
+| 2 | Eine Rechnung wie jede andere | 0:50 | 1:10 |
 | 3 | Der zweite Blick | 1:00 | 2:10 |
 | 4 | Woher ich das kenne | 1:30 | 3:40 |
 | 5 | Anderer Prozess, gleiches Grundproblem | 1:15 | 4:55 |
@@ -30,18 +30,16 @@ es schon gezeigt), und auf Folie 12 nur je einen Punkt nennen.
 ## 1 · Titel (0:20)
 
 Guten Tag. Ich bin Shota Tsertsvadze, und mein Abschlussprojekt heißt
-Finance Operations Automation. Bevor ich erkläre, was das ist, habe ich eine
-Frage an Sie.
+Finance Operations Automation. Ich beginne mit einer Rechnung.
 
-## 2 · Würden Sie diese Rechnung bezahlen? (0:50)
+## 2 · Eine Rechnung wie jede andere (0:50)
 
 Stellen Sie sich vor, das liegt heute Morgen in Ihrem Posteingang. Eine
 Rechnung von Havel Logistik: Den Lieferanten kennen wir, es gibt eine passende
 Bestellung, der Betrag liegt im Rahmen. 2.499 Euro für einen Palettentransport.
 
-[Kurze Pause.]
-
-Würden Sie die bezahlen? Die meisten würden sagen: ja. Alles sieht normal aus.
+Auf den ersten Blick spricht nichts dagegen, sie zu bezahlen. Alles sieht
+normal aus.
 
 ## 3 · Der zweite Blick (1:00)
 
