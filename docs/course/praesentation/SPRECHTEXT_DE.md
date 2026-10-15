@@ -1,7 +1,8 @@
 # Sprechtext – Abschlusspräsentation
 
-Gehört zu `praesentation.html` (13 Folien plus 7 Backup-Folien). Ziel: etwa
-17½ Minuten, davon etwa 5 Minuten Live-Demo. Bis 20 Minuten bleibt Puffer.
+Gehört zu `praesentation.html` (14 Folien plus 7 Backup-Folien). Ziel: etwa
+14½ Minuten, davon knapp 2 Minuten Demo-Video. Bis 20 Minuten bleibt Zeit für
+Fragen.
 Der Text ist zum Sprechen geschrieben, nicht zum Ablesen: Sätze in eckigen
 Klammern sind Regieanweisungen.
 
@@ -14,16 +15,16 @@ Klammern sind Regieanweisungen.
 | 5 | Anderer Prozess, gleiches Grundproblem | 1:15 | 4:55 |
 | 6 | Jonas, Finance-Team Nordwerk | 1:00 | 5:55 |
 | 7 | Vorher / Nachher | 1:15 | 7:10 |
-| 8 | Live: zwei Rechnungen | 0:30 | 7:40 |
-| – | **Live-Demo** | 5:00 | 12:40 |
-| 9 | Was Jonas bei einer Ausnahme sieht | 0:40 | 13:20 |
-| 10 | Menschliche Kontrolle | 1:20 | 14:40 |
-| 11 | Geschäftlicher Nutzen | 1:15 | 15:55 |
-| 12 | Reflexion | 1:10 | 17:05 |
-| 13 | Abschluss | 0:25 | 17:30 |
+| 8 | Zwei Rechnungen, zwei Ergebnisse | 0:30 | 7:40 |
+| 9 | **Demo-Video** | 2:00 | 9:40 |
+| 10 | Was Jonas bei einer Ausnahme sieht | 0:40 | 10:20 |
+| 11 | Menschliche Kontrolle | 1:20 | 11:40 |
+| 12 | Geschäftlicher Nutzen | 1:15 | 12:55 |
+| 13 | Reflexion | 1:10 | 14:05 |
+| 14 | Abschluss | 0:25 | 14:30 |
 
-Wenn die Zeit knapp wird: Folie 9 nur zeigen, nicht besprechen (die Demo hat
-es schon gezeigt), und auf Folie 12 nur je einen Punkt nennen.
+Wenn die Zeit knapp wird: Folie 10 nur zeigen, nicht besprechen (das Video hat
+es schon gezeigt), und auf Folie 13 nur je einen Punkt nennen.
 
 ---
 
@@ -125,11 +126,10 @@ Wichtig: Es entscheiden feste Geschäftsregeln. Bei gleichen Daten und gleichen
 Regeln kommt immer dasselbe heraus, und jede Entscheidung hat einen Grund. Es gibt eine optionale KI-Erklärung, die eine Ausnahme verständlicher
 formulieren kann, aber sie entscheidet nichts.
 
-[Übergang: Mail-Programm öffnen, beide Entwürfe absenden, zurück zu Folie 8.]
 
-## 8 · Live: zwei Rechnungen (0:30)
+## 8 · Zwei Rechnungen, zwei Ergebnisse (0:30)
 
-Ich habe gerade zwei Rechnungen abgeschickt. Die erste ist eine kleine
+Ich zeige das an zwei Rechnungen. Die erste ist eine kleine
 Bürobedarf-Rechnung über 380 Euro, alles in Ordnung. Die sollte automatisch
 freigegeben werden. Die zweite ist die Rechnung vom Anfang, Havel Logistik,
 mit der abweichenden IBAN. Die sollte gestoppt werden.
@@ -137,57 +137,54 @@ mit der abweichenden IBAN. Die sollte gestoppt werden.
 Der Weg: Die Mail geht an ein Postfach. n8n, ein Werkzeug, das Abläufe
 zwischen Diensten verbindet, holt den Anhang ab und reicht ihn an Finance-Ops
 weiter. Finance-Ops prüft und entscheidet. Google Sheets protokolliert das
-Ergebnis. Schauen wir es uns an.
+Ergebnis. Den Ablauf habe ich aufgezeichnet, damit Sie ihn ohne Wartezeiten
+sehen.
 
-## Live-Demo (5:00)
+## 9 · Demo-Video (2:00)
 
-Ablauf und Ersatzwege: `docs/DEMO_LIVE_DE.md`. Klappt die Live-Demo nicht: Nach
-Folie 8 folgen „Eingang“ (Bildschirmfotos Mail → n8n → Sheet) und
-„Aufzeichnung“ (App-Teil als Video).
+[Ins Video klicken, es startet. Zeiten in Klammern: Stelle im Video.]
 
-**n8n (30–45 s).** Hier ist der Ablauf in n8n. Links kommt die Mail an, in der
-Mitte meldet sich n8n bei Finance-Ops an und übergibt die Datei, rechts wird
-das Ergebnis ins Sheet geschrieben. [Auf „Executions“ wechseln.] Und hier sehen
-wir: zwei Durchläufe, beide erfolgreich. Wichtig ist, was n8n nicht tut: Es
-enthält keine einzige Geschäftsregel. Es transportiert nur.
+**(0:00) Mails.** Ich schicke die beiden Rechnungen per E-Mail ab, ganz
+normal, die XRechnung im Anhang.
 
-**Google Sheet (20 s).** Im Protokoll stehen zwei neue Zeilen. Die
-Bürobedarf-Rechnung: automatisch freigegeben. Havel Logistik: zur Prüfung, mit
-dem Grund „IBAN weicht von den freigegebenen Bankverbindungen ab“.
+**(0:06) n8n.** n8n holt die Anhänge aus dem Postfach, meldet sich bei
+Finance-Ops an und reicht die Dateien weiter. Wichtig ist, was n8n nicht tut:
+Es enthält keine einzige Geschäftsregel. Es transportiert nur.
 
-**Finance-Ops, Posteingang (20 s).** So sieht das für Jonas aus. Oben die
-gestoppte Rechnung, Status Sichtprüfung, darunter die freigegebene.
+**(0:14) Ausführungen.** Zwei Durchläufe, beide erfolgreich, jeweils in
+wenigen Sekunden.
 
-**INV-2026-00433 (40 s).** Die saubere Rechnung zuerst. Im Verlauf sieht man:
-Nach dem Eingang hat nur das System gearbeitet. Keine Prüfung ist
-fehlgeschlagen, der Betrag liegt unter der Auto-Grenze, also automatisch
-freigegeben. Jonas musste nichts tun. Die offizielle KoSIT-Prüfung ist in der
-Demo ausgeschaltet; im Betrieb liefe sie mit.
+**(0:21) Google Sheet.** Im Protokoll stehen zwei neue Zeilen: Havel Logistik
+zur Prüfung, die Bürobedarf-Rechnung automatisch freigegeben.
 
-**HL-2026-7731 (2:00).** Jetzt die interessante. Ganz oben: „Was blockiert“,
-in einem Satz. Darunter der Beleg: erwartet, gefunden, die abweichenden
-Ziffern markiert. Jonas muss nichts suchen oder vergleichen.
+**(0:28) Posteingang.** So sieht das für Jonas aus. Beide Rechnungen sind da
+und schon geprüft.
 
-[„Übrige 22 Prüfungen anzeigen“ klicken.] Alles andere ist ohne Befund:
-20 bestanden, dazu ein reiner Hinweis und die offizielle Prüfung, die in der
-Demo ausgeschaltet ist. Nur diese eine Prüfung ist fehlgeschlagen.
-[Wieder einklappen.]
+**(0:40) INV-2026-00433.** Die saubere Rechnung zuerst: automatisch
+freigegeben. Im Verlauf sieht man, nach dem Eingang hat nur das System
+gearbeitet. Jonas musste nichts tun.
 
-[Zurück nach oben scrollen, auf das Panel „Bankverbindung“ zeigen.] Und direkt
-darunter der nächste Schritt: Die neue Bankverbindung wird zur Prüfung
-vorgeschlagen. Die Rechnung selbst kann Jonas nicht freigeben, auch nicht mit
-einer Begründung. Was dann passiert, zeige ich gleich.
+**(1:01) HL-2026-7731.** Jetzt die interessante. Ganz oben: was blockiert, in
+einem Satz. Darunter der Beleg: erwartet, gefunden, die abweichenden Ziffern
+markiert. Jonas muss nichts suchen oder vergleichen.
 
-[Zurück zu den Folien, dreimal weiter: Die Folien „Eingang“ und „Aufzeichnung“ überspringen.]
+**(1:21) Übrige Prüfungen.** Alles andere ist ohne Befund, 20 Prüfungen
+bestanden. Nur diese eine ist fehlgeschlagen.
 
-## 9 · Was Jonas bei einer Ausnahme sieht (0:40)
+**(1:34) Nächster Schritt.** Und direkt darunter: Die neue Bankverbindung wird
+zur Prüfung vorgeschlagen. Die Rechnung selbst kann Jonas so nicht freigeben.
+Was dann passiert, zeige ich gleich.
+
+[Video endet bei 1:49. Weiter zu Folie 10.]
+
+## 10 · Was Jonas bei einer Ausnahme sieht (0:40)
 
 Kurz zusammengefasst, was wir gerade gesehen haben: kein Rätselraten. Der
 Grund steht in einem Satz da, der Beleg direkt daneben, und der nächste
 Schritt steht darunter. Alles andere ist ohne Befund und auf Wunsch
 sichtbar.
 
-## 10 · Menschliche Kontrolle (1:20)
+## 11 · Menschliche Kontrolle (1:20)
 
 Jetzt die naheliegende Frage: Und wenn Havel Logistik wirklich die Bank
 gewechselt hat?
@@ -212,7 +209,7 @@ Personen, und so ist es im System fest eingestellt. Für jedes Unternehmen
 vorschreiben würde ich das nicht. Der Punkt
 ist: Wer vorschlägt, darf nicht selbst prüfen oder freigeben.
 
-## 11 · Geschäftlicher Nutzen (1:15)
+## 12 · Geschäftlicher Nutzen (1:15)
 
 Was bringt das? Links eine Modellrechnung für Nordwerk, klar gesagt: mit
 Annahmen, nicht gemessen. 2.000 Rechnungen im Monat, jede fünfte braucht eine
@@ -226,7 +223,7 @@ Ausnahmen kommen mit Grund. Er entscheidet gezielt, dort, wo Verantwortung
 gefragt ist. Und jeder Schritt ist belegt: wer was wann geprüft und
 entschieden hat.
 
-## 12 · Reflexion (1:10)
+## 13 · Reflexion (1:10)
 
 Was nehme ich mit? Erstens: Die schwierigste Frage war nicht, was man
 automatisiert. Sondern wo ein Mensch entscheiden muss, und wer genau.
@@ -240,7 +237,7 @@ Rechnungsdaten eines Unternehmens, ein stabiler Betrieb statt Tunnel, bei dem
 die offizielle KoSIT-Prüfung dauerhaft mitläuft, und echte Anbindungen an
 Buchhaltung und Bank.
 
-## 13 · Abschluss (0:25)
+## 14 · Abschluss (0:25)
 
 Die Rechnung vom Anfang: gestoppt, bevor Geld überwiesen wurde.
 Automatisieren, was Routine ist. Kontrollieren, was kritisch ist.
