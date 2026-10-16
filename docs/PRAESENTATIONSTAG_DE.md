@@ -1,7 +1,7 @@
 # Präsentationstag – Checkliste
 
 Vortragsfassung: `docs/course/praesentation/praesentation_v4.html` (16 Folien).
-Die Demo läuft als Video auf Folie 9 (aufgezeichnet am 15.10.2026, 2:56, ohne
+Die Demo läuft als Video auf Folie 9 (aufgezeichnet am 15.10.2026, 3:39, ohne
 Ton): zwei Rechnungen per E-Mail, n8n Schritt für Schritt, Ausführungen,
 Google Sheet, dann Finance-Ops. Eine Rechnung läuft automatisch durch, eine
 stoppt. Am Tag selbst braucht es weder Tunnel noch n8n. Finance-Ops läuft nur
