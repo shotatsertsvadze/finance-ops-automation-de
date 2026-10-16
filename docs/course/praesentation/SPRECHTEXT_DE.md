@@ -1,8 +1,9 @@
 # Sprechtext – Abschlusspräsentation
 
-Gehört zu `praesentation.html` (14 Folien plus 7 Backup-Folien). Ziel: etwa
-14½ Minuten, davon knapp 2 Minuten Demo-Video. Bis 20 Minuten bleibt Zeit für
-Fragen.
+Gehört zu `praesentation_v4.html` (16 Folien, kein Backup-Anhang mehr; die
+früheren Backup-Folien liegen in `referenz/backup_folien_v3.html`). Ziel: etwa
+19 Minuten, davon gut 3,5 Minuten Demo-Video, das ich live erkläre. Rahmen des
+Dozenten: 15 bis 20 Minuten.
 Der Text ist zum Sprechen geschrieben, nicht zum Ablesen: Sätze in eckigen
 Klammern sind Regieanweisungen.
 
@@ -15,16 +16,19 @@ Klammern sind Regieanweisungen.
 | 5 | Anderer Prozess, gleiches Grundproblem | 1:15 | 4:55 |
 | 6 | Jonas, Finance-Team Nordwerk | 1:00 | 5:55 |
 | 7 | Vorher / Nachher | 1:15 | 7:10 |
-| 8 | Zwei Rechnungen, zwei Ergebnisse | 0:30 | 7:40 |
-| 9 | **Demo-Video** | 2:00 | 9:40 |
-| 10 | Was Jonas bei einer Ausnahme sieht | 0:40 | 10:20 |
-| 11 | Menschliche Kontrolle | 1:20 | 11:40 |
-| 12 | Geschäftlicher Nutzen | 1:15 | 12:55 |
-| 13 | Reflexion | 1:10 | 14:05 |
-| 14 | Abschluss | 0:25 | 14:30 |
+| 8 | Zwei Rechnungen, zwei Ergebnisse | 0:40 | 7:50 |
+| 9 | **Demo-Video** (3:39 plus Start) | 3:50 | 11:40 |
+| 10 | Was Jonas bei einer Ausnahme sieht | 0:20 | 12:00 |
+| 11 | Menschliche Kontrolle | 1:20 | 13:20 |
+| 12 | **Gestoppt ist nicht ausgefallen** | 1:40 | 15:00 |
+| 13 | **Was hält, was noch fehlt** | 1:00 | 16:00 |
+| 14 | Geschäftlicher Nutzen | 1:15 | 17:15 |
+| 15 | Reflexion | 1:00 | 18:15 |
+| 16 | Abschluss | 0:25 | 18:40 |
 
 Wenn die Zeit knapp wird: Folie 10 nur zeigen, nicht besprechen (das Video hat
-es schon gezeigt), und auf Folie 13 nur je einen Punkt nennen.
+es schon gezeigt), und auf Folie 15 nur je einen Punkt nennen. Die
+Ausfall-Folien 12 und 13 nicht kürzen: Danach hat der Dozent gefragt.
 
 ---
 
@@ -127,7 +131,7 @@ Regeln kommt immer dasselbe heraus, und jede Entscheidung hat einen Grund. Es gi
 formulieren kann, aber sie entscheidet nichts.
 
 
-## 8 · Zwei Rechnungen, zwei Ergebnisse (0:30)
+## 8 · Zwei Rechnungen, zwei Ergebnisse (0:40)
 
 Ich zeige das an zwei Rechnungen. Die erste ist eine kleine
 Bürobedarf-Rechnung über 380 Euro, alles in Ordnung. Die sollte automatisch
@@ -140,49 +144,93 @@ weiter. Finance-Ops prüft und entscheidet. Google Sheets protokolliert das
 Ergebnis. Den Ablauf habe ich aufgezeichnet, damit Sie ihn ohne Wartezeiten
 sehen.
 
-## 9 · Demo-Video (2:00)
+## 9 · Demo-Video (3:50)
 
-[Ins Video klicken, es startet. Zeiten in Klammern: Stelle im Video.]
+[Ins Video klicken oder Leertaste: Start. Leertaste, K oder Klick: Pause und
+weiter. Die Pfeiltasten wechseln die Folie. Zeiten in Klammern: Stelle im
+Video. Braucht ein Satz länger, kurz pausieren und weiterreden.]
 
-**(0:00) Mails.** Ich schicke die beiden Rechnungen per E-Mail ab, ganz
-normal, die XRechnung im Anhang.
+Ablaufplan des Videos (Aufnahme vom 15.10.2026, ohne Ton):
 
-**(0:06) n8n.** n8n holt die Anhänge aus dem Postfach, meldet sich bei
-Finance-Ops an und reicht die Dateien weiter. Wichtig ist, was n8n nicht tut:
-Es enthält keine einzige Geschäftsregel. Es transportiert nur.
+| Zeit | Szene | Gezeigt | Sprechzeit |
+|---|---|---|---|
+| 0:00 | Zwei Mails | Entwurf mit Anhang, Adressen abgedeckt | 11 s |
+| 0:11 | n8n im Überblick | ganzer Workflow | 8 s |
+| 0:19 | Eingang | E-Mail, Formular, XML vorbereiten | 19 s |
+| 0:38 | Übergabe | Gruppe Finance-Ops, fünf Knoten | 28 s |
+| 1:06 | Protokoll | Gruppe Google Sheets, Formularzweig | 24 s |
+| 1:30 | Ausführungen | zwei grüne Läufe | 9 s |
+| 1:39 | Google Sheet | zwei Zeilen, zwei Ergebnisse | 11 s |
+| 1:50 | Posteingang | beide Rechnungen | 16 s |
+| 2:06 | INV-2026-00433 | Status, dann Verlauf | 29 s |
+| 2:35 | HL-2026-7731 | was blockiert, dann der Beleg | 28 s |
+| 3:03 | Übrige Prüfungen | 20 bestanden | 17 s |
+| 3:20 | Nächster Schritt | Bankverbindung vorschlagen | 19 s |
 
-**(0:14) Ausführungen.** Zwei Durchläufe, beide erfolgreich, jeweils in
-wenigen Sekunden.
+**(0:00) Zwei Mails.** Zwei Rechnungen kommen per E-Mail an, jeweils mit der
+XRechnung im Anhang: zuerst Havel Logistik, dann eine kleine
+Bürobedarf-Rechnung.
 
-**(0:21) Google Sheet.** Im Protokoll stehen zwei neue Zeilen: Havel Logistik
-zur Prüfung, die Bürobedarf-Rechnung automatisch freigegeben.
+**(0:11) n8n im Überblick.** Das ist der n8n-Workflow. Ich gehe ihn jetzt
+Knoten für Knoten von links nach rechts durch.
 
-**(0:28) Posteingang.** So sieht das für Jonas aus. Beide Rechnungen sind da
-und schon geprüft.
+**(0:19) Eingang.** Unten links „Rechnung per E-Mail“: Dieser Knoten holt neue
+Mails aus dem Demo-Postfach. Darüber „Rechnung per Formular“, ein zweiter
+Eingangsweg, den ich heute nicht nutze. Beide führen zu „XML vorbereiten“: Der
+Knoten nimmt nur den XML-Anhang und merkt sich, auf welchem Weg die Rechnung
+kam.
 
-**(0:40) INV-2026-00433.** Die saubere Rechnung zuerst: automatisch
-freigegeben. Im Verlauf sieht man, nach dem Eingang hat nur das System
-gearbeitet. Jonas musste nichts tun.
+**(0:38) Übergabe.** Jetzt die Gruppe Finance-Ops. „CONFIG“ enthält nur die
+Adresse von Finance-Ops, keine Regeln. „Finance Ops Login“ meldet sich mit
+einem eigenen Demo-Konto an. „Session vorbereiten“ übernimmt aus der Antwort
+den Nachweis der Anmeldung. „Datei + Session zusammenführen“ legt Rechnung und
+Anmeldung zusammen. „Rechnung prüfen“ schickt die Datei an Finance-Ops.
+Geprüft und entschieden wird nur dort; n8n enthält keine einzige
+Geschäftsregel.
 
-**(1:01) HL-2026-7731.** Jetzt die interessante. Ganz oben: was blockiert, in
-einem Satz. Darunter der Beleg: erwartet, gefunden, die abweichenden Ziffern
-markiert. Jonas muss nichts suchen oder vergleichen.
+**(1:06) Protokoll.** Rechts die Gruppe Google Sheets. „Ergebnis vorbereiten“
+übersetzt die Antwort in Wörter, etwa „Zur Prüfung“ statt eines Codes. „Demo
+Log aktualisieren“ schreibt daraus eine Zeile ins Google Sheet. Ganz rechts
+der Formularweg: Nur wenn die Rechnung über das Formular kam, zeigt n8n dort
+eine Bestätigung. Bei einer E-Mail endet der Lauf nach dem Sheet.
 
-**(1:21) Übrige Prüfungen.** Alles andere ist ohne Befund, 20 Prüfungen
+**(1:30) Ausführungen.** Beide Ausführungen sind grün. Das heißt nur: n8n hat
+transportiert. Ob eine Rechnung frei ist, entscheidet Finance-Ops.
+
+**(1:39) Google Sheet.** Und genau das zeigt das Protokoll: Havel Logistik zur
+Prüfung, die Bürobedarf-Rechnung automatisch freigegeben. Zweimal grün, zwei
+verschiedene Ergebnisse.
+
+**(1:50) Posteingang.** So sieht das für Jonas aus. Beide Rechnungen sind da
+und schon geprüft: oben die freigegebene Bürobedarf-Rechnung, darunter Havel
+Logistik in der Sichtprüfung.
+
+**(2:06) INV-2026-00433.** Die saubere Rechnung zuerst: 380 Euro, Status
+freigegeben.
+
+**(2:18) Verlauf.** Im Verlauf sieht man: Nach dem Eingang hat nur das System
+gearbeitet. Keine Prüfung ist fehlgeschlagen, der Betrag liegt unter der
+Grenze von 500 Euro. Jonas musste nichts tun.
+
+**(2:35) HL-2026-7731.** Jetzt Havel Logistik, 2.499 Euro, gestoppt. Ganz oben
+steht in einem Satz, was blockiert.
+
+**(2:48) Beleg.** Darunter der Beleg: erwartet, gefunden, die abweichenden
+Ziffern markiert. Das ist ein Grund zur Prüfung, kein Nachweis für Betrug.
+
+**(3:03) Übrige Prüfungen.** Alles andere ist ohne Befund, 20 Prüfungen
 bestanden. Nur diese eine ist fehlgeschlagen.
 
-**(1:34) Nächster Schritt.** Und direkt darunter: Die neue Bankverbindung wird
-zur Prüfung vorgeschlagen. Die Rechnung selbst kann Jonas so nicht freigeben.
-Was dann passiert, zeige ich gleich.
+**(3:20) Nächster Schritt.** Und direkt darunter der nächste Schritt: die neue
+Bankverbindung zur Prüfung vorschlagen. Die Rechnung selbst kann Jonas so
+nicht freigeben. Was dann passiert, zeige ich gleich.
 
-[Video endet bei 1:49. Weiter zu Folie 10.]
+[Video endet bei 3:39. Pfeiltaste: weiter zu Folie 10.]
 
-## 10 · Was Jonas bei einer Ausnahme sieht (0:40)
+## 10 · Was Jonas bei einer Ausnahme sieht (0:20)
 
-Kurz zusammengefasst, was wir gerade gesehen haben: kein Rätselraten. Der
-Grund steht in einem Satz da, der Beleg direkt daneben, und der nächste
-Schritt steht darunter. Alles andere ist ohne Befund und auf Wunsch
-sichtbar.
+Zusammengefasst: kein Rätselraten. Der Grund steht in einem Satz da, der Beleg
+daneben, der nächste Schritt darunter.
 
 ## 11 · Menschliche Kontrolle (1:20)
 
@@ -209,7 +257,47 @@ Personen, und so ist es im System fest eingestellt. Für jedes Unternehmen
 vorschreiben würde ich das nicht. Der Punkt
 ist: Wer vorschlägt, darf nicht selbst prüfen oder freigeben.
 
-## 12 · Geschäftlicher Nutzen (1:15)
+## 12 · Gestoppt ist nicht ausgefallen (1:40)
+
+Die Rechnung von Havel Logistik wurde gestoppt. Das war kein Ausfall: Das
+System hat genau das getan, wofür es gebaut ist. Ein technischer Ausfall ist
+etwas anderes. Dann ist ein Baustein nicht erreichbar. Drei Fälle.
+
+Erstens: n8n ist nicht erreichbar. Dann passiert nichts. Die Mails bleiben im
+Postfach, keine Rechnung wird geprüft. Der Ersatzweg: die Rechnungen direkt in
+Finance-Ops hochladen.
+
+Zweitens: Die Verbindung zu Finance-Ops oder Finance-Ops selbst ist weg. Dann
+bricht n8n beim Anmelden ab, und die Ausführung steht rot in der Liste, mit
+dem Schritt, an dem sie abbrach. In Finance-Ops ist nichts angekommen, im
+Sheet steht nichts. Wichtig: Die Mail gilt für n8n als abgeholt und kommt
+nicht von selbst noch einmal. Also Verbindung herstellen, dann die Rechnung
+erneut senden oder hochladen.
+
+Drittens: Google Sheets ist weg. Dann hat Finance-Ops schon geprüft und
+entschieden, die Rechnung ist vollständig. Es fehlt nur die Zeile im
+Protokoll, die trägt man nach. Die Rechnung noch einmal zu senden hilft hier
+nicht: Finance-Ops erkennt die Datei und legt nur ein Duplikat an.
+
+Und eine ehrliche Grenze: Heute meldet sich kein System von selbst. Einen
+Ausfall sieht, wer nachschaut.
+
+## 13 · Was hält, was noch fehlt (1:00)
+
+Was hält: Doppelt senden ist sicher. Dieselbe Datei wird als Duplikat erkannt,
+nichts wird doppelt freigegeben. Bricht eine Prüfung mittendrin ab, setzt
+dieselbe Datei sie beim erneuten Senden fort. Und ist der offizielle
+Prüfdienst nicht erreichbar, geht die Rechnung in die Sichtprüfung, nie in die
+Freigabe. In der Demo ist dieser Prüfdienst aus.
+
+Von Hand heißt heute: in n8n nachsehen, die Ursache beheben, die Rechnung
+erneut senden oder hochladen, eine fehlende Zeile nachtragen.
+
+Noch nicht gebaut ist die automatische Benachrichtigung bei einem Fehler, ein
+Dauerbetrieb statt des Tunnels und das automatische Nachholen fehlender
+Sheet-Zeilen. Das wären die nächsten Schritte.
+
+## 14 · Geschäftlicher Nutzen (1:15)
 
 Was bringt das? Links eine Modellrechnung für Nordwerk, klar gesagt: mit
 Annahmen, nicht gemessen. 2.000 Rechnungen im Monat, jede fünfte braucht eine
@@ -223,21 +311,22 @@ Ausnahmen kommen mit Grund. Er entscheidet gezielt, dort, wo Verantwortung
 gefragt ist. Und jeder Schritt ist belegt: wer was wann geprüft und
 entschieden hat.
 
-## 13 · Reflexion (1:10)
+## 15 · Reflexion (1:00)
 
 Was nehme ich mit? Erstens: Die schwierigste Frage war nicht, was man
 automatisiert. Sondern wo ein Mensch entscheiden muss, und wer genau.
 Zweitens: Feste Regeln sind erklärbar. Jede Entscheidung lässt sich begründen,
 und das schafft Vertrauen bei Finance. Drittens, ganz praktisch: Eine Demo
 braucht Betriebsdisziplin. Die temporäre Tunnel-Adresse ist mehrfach
-weggefallen. Daraus ist eine feste Checkliste geworden.
+weggefallen. Daraus sind eine feste Checkliste und der Ausfallplan von eben
+geworden.
 
 Die nächsten Schritte wären ein Pilot mit echten, anonymisierten
 Rechnungsdaten eines Unternehmens, ein stabiler Betrieb statt Tunnel, bei dem
 die offizielle KoSIT-Prüfung dauerhaft mitläuft, und echte Anbindungen an
 Buchhaltung und Bank.
 
-## 14 · Abschluss (0:25)
+## 16 · Abschluss (0:25)
 
 Die Rechnung vom Anfang: gestoppt, bevor Geld überwiesen wurde.
 Automatisieren, was Routine ist. Kontrollieren, was kritisch ist.
@@ -248,6 +337,10 @@ Vielen Dank. Ich freue mich auf Ihre Fragen.
 
 ## Kurze Antworten auf erwartbare Fragen
 
+Die früheren Backup-Folien B1 bis B7 sind nicht mehr Teil des Vortrags. Bei
+Bedarf `referenz/backup_folien_v3.html` öffnen; die Verweise unten nennen die
+passende Folie.
+
 **Hat das System einen Betrug erkannt?**
 Nein. Es hat erkannt, dass die IBAN nicht zu den freigegebenen
 Bankverbindungen passt. Ob das Betrug ist oder ein echter Bankwechsel, klärt
@@ -256,13 +349,13 @@ der Rückruf. Das System sorgt nur dafür, dass vorher nicht gezahlt wird.
 **Warum entscheidet keine KI?**
 Weil die Entscheidung nachvollziehbar und wiederholbar sein muss. Feste Regeln
 liefern bei gleichen Daten immer dasselbe Ergebnis und nennen den Grund. Die KI darf eine
-Ausnahme erklären, sie ist standardmäßig aus. → Backup B2.
+Ausnahme erklären, sie ist standardmäßig aus. → Referenzfolie B2.
 
 **Was macht n8n genau? Warum nicht alles in n8n?**
 n8n holt die Mail ab, meldet sich an, übergibt die Datei und schreibt das
 Ergebnis ins Sheet. Die Regeln liegen an einer Stelle in der Anwendung, sind
 dort getestet und gelten unabhängig davon, ob eine Rechnung per Mail, Formular
-oder Upload kommt. → Backup B3.
+oder Upload kommt. → Referenzfolie B3.
 
 **Warum drei Personen? Ist das nicht zu viel?**
 Das ist die Regel, die ich für das Projekt gewählt habe, und sie ist im
@@ -273,11 +366,11 @@ die Trennung: Wer vorschlägt, prüft und gibt nicht selbst frei.
 **Kann jemand den Rückruf einfach behaupten?**
 Das System kann nicht beweisen, dass ein Anruf stattfand. Es macht ihn
 nachvollziehbar: Nummer aus den Stammdaten, vorgelesene IBAN, wer wann, und
-eine dritte Person muss zustimmen. → Backup B5.
+eine dritte Person muss zustimmen. → Referenzfolie B5.
 
 **Woher kommen die 327 und 80 Stunden?**
 Aus Annahmen für die fiktive Firma: Minuten pro Rechnung, Anteil der
-Ausnahmen. Nichts davon ist gemessen. → Backup B4.
+Ausnahmen. Nichts davon ist gemessen. → Referenzfolie B4.
 
 **Funktioniert das auch mit PDF-Rechnungen?**
 Nein. Die Anwendung liest XRechnung im UBL-Format. Andere Formate wie CII oder
@@ -289,7 +382,7 @@ für die Demo über einen temporären Tunnel. Buchungen gehen als CSV-Export
 raus, Kontoauszüge kommen als Import, Zahlungen sind simuliert. Für den Betrieb
 fehlen ein fester Server, echte Anbindungen an Buchhaltung und Bank und eine
 dauerhaft laufende KoSIT-Prüfung, die eingebaut, in der Demo aber aus ist.
-→ Backup B5.
+→ Referenzfolie B5.
 
 **Ist das rechtskonform (GoBD, DSGVO, EN 16931)?**
 Dazu mache ich bewusst keine Aussage. Das wäre im Pilot mit Fachleuten zu
@@ -298,11 +391,16 @@ prüfen.
 **Wie schnell geht das?**
 Im Test am 11.10.2026 lief eine n8n-Ausführung 2 bis 4 Sekunden, von der
 Abholung der Mail bis zur Zeile im Sheet. Wie lange das Postfach braucht, bis
-n8n die Mail abholt, habe ich nicht gemessen. → Backup B1.
+n8n die Mail abholt, habe ich nicht gemessen. → Referenzfolie B1.
 
 **Wie viele Tests gibt es?**
 Über 740 automatisierte Tests, dazu 83 dokumentierte
-Architekturentscheidungen. → Backup B6.
+Architekturentscheidungen. → Referenzfolie B6.
+
+**Bekommt jemand eine Nachricht, wenn etwas ausfällt?**
+Nein, heute nicht. Einen Ausfall sieht, wer in n8n die Ausführungen oder das
+Sheet prüft. Der nächste Schritt wäre ein Fehler-Workflow in n8n, der zum
+Beispiel ein Team-Postfach benachrichtigt. Das ist nicht gebaut.
 
 **Was passiert, wenn dieselbe Rechnung zweimal kommt?**
 Dieselbe Datei wird am Inhalt erkannt, auch unter anderem Namen, und als
