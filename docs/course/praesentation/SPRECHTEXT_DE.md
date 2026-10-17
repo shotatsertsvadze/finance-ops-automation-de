@@ -21,10 +21,10 @@ Klammern sind Regieanweisungen.
 | 10 | Was Jonas bei einer Ausnahme sieht | 0:20 | 12:25 |
 | 11 | Menschliche Kontrolle | 1:20 | 13:45 |
 | 12 | **Gestoppt ist nicht ausgefallen** | 1:40 | 15:25 |
-| 13 | **Was hält, was noch fehlt** | 1:00 | 16:25 |
-| 14 | Geschäftlicher Nutzen | 1:15 | 17:40 |
-| 15 | Reflexion | 1:00 | 18:40 |
-| 16 | Abschluss | 0:25 | 19:05 |
+| 13 | **Was hält, was noch fehlt** | 1:10 | 16:35 |
+| 14 | Geschäftlicher Nutzen | 1:15 | 17:50 |
+| 15 | Reflexion | 1:00 | 18:50 |
+| 16 | Abschluss | 0:25 | 19:15 |
 
 Wenn die Zeit knapp wird: Folie 10 nur zeigen, nicht besprechen (das Video hat
 es schon gezeigt), und auf Folie 15 nur je einen Punkt nennen. Die
@@ -71,7 +71,7 @@ wiederholen, die von Hand erledigt werden und für die es kaum Automatisierung
 gab. Das war aufwendig, und ehrlich gesagt auch ermüdend.
 
 Rechts sehen Sie, wie man sich das vorstellen kann. Das ist eine vereinfachte
-Darstellung, kein Abbild der Systeme meines früheren Arbeitgebers. Ein
+Darstellung, kein Abbild der Systeme oder Abläufe meines früheren Arbeitgebers. Ein
 Auskunftsersuchen kommt an. Jemand liest es und ordnet es ein, findet die
 richtige Person, gleicht Angaben ab, sucht Kunden- und Kontodaten zusammen,
 erstellt die Antwort, behält die Frist im Blick und hält am Ende fest, was
@@ -123,7 +123,7 @@ die Datei und die Geschäftsregeln, also Lieferant, IBAN, Bestellung und
 Beträge. In unserem Modell laufen acht von zehn einfach durch, grün. Zwei
 werden gestoppt und kommen zu Jonas, jeweils mit dem Grund, warum.
 
-Bei größeren Beträgen braucht eine saubere Rechnung zusätzlich eine
+Über 500 Euro braucht eine saubere Rechnung zusätzlich eine
 Freigabe-Unterschrift. Von Hand prüfen muss sie aber niemand mehr.
 
 Wichtig: Es entscheiden feste Geschäftsregeln. Bei gleichen Daten und gleichen
@@ -284,13 +284,15 @@ nicht: Finance-Ops erkennt die Datei und legt nur ein Duplikat an.
 Und eine ehrliche Grenze: Heute meldet sich kein System von selbst. Einen
 Ausfall sieht, wer nachschaut.
 
-## 13 · Was hält, was noch fehlt (1:00)
+## 13 · Was hält, was noch fehlt (1:10)
 
 Was hält: Doppelt senden ist sicher. Dieselbe Datei wird als Duplikat erkannt,
 nichts wird doppelt freigegeben. Bricht eine Prüfung mittendrin ab, setzt
 dieselbe Datei sie beim erneuten Senden fort. Und ist der offizielle
 Prüfdienst nicht erreichbar, geht die Rechnung in die Sichtprüfung, nie in die
-Freigabe. In der Demo ist dieser Prüfdienst aus.
+Freigabe. In der Demo ist dieser Prüfdienst aus. Und wenn etwas abbricht,
+bleiben Spuren: n8n zeigt den Schritt, an dem es abbrach, Finance-Ops führt
+Verlauf und Server-Protokoll.
 
 Von Hand heißt heute: in n8n nachsehen, die Ursache beheben, die Rechnung
 erneut senden oder hochladen, eine fehlende Zeile nachtragen.
@@ -324,7 +326,8 @@ weggefallen. Daraus sind eine feste Checkliste und der Ausfallplan von eben
 geworden.
 
 Die nächsten Schritte wären ein Pilot mit echten, anonymisierten
-Rechnungsdaten eines Unternehmens, ein stabiler Betrieb statt Tunnel, bei dem
+Rechnungen eines Unternehmens, die Regeln gemeinsam mit dem Finance-Team
+abgestimmt, ein stabiler Betrieb statt Tunnel, bei dem
 die offizielle KoSIT-Prüfung dauerhaft mitläuft, und echte Anbindungen an
 Buchhaltung und Bank.
 
