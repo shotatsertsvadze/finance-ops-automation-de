@@ -115,7 +115,7 @@ ansehen? Wenn ja, warum genau? Und was ist der nächste Schritt?
 
 ## 7 · Vorher / Nachher (1:00)
 
-Genau das ändert meine Anwendung. Links der Ablauf heute: zehn Rechnungen,
+Die Antwort auf seine erste Frage: nur bei Ausnahmen. Links der Ablauf heute: zehn Rechnungen,
 und alle zehn landen bei Jonas. Er prüft jede einzelne von Hand.
 
 Rechts mit Finance-Ops. Das System übernimmt den Eingang und prüft die Datei
@@ -230,7 +230,7 @@ Darunter der Beleg, die abweichenden Ziffern markiert. Der Rest ohne Befund.
 Und direkt darunter der nächste Schritt.
 
 Das ist die Oberfläche. Dahinter stehen 751 automatisierte Tests und 83
-schriftlich begründete Entscheidungen. Die Kontrollen sind also geprüft und
+dokumentierte Architekturentscheidungen. Die Kontrollen sind also geprüft und
 nachvollziehbar. Getestet ist das mit synthetischen Daten, nicht im
 Echtbetrieb.
 
