@@ -229,8 +229,10 @@ nicht freigeben. Was dann passiert, zeige ich gleich.
 
 ## 10 · Was Jonas bei einer Ausnahme sieht (0:20)
 
-Zusammengefasst: kein Rätselraten. Der Grund steht in einem Satz da, der Beleg
-daneben, der nächste Schritt darunter.
+Zusammengefasst: kein Rätselraten. Oben steht in einem Satz, was blockiert.
+Darunter der Beleg: erwartet und gefunden, die abweichenden Ziffern markiert.
+Der Rest ist ohne Befund, 20 Prüfungen bestanden. Und direkt darunter der
+nächste Schritt.
 
 ## 11 · Menschliche Kontrolle (1:20)
 
