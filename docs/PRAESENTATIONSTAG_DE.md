@@ -44,8 +44,12 @@ allein. Die Vorgängerfassung mit Backup-Folien liegt in
        `npm run demo:reset`. Finance-Ops unter **http://localhost:5400** als
        **jonas.weber@nordwerk.example** anmelden, Zoom 125 %.
 2. [ ] Präsentation öffnen, **S** drücken, die Referentenansicht auf den
-       Laptop-Bildschirm ziehen, die Präsentation auf dem Beamer ins Vollbild.
-       Benachrichtigungen aus (Fokus-Modus).
+       Laptop-Bildschirm ziehen, die Präsentation auf den Beamer ziehen und
+       erst dann ins Vollbild (Ctrl + Cmd + F). In dieser Reihenfolge: Ein
+       Vollbildfenster bekommt auf dem Mac einen eigenen Schreibtisch, S im
+       Vollbild springt deshalb zur Referentenansicht weg. Mit nur einem
+       Bildschirm geht Vollbild plus Referentenansicht nicht; zum Üben die
+       Fenster nebeneinander anordnen. Benachrichtigungen aus (Fokus-Modus).
 
 ## Während des Vortrags
 
