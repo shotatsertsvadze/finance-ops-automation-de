@@ -26,6 +26,13 @@ allein. Die Vorgängerfassung mit Backup-Folien liegt in
       Die Pfeiltasten wechseln die Folie; beim Zurückkehren steht das Video
       dort, wo es pausiert wurde.
 - [ ] Am Beamer prüfen: Untertitel und vergrößerte Stellen im Video lesbar?
+- [ ] Referentenansicht probieren: In der Präsentation **S** drücken. Ein
+      zweites Fenster zeigt den Sprechtext der aktuellen Folie und folgt beim
+      Weiterschalten von selbst, auf Folie 9 auch dem Video. Pfeiltasten,
+      Leertaste und K wirken in beiden Fenstern. Den Beamer dafür auf
+      „erweitern“ stellen, nicht „spiegeln“, sonst sieht das Publikum den Text.
+      Online nur das Präsentationsfenster teilen. Öffnet sich kein Fenster:
+      Pop-ups für die Datei erlauben (getestet in Chrome).
 - [ ] Ersatz bereitlegen: PDF der Präsentation und `demo_v4.mp4` als eigene
       Datei, auf dem Desktop und auf einem USB-Stick.
 - [ ] Die Schriften der Präsentation kommen aus dem Internet (Google Fonts).
@@ -36,12 +43,14 @@ allein. Die Vorgängerfassung mit Backup-Folien liegt in
 1. [ ] Für Fragen: Anwendung starten mit `npm run dev`, dann
        `npm run demo:reset`. Finance-Ops unter **http://localhost:5400** als
        **jonas.weber@nordwerk.example** anmelden, Zoom 125 %.
-2. [ ] Präsentation im Vollbild öffnen. Benachrichtigungen aus (Fokus-Modus).
+2. [ ] Präsentation öffnen, **S** drücken, die Referentenansicht auf den
+       Laptop-Bildschirm ziehen, die Präsentation auf dem Beamer ins Vollbild.
+       Benachrichtigungen aus (Fokus-Modus).
 
 ## Während des Vortrags
 
-- Folie 9: Leertaste oder Klick auf das Play-Symbol, dazu den Sprechtext
-  (Abschnitt „9 · Demo-Video“, mit Zeitmarken). Braucht ein Satz länger:
+- Folie 9: Leertaste oder Klick auf das Play-Symbol. Die Referentenansicht
+  hebt den Absatz zur aktuellen Videostelle hervor. Braucht ein Satz länger:
   Leertaste, weiterreden, Leertaste. Danach mit der Pfeiltaste weiter.
 
 ## Wenn etwas schiefgeht
