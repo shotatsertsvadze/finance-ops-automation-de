@@ -2,7 +2,7 @@
 
 Gehört zu `praesentation_v4.html` (16 Folien, kein Backup-Anhang mehr; die
 früheren Backup-Folien liegen in `referenz/backup_folien_v3.html`). Ziel: etwa
-19 Minuten, davon gut 3,5 Minuten Demo-Video, das ich live erkläre. Rahmen des
+19 Minuten, davon gut 4 Minuten Demo-Video, das ich live erkläre. Rahmen des
 Dozenten: 15 bis 20 Minuten.
 Der Text ist zum Sprechen geschrieben, nicht zum Ablesen: Sätze in eckigen
 Klammern sind Regieanweisungen.
@@ -17,14 +17,14 @@ Klammern sind Regieanweisungen.
 | 6 | Jonas, Finance-Team Nordwerk | 1:00 | 5:55 |
 | 7 | Vorher / Nachher | 1:15 | 7:10 |
 | 8 | Zwei Rechnungen, zwei Ergebnisse | 0:40 | 7:50 |
-| 9 | **Demo-Video** (3:39 plus Start) | 3:50 | 11:40 |
-| 10 | Was Jonas bei einer Ausnahme sieht | 0:20 | 12:00 |
-| 11 | Menschliche Kontrolle | 1:20 | 13:20 |
-| 12 | **Gestoppt ist nicht ausgefallen** | 1:40 | 15:00 |
-| 13 | **Was hält, was noch fehlt** | 1:00 | 16:00 |
-| 14 | Geschäftlicher Nutzen | 1:15 | 17:15 |
-| 15 | Reflexion | 1:00 | 18:15 |
-| 16 | Abschluss | 0:25 | 18:40 |
+| 9 | **Demo-Video** (4:05 plus Start) | 4:15 | 12:05 |
+| 10 | Was Jonas bei einer Ausnahme sieht | 0:20 | 12:25 |
+| 11 | Menschliche Kontrolle | 1:20 | 13:45 |
+| 12 | **Gestoppt ist nicht ausgefallen** | 1:40 | 15:25 |
+| 13 | **Was hält, was noch fehlt** | 1:00 | 16:25 |
+| 14 | Geschäftlicher Nutzen | 1:15 | 17:40 |
+| 15 | Reflexion | 1:00 | 18:40 |
+| 16 | Abschluss | 0:25 | 19:05 |
 
 Wenn die Zeit knapp wird: Folie 10 nur zeigen, nicht besprechen (das Video hat
 es schon gezeigt), und auf Folie 15 nur je einen Punkt nennen. Die
@@ -144,7 +144,7 @@ weiter. Finance-Ops prüft und entscheidet. Google Sheets protokolliert das
 Ergebnis. Den Ablauf habe ich aufgezeichnet, damit Sie ihn ohne Wartezeiten
 sehen.
 
-## 9 · Demo-Video (3:50)
+## 9 · Demo-Video (4:15)
 
 [Ins Video klicken oder Leertaste: Start. Leertaste, K oder Klick: Pause und
 weiter. Die Pfeiltasten wechseln die Folie. Zeiten in Klammern: Stelle im
@@ -154,33 +154,33 @@ Ablaufplan des Videos (Aufnahme vom 15.10.2026, ohne Ton):
 
 | Zeit | Szene | Gezeigt | Sprechzeit |
 |---|---|---|---|
-| 0:00 | Zwei Mails | Entwurf mit Anhang, Adressen abgedeckt | 11 s |
-| 0:11 | n8n im Überblick | ganzer Workflow | 8 s |
-| 0:19 | Eingang | E-Mail, Formular, XML vorbereiten | 19 s |
-| 0:38 | Übergabe | Gruppe Finance-Ops, fünf Knoten | 28 s |
-| 1:06 | Protokoll | Gruppe Google Sheets, Formularzweig | 24 s |
-| 1:30 | Ausführungen | zwei grüne Läufe | 9 s |
-| 1:39 | Google Sheet | zwei Zeilen, zwei Ergebnisse | 11 s |
-| 1:50 | Posteingang | beide Rechnungen | 16 s |
-| 2:06 | INV-2026-00433 | Status, dann Verlauf | 29 s |
-| 2:35 | HL-2026-7731 | was blockiert, dann der Beleg | 28 s |
-| 3:03 | Übrige Prüfungen | 20 bestanden | 17 s |
-| 3:20 | Nächster Schritt | Bankverbindung vorschlagen | 19 s |
+| 0:00 | Zwei Mails | Entwurf mit Anhang, Adressen abgedeckt | 12 s |
+| 0:12 | n8n im Überblick | ganzer Workflow | 11 s |
+| 0:23 | Eingang | E-Mail, Formular, XML vorbereiten | 26 s |
+| 0:49 | Übergabe | Gruppe Finance-Ops, fünf Knoten | 34 s |
+| 1:23 | Protokoll | Gruppe Google Sheets, Formularzweig | 31 s |
+| 1:54 | Ausführungen | zwei grüne Läufe | 10 s |
+| 2:04 | Google Sheet | zwei Zeilen, zwei Ergebnisse | 12 s |
+| 2:16 | Posteingang | beide Rechnungen | 16 s |
+| 2:32 | INV-2026-00433 | Status, dann Verlauf | 29 s |
+| 3:01 | HL-2026-7731 | was blockiert, dann der Beleg | 28 s |
+| 3:29 | Übrige Prüfungen | 20 bestanden | 17 s |
+| 3:46 | Nächster Schritt | Bankverbindung vorschlagen | 19 s |
 
 **(0:00) Zwei Mails.** Zwei Rechnungen kommen per E-Mail an, jeweils mit der
 XRechnung im Anhang: zuerst Havel Logistik, dann eine kleine
 Bürobedarf-Rechnung.
 
-**(0:11) n8n im Überblick.** Das ist der n8n-Workflow. Ich gehe ihn jetzt
+**(0:12) n8n im Überblick.** Das ist der n8n-Workflow. Ich gehe ihn jetzt
 Knoten für Knoten von links nach rechts durch.
 
-**(0:19) Eingang.** Unten links „Rechnung per E-Mail“: Dieser Knoten holt neue
+**(0:23) Eingang.** Unten links „Rechnung per E-Mail“: Dieser Knoten holt neue
 Mails aus dem Demo-Postfach. Darüber „Rechnung per Formular“, ein zweiter
 Eingangsweg, den ich heute nicht nutze. Beide führen zu „XML vorbereiten“: Der
 Knoten nimmt nur den XML-Anhang und merkt sich, auf welchem Weg die Rechnung
 kam.
 
-**(0:38) Übergabe.** Jetzt die Gruppe Finance-Ops. „CONFIG“ enthält nur die
+**(0:49) Übergabe.** Jetzt die Gruppe Finance-Ops. „CONFIG“ enthält nur die
 Adresse von Finance-Ops, keine Regeln. „Finance Ops Login“ meldet sich mit
 einem eigenen Demo-Konto an. „Session vorbereiten“ übernimmt aus der Antwort
 den Nachweis der Anmeldung. „Datei + Session zusammenführen“ legt Rechnung und
@@ -188,44 +188,44 @@ Anmeldung zusammen. „Rechnung prüfen“ schickt die Datei an Finance-Ops.
 Geprüft und entschieden wird nur dort; n8n enthält keine einzige
 Geschäftsregel.
 
-**(1:06) Protokoll.** Rechts die Gruppe Google Sheets. „Ergebnis vorbereiten“
+**(1:23) Protokoll.** Rechts die Gruppe Google Sheets. „Ergebnis vorbereiten“
 übersetzt die Antwort in Wörter, etwa „Zur Prüfung“ statt eines Codes. „Demo
 Log aktualisieren“ schreibt daraus eine Zeile ins Google Sheet. Ganz rechts
 der Formularweg: Nur wenn die Rechnung über das Formular kam, zeigt n8n dort
 eine Bestätigung. Bei einer E-Mail endet der Lauf nach dem Sheet.
 
-**(1:30) Ausführungen.** Beide Ausführungen sind grün. Das heißt nur: n8n hat
+**(1:54) Ausführungen.** Beide Ausführungen sind grün. Das heißt nur: n8n hat
 transportiert. Ob eine Rechnung frei ist, entscheidet Finance-Ops.
 
-**(1:39) Google Sheet.** Und genau das zeigt das Protokoll: Havel Logistik zur
+**(2:04) Google Sheet.** Und genau das zeigt das Protokoll: Havel Logistik zur
 Prüfung, die Bürobedarf-Rechnung automatisch freigegeben. Zweimal grün, zwei
 verschiedene Ergebnisse.
 
-**(1:50) Posteingang.** So sieht das für Jonas aus. Beide Rechnungen sind da
+**(2:16) Posteingang.** So sieht das für Jonas aus. Beide Rechnungen sind da
 und schon geprüft: oben die freigegebene Bürobedarf-Rechnung, darunter Havel
 Logistik in der Sichtprüfung.
 
-**(2:06) INV-2026-00433.** Die saubere Rechnung zuerst: 380 Euro, Status
+**(2:32) INV-2026-00433.** Die saubere Rechnung zuerst: 380 Euro, Status
 freigegeben.
 
-**(2:18) Verlauf.** Im Verlauf sieht man: Nach dem Eingang hat nur das System
+**(2:44) Verlauf.** Im Verlauf sieht man: Nach dem Eingang hat nur das System
 gearbeitet. Keine Prüfung ist fehlgeschlagen, der Betrag liegt unter der
 Grenze von 500 Euro. Jonas musste nichts tun.
 
-**(2:35) HL-2026-7731.** Jetzt Havel Logistik, 2.499 Euro, gestoppt. Ganz oben
+**(3:01) HL-2026-7731.** Jetzt Havel Logistik, 2.499 Euro, gestoppt. Ganz oben
 steht in einem Satz, was blockiert.
 
-**(2:48) Beleg.** Darunter der Beleg: erwartet, gefunden, die abweichenden
+**(3:14) Beleg.** Darunter der Beleg: erwartet, gefunden, die abweichenden
 Ziffern markiert. Das ist ein Grund zur Prüfung, kein Nachweis für Betrug.
 
-**(3:03) Übrige Prüfungen.** Alles andere ist ohne Befund, 20 Prüfungen
+**(3:29) Übrige Prüfungen.** Alles andere ist ohne Befund, 20 Prüfungen
 bestanden. Nur diese eine ist fehlgeschlagen.
 
-**(3:20) Nächster Schritt.** Und direkt darunter der nächste Schritt: die neue
+**(3:46) Nächster Schritt.** Und direkt darunter der nächste Schritt: die neue
 Bankverbindung zur Prüfung vorschlagen. Die Rechnung selbst kann Jonas so
 nicht freigeben. Was dann passiert, zeige ich gleich.
 
-[Video endet bei 3:39. Pfeiltaste: weiter zu Folie 10.]
+[Video endet bei 4:05. Pfeiltaste: weiter zu Folie 10.]
 
 ## 10 · Was Jonas bei einer Ausnahme sieht (0:20)
 
