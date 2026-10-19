@@ -10,6 +10,7 @@ import EvidenceRow from "./EvidenceRow.jsx";
 import ActionPanel from "./ActionPanel.jsx";
 import InvoiceBankPanel from "../bank-changes/InvoiceBankPanel.jsx";
 import AiExplanation from "./AiExplanation.jsx";
+import SupplierInquiry from "./SupplierInquiry.jsx";
 import { STEP_TONE, chip } from "../../lib/tones.js";
 
 export default function InvoiceDetail({ may, onChanged }) {
@@ -211,6 +212,17 @@ export default function InvoiceDetail({ may, onChanged }) {
           />
 
           <AiExplanation invoiceId={invoice.id} runNo={results[0]?.run_no} state={invoice.state} may={may} />
+
+          <SupplierInquiry
+            invoiceId={invoice.id}
+            runNo={results[0]?.run_no}
+            state={invoice.state}
+            may={may}
+            onChanged={() => {
+              load();
+              onChanged();
+            }}
+          />
 
           {(invoice.accounting_record || invoice.payment) && (
             <section className="panel">

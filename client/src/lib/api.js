@@ -74,6 +74,10 @@ export const reprocessInvoice = (id) => actorPost(`/invoices/${id}/reprocess`);
 // AI explanation (ADR-080): read freely, generated only when a reviewer asks.
 export const getAiExplanation = (id, language) => request(`/invoices/${id}/ai-explanation?language=${language}`);
 export const requestAiExplanation = (id, language) => actorPost(`/invoices/${id}/ai-explanation?language=${language}`);
+export const getSupplierInquiry = (id) => request(`/invoices/${id}/supplier-inquiry`);
+export const requestSupplierInquiryDraft = (id) => actorPost(`/invoices/${id}/supplier-inquiry/draft`);
+export const approveSupplierInquiry = (id, draft) => actorPost(`/invoices/${id}/supplier-inquiry/approve`, draft);
+export const markSupplierInquirySent = (id, inquiryId) => actorPost(`/invoices/${id}/supplier-inquiry/${inquiryId}/sent`);
 
 export const createAccountingRecord = (id) => actorPost(`/invoices/${id}/accounting-record`);
 export const instructPayment = (id) => actorPost(`/invoices/${id}/payment`);

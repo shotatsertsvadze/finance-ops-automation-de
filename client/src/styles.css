@@ -586,3 +586,15 @@ select {
 }
 .lang-switch button:hover { color: var(--ink-1); border-color: var(--line-strong); }
 .lang-switch button.is-active { color: var(--ink-1); border-color: var(--line-strong); background: var(--surface); }
+
+/* ---------- Supplier inquiry (ADR-084): draft, approve, send by hand ---------- */
+.inquiry-start { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.inquiry-start .hint { flex-basis: 100%; margin: 0 0 4px; }
+.inquiry-editor { gap: 8px; }
+.inquiry-editor textarea { min-height: 220px; resize: vertical; }
+.inquiry-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.inquiry-list { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 10px; }
+.inquiry-item { border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; }
+.inquiry-status { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.inquiry-subject { margin: 8px 0 2px; font-weight: 500; }
+.inquiry-text { margin: 0 0 10px; white-space: pre-wrap; font-size: 13px; color: var(--ink-2); }
