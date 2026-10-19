@@ -12,20 +12,20 @@ Klammern sind Regieanweisungen.
 |---|---|---|---|
 | 1 | Titel | 0:15 | 0:15 |
 | 2 | Eine Rechnung wie jede andere | 0:30 | 0:45 |
-| 3 | Der zweite Blick | 0:55 | 1:40 |
-| 4 | Woher ich das kenne | 1:30 | 3:10 |
-| 5 | Anderer Prozess, gleiches Grundproblem | 1:00 | 4:10 |
-| 6 | Jonas, Finance-Team Nordwerk | 1:00 | 5:10 |
-| 7 | Vorher / Nachher | 1:00 | 6:10 |
-| 8 | Zwei Rechnungen, zwei Ergebnisse | 0:50 | 7:00 |
-| 9 | **Demo-Video** (4:05 plus Start) | 4:15 | 11:15 |
-| 10 | Was Jonas sieht, und was dahinter steht | 0:35 | 11:50 |
-| 11 | Menschliche Kontrolle | 1:40 | 13:30 |
-| 12 | **Warum hier nicht die KI entscheidet** | 1:30 | 15:00 |
-| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 16:15 |
-| 14 | Nutzen und wie man ihn misst | 1:05 | 17:20 |
-| 15 | Reflexion und Einführung | 1:05 | 18:25 |
-| 16 | Abschluss | 0:25 | 18:50 |
+| 3 | Der zweite Blick | 1:30 | 2:15 |
+| 4 | Woher ich das kenne | 1:20 | 3:35 |
+| 5 | Anderer Prozess, gleiches Grundproblem | 1:00 | 4:35 |
+| 6 | Jonas, Finance-Team Nordwerk | 1:00 | 5:35 |
+| 7 | Vorher / Nachher | 1:00 | 6:35 |
+| 8 | Zwei Rechnungen, zwei Ergebnisse | 0:50 | 7:25 |
+| 9 | **Demo-Video** (4:05 plus Start) | 4:15 | 11:40 |
+| 10 | Was Jonas sieht, und was dahinter steht | 0:35 | 12:15 |
+| 11 | Menschliche Kontrolle | 1:35 | 13:50 |
+| 12 | **Warum hier nicht die KI entscheidet** | 2:05 | 15:55 |
+| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 17:10 |
+| 14 | Nutzen und wie man ihn misst | 1:05 | 18:15 |
+| 15 | Reflexion und Einführung | 1:05 | 19:20 |
+| 16 | Abschluss | 0:25 | 19:45 |
 
 Wenn die Zeit knapp wird: auf Folie 10 den zweiten Absatz weglassen, auf
 Folie 15 die Erkenntnisse nur nennen. Die Ausfall-Folie 13 nicht streichen:
@@ -47,7 +47,7 @@ Bestellung, der Betrag liegt im Rahmen. 2.499 Euro für einen Palettentransport.
 Auf den ersten Blick spricht nichts dagegen, sie zu bezahlen. Alles sieht
 normal aus.
 
-## 3 · Der zweite Blick (0:55)
+## 3 · Der zweite Blick (1:30)
 
 Schauen wir genauer hin. Oben steht die IBAN, die wir für Havel Logistik in
 unseren Stammdaten haben. Unten die IBAN auf dieser Rechnung. Alles rot
@@ -57,11 +57,18 @@ Lieferant, Bestellung und Betrag stimmen. Nur das Konto nicht.
 
 Eine echt aussehende Rechnung mit einem anderen Konto ist ein bekanntes
 Muster beim Rechnungsbetrug. Ob es hier Betrug ist, wissen wir nicht. Aber
-wir sollten nicht zahlen, bevor wir es wissen. Und von Hand fällt so etwas nur
-auf, wenn jemand jedes Mal ganz genau hinschaut, auch bei der hundertsten
-Rechnung des Tages.
+wir sollten nicht zahlen, bevor wir es wissen.
 
-## 4 · Woher ich das kenne (1:30)
+Seit Oktober 2025 gibt es bei Überweisungen die sogenannte
+Empfängerüberprüfung. Banken gleichen den Namen mit der IBAN ab, bevor das
+Geld überwiesen wird. Meine Anwendung setzt einen Schritt früher an: Sie prüft
+bereits bei der Rechnung, ob die Bankverbindung in den Stammdaten des
+Unternehmens hinterlegt und freigegeben ist.
+
+Ohne diese Prüfung fällt so etwas von Hand nur auf, wenn jemand jedes Mal ganz
+genau hinschaut, auch bei der hundertsten Rechnung des Tages.
+
+## 4 · Woher ich das kenne (1:20)
 
 Warum mich gerade dieses Thema interessiert: Ich habe in den Operations eines
 FinTech-Unternehmens gearbeitet, das Girokonten für Privatkunden anbietet.
@@ -71,11 +78,11 @@ Was ich dort erlebt habe: viele Arbeitsschritte, die sich ständig
 wiederholen, die von Hand erledigt werden und für die es kaum Automatisierung
 gab. Das war aufwendig, und ehrlich gesagt auch ermüdend.
 
-Rechts eine vereinfachte Darstellung, kein Abbild der Systeme oder Abläufe meines früheren Arbeitgebers. Ein
-Auskunftsersuchen kommt an. Jemand liest es und ordnet es ein, findet die
-richtige Person, gleicht Angaben ab, sucht Kunden- und Kontodaten zusammen,
-erstellt die Antwort, behält die Frist im Blick und hält am Ende fest, was
-gemacht wurde. Jeder dieser Schritte: von Hand.
+Rechts eine vereinfachte Darstellung, kein Abbild der Systeme oder Abläufe
+meines früheren Arbeitgebers. Ein Auskunftsersuchen kommt an. Jemand ordnet es
+ein, findet die richtige Person, sucht Kunden- und Kontodaten zusammen,
+beantwortet es fristgerecht und hält fest, was gemacht wurde. Jeder Schritt:
+von Hand.
 
 Gerade bei repetitiver Arbeit ist der Mensch nicht die beste Prüfinstanz. Die
 Aufmerksamkeit lässt nach, nicht weil jemand nachlässig ist, sondern weil die
@@ -234,21 +241,20 @@ dokumentierte Architekturentscheidungen. Die Kontrollen sind also geprüft und
 nachvollziehbar. Getestet ist das mit synthetischen Daten, nicht im
 Echtbetrieb.
 
-## 11 · Menschliche Kontrolle (1:40)
+## 11 · Menschliche Kontrolle (1:35)
 
 Jetzt die naheliegende Frage: Und wenn Havel Logistik wirklich die Bank
 gewechselt hat?
 
 Dann gilt eine wichtige Regel: Eine Rechnung kann die Bankverbindung nie
 ändern. Die IBAN auf einer Rechnung ist genau das, was ein Betrüger
-kontrolliert. Deshalb gibt es einen eigenen Weg mit eigenen Entscheidungen.
+kontrolliert.
 
 Person eins schlägt die neue Bankverbindung vor, mit Begründung. Person zwei
 prüft unabhängig: Sie ruft beim Lieferanten an, und zwar nur über die Nummer,
 die wir schon in den Stammdaten haben, nie über eine Nummer von der Rechnung.
 Der Lieferant liest die IBAN vor. Person drei gibt die Bankverbindung frei.
-Erst dann prüft das System die Rechnung automatisch noch einmal, mit allen
-Prüfungen.
+Erst dann prüft das System die Rechnung noch einmal.
 
 Und dann kommt eine zweite, eigene Entscheidung: die Freigabe der Rechnung.
 Eine Rechnung, die einmal gestoppt war, wird nie automatisch freigegeben. Ein
@@ -258,28 +264,34 @@ Die Idee ist das Vier-Augen-Prinzip, hier bewusst mit drei Personen. Das ist
 meine Projektregel, keine allgemeine Pflicht. Der Punkt: Wer vorschlägt, prüft
 und gibt nicht selbst frei.
 
-## 12 · Warum hier nicht die KI entscheidet (1:30)
+## 12 · Warum hier nicht die KI entscheidet (2:05)
 
 Sie fragen sich vielleicht: Das ist ein KI-Kurs. Warum entscheidet hier keine
 KI? Das war eine bewusste Entscheidung.
 
-Links: Über Geld entscheiden feste Regeln. IBAN, Beträge, Bestellung,
-Freigabegrenzen. Gleiche Daten, gleiches Ergebnis, und jedes Ergebnis hat
-einen Grund.
-
-Ein Sprachmodell wäre hier riskant. Es liefert nicht garantiert jedes Mal
+Über Geld entscheiden feste Regeln: gleiche Daten, gleiches Ergebnis, und jedes
+Ergebnis hat einen Grund. Ein Sprachmodell liefert nicht garantiert jedes Mal
 dasselbe. Eine plausible Begründung ist noch kein Beleg. Und den Text der
-Rechnung schreibt der Absender, im schlimmsten Fall also der Betrüger.
+Rechnung schreibt der Absender, im schlimmsten Fall der Betrüger.
 
-In der Mitte, wo KI hilft: Sie kann erklären, warum eine Rechnung gestoppt
-wurde. Das ist gebaut, aber standardmäßig aus und mit dem echten Modell noch
-nicht bewertet. Eine Idee für später: PDF-Rechnungen auslesen. Ein Mensch
-bestätigt, danach gelten dieselben Regeln.
+KI hilft beim Verstehen: Sie kann erklären, warum eine Rechnung gestoppt
+wurde. Das ist gebaut, aber aus und mit dem echten Modell noch nicht bewertet.
+Später denkbar: PDF-Rechnungen auslesen, ein Mensch bestätigt. Die
+Verantwortung tragen Menschen.
 
-Rechts: Die Verantwortung tragen Menschen.
+Ich habe mir drei bestehende Lösungen angesehen: DATEV, Candis und finway.
+DATEV ist eng mit der Buchhaltung verbunden, Candis nutzt unter anderem KI für
+die Rechnungserfassung, und finway deckt auch Bestellungen und deren Abgleich
+mit Rechnungen ab.
+
+Mein Ziel war nicht, diese Produkte zu ersetzen. Ich wollte selbst
+nachvollziehen, wie man einen solchen Prozess mit festen Regeln,
+dokumentierten Ausnahmen und klarer menschlicher Verantwortung gestaltet. In
+einem echten Unternehmen würde ich zuerst prüfen, welche Funktionen die
+vorhandene Software bereits bietet.
 
 Die Frage ist also nicht nur: Wo kann ich KI einsetzen? Sondern: Wo bringt sie
-messbaren Nutzen, und wo ist eine einfache Regel sicherer?
+messbaren Nutzen, und wo ist eine Regel sicherer?
 
 ## 13 · Gestoppt ist nicht ausgefallen (1:15)
 
