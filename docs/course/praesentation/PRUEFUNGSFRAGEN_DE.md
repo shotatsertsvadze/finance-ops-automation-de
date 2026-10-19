@@ -133,12 +133,14 @@ nicht. Das klärt der Rückruf unter der Nummer, die schon in den Stammdaten
 steht. Die Kontrolle sorgt nur dafür, dass vorher nicht gezahlt wird. Und in
 der Demo ist die Zahlung ohnehin simuliert.
 
-**Nachfrage:** „Seit Oktober 2025 prüfen Banken doch Name und IBAN
-(Verification of Payee). Ist Ihre Kontrolle nicht überflüssig?“
-→ Das hilft, ersetzt aber kein verifiziertes Konto in den Stammdaten. Die Bank
-prüft den Namen, den der Zahlende eingibt, nicht, ob der Lieferant wirklich die
-Bank gewechselt hat. Das ist im Projekt als Hypothese festgehalten, nicht
-getestet.
+**Nachfrage:** „Sie sagen auf Folie 3, die Bank prüft Name und IBAN. Reicht das
+nicht?“
+→ Es hilft, ersetzt aber kein verifiziertes Konto in den Stammdaten. Die Bank
+prüft beim Bezahlen, ob der eingegebene Name zur IBAN passt. Ob der Lieferant
+wirklich die Bank gewechselt hat und ob das Unternehmen dieses Konto
+freigegeben hat, prüft sie nicht. Das ist im Projekt als Hypothese
+festgehalten, nicht getestet. Wie genau die Banken bei einer Abweichung
+vorgehen, würde ich mit der Hausbank klären, statt es zu behaupten.
 
 ---
 
