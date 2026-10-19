@@ -12,20 +12,20 @@ Klammern sind Regieanweisungen.
 |---|---|---|---|
 | 1 | Titel | 0:15 | 0:15 |
 | 2 | Eine Rechnung wie jede andere | 0:30 | 0:45 |
-| 3 | Der zweite Blick | 0:55 | 1:40 |
-| 4 | Woher ich das kenne | 1:30 | 3:10 |
-| 5 | Anderer Prozess, gleiches Grundproblem | 1:00 | 4:10 |
-| 6 | Jonas, Finance-Team Nordwerk | 1:00 | 5:10 |
-| 7 | Vorher / Nachher | 1:00 | 6:10 |
-| 8 | Zwei Rechnungen, zwei Ergebnisse | 0:50 | 7:00 |
-| 9 | **Demo-Video** (4:05 plus Start) | 4:15 | 11:15 |
-| 10 | Was Jonas sieht, und was dahinter steht | 0:35 | 11:50 |
-| 11 | Menschliche Kontrolle | 1:40 | 13:30 |
-| 12 | **Warum hier nicht die KI entscheidet** | 1:30 | 15:00 |
-| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 16:15 |
-| 14 | Nutzen und wie man ihn misst | 1:05 | 17:20 |
-| 15 | Reflexion und Einführung | 1:05 | 18:25 |
-| 16 | Abschluss | 0:25 | 18:50 |
+| 3 | Der zweite Blick | 1:30 | 2:15 |
+| 4 | Woher ich das kenne | 1:30 | 3:45 |
+| 5 | Anderer Prozess, gleiches Grundproblem | 1:00 | 4:45 |
+| 6 | Jonas, Finance-Team Nordwerk | 1:00 | 5:45 |
+| 7 | Vorher / Nachher | 1:00 | 6:45 |
+| 8 | Zwei Rechnungen, zwei Ergebnisse | 0:50 | 7:35 |
+| 9 | **Demo-Video** (4:05 plus Start) | 4:15 | 11:50 |
+| 10 | Was Jonas sieht, und was dahinter steht | 0:35 | 12:25 |
+| 11 | Menschliche Kontrolle | 1:40 | 14:05 |
+| 12 | **Warum hier nicht die KI entscheidet** | 1:30 | 15:35 |
+| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 16:50 |
+| 14 | Nutzen und wie man ihn misst | 1:05 | 17:55 |
+| 15 | Reflexion und Einführung | 1:05 | 19:00 |
+| 16 | Abschluss | 0:25 | 19:25 |
 
 Wenn die Zeit knapp wird: auf Folie 10 den zweiten Absatz weglassen, auf
 Folie 15 die Erkenntnisse nur nennen. Die Ausfall-Folie 13 nicht streichen:
@@ -47,7 +47,7 @@ Bestellung, der Betrag liegt im Rahmen. 2.499 Euro für einen Palettentransport.
 Auf den ersten Blick spricht nichts dagegen, sie zu bezahlen. Alles sieht
 normal aus.
 
-## 3 · Der zweite Blick (0:55)
+## 3 · Der zweite Blick (1:30)
 
 Schauen wir genauer hin. Oben steht die IBAN, die wir für Havel Logistik in
 unseren Stammdaten haben. Unten die IBAN auf dieser Rechnung. Alles rot
@@ -57,9 +57,16 @@ Lieferant, Bestellung und Betrag stimmen. Nur das Konto nicht.
 
 Eine echt aussehende Rechnung mit einem anderen Konto ist ein bekanntes
 Muster beim Rechnungsbetrug. Ob es hier Betrug ist, wissen wir nicht. Aber
-wir sollten nicht zahlen, bevor wir es wissen. Und von Hand fällt so etwas nur
-auf, wenn jemand jedes Mal ganz genau hinschaut, auch bei der hundertsten
-Rechnung des Tages.
+wir sollten nicht zahlen, bevor wir es wissen.
+
+Seit Oktober 2025 gibt es bei Überweisungen die sogenannte
+Empfängerüberprüfung. Banken gleichen den Namen mit der IBAN ab, bevor das
+Geld überwiesen wird. Meine Anwendung setzt einen Schritt früher an: Sie prüft
+bereits bei der Rechnung, ob die Bankverbindung in den Stammdaten des
+Unternehmens hinterlegt und freigegeben ist.
+
+Ohne diese Prüfung fällt so etwas von Hand nur auf, wenn jemand jedes Mal ganz
+genau hinschaut, auch bei der hundertsten Rechnung des Tages.
 
 ## 4 · Woher ich das kenne (1:30)
 
