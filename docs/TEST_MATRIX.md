@@ -67,6 +67,7 @@ browser).
 | H | 380 EUR with a changed IBAN | REVIEW_REQUIRED; accepting it still needs one approval | AUTO | `approvals.test.js` "a review of a small invoice" |
 | I | 3 % discount, 499.80 EUR due | APPROVED, no steps; 535.50 without the discount would need one | AUTO | `business-checks.test.js` "fixture I behaves as the README says" |
 | J | credit note, 214.20 EUR, crediting RE-2026-4471 | APPROVED, booked negative, CREDITED, never paid | AUTO | `moneypath.test.js` "a credit note runs the pipeline" |
+| Soll/Ist | 20 synthetic invoices with a known expected outcome, each run on its own: 16 should go through, 4 must stop | every one ends in the expected state with the expected reason or approvers; nothing that should stop goes through | AUTO | `soll-ist.test.js`; write-up in `docs/course/SOLL_IST_DE.md` |
 | A-J, demo | official XRechnung validity | KoSIT accepts A-E and G-J and rejects F; of the 70 generated demo invoices it accepts 65 and rejects the 5 malformed ones | AUTO | `kosit-real.test.js` against the pinned KoSIT 1.6.3 and configuration 2026-08-31 (OV21-OV23); first measured by hand in the spike, 2026-09-30 |
 
 ## Parsing and technical validation
