@@ -35,8 +35,10 @@ Go/No-go-Entscheidung nach Woche 4 und am Ende.
   gilt und warum manche Prüfungen nicht übersteuert werden können.
 - **Finanzen:** Zahlungsweg, Abstimmung, Umgang mit Ausnahmen, Rückruf bei
   neuen Bankverbindungen.
-- **Alle:** Die KI-Erklärung – falls eingeschaltet – ist ein Vorschlag,
-  keine Entscheidung.
+- **Alle:** Die KI-Erklärung und der KI-Entwurf einer Lieferantenrückfrage
+  – falls eingeschaltet – sind Vorschläge, keine Entscheidung. Einen Entwurf
+  liest ein Mensch, ändert ihn bei Bedarf, gibt ihn frei und versendet ihn
+  selbst.
 
 Kurze Schulungen am echten Fall wirken besser als lange Handbücher. Eine
 Ansprechperson in der Kreditorenbuchhaltung („Champion“) hilft im Alltag.
@@ -59,6 +61,31 @@ Ansprechperson in der Kreditorenbuchhaltung („Champion“) hilft im Alltag.
   Daten, gegen die es prüft.
 - Rückrufnummern der Lieferanten müssen stimmen, bevor der Rückrufprozess
   startet.
+
+### Was sich für das Finance-Team ändert
+
+| Aufgabe | Heute (Ist-Prozess, modelliert) | Mit Finance-Ops |
+|---|---|---|
+| Rechnung erfassen | ablegen und abtippen | entfällt bei XRechnung, das System liest sie ein |
+| IBAN prüfen | Blick auf die Rechnung | das System vergleicht mit den hinterlegten Konten; bei Abweichung Rückruf unter der hinterlegten Nummer, eine neue Bankverbindung geben drei verschiedene Personen frei |
+| Bestellung und Betrag abgleichen | von Hand | das System prüft; der Mensch sieht nur Ausnahmen, mit Grund und Beleg |
+| Rückfrage an den Lieferanten | frei geschrieben | Entwurf aus Vorlage oder KI, ein Mensch prüft, gibt frei und versendet von Hand; bei IBAN-Abweichung nur Rückruf |
+| Freigabe nachverfolgen | per Mail | Arbeitsliste je Rolle, Freigabestufe nach Betrag |
+
+Die größte Umstellung ist der Rückruf: Statt eine IBAN mit dem Auge zu
+prüfen, ruft jemand unter einer Nummer an, die schon vorher hinterlegt war,
+nie unter einer aus der Rechnung oder der Mail.
+
+**Erwartbare Sorgen und Antworten:**
+
+- *„Der Rückruf kostet Zeit.“* Er ist nur bei einer neuen Bankverbindung
+  nötig, nicht bei jeder Rechnung.
+- *„Das System nimmt mir die Entscheidung ab.“* Nein. Die Regeln stoppen und
+  begründen, entscheiden tut der Mensch.
+- *„Wird meine Arbeit überwacht?“* Die Kennzahlen sind prozessbezogen, nicht
+  personenbezogen.
+- *„Muss ich der KI vertrauen?“* Nein. Sie schlägt Text vor, die Prüfungen und
+  die Freigabe bleiben bei Regeln und Menschen.
 
 ### Change-Kommunikation
 
