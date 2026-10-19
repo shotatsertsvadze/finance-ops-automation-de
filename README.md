@@ -124,7 +124,7 @@ KOSIT_JAVA=/path/to/java npm run kosit   # daemon on 127.0.0.1:8081; leave KOSIT
 
 AI explanation (optional, off by default): a reviewer can ask for a short
 explanation of why an invoice stopped, shown beside the checks and verified
-against them first. It sends Anthropic (`claude-sonnet-4-6`) only the check
+against them first. It sends Anthropic (`claude-sonnet-5-5`) only the check
 evidence an allowlist names: text the application composes, and IBANs as their
 first and last four characters. Values read from the document, the KoSIT
 message and supplier or buyer identities are withheld (ADR-082). It needs a
@@ -135,7 +135,17 @@ tests, CI and Docker run without a key.
 ```bash
 # in .env: AI_EXPLANATIONS=true and ANTHROPIC_API_KEY=...
 npm run ai:eval             # the five evaluation scenarios against the real model (costs money)
+npm run ai:eval:inquiry     # the ten supplier-inquiry cases, with a blind sheet (costs money)
 ```
+
+Supplier inquiry (ADR-084, same switch): when an invoice stops on a business
+rule, a reviewer can have the model draft a letter to the supplier, or take
+the fixed template. The model sees the same allowlisted evidence and only the
+names of placeholders such as `{{rechnungsnummer}}`; the application fills in
+the values after the draft passed its checks. A person edits and approves the
+text, sends it by hand, and then records it as sent, which is when the invoice
+moves to INFO_REQUESTED. A changed IBAN gets no inquiry: the bank account is
+verified by call-back.
 
 Tests:
 
