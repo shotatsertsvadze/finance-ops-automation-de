@@ -1,0 +1,43 @@
+{
+  "scenario": "i04_no_order_number",
+  "eligible": true,
+  "input": {
+    "schema": "finops.ai-inquiry-input/1",
+    "language": "de",
+    "document": {
+      "kind": "INVOICE",
+      "run_no": 1
+    },
+    "failed": [
+      {
+        "check": "po_reference_present",
+        "phase": "BUSINESS",
+        "severity": "MEDIUM",
+        "expected": "Bestellreferenz ab 500.00 EUR",
+        "actual": "(keine)",
+        "reason": "Bestellreferenz fehlt, obwohl die Richtlinie sie verlangt"
+      }
+    ],
+    "request_for_check": {
+      "po_reference_present": "bestellnummer_nennen"
+    },
+    "allowed_requests": [
+      "bestellnummer_nennen"
+    ],
+    "placeholders": [
+      "rechnungsnummer",
+      "rechnungsdatum",
+      "bruttobetrag",
+      "lieferant",
+      "unser_unternehmen"
+    ]
+  },
+  "placeholder_values": {
+    "rechnungsnummer": "INV-2026-00421",
+    "rechnungsdatum": "10.09.2026",
+    "bruttobetrag": "1.240,00 EUR",
+    "bestellnummer": null,
+    "lieferant": "Berliner Bürobedarf GmbH",
+    "unser_unternehmen": "Nordwerk GmbH"
+  }
+}

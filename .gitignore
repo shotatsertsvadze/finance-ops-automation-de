@@ -17,3 +17,6 @@ dist/
 
 # Real-model evaluation output (npm run ai:eval)
 /ai-eval-report.json
+/ai-inquiry-eval-report.json
+/ai-inquiry-eval-blind.md
+/ai-inquiry-eval-key.json

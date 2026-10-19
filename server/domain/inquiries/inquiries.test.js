@@ -9,6 +9,7 @@ import { readFileSync } from "node:fs";
 import { testDeps, USERS } from "../../test-support/db.js";
 import { ANSWERS, standInValidator } from "../../test-support/kosit.js";
 import { runScenario } from "../../test-support/ai-scenarios.js";
+import { INQUIRY_SCENARIOS, inquiryScenarioCase, inquiryScenarioFixture } from "../../test-support/inquiry-scenarios.js";
 import { AI_OFF, aiEnabled, fakeExplainer, replies, sentInput } from "../../test-support/ai.js";
 import { human } from "../workflow/transitions.js";
 import { handleUpload, processInvoice } from "../intake/intake.js";
@@ -190,4 +191,13 @@ test("an instruction planted in the invoice never reaches the model", async () =
     assert.ok(!fake.calls[0].message.includes(fragment), fragment);
     assert.ok(!fake.calls[0].system.includes(fragment), fragment);
   }
+});
+
+test("the committed evaluation cases are what the pipeline produces, and none carries the planted instruction", async () => {
+  for (const name of Object.keys(INQUIRY_SCENARIOS)) {
+    const produced = await inquiryScenarioCase(deps, name);
+    assert.deepEqual(produced, inquiryScenarioFixture(name), name);
+    assert.ok(!JSON.stringify(produced.input ?? {}).includes("IGNORIERE"), name);
+  }
+  assert.deepEqual(Object.keys(INQUIRY_SCENARIOS).filter((name) => !inquiryScenarioFixture(name).eligible), ["i09_iban_changed", "i10_iban_and_overrun"]);
 });

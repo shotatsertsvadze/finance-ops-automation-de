@@ -1,0 +1,5 @@
+{
+  "scenario": "i09_iban_changed",
+  "eligible": false,
+  "code": "INQUIRY_BANK_DETAILS"
+}

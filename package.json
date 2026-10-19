@@ -29,7 +29,8 @@
     "test:kosit": "node --env-file=.env --test server/integrations/kosit-real.test.js",
     "kosit:fetch": "node scripts/kosit-fetch.js",
     "kosit": "node --env-file-if-exists=.env scripts/kosit-start.js",
-    "ai:eval": "node --env-file-if-exists=.env scripts/ai-eval.js"
+    "ai:eval": "node --env-file-if-exists=.env scripts/ai-eval.js",
+    "ai:eval:inquiry": "node --env-file-if-exists=.env scripts/ai-eval-inquiry.js"
   },
   "dependencies": {
     "cors": "^2.8.6",
