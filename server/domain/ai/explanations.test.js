@@ -75,14 +75,14 @@ test("a grounded answer is accepted, labelled as AI, stored with its model and l
   assert.equal(view.status, "ACCEPTED");
   assert.equal(view.ai_generated, true);
   assert.deepEqual([view.summary, view.next_step, view.provider, view.model, view.language, view.run_no],
-    [GERMAN.summary, "verify_bank_account", "anthropic", "claude-sonnet-4-6", "de", 1]);
+    [GERMAN.summary, "verify_bank_account", "anthropic", "claude-sonnet-5-5", "de", 1]);
   assert.deepEqual(view.cited_checks, GERMAN.cited_checks);
 
   assert.deepEqual((await requestExplanation(deps, id, "de", REVIEWER)).summary, GERMAN.summary);
   assert.equal((await currentExplanation(deps, id, "de")).explanation.summary, GERMAN.summary);
   assert.equal(fake.calls.length, 1, "the second request and the read are served from the record");
   const [row] = await attempts(id);
-  assert.deepEqual([row.status, row.language, row.model, row.requested_by], ["ACCEPTED", "de", "claude-sonnet-4-6", USERS.clerk]);
+  assert.deepEqual([row.status, row.language, row.model, row.requested_by], ["ACCEPTED", "de", "claude-sonnet-5-5", USERS.clerk]);
 });
 
 test("each language is its own explanation, and a different model never reuses another model's answer", async () => {
@@ -98,7 +98,7 @@ test("each language is its own explanation, and a different model never reuses a
   assert.equal((await requestExplanation(deps, id, "de", REVIEWER)).model, "claude-sonnet-5");
   assert.equal(other.calls.length, 1);
   assert.deepEqual((await attempts(id)).map((a) => [a.language, a.model]),
-    [["de", "claude-sonnet-4-6"], ["en", "claude-sonnet-4-6"], ["de", "claude-sonnet-5"]]);
+    [["de", "claude-sonnet-5-5"], ["en", "claude-sonnet-5-5"], ["de", "claude-sonnet-5"]]);
 });
 
 for (const [what, reply, status, rule] of [
