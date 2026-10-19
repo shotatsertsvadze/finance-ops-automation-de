@@ -41,7 +41,7 @@ function clauseOf(text, match) {
 }
 
 /** The first phrase that decides about the invoice, or null. */
-function decision(text) {
+export function decision(text) {
   for (const pattern of VERDICTS) {
     const match = text.match(pattern);
     if (match) return match[0];
@@ -54,9 +54,9 @@ function decision(text) {
 
 // That money moved: a participle, but not "bezahlt werden" or "be paid",
 // which say what may happen, not what did.
-const PAYMENT_CLAIM = phrase("((bezahlt|überwiesen|gezahlt)(?!\\s+werden)|(?<!\\bbe\\s)(paid|transferred))");
-const PAID_IN_EVIDENCE = phrase("(paid|bezahlt)");
-const CONTACT = [/\bhttps?:\/\//i, /\bwww\./i, /[^\s@]+@[^\s@]+\.[^\s@]+/, /\+\s?\d/];
+export const PAYMENT_CLAIM = phrase("((bezahlt|überwiesen|gezahlt)(?!\\s+werden)|(?<!\\bbe\\s)(paid|transferred))");
+export const PAID_IN_EVIDENCE = phrase("(paid|bezahlt)");
+export const CONTACT = [/\bhttps?:\/\//i, /\bwww\./i, /[^\s@]+@[^\s@]+\.[^\s@]+/, /\+\s?\d/];
 
 const DATE = /\b(\d{4})-(\d{2})-(\d{2})\b|\b(\d{1,2})\.(\d{1,2})\.(\d{4})\b/g;
 const WORD = /[\p{L}\d]+(?:[-/._:][\p{L}\d]+)*/gu;
@@ -66,7 +66,7 @@ const isoDate = (m) => (m[1] ? `${m[1]}-${m[2]}-${m[3]}` : `${m[6]}-${m[5].padSt
 const isIdentifier = (word) => /\p{L}/u.test(word) && /\d/.test(word);
 
 /** The values a written number can mean: German and English notation both. */
-function values(token) {
+export function values(token) {
   const out = [];
   if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(token)) out.push(Number(token.replaceAll(".", "").replace(",", ".")));
   if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(token)) out.push(Number(token.replaceAll(",", "")));
@@ -76,7 +76,7 @@ function values(token) {
 }
 
 /** The dates, identifiers and numbers a text states. */
-function facts(text) {
+export function facts(text) {
   const dates = [...text.matchAll(DATE)].map(isoDate);
   const rest = text.replace(DATE, " ");
   const identifiers = (rest.match(WORD) ?? []).filter(isIdentifier);
@@ -84,7 +84,7 @@ function facts(text) {
   return { dates, identifiers, numbers };
 }
 
-function evidenceFacts(input) {
+export function evidenceFacts(input) {
   const corpus = [...input.failed, ...input.warnings].flatMap((c) => [c.expected, c.actual, c.reason]).filter(Boolean).join(" \n ");
   const { dates, identifiers } = facts(corpus);
   const numbers = corpus.replace(DATE, " ").match(NUMBER) ?? [];
