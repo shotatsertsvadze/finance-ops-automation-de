@@ -1,3 +1,5 @@
+import { RuleError } from "../errors.js";
+
 /**
  * What a supplier may be asked about each failed check (ADR-084), as fixed
  * German sentences with placeholders. A check that is not listed gets no
@@ -6,6 +8,9 @@
  * account is verified by call-back, ADR-077), and an unknown supplier, because
  * there is no known party to write to.
  */
+/** Words that name bank details; no inquiry, drafted or approved, may contain them. */
+export const BANK_DETAILS = /(?<!\p{L})(iban|bic|bankverbindung\p{L}*|bankdaten|kontonummer\p{L}*|kontoverbindung\p{L}*|konto|kontos|bank account|account number)(?!\p{L})/iu;
+
 export const BLOCKING = {
   supplier_iban_match: "INQUIRY_BANK_DETAILS",
   supplier_known: "INQUIRY_SUPPLIER_UNKNOWN",
@@ -37,6 +42,20 @@ export const REQUESTS = {
   duplicate_invoice_number: { request: "doppel_bestaetigen", issue: "Unter dieser Rechnungsnummer liegt uns bereits eine Rechnung von Ihnen vor.", ask: "Bitte bestätigen Sie, ob es sich um eine erneute Zusendung derselben Rechnung oder um eine neue Rechnung handelt." },
   credit_note_reference: { request: "gutschrift_bezug", issue: "In der Gutschrift fehlt der Bezug auf die gutgeschriebene Rechnung.", ask: "Bitte nennen Sie uns die Nummer der Rechnung, auf die sich die Gutschrift bezieht." },
 };
+
+/** The refusal for an invoice that offers no inquiry, by the code its scope gave. */
+export function inquiryRefusal(code) {
+  if (code === "INQUIRY_BANK_DETAILS") {
+    return new RuleError(409, "INQUIRY_BANK_DETAILS", "Bei abweichender IBAN gibt es keine Lieferantenrückfrage; die Bankverbindung wird per Rückruf geprüft");
+  }
+  if (code === "INQUIRY_SUPPLIER_UNKNOWN") {
+    return new RuleError(409, "INQUIRY_SUPPLIER_UNKNOWN", "Der Lieferant ist nicht zugeordnet; eine Rückfrage hat keinen bekannten Empfänger");
+  }
+  if (code === "INQUIRY_NOT_IN_REVIEW") {
+    return new RuleError(409, "INQUIRY_NOT_IN_REVIEW", "Eine Lieferantenrückfrage gibt es nur für eine Rechnung in der Sichtprüfung");
+  }
+  return new RuleError(409, "INQUIRY_NOT_APPLICABLE", "Für die fehlgeschlagenen Prüfungen ist keine Lieferantenrückfrage vorgesehen");
+}
 
 /** Whether the failed checks allow an inquiry, and which of them it covers. */
 export function inquiryScope(failedCodes) {

@@ -1,4 +1,5 @@
 import { CONTACT, PAID_IN_EVIDENCE, PAYMENT_CLAIM, decision, evidenceFacts, facts, values } from "./grounding.js";
+import { BANK_DETAILS } from "../inquiries/requests.js";
 
 /**
  * Whether an inquiry draft may be shown (ADR-084). Deterministic, applied to
@@ -13,7 +14,6 @@ export const INQUIRY_SCHEMA_VERSION = "finops.ai-inquiry/1";
 export const INQUIRY_LIMITS = { subject: 120, body: 1500 };
 const FIELDS = ["subject", "body", "cited_checks", "requests", "language"];
 const PLACEHOLDER = /\{\{([a-z_]+)\}\}/g;
-export const BANK_DETAILS = /(?<!\p{L})(iban|bic|bankverbindung\p{L}*|bankdaten|kontonummer\p{L}*|kontoverbindung\p{L}*|konto|kontos|bank account|account number)(?!\p{L})/iu;
 
 const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 

@@ -22,6 +22,8 @@ const HISTORY_PRIVILEGES = [
   ["DELETE", "supplier_bank_accounts"],
   // Not evidence, but the record of what left the system (ADR-080).
   ...["UPDATE", "DELETE", "TRUNCATE"].map((privilege) => [privilege, "ai_explanations"]),
+  // Inquiry drafts and approved inquiries, written once (ADR-084).
+  ...["ai_supplier_inquiries", "supplier_inquiries"].flatMap((table) => ["UPDATE", "DELETE", "TRUNCATE"].map((privilege) => [privilege, table])),
 ];
 
 /**

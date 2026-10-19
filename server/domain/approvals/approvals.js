@@ -39,7 +39,7 @@ const cancelAllSteps = (client, invoiceId) =>
  * Accepting never approves: it always produces at least one approval step, so
  * an exception always ends up in front of a second person (ADR-010).
  */
-export async function decideReview({ pool, policy }, { invoiceId, action, actor, comment }) {
+export async function decideReview({ pool, policy }, { invoiceId, action, actor, comment, evidence = {} }) {
   return withTransaction(pool, async (client) => {
     const invoice = await lockInvoice(client, invoiceId);
 
@@ -103,9 +103,10 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
       const reason = requireComment(comment);
       await cancelAllSteps(client, invoiceId);
       await client.query("update finops.invoices set review_accepted_by = null where id = $1", [invoiceId]);
+      // A supplier inquiry sent by hand names itself here (ADR-084).
       await transition(client, {
         invoiceId, to: "INFO_REQUESTED", actor, action: "information_requested",
-        reason, reviewReason: invoice.review_reason,
+        reason, evidence, reviewReason: invoice.review_reason,
       });
       return;
     }
