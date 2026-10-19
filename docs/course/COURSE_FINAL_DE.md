@@ -317,7 +317,8 @@ versendet“ ändert den Status der Rechnung. Bei einer abweichenden IBAN gibt e
 keinen Entwurf, nur den Rückruf. Fällt das Modell aus, steht eine feste Vorlage
 bereit. Standardmodell ist seitdem `claude-sonnet-5-5`. Mit dem echten Modell
 bewertet ist die Rückfrage, auf Zulässigkeit: 16 von 24 Entwürfen in der
-Erstbewertung, 15 von 15 in einer Nachprüfung nach einer Prompt-Anpassung
+Erstbewertung; nach einer Prompt-Anpassung 15 von 15 in einer gezielten
+Nachprüfung mit 5 Fällen, keine neue Gesamtquote
 ([KI_BEWERTUNG_DE.md](KI_BEWERTUNG_DE.md)). Die Erklärung ist noch nicht mit
 dem echten Modell bewertet.
 

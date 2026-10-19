@@ -85,7 +85,7 @@ beiden IBAN-Fälle.
 
 | Kennzahl | Ergebnis |
 |---|---|
-| Angenommen | **15 von 15** |
+| Angenommen | **15 von 15** (5 Fälle, keine Gesamtquote) |
 | Entwürfe mit nummerierter Liste | 0 von 15 (in Lauf 1: alle 5 abgelehnten) |
 | Antwortzeit | Median 4,6 s, höchstens 6,8 s |
 | Tokens | 20.319 Eingabe, 8.544 Ausgabe |
@@ -105,8 +105,10 @@ bewusst streng.
 - **Zeigt nicht**, ob die Entwürfe besser sind als die feste Vorlage. Das
   beurteilt Shota Tsertsvadze im Blindvergleich: pro Fall zwei Texte, ohne zu
   wissen, welcher von der KI stammt. **Die Bewertung steht noch aus.**
-- 15 von 15 ist eine kleine Nachprüfung auf synthetischen Fällen, kein Beleg
-  für den Echtbetrieb.
+- **15 von 15 ist keine Gesamtquote.** Es ist eine gezielte Nachprüfung mit
+  5 Fällen, ausgewählt nach dem Fehler, den die Änderung beheben sollte. Die
+  einzige Bewertung über alle 8 Fälle bleibt Lauf 1 mit 16 von 24. Beides gilt
+  für synthetische Fälle, nicht für den Echtbetrieb.
 
 **Verbleibende Risiken:**
 - Lange Fälle liegen nahe an der Token-Grenze. Wird sie überschritten, fällt
