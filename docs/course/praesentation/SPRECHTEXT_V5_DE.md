@@ -21,11 +21,11 @@ Klammern sind Regieanweisungen.
 | 9 | **Demo-Video** (4:05 plus Start) | 4:15 | 11:40 |
 | 10 | Was Jonas sieht, und was dahinter steht | 0:35 | 12:15 |
 | 11 | Menschliche Kontrolle | 1:35 | 13:50 |
-| 12 | **Warum hier nicht die KI entscheidet** | 1:50 | 15:40 |
-| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 16:55 |
-| 14 | Nutzen und wie man ihn misst | 1:05 | 18:00 |
-| 15 | Reflexion und Einführung | 1:05 | 19:05 |
-| 16 | Abschluss | 0:25 | 19:30 |
+| 12 | **Warum hier nicht die KI entscheidet** | 2:05 | 15:55 |
+| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 17:10 |
+| 14 | Nutzen und wie man ihn misst | 1:05 | 18:15 |
+| 15 | Reflexion und Einführung | 1:05 | 19:20 |
+| 16 | Abschluss | 0:25 | 19:45 |
 
 Wenn die Zeit knapp wird: auf Folie 10 den zweiten Absatz weglassen, auf
 Folie 15 die Erkenntnisse nur nennen. Die Ausfall-Folie 13 nicht streichen:
@@ -264,7 +264,7 @@ Die Idee ist das Vier-Augen-Prinzip, hier bewusst mit drei Personen. Das ist
 meine Projektregel, keine allgemeine Pflicht. Der Punkt: Wer vorschlägt, prüft
 und gibt nicht selbst frei.
 
-## 12 · Warum hier nicht die KI entscheidet (1:50)
+## 12 · Warum hier nicht die KI entscheidet (2:05)
 
 Sie fragen sich vielleicht: Das ist ein KI-Kurs. Warum entscheidet hier keine
 KI? Das war eine bewusste Entscheidung.
@@ -279,11 +279,16 @@ wurde. Das ist gebaut, aber aus und mit dem echten Modell noch nicht bewertet.
 Später denkbar: PDF-Rechnungen auslesen, ein Mensch bestätigt. Die
 Verantwortung tragen Menschen.
 
-Einzigartig ist das nicht. Lösungen wie DATEV, Candis oder finway bilden
-Rechnungseingang, Freigaben und die Übergabe an die Buchhaltung schon ab,
-teils mit KI beim Erfassen. In einem echten Unternehmen würde ich zuerst
-prüfen, ob so ein Produkt reicht. Mein Projekt zeigt die Entscheidungen
-dahinter: was eine Regel entscheidet, was ein Mensch, und wo KI hilft.
+Ich habe mir drei bestehende Lösungen angesehen: DATEV, Candis und finway.
+DATEV ist eng mit der Buchhaltung verbunden, Candis nutzt unter anderem KI für
+die Rechnungserfassung, und finway deckt auch Bestellungen und deren Abgleich
+mit Rechnungen ab.
+
+Mein Ziel war nicht, diese Produkte zu ersetzen. Ich wollte selbst
+nachvollziehen, wie man einen solchen Prozess mit festen Regeln,
+dokumentierten Ausnahmen und klarer menschlicher Verantwortung gestaltet. In
+einem echten Unternehmen würde ich zuerst prüfen, welche Funktionen die
+vorhandene Software bereits bietet.
 
 Die Frage ist also nicht nur: Wo kann ich KI einsetzen? Sondern: Wo bringt sie
 messbaren Nutzen, und wo ist eine Regel sicherer?
