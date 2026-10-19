@@ -421,11 +421,35 @@ model, and real-provider evaluation is pending (L16, AI24).
 | AI17 | The provider call and the database | no connection held while waiting | AUTO | `explanations.test.js` |
 | AI18 | No authority | no workflow, routing, approval, master-data or payment module imports the AI modules | AUTO | `explanations.test.js` "no workflow ... imports" |
 | AI19 | Who may ask | `review:decide` asks; anyone who reads the invoice reads the answer; an unknown language is 400 | AUTO | `ai-explanation.test.js` |
-| AI20 | The adapter | pinned `claude-sonnet-4-6`, temperature 0, forced tool, 800 tokens, no extended thinking; no provider text or key in an error; timeout and unreachable are failures | AUTO | `ai-explainer.test.js` |
+| AI20 | The adapter | pinned `claude-sonnet-5-5` (ADR-084); the domain's schema sent as structured output (`output_config.format`, json_schema) without the keywords it does not accept; no tool, no temperature, `thinking: between_tools`, 800 tokens; JSON read from the text block; a non-JSON, cut-off or refused answer is a failure; no provider text or key in an error; timeout and unreachable are failures | AUTO | `ai-explainer.test.js` |
 | AI21 | The record | insert-only for the app role; a production start checks it | AUTO | `audit-role.test.js` |
 | AI22 | The evaluation scenarios | IBAN mismatch, PO overrun, duplicate, KoSIT rejection, two failures: every good answer accepted in German and English, every bad one refused by its rule; the committed inputs equal what the pipeline produces | AUTO | `grounding.test.js`; `explanations.test.js` "the committed evaluation inputs" |
 | AI23 | The panel | below the checks; DE and EN; a refused answer reads "Keine KI-Erklärung verfügbar" with a retry; no panel for an invoice that passed; no button for a manager; no overflow at 390 px | MANUAL | Browser, 2026-09-30, with the stand-in provider |
 | AI24 | The real model | `npm run ai:eval` over the five scenarios in both languages, three runs each | OPEN | Pending: paid API usage is not enabled for this project; see L16 |
+
+## AI supplier inquiry (ADR-084)
+
+A model may draft a letter to the supplier; a person approves it and sends it
+by hand. Off with the AI features off. CI uses the stand-in provider; the real
+model is evaluated by hand (INQ15).
+
+| # | Case | Expected | Status | Evidence |
+|---|---|---|---|---|
+| INQ1 | Which failed checks offer an inquiry | every listed check is one the validation produces; a changed IBAN (`INQUIRY_BANK_DETAILS`) or an unknown supplier (`INQUIRY_SUPPLIER_UNKNOWN`) blocks it whatever else failed; checks that are ours give none | AUTO | `template.test.js` |
+| INQ2 | The fixed template | names invoice, date, amount and order only by placeholders the invoice has values for; mentions no bank details for any check; passes the same checks as an AI draft | AUTO | `template.test.js`; `inquiry.test.js` "every fixed template" |
+| INQ3 | What the model is given | the explanation's allowlisted evidence of the covered checks, the requests, and the names of available placeholders, never a value: no invoice number, order number, amount, supplier or company name | AUTO | `inquiry.test.js`; `inquiries.test.js` "the model never saw them" |
+| INQ4 | An instruction planted in the invoice | never in the provider request or system prompt | AUTO | `inquiries.test.js` "an instruction planted"; committed case i08 |
+| INQ5 | IBAN cases | no input, no model call, no template, no approval; the panel shows the call-back notice and no button | AUTO / MANUAL | `inquiries.test.js` "a changed IBAN"; browser 2026-10-19 |
+| INQ6 | A draft's checks | accepted only if it covers exactly the failed checks and allowed requests, uses known and available placeholders, states no ungrounded number, date or identifier, and has no contact route, bank details, decision or payment claim | AUTO | `inquiry.test.js` |
+| INQ7 | Off; on without a key; timeout | off: nothing offered, refused with `AI_DISABLED`; without a key or on timeout: FAILED recorded, invoice and audit unchanged, the template remains | AUTO | `inquiries.test.js`; `supplier-inquiry.test.js` |
+| INQ8 | A refused draft | REJECTED recorded with its rule; invoice and audit unchanged; the template remains | AUTO | `inquiries.test.js` "naming bank details" |
+| INQ9 | An accepted draft | shown with the invoice's values filled in by the application; served again without a second call | AUTO | `inquiries.test.js` |
+| INQ10 | Approval | inserts the text with who and when and an audit event `supplier_inquiry_approved` in the same state; the invoice does not move; a text with open placeholders, bank details or nothing in it is refused; an AI source must be an accepted draft of the current run | AUTO | `inquiries.test.js` |
+| INQ11 | Sent by hand | only this runs `request-info`: INFO_REQUESTED, audit evidence names the inquiry; a second time `INQUIRY_ALREADY_SENT`; after a new validation run `INQUIRY_OUTDATED` | AUTO | `inquiries.test.js` |
+| INQ12 | Who may act | `review:decide` drafts, approves and marks sent; a manager is refused; anyone signed in reads; malformed ids are refused before the database | AUTO | `supplier-inquiry.test.js` |
+| INQ13 | The records | both tables insert-only for the app role; a production start checks them; every refusal code has text in both languages | AUTO | `audit-role.test.js`; `deployment.test.js`; `dictionaries.test.js` |
+| INQ14 | The panel | AI draft or template, edit, approve, copy, mark sent after a confirmation; a failed draft loads the template and says so; the invoice moves to INFO_REQUESTED only when marked sent | MANUAL | Browser 2026-10-19, separate instance on the test database, no API key |
+| INQ15 | The real model | `npm run ai:eval:inquiry`: eight cases three times each, two IBAN cases refused before any call; acceptance, rejection rules, latency, tokens; a blind A/B sheet against the template for a person to rate | OPEN | Pending: needs ANTHROPIC_API_KEY. The script was exercised against a stand-in only, which says nothing about the model |
 
 ## Bank-account changes (ADR-077)
 

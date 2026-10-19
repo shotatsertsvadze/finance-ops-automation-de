@@ -1,0 +1,5 @@
+{
+  "scenario": "i10_iban_and_overrun",
+  "eligible": false,
+  "code": "INQUIRY_BANK_DETAILS"
+}

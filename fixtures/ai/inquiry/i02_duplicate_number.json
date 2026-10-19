@@ -1,0 +1,54 @@
+{
+  "scenario": "i02_duplicate_number",
+  "eligible": true,
+  "input": {
+    "schema": "finops.ai-inquiry-input/1",
+    "language": "de",
+    "document": {
+      "kind": "INVOICE",
+      "run_no": 1
+    },
+    "failed": [
+      {
+        "check": "duplicate_invoice_number",
+        "phase": "BUSINESS",
+        "severity": "HIGH",
+        "expected": "Rechnungsnummer noch nicht erfasst",
+        "actual": "Rechnungsnummer desselben Lieferanten bereits im Bestand",
+        "reason": "Gleiche Rechnungsnummer desselben Lieferanten bereits im Bestand"
+      },
+      {
+        "check": "po_amount_within_tolerance",
+        "phase": "BUSINESS",
+        "severity": "HIGH",
+        "expected": "<= 487.98 EUR (verfügbar 457.98 + Toleranz 2 %, davon 1042.02 EUR durch andere Rechnungen gebunden)",
+        "actual": "1042.02 EUR",
+        "reason": "Nettobetrag überschreitet zusammen mit bereits gebundenen Rechnungen den Bestellwert"
+      }
+    ],
+    "request_for_check": {
+      "duplicate_invoice_number": "doppel_bestaetigen",
+      "po_amount_within_tolerance": "betrag_klaeren"
+    },
+    "allowed_requests": [
+      "doppel_bestaetigen",
+      "betrag_klaeren"
+    ],
+    "placeholders": [
+      "rechnungsnummer",
+      "rechnungsdatum",
+      "bruttobetrag",
+      "bestellnummer",
+      "lieferant",
+      "unser_unternehmen"
+    ]
+  },
+  "placeholder_values": {
+    "rechnungsnummer": "INV-2026-00421",
+    "rechnungsdatum": "12.09.2026",
+    "bruttobetrag": "1.240,00 EUR",
+    "bestellnummer": "PO-2026-0101",
+    "lieferant": "Berliner Bürobedarf GmbH",
+    "unser_unternehmen": "Nordwerk GmbH"
+  }
+}

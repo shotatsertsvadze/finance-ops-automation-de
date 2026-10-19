@@ -42,7 +42,7 @@ test("a reviewer asks and gets the explanation, marked as AI-generated", async (
   const res = await clients.clerk.post(path(), {});
   assert.equal(res.status, 200);
   const body = await res.json();
-  assert.deepEqual([body.status, body.ai_generated, body.summary, body.model], ["ACCEPTED", true, GERMAN.summary, "claude-sonnet-4-6"]);
+  assert.deepEqual([body.status, body.ai_generated, body.summary, body.model], ["ACCEPTED", true, GERMAN.summary, "claude-sonnet-5-5"]);
   const current = await (await clients.clerk.get(path())).json();
   assert.deepEqual([current.enabled, current.eligible, current.explanation.summary], [true, true, GERMAN.summary]);
 });

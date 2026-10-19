@@ -14,6 +14,9 @@ import { settleByCredit } from "../domain/accounting/netting.js";
 import { resolveReconciliation } from "../domain/reconciliation/reconciliation.js";
 import { cancelInvoice } from "../domain/cancellation/cancel.js";
 import { currentExplanation, requestExplanation } from "../domain/ai/explanations.js";
+import { currentInquiryDraft, requestInquiryDraft } from "../domain/ai/inquiry-drafts.js";
+import { approveInquiry, inquiryOverview, markInquirySent } from "../domain/inquiries/inquiries.js";
+import { RuleError } from "../domain/errors.js";
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -37,6 +40,10 @@ export function invoicesRouter(deps) {
   // left to Postgres, whose refused cast would surface as a 500.
   router.param("id", (req, res, next, id) => {
     if (!UUID.test(id)) return res.status(404).json({ error: "Rechnung nicht gefunden", code: "INVOICE_NOT_FOUND" });
+    next();
+  });
+  router.param("inquiryId", (req, res, next, id) => {
+    if (!UUID.test(id)) return res.status(404).json({ error: "Rückfrage nicht gefunden", code: "INQUIRY_NOT_FOUND" });
     next();
   });
 
@@ -130,6 +137,55 @@ export function invoicesRouter(deps) {
   router.post("/:id/ai-explanation", requirePermission("review:decide"), async (req, res, next) => {
     try {
       res.json(await requestExplanation(deps, req.params.id, req.query.language, req.actor));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // A supplier inquiry (ADR-084): a draft from the model or the template, a
+  // text a person approves, and an inquiry the person sent by hand. Part of
+  // the AI features: with them off, nothing is offered.
+  const inquiryOn = () => {
+    if (!deps.ai?.enabled) throw new RuleError(409, "AI_DISABLED", "KI-Funktionen sind nicht eingeschaltet");
+  };
+  const inquiryView = async (id) => ({ enabled: true, ...(await inquiryOverview(deps, id)), ai: await currentInquiryDraft(deps, id) });
+
+  router.get("/:id/supplier-inquiry", async (req, res, next) => {
+    try {
+      res.json(deps.ai?.enabled ? await inquiryView(req.params.id) : { enabled: false });
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/supplier-inquiry/draft", requirePermission("review:decide"), async (req, res, next) => {
+    try {
+      inquiryOn();
+      res.json(await requestInquiryDraft(deps, req.params.id, req.actor));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/supplier-inquiry/approve", requirePermission("review:decide"), async (req, res, next) => {
+    try {
+      inquiryOn();
+      const { source, ai_inquiry_id: aiInquiryId, subject, body } = req.body ?? {};
+      if (aiInquiryId != null && !UUID.test(String(aiInquiryId))) {
+        throw new RuleError(400, "INQUIRY_DRAFT_UNKNOWN", "Kein angenommener KI-Entwurf zu diesem Prüflauf");
+      }
+      await approveInquiry(deps, req.params.id, { source, aiInquiryId, subject, body }, req.actor);
+      res.json(await inquiryView(req.params.id));
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post("/:id/supplier-inquiry/:inquiryId/sent", requirePermission("review:decide"), async (req, res, next) => {
+    try {
+      inquiryOn();
+      await markInquirySent(deps, req.params.id, req.params.inquiryId, req.actor);
+      res.json(await inquiryView(req.params.id));
     } catch (error) {
       next(error);
     }

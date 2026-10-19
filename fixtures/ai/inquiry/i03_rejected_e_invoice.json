@@ -1,0 +1,60 @@
+{
+  "scenario": "i03_rejected_e_invoice",
+  "eligible": true,
+  "input": {
+    "schema": "finops.ai-inquiry-input/1",
+    "language": "de",
+    "document": {
+      "kind": "INVOICE",
+      "run_no": 1
+    },
+    "failed": [
+      {
+        "check": "required_fields_present",
+        "phase": "TECHNICAL",
+        "severity": "HIGH",
+        "expected": "Rechnungsnummer (cbc:ID), Rechnungsdatum (cbc:IssueDate), Lieferantenname, Währung (cbc:DocumentCurrencyCode), Zahlbetrag (cbc:PayableAmount), Nettobetrag (cbc:TaxExclusiveAmount), Steuerbetrag (cbc:TaxAmount), Rechnungspositionen",
+        "actual": "fehlt: Lieferantenname, Zahlbetrag (cbc:PayableAmount), Nettobetrag (cbc:TaxExclusiveAmount)",
+        "reason": "Pflichtfelder fehlen: Lieferantenname, Zahlbetrag (cbc:PayableAmount), Nettobetrag (cbc:TaxExclusiveAmount)"
+      },
+      {
+        "check": "amounts_numeric",
+        "phase": "TECHNICAL",
+        "severity": "HIGH",
+        "expected": "Dezimalzahlen mit Punkt",
+        "actual": "(Wert aus dem Dokument, nicht übermittelt)",
+        "reason": "Beträge oder Mengen sind nicht numerisch"
+      },
+      {
+        "check": "official_validation",
+        "phase": "TECHNICAL",
+        "severity": "HIGH",
+        "expected": "KoSIT 1.6.3, xrechnung-3.0.2-validator-configuration-2026-08-31: annehmbar",
+        "actual": "nicht annehmbar: 5 Fehler (cvc-datatype-valid.1.2.1, cvc-complex-type.2.2, cvc-complex-type.2.4.a)",
+        "reason": "Der KoSIT-Validator hat das Dokument nicht angenommen oder keine verwertbare Antwort gegeben"
+      }
+    ],
+    "request_for_check": {
+      "required_fields_present": "korrigierte_e_rechnung",
+      "amounts_numeric": "korrigierte_rechnung",
+      "official_validation": "korrigierte_e_rechnung"
+    },
+    "allowed_requests": [
+      "korrigierte_e_rechnung",
+      "korrigierte_rechnung"
+    ],
+    "placeholders": [
+      "rechnungsnummer",
+      "rechnungsdatum",
+      "unser_unternehmen"
+    ]
+  },
+  "placeholder_values": {
+    "rechnungsnummer": "AW-2026-15",
+    "rechnungsdatum": "13.09.2026",
+    "bruttobetrag": null,
+    "bestellnummer": null,
+    "lieferant": null,
+    "unser_unternehmen": "Nordwerk GmbH"
+  }
+}

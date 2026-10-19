@@ -1,0 +1,44 @@
+{
+  "scenario": "i06_totals",
+  "eligible": true,
+  "input": {
+    "schema": "finops.ai-inquiry-input/1",
+    "language": "de",
+    "document": {
+      "kind": "INVOICE",
+      "run_no": 1
+    },
+    "failed": [
+      {
+        "check": "totals_consistent",
+        "phase": "BUSINESS",
+        "severity": "HIGH",
+        "expected": "Positionen - Nachlässe + Zuschläge = Netto; Netto + Steuer - Anzahlung = Zahlbetrag",
+        "actual": "Bruttobetrag - Anzahlung + Rundung = Zahlbetrag: 1240.00 != 1340.00",
+        "reason": "Summen sind rechnerisch nicht konsistent"
+      }
+    ],
+    "request_for_check": {
+      "totals_consistent": "korrigierte_rechnung"
+    },
+    "allowed_requests": [
+      "korrigierte_rechnung"
+    ],
+    "placeholders": [
+      "rechnungsnummer",
+      "rechnungsdatum",
+      "bruttobetrag",
+      "bestellnummer",
+      "lieferant",
+      "unser_unternehmen"
+    ]
+  },
+  "placeholder_values": {
+    "rechnungsnummer": "INV-2026-00421",
+    "rechnungsdatum": "10.09.2026",
+    "bruttobetrag": "1.340,00 EUR",
+    "bestellnummer": "PO-2026-0101",
+    "lieferant": "Berliner Bürobedarf GmbH",
+    "unser_unternehmen": "Nordwerk GmbH"
+  }
+}

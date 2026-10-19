@@ -2057,3 +2057,67 @@ after another at that point, which they already did while waiting for the
 lock. No demo figure changes: the demo instructs its payments one at a time.
 Tests hold the first session at its write with a third session, so the
 interleaving is forced rather than hoped for.
+
+## ADR-084 An AI model may draft a supplier inquiry; a person approves and sends it
+
+Date: 2026-10-19. Lifts the feature freeze for this one capability only.
+
+Context: the instructor's feedback asked for an AI task that does real work
+while the rules keep deciding. When an invoice stops on a business rule,
+someone writes to the supplier: a corrected invoice, a missing order number,
+whether a second invoice with the same number is a resend. That letter is
+repetitive and costs time, and a wrong word in it costs little as long as a
+person reads it first.
+
+Decision:
+
+- **Three states, kept apart.** An AI draft is an attempt in
+  `ai_supplier_inquiries`, written once, like an explanation (ADR-080). A
+  person approving a text, from an AI draft or from the fixed template, is a
+  row in `supplier_inquiries`, written once, with who and when; the invoice
+  does not move. Only when the person confirms that they sent it by hand does
+  the existing review action `request-info` run, so the invoice goes to
+  INFO_REQUESTED with its usual consequences (ADR-014), and the audit event
+  carries the inquiry's id. Whether an inquiry was sent is read from that
+  event; nothing else records it. Approval is not sending: INFO_REQUESTED
+  means the question has been asked.
+- **No draft on a changed IBAN**, neither from the model nor from the template.
+  A letter to the address an invoice came from can reach whoever wrote the
+  invoice; the bank account is verified by call-back and three people
+  (ADR-077), unchanged. Every draft is also refused if it names an IBAN or
+  bank details.
+- **Placeholders, not values.** The model gets the same allowlisted evidence
+  as an explanation (ADR-082) and the names of the placeholders that exist,
+  never their values. It writes `{{rechnungsnummer}}`, `{{bruttobetrag}}` and
+  so on; the application fills them from the invoice after the draft passed
+  its checks. No invoice number or amount leaves the system, and none can be
+  wrong.
+- **Deterministic checks before anyone sees a draft:** only known
+  placeholders; no number, date or identifier that the evidence does not
+  hold; no contact details; no sentence that decides about the invoice or
+  claims a payment; no bank details; the draft addresses exactly the failed
+  checks and asks only what is allowed for them.
+- **A fixed template always works.** It covers the same checks with fixed
+  sentences, needs no model, and is what a person gets when the model is
+  off, fails or is refused. It is also the baseline the AI drafts are
+  compared with.
+- **The transport follows the current model.** Claude Sonnet 5.5 refuses a
+  forced tool choice and a non-default temperature. The adapter asks for
+  structured output (`output_config.format` with a JSON schema), turns
+  up-front thinking off (`between_tools`), and reads the JSON from the text
+  block. The domain's interface (system, message, tool schema) is unchanged,
+  so the explanation uses the same path.
+
+Rejected: sending e-mail from the application (not in the first version, and
+it would need the supplier's address from master data, which the system does
+not hold); marking an inquiry as sent when it is approved (it is not);
+storing approval and sending in the AI table (the AI table records what the
+model did, not what people did); a draft for IBAN cases with a warning (the
+channel itself is the risk).
+
+Consequences: the feature is on with `AI_EXPLANATIONS=true`, and off it shows
+nothing, so the main demo is unchanged. Failures of the model never touch an
+invoice: they are recorded and the template remains. The one change to
+workflow code is that `decideReview` passes an optional evidence object to
+the `request-info` audit event. Whether drafts are better than the template
+is measured against the real model and reported, not assumed.

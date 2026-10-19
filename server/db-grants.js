@@ -33,6 +33,8 @@ export async function grantAppRole(pool, role) {
     `revoke update, delete, truncate on finops.official_validations from ${role}`,
     // What was sent to an AI provider and what came back, written once (ADR-080).
     `revoke update, delete, truncate on finops.ai_explanations from ${role}`,
+    // AI inquiry drafts and the inquiries people approved, written once (ADR-084).
+    `revoke update, delete, truncate on finops.ai_supplier_inquiries, finops.supplier_inquiries from ${role}`,
   ];
   for (const sql of statements) await pool.query(sql);
 }
