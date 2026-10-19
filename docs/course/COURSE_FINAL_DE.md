@@ -308,8 +308,10 @@ Freigabe bewegt Geld.
 
 **Nachtrag: Entwurf der Lieferantenrückfrage (ADR-084).** Bei einer Ausnahme
 kann ein Prüfer einen Entwurf der Rückfrage an den Lieferanten anfordern. Das
-Modell schreibt Platzhalter wie `{{rechnungsnummer}}`, nie Werte aus der
-Rechnung; die Anwendung setzt die Werte erst nach der Prüfung ein. Ein Mensch
+Modell bekommt die fehlgeschlagenen Prüfungen mit ihren freigegebenen Belegen,
+etwa Netto- und Bestellbetrag, aber keine Rechnungsnummer, keinen Lieferanten
+und keinen Firmennamen; dafür schreibt es Platzhalter wie `{{rechnungsnummer}}`,
+und die Anwendung setzt die Werte erst nach der Prüfung ein. Ein Mensch
 bearbeitet den Text, gibt ihn frei und versendet ihn von Hand. Erst „von Hand
 versendet“ ändert den Status der Rechnung. Bei einer abweichenden IBAN gibt es
 keinen Entwurf, nur den Rückruf. Fällt das Modell aus, steht eine feste Vorlage
