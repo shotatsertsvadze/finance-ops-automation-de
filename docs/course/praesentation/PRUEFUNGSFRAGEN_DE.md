@@ -29,8 +29,9 @@ Lieferanten. Rechnungsnummer und Lieferant bekommt sie nicht, sie schreibt
 Platzhalter;
 die Anwendung prüft den Entwurf, ein Mensch gibt frei und verschickt von Hand.
 Bei einer abweichenden IBAN gibt es keinen Entwurf. Mit dem echten Modell
-waren zuerst 16 von 24 Entwürfen zulässig, nach einer Zeile mehr im Prompt in
-der Nachprüfung 15 von 15. Erklären, warum eine Rechnung gestoppt wurde, kann
+waren zuerst 16 von 24 Entwürfen zulässig. Nach einer Zeile mehr im Prompt
+waren es in einer gezielten Nachprüfung mit fünf Fällen 15 von 15, keine neue
+Gesamtquote. Erklären, warum eine Rechnung gestoppt wurde, kann
 sie auch; das ist gebaut, aber noch nicht mit dem echten Modell bewertet.
 PDF-Rechnungen auszulesen wäre die nächste Stelle, das ist nur eine Idee.
 

@@ -51,8 +51,9 @@ Ersatz.
 ## Was belegt ist und was nicht
 
 - Die Anwendung versendet keine E-Mails.
-- Mit dem echten Modell waren zuerst 16 von 24 Entwürfen zulässig, nach einer
-  Zeile mehr im Prompt in der Nachprüfung 15 von 15
+- Mit dem echten Modell waren in der Erstbewertung 16 von 24 Entwürfen
+  zulässig. Nach einer Zeile mehr im Prompt waren es in einer gezielten
+  Nachprüfung mit 5 Fällen 15 von 15; das ist keine neue Gesamtquote
   (`docs/course/KI_BEWERTUNG_DE.md`). Zulässig heißt: Die feste Prüfung hat
   nichts gefunden, nicht: Der Text ist gut.
 - Ob die KI-Entwürfe besser sind als die Vorlage, zeigt erst der

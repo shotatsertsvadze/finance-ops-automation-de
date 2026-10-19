@@ -21,11 +21,11 @@ Klammern sind Regieanweisungen.
 | 9 | **Demo-Video** (4:05 plus Start) | 4:15 | 11:40 |
 | 10 | Was Jonas sieht, und was dahinter steht | 0:35 | 12:15 |
 | 11 | Menschliche Kontrolle | 1:35 | 13:50 |
-| 12 | **Warum hier nicht die KI entscheidet** | 3:05 | 16:55 |
-| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 18:10 |
-| 14 | Nutzen und wie man ihn misst | 1:35 | 19:45 |
-| 15 | Reflexion und Einführung | 1:05 | 20:50 |
-| 16 | Abschluss | 0:25 | 21:15 |
+| 12 | **Warum hier nicht die KI entscheidet** | 3:15 | 17:05 |
+| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 18:20 |
+| 14 | Nutzen und wie man ihn misst | 1:35 | 19:55 |
+| 15 | Reflexion und Einführung | 1:05 | 21:00 |
+| 16 | Abschluss | 0:25 | 21:25 |
 
 Wenn die Zeit knapp wird: auf Folie 10 den zweiten Absatz weglassen, auf
 Folie 15 die Erkenntnisse nur nennen. Die Ausfall-Folie 13 nicht streichen:
@@ -264,7 +264,7 @@ Die Idee ist das Vier-Augen-Prinzip, hier bewusst mit drei Personen. Das ist
 meine Projektregel, keine allgemeine Pflicht. Der Punkt: Wer vorschlägt, prüft
 und gibt nicht selbst frei.
 
-## 12 · Warum hier nicht die KI entscheidet (3:05)
+## 12 · Warum hier nicht die KI entscheidet (3:15)
 
 Sie fragen sich vielleicht: Das ist ein KI-Kurs. Warum entscheidet hier keine
 KI? Das war eine bewusste Entscheidung.
@@ -283,8 +283,9 @@ abweichenden IBAN gibt es keinen Entwurf, nur den Rückruf.
 
 Mit dem echten Modell bestanden zuerst 16 von 24 Entwürfen die Prüfung. Die
 meisten Ablehnungen waren nummerierte Listen. Nach einer Zeile mehr im Prompt
-bestanden in der Nachprüfung 15 von 15. Fällt ein Entwurf durch, springt eine
-feste Vorlage ein. Ob die Entwürfe besser sind als die Vorlage, muss ein
+habe ich gezielt nachgeprüft: fünf Fälle, darunter die abgelehnten, 15 von 15
+bestanden. Eine neue Gesamtquote ist das nicht, die bleibt bei 16 von 24.
+Fällt ein Entwurf durch, springt eine feste Vorlage ein. Ob die Entwürfe besser sind als die Vorlage, muss ein
 Blindvergleich zeigen. Die Verantwortung tragen Menschen.
 
 Ich habe mir drei bestehende Lösungen angesehen: DATEV, Candis und finway.
@@ -386,8 +387,9 @@ Die Rückfrage mit dem echten Modell: acht Fälle, je dreimal, jeder Entwurf
 durch dieselben festen Prüfungen wie in der Anwendung. In der ersten Runde
 waren 16 von 24 zulässig. Fünf Ablehnungen kamen von nummerierten Listen, zwei
 von einer Differenz, die das Modell selbst gerechnet hatte, und ein Entwurf
-brach an der Längengrenze ab. Nach einer Zeile im Prompt waren in der
-Nachprüfung 15 von 15 zulässig. Beide IBAN-Fälle wurden vor jedem Aufruf
+brach an der Längengrenze ab. Nach einer Zeile im Prompt waren in einer
+gezielten Nachprüfung mit fünf Fällen 15 von 15 zulässig. Eine neue
+Gesamtquote ist das nicht. Beide IBAN-Fälle wurden vor jedem Aufruf
 verweigert. Zusammen etwa 30 Cent. Ob die Texte besser sind als die Vorlage,
 bewertet ein Mensch blind. Die Erklärfunktion ist noch nicht mit dem echten
 Modell bewertet. (`docs/course/KI_BEWERTUNG_DE.md`)
