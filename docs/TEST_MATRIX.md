@@ -432,7 +432,7 @@ model, and real-provider evaluation is pending (L16, AI24).
 
 A model may draft a letter to the supplier; a person approves it and sends it
 by hand. Off with the AI features off. CI uses the stand-in provider; the real
-model is evaluated by hand (INQ15).
+model was evaluated by hand on 2026-10-19 (INQ15).
 
 | # | Case | Expected | Status | Evidence |
 |---|---|---|---|---|
@@ -450,7 +450,7 @@ model is evaluated by hand (INQ15).
 | INQ12 | Who may act | `review:decide` drafts, approves and marks sent; a manager is refused; anyone signed in reads; malformed ids are refused before the database | AUTO | `supplier-inquiry.test.js` |
 | INQ13 | The records | both tables insert-only for the app role; a production start checks them; every refusal code has text in both languages | AUTO | `audit-role.test.js`; `deployment.test.js`; `dictionaries.test.js` |
 | INQ14 | The panel | AI draft or template, edit, approve, copy, mark sent after a confirmation; a failed draft loads the template and says so; the invoice moves to INFO_REQUESTED only when marked sent | MANUAL | Browser 2026-10-19, separate instance on the test database, no API key |
-| INQ15 | The real model | `npm run ai:eval:inquiry`: eight cases three times each, two IBAN cases refused before any call; acceptance, rejection rules, latency, tokens; a blind A/B sheet against the template for a person to rate | OPEN | Pending: needs ANTHROPIC_API_KEY. The script was exercised against a stand-in only, which says nothing about the model |
+| INQ15 | The real model | `npm run ai:eval:inquiry` with `claude-sonnet-5-5`: acceptance, rejection rules, latency, tokens; a blind A/B sheet against the template for a person to rate | MANUAL | 2026-10-19, `docs/course/KI_BEWERTUNG_DE.md`. Prompt v1, 8 cases x 3: 16 of 24 accepted, 7 rejected as ungrounded (5 numbered lists, 2 a difference the model computed), 1 cut off at 800 output tokens; both IBAN cases refused before any call; 8 of 8 templates pass. Prompt v2 (bullets, no rule changed), follow-up on 5 cases x 3: 15 of 15 accepted, no numbered list. Blind rating by a person still open |
 
 ## Bank-account changes (ADR-077)
 

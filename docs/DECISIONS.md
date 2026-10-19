@@ -2121,3 +2121,11 @@ invoice: they are recorded and the template remains. The one change to
 workflow code is that `decideReview` passes an optional evidence object to
 the `request-info` audit event. Whether drafts are better than the template
 is measured against the real model and reported, not assumed.
+
+Evaluated on 2026-10-19 (`docs/course/KI_BEWERTUNG_DE.md`): with prompt
+`supplier-inquiry/1`, 16 of 24 drafts were accepted. Five of the rejections
+were numbered lists, whose list numbers the grounding check reads as
+ungrounded numbers; two were a difference the model computed itself, which
+stays rejected. Prompt `supplier-inquiry/2` adds one line asking for bullet
+points; no check changed. A follow-up on five cases accepted 15 of 15. The
+feature is frozen at that version until the presentation.
