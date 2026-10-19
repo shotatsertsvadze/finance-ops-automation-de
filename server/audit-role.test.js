@@ -8,9 +8,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createApp } from "./app.js";
 import { createPool } from "./db.js";
-import { loginAs, testDeps } from "./test-support/db.js";
+import { loginAs, resetBankChanges, testDeps } from "./test-support/db.js";
 import { grantAppRole } from "./db-grants.js";
 import { deploymentProblems } from "./config/deployment.js";
+import { runScenario } from "./test-support/ai-scenarios.js";
+import { aiEnabled, fakeExplainer, replies } from "./test-support/ai.js";
+import { human } from "./domain/workflow/transitions.js";
+import { requestInquiryDraft } from "./domain/ai/inquiry-drafts.js";
+import { approveInquiry, inquiryOverview, markInquirySent } from "./domain/inquiries/inquiries.js";
 
 const ROLE = "finops_app_test";
 let deps, app;
@@ -126,6 +131,32 @@ test("the app role cannot rewrite or remove a record of what was sent to the AI 
     "update finops.ai_explanations set input = '{}'::jsonb",
     "delete from finops.ai_explanations",
     "truncate finops.ai_explanations",
+  ]) {
+    await assert.rejects(() => app.query(sql), /permission denied/, sql);
+  }
+});
+
+test("the app role drafts, approves and sends a supplier inquiry, but cannot rewrite or remove either record", async () => {
+  await resetBankChanges(deps.pool);
+  const id = await runScenario(deps, "2_po_overrun");
+  const draft = {
+    subject: "Rückfrage zu Ihrer Rechnung {{rechnungsnummer}}",
+    body: "Sehr geehrte Damen und Herren,\n\nbitte erläutern Sie die Differenz zur Bestellung {{bestellnummer}}.\n\nMit freundlichen Grüßen",
+    cited_checks: ["po_amount_within_tolerance"], requests: ["betrag_klaeren"], language: "de",
+  };
+  const asApp = { ...deps, pool: app, ai: aiEnabled(fakeExplainer(replies.output(draft))) };
+  const clerk = human("00000000-0000-0000-0000-000000000001");
+  const shown = await requestInquiryDraft(asApp, id, clerk);
+  const approved = await approveInquiry(asApp, id, { source: "AI", aiInquiryId: shown.id, subject: shown.subject, body: shown.body }, clerk);
+  await markInquirySent(asApp, id, approved.id, clerk);
+  assert.equal((await inquiryOverview(asApp, id)).inquiries[0].status, "SENT");
+  for (const sql of [
+    "update finops.ai_supplier_inquiries set status = 'ACCEPTED'",
+    "delete from finops.ai_supplier_inquiries",
+    "truncate finops.ai_supplier_inquiries",
+    "update finops.supplier_inquiries set body = 'anders'",
+    "delete from finops.supplier_inquiries",
+    "truncate finops.supplier_inquiries",
   ]) {
     await assert.rejects(() => app.query(sql), /permission denied/, sql);
   }
