@@ -149,6 +149,9 @@ flowchart LR
   N --> S[Google Sheets<br/>protokolliert]
 ```
 
+Den ganzen Ablauf mit allen Zuständigkeiten und welche Daten wohin gehen,
+zeigt [DATENFLUSS_DE.md](DATENFLUSS_DE.md).
+
 | Baustein | Aufgabe | Was er nicht tut |
 |---|---|---|
 | **E-Mail** | bringt die XRechnung als Anhang in ein Demo-Postfach | – |
