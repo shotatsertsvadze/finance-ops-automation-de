@@ -2,6 +2,20 @@
 
 Stand: 30. September 2026, Feature Freeze. Grundlage ist der Code auf `main`.
 
+> **Nachtrag 19. Oktober 2026.** Seitdem dazugekommen:
+>
+> - **Eingang per E-Mail über n8n** mit Protokoll in Google Sheets, für die
+>   Präsentation. n8n transportiert nur, die Regeln bleiben in der Anwendung.
+> - **KI-gestützte Lieferantenrückfrage** mit menschlicher Freigabe
+>   (ADR-084). Der Feature Freeze wurde nur dafür aufgehoben.
+> - **Soll/Ist-Auswertung** mit 20 synthetischen Rechnungen:
+>   [SOLL_IST_DE.md](SOLL_IST_DE.md).
+> - **Prozess- und Datenflussdiagramm** auf Deutsch:
+>   [DATENFLUSS_DE.md](DATENFLUSS_DE.md).
+> - Datenschutzkonzept um n8n, Google Sheets und den Demo-Tunnel ergänzt.
+>
+> Die Abschnitte 2, 5, 8 und 9 sind entsprechend angepasst.
+
 > **Einordnung.** Die genaue Bewertungsgrundlage des Kurses liegt im
 > Repository nicht vor. Diese Unterlagen sind deshalb als **empfohlene
 > Projektdokumentation** zu verstehen, nicht als Abbildung einer
@@ -19,7 +33,7 @@ Das Paket besteht aus drei Dokumenten:
 
 Die technischen Details stehen in den bestehenden Dokumenten auf Englisch:
 `docs/ARCHITECTURE.md` (Aufbau, Zustände, Schnittstellen),
-`docs/DECISIONS.md` (83 Architekturentscheidungen, kurz ADR),
+`docs/DECISIONS.md` (84 Architekturentscheidungen, kurz ADR),
 `docs/TEST_MATRIX.md` (was wie getestet ist) und `docs/DEMO.md` (Ablauf der
 Vorführung).
 
@@ -115,8 +129,9 @@ nichts.
 
 Für diese Automatisierung braucht es kein externes Werkzeug wie n8n. Die
 Regeln, die Zustände und die Freigaben liegen an einer Stelle: im Server der
-Anwendung. Das war eine bewusste Entscheidung (ADR-004). n8n wäre nach dem
-Kurs eine Ergänzung für externe Abläufe, keine Voraussetzung (Abschnitt 9).
+Anwendung. Das war eine bewusste Entscheidung (ADR-004). Für die Präsentation
+übernimmt n8n nur den Eingang per E-Mail und das Protokoll in Google Sheets,
+ohne eine einzige Regel (Abschnitt 9).
 
 ### Kernprozess der Rechnungsautomatisierung
 
@@ -290,6 +305,16 @@ Warum die KI hier nur erklärt: Eine Erklärung lässt sich an den Belegen
 messen, und eine falsche kostet einen Prüfer einen Moment. Eine falsche
 Freigabe bewegt Geld.
 
+**Nachtrag: Entwurf der Lieferantenrückfrage (ADR-084).** Bei einer Ausnahme
+kann ein Prüfer einen Entwurf der Rückfrage an den Lieferanten anfordern. Das
+Modell schreibt Platzhalter wie `{{rechnungsnummer}}`, nie Werte aus der
+Rechnung; die Anwendung setzt die Werte erst nach der Prüfung ein. Ein Mensch
+bearbeitet den Text, gibt ihn frei und versendet ihn von Hand. Erst „von Hand
+versendet“ ändert den Status der Rechnung. Bei einer abweichenden IBAN gibt es
+keinen Entwurf, nur den Rückruf. Fällt das Modell aus, steht eine feste Vorlage
+bereit. Standardmodell ist seitdem `claude-sonnet-5-5`; die Bewertung mit dem
+echten Modell steht für beide KI-Funktionen noch aus.
+
 ---
 
 ## 6. Stakeholder-Analyse
@@ -385,6 +410,10 @@ Dokumentation, Demo-Stabilisierung, Präsentation und Probe reserviert.
 - Prüfpfad für jeden Statuswechsel, im Produktionsmodus nur ergänzbar
 - Kennzahlen mit Quellenangabe (Provenienz)
 - optionale KI-Erklärung, standardmäßig aus
+- optionale KI-gestützte Lieferantenrückfrage mit menschlicher Freigabe,
+  standardmäßig aus (Nachtrag)
+- Eingang per E-Mail über n8n mit Protokoll in Google Sheets, als Demo
+  (Nachtrag)
 - zweisprachige Oberfläche (Deutsch, Englisch)
 - 745 automatisierte Tests
 - CI bei jeder Änderung: Abhängigkeitsprüfung, Tests mit echtem
@@ -394,7 +423,7 @@ Dokumentation, Demo-Stabilisierung, Präsentation und Probe reserviert.
 ### Noch nicht produktionsreif / Future Scope
 
 - CII und ZUGFeRD (bisher nur XRechnung in UBL-Syntax)
-- Rechnungseingang per Postfach (Mailbox Intake)
+- Rechnungseingang per Postfach im Dauerbetrieb (bisher nur die n8n-Demo)
 - DATEV-Anbindung
 - Kontoauszüge im Bankformat camt.053
 - Zahlungsdateien im SEPA-Format pain.001
@@ -404,7 +433,7 @@ Dokumentation, Demo-Stabilisierung, Präsentation und Probe reserviert.
 - Produktionshosting und Backups
 - vollständiges Aufbewahrungs- und Archivierungskonzept
 - echter Kundenpilot mit gemessenen Werten
-- n8n bzw. externe Orchestrierung
+- weitere n8n-Abläufe wie Erinnerungen und Eskalation
 - Bewertung der KI-Funktion mit dem echten Modell
 
 Weitere bekannte Grenzen stehen im README unter „Known limits“, zum Beispiel:
@@ -453,7 +482,9 @@ Diese Entscheidungen bleiben in der Anwendung, bei ihren Regeln und bei den
 berechtigten Menschen. Ein Orchestrierungswerkzeug ruft nur die Schnittstelle
 auf. Die Anwendung prüft dann Rechte und Regeln wie bei jedem anderen Aufruf.
 
-Das ist Umfang für die Zeit nach dem Kurs. Nichts davon ist heute gebaut.
+Gebaut ist davon nur der erste Punkt, als Demo: der Eingang aus einem
+E-Mail-Postfach, mit Protokoll in Google Sheets. Der Rest ist Umfang für die
+Zeit nach dem Kurs.
 
 ### Weitere Reihenfolge nach dem Kurs
 
