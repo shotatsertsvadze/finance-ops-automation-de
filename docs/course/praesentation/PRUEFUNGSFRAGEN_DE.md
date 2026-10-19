@@ -222,23 +222,25 @@ nach einer Abwägung mit dem Unternehmen freigeben, nicht pauschal.
 
 ---
 
-## 11. Warum selbst bauen statt eine fertige Lösung oder ein ERP-Modul kaufen? ●●●
+## 11. Warum selbst bauen statt eine fertige Lösung kaufen, etwa DATEV, Candis oder finway? ●●●
 
-**Kern: Das Auslesen der Rechnung ist Standard. Interessant ist die
-Kontrolllogik danach. Eine Marktanalyse habe ich noch nicht gemacht.**
+**Kern: Das ist kein Konkurrenzprodukt. Das Projekt zeigt die Entscheidungen
+hinter so einem System. In einem echten Unternehmen würde ich zuerst prüfen, ob
+ein fertiges Produkt reicht.**
 
-Eine XRechnung lesen kann heute fast jedes System. Mein Projekt zeigt, was
-danach kommt: Prüfung gegen die eigenen Stammdaten, Freigaben mit
-Funktionstrennung, ein Prüfpfad, Kennzahlen mit Quellenangabe. Zielgruppe wäre
-ein Mittelständler ohne eingeführte Rechnungsautomatisierung. Wer schon ein ERP
-mit gut laufender Rechnungsprüfung hat, ist nicht der richtige Kunde. Ob sich
-das am Markt lohnt, ist offen. Dafür sind Interviews geplant, gemacht habe ich
-noch keine.
+Lösungen wie DATEV, Candis oder finway bilden Rechnungseingang, Freigaben und
+die Übergabe an die Buchhaltung schon ab, teils mit KI beim Erfassen. Mein
+Projekt will das nicht besser machen. Es macht sichtbar, welche Entscheidungen
+dahinter stehen: was eine feste Regel entscheidet, wo ein Mensch entscheidet
+und wo KI hilft. Genau diese Fragen müsste ein Unternehmen auch bei einem
+gekauften Produkt beantworten, etwa bei der Einrichtung der Freigaben.
 
-**Nachfrage:** „Also ein Lernprojekt ohne Markt?“
-→ Ein Proof of Concept, der eine Hypothese prüfbar macht. Der nächste Schritt
-wären 12 bis 15 Interviews und eine Messung des heutigen Aufwands, bevor
-weiterentwickelt wird.
+**Nachfrage:** „Was kann Ihre Lösung, was diese Produkte nicht können?“
+→ Das behaupte ich nicht. Ich habe mir die Produkte angesehen, aber nicht im
+Detail verglichen und nicht getestet. Für eine Kaufentscheidung würde ich mit
+eigenen Rechnungen testen: Wie wird eine abweichende IBAN behandelt, lässt sie
+sich übersteuern, wer muss eine neue Bankverbindung freigeben, und was steht
+danach im Prüfpfad?
 
 ---
 
