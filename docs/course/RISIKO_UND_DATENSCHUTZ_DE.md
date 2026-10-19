@@ -28,8 +28,8 @@ Pilotbetrieb mit echten Rechnungen. Sie sind nicht gemessen.
 | 8 | **KI-Halluzination / Automation Bias** (Menschen vertrauen der KI zu sehr) | mittel | mittel | Die KI ist standardmäßig aus und entscheidet nichts; ein Test verhindert, dass Workflow-Code sie nutzt. Jede Antwort wird vor der Anzeige gegen die Belege geprüft; nennt sie Zahlen oder Kennungen, die nicht in den Belegen stehen, wird sie nicht gezeigt. Die regelbasierten Prüfergebnisse stehen über der Erklärung, die als Vorschlag gekennzeichnet ist. | Widersprüche im freien Text werden nur über eine Liste von Formulierungen erkannt. Mit dem echten Modell ist die Funktion noch nicht bewertet. Übervertrauen lässt sich durch Gestaltung verringern, nicht ausschließen. |
 | 9 | **Datenweitergabe an einen externen KI-Anbieter** | niedrig, solange die Funktion aus ist | hoch | Standardmäßig aus. Eingeschaltet werden nur ausdrücklich freigegebene, minimierte Prüfinformationen gesendet. Dokumentbasierte Rohwerte werden standardmäßig nicht übertragen; KoSIT-Fehlermeldungen werden auf Regelcodes reduziert. Keine Rechnungsdatei, keine Namen von Lieferant, Käufer oder Firma, keine vollständige IBAN, keine Kommentare. Was gesendet wurde, wird gespeichert. | Die Anwendung erkennt personenbezogene Daten nicht automatisch; sie vermeidet stattdessen, Werte aus dem Dokument zu senden. Auch minimierte Prüfinformationen verlassen das System, etwa ein Bestellstatus oder eine gekürzte IBAN. Ein Vertrag zur Auftragsverarbeitung und eine Prüfung der Speicherfristen beim Anbieter fehlen. |
 | 9a | **KI-Entwurf einer Lieferantenrückfrage sagt etwas Falsches oder Gefährliches** (ADR-084) | mittel | mittel | Der Entwurf ist ein Vorschlag; ein Mensch bearbeitet, gibt frei und versendet von Hand. Vor der Anzeige wird jeder Entwurf deterministisch geprüft: nur bekannte Platzhalter statt Rechnungswerten, keine unbelegten Zahlen, keine Kontaktdaten, keine Bankdaten, keine Entscheidung. Bei abweichender IBAN gibt es gar keine Rückfrage, auch keine Vorlage. Fällt das Modell aus, bleibt die feste Vorlage. Nur „von Hand versendet“ ändert den Status der Rechnung. | Ton und inhaltliche Vollständigkeit prüft keine Regel; das leistet der Mensch. Mit dem echten Modell ist die Funktion noch nicht bewertet. |
-| 10 | **Scope Creep** (der Umfang wächst unkontrolliert) | hoch | hoch | Feature Freeze seit dem 30.09.2026. Ein Plan mit klarer „nicht jetzt“-Liste. Jede Phase endet getestet und dokumentiert, bevor die nächste beginnt. | Druck in einem Pilot, ERP-Funktionen nachzubauen. Dagegen hilft nur die klare Abgrenzung: kein ERP, kein Zahlungsdienstleister. |
-| 11 | **Integrationsfehler** (Buchhaltung, Bank, Validator) | mittel | hoch | Klare Schnittstellen („Adapter“) für Buchhaltung, Zahlung, Validator und KI. Zahlungen tragen einen Idempotenzschlüssel, der Kontoauszugsimport ist wiederholbar, der Validator ist versionsgebunden. | Die Anbindungen an DATEV, die Bank (pain.001, camt.053) und ein Postfach existieren noch nicht und sind gegen echte Systeme ungetestet. Hier liegt die größte Unsicherheit für einen Pilot. |
+| 10 | **Scope Creep** (der Umfang wächst unkontrolliert) | hoch | hoch | Feature Freeze seit dem 30.09.2026, aufgehoben nur für die KI-gestützte Lieferantenrückfrage (ADR-084). Ein Plan mit klarer „nicht jetzt“-Liste. Jede Phase endet getestet und dokumentiert, bevor die nächste beginnt. | Druck in einem Pilot, ERP-Funktionen nachzubauen. Dagegen hilft nur die klare Abgrenzung: kein ERP, kein Zahlungsdienstleister. |
+| 11 | **Integrationsfehler** (Buchhaltung, Bank, Validator, Postfach) | mittel | hoch | Klare Schnittstellen („Adapter“) für Buchhaltung, Zahlung, Validator und KI. Zahlungen tragen einen Idempotenzschlüssel, der Kontoauszugsimport ist wiederholbar, der Validator ist versionsgebunden. | Die Anbindungen an DATEV und die Bank (pain.001, camt.053) existieren noch nicht. Den Eingang per E-Mail gibt es nur als Demo mit n8n, einem Demo-Postfach und einem temporären Tunnel. Gegen echte Systeme ist nichts davon getestet. Hier liegt die größte Unsicherheit für einen Pilot. |
 
 ### Einordnung
 
@@ -55,7 +55,7 @@ noch fehlt.
 | Mitarbeitende | Name, E-Mail-Adresse, Rolle, Handlungen im Prüfpfad, Kommentare | ja |
 | Anmeldedaten | Passwort-Hash, Sitzungen, IP-Adresse bei fehlgeschlagener Anmeldung | ja |
 | Lieferanten | Firmenname, USt-IdNr., IBAN, Rückrufnummer | bei Einzelunternehmen und Ansprechpartnern ja |
-| Rechnungsinhalte | Positionen, Beträge, Referenzen, ggf. Kontaktdaten im Dokument | teilweise |
+| Rechnungsinhalte | Positionen, Beträge, Referenzen, IBAN, ggf. Kontaktdaten im Dokument | teilweise |
 
 ### Bereits umgesetzt
 
@@ -133,6 +133,44 @@ noch fehlt.
   `{{rechnungsnummer}}`, nie deren Werte. Rechnungsnummer, Betrag,
   Bestellnummer, Lieferant und Firmenname setzt die Anwendung erst nach der
   Prüfung ein. Versendet wird nicht aus der Anwendung.
+
+### n8n, Google Sheets und Tunnel (nur in der Demo)
+
+Welche Daten wohin gehen, zeigt [DATENFLUSS_DE.md](DATENFLUSS_DE.md). Was das
+für den Datenschutz heißt:
+
+- **Im Google Sheet stehen keine Bankdaten.** Es hat neun Spalten: Eingang,
+  Rechnungsnummer, Lieferant, Betrag, Ergebnis, Status, Grund, Invoice ID,
+  Eingangskanal. Der Grund nennt eine IBAN-Abweichung als Satz, nie die IBAN.
+  Das Sheet ist eine Anzeige. Verbindlich ist der Prüfpfad in der Anwendung.
+- **n8n sieht mehr als das Sheet:** die ganze XML-Datei und die Antwort der
+  Anwendung, also die ganze Rechnungsansicht. Darin stehen die IBAN der
+  Rechnung und die hinterlegten IBANs aus der Prüfung. Je nach Einstellung der
+  n8n-Instanz bleiben diese Daten in den Ausführungsdaten gespeichert; im
+  Demo-Workflow ist dazu nichts abweichend eingestellt.
+- **n8n meldet sich mit dem Demo-Konto der Kreditorenbuchhaltung an.** Dieses
+  Konto darf mehr als hochladen, zum Beispiel Ausnahmen entscheiden. Eine
+  Rolle, die nur hochladen darf, gibt es noch nicht.
+- **Zugangsdaten** für Postfach, Anmeldung und Google liegen in den
+  n8n-Credentials, nicht im Workflow.
+- **Tunnel:** Für die Aufnahme war die lokale Anwendung über einen temporären
+  Cloudflare-Tunnel aus dem Internet erreichbar, geschützt nur durch die
+  Anmeldung. Der Tunnelanbieter leitet die Daten weiter.
+- Alle Daten in der Demo sind synthetisch.
+
+**Was das für ein Echtsystem heißt, besonders für Bankdaten:**
+
+- Keine Rechnungsdaten in ein Google Sheet. Die Übersicht gehört in die
+  Anwendung selbst, die Rechte und Prüfpfad hat. Wenn ein Sheet bleiben soll,
+  dann nur mit Kennzahlen ohne Lieferant und Betrag. Rechnungsnummer,
+  Lieferant und Betrag sind Geschäftsdaten, bei Einzelunternehmen auch
+  personenbezogen. Google wäre dann Auftragsverarbeiter, mit Vertrag,
+  Speicherort, Zugriffsrechten und Löschfristen.
+- n8n im eigenen Netz oder in der EU betreiben, Ausführungsdaten erfolgreicher
+  Läufe nicht oder nur kurz speichern, eigenes technisches Konto nur mit dem
+  Recht zum Hochladen, die Antwort an n8n auf die nötigen Felder kürzen.
+- Ein fester Server mit eigenem Zertifikat statt eines Tunnels.
+- Die Rechte des Google-Zugangs in n8n auf das Nötige beschränken.
 
 ### Noch für die Produktion nötig
 
