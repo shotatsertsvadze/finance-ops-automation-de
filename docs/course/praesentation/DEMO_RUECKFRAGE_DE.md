@@ -10,7 +10,7 @@ Hintergrund: ADR-084.
 1. In `.env` (nie ins Repo, nie auf dem Bildschirm zeigen):
    ```
    AI_EXPLANATIONS=true
-   ANTHROPIC_API_KEY=…   # eigener Schlüssel mit bezahltem Zugang
+   ANTHROPIC_API_KEY=…   # Schlüssel eines Workspace, mit Guthaben
    ```
    Optional `AI_MODEL`; Standard ist `claude-sonnet-5-5`.
 2. `npm run dev` neu starten.
@@ -30,7 +30,8 @@ soll. `npm run demo:reset` stellt den Demo-Monat wieder her.
 2. **KI-Entwurf erstellen.** Der Entwurf erscheint mit Rechnungsnummer, Betrag
    und Bestellnummer. Sagen: *Diese Werte hat das Modell nie gesehen. Es
    schreibt Platzhalter, die Anwendung setzt die Werte erst nach der Prüfung
-   ein.*
+   ein.* Bei Nachfrage: Die Beträge der Prüfung selbst, hier netto 8.500 € und
+   5.000 € offen in der Bestellung, bekommt das Modell schon.
 3. Einen Satz im Text ändern, dann **Text freigeben**. Sagen: *Freigegeben ist
    nicht versendet. Die Rechnung steht weiter in der Sichtprüfung.*
 4. **Text kopieren**. Versendet wird außerhalb der Anwendung.
@@ -47,9 +48,14 @@ Dann lädt das Panel die feste Vorlage und sagt das. Genau das zeigen: Die
 Funktion blockiert nie die Rechnung, und es gibt immer einen deterministischen
 Ersatz.
 
-## Was nicht behauptet wird
+## Was belegt ist und was nicht
 
 - Die Anwendung versendet keine E-Mails.
-- Ob die KI-Entwürfe besser sind als die Vorlage, ist erst nach der Bewertung
-  mit dem echten Modell belegt (`npm run ai:eval:inquiry`, siehe
-  `docs/TEST_MATRIX.md`, INQ15).
+- Mit dem echten Modell waren zuerst 16 von 24 Entwürfen zulässig, nach einer
+  Zeile mehr im Prompt in der Nachprüfung 15 von 15
+  (`docs/course/KI_BEWERTUNG_DE.md`). Zulässig heißt: Die feste Prüfung hat
+  nichts gefunden, nicht: Der Text ist gut.
+- Ob die KI-Entwürfe besser sind als die Vorlage, zeigt erst der
+  Blindvergleich.
+- Der Entwurf ist bei jedem Aufruf etwas anders formuliert. Live kann also ein
+  anderer Text kommen als in der Probe.

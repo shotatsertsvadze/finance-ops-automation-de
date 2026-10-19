@@ -1,6 +1,7 @@
 # Präsentationstag – Checkliste
 
-Vortragsfassung: `docs/course/praesentation/praesentation_v4.html` (16 Folien).
+Vortragsfassung: `docs/course/praesentation/praesentation_v5.html` (16 Folien),
+Sprechtext `SPRECHTEXT_V5_DE.md`, geplant etwa 21 Minuten.
 Die Demo läuft als Video auf Folie 9 (aufgezeichnet am 15.10.2026, 4:05, ohne
 Ton): zwei Rechnungen per E-Mail, n8n Schritt für Schritt, Ausführungen,
 Google Sheet, dann Finance-Ops. Eine Rechnung läuft automatisch durch, eine
@@ -15,7 +16,7 @@ E-Mail → n8n (Cloud) → Cloudflare-Tunnel → Finance-Ops (lokal) → Google 
 ```
 
 Videoquelle: `docs/course/praesentation/demo_v4.mp4`. In
-`praesentation_v4.html` ist es eingebettet, die Datei funktioniert also
+`praesentation_v5.html` ist es eingebettet, die Datei funktioniert also
 allein. Die Vorgängerfassung mit Backup-Folien liegt in
 `docs/course/praesentation/referenz/`.
 
@@ -51,6 +52,11 @@ allein. Die Vorgängerfassung mit Backup-Folien liegt in
        Bildschirm geht Vollbild plus Referentenansicht nicht; zum Üben die
        Fenster nebeneinander anordnen. Benachrichtigungen aus (Fokus-Modus).
 
+3. [ ] Nur wenn die KI-Rückfrage in den Fragen gezeigt werden soll:
+       `AI_EXPLANATIONS=true` in `.env`, `npm run dev` neu starten, einmal
+       einen Entwurf für Rechnung C erzeugen (prüft Schlüssel und Guthaben).
+       Die Hauptdemo braucht die KI nicht.
+
 ## Während des Vortrags
 
 - Folie 9: Leertaste oder Klick auf das Play-Symbol. Die Referentenansicht
@@ -64,6 +70,7 @@ allein. Die Vorgängerfassung mit Backup-Folien liegt in
 | Video startet nicht | `demo_v4.mp4` vom Desktop in QuickTime öffnen, Vollbild |
 | Präsentation lässt sich nicht öffnen | PDF zeigen; Folie 9 zeigt dort ein Standbild, das Video separat abspielen |
 | In den Fragen will jemand die Anwendung live sehen | Finance-Ops öffnen, die beiden Dateien aus `~/Desktop/Demo-Anhaenge/` über „Datei auswählen“ hochladen. Kanal zeigt dann „Upload“ |
+| Jemand will die KI-Rückfrage sehen | Vorführung nach `docs/course/praesentation/DEMO_RUECKFRAGE_DE.md`, etwa 90 Sekunden. Antwortet das Modell nicht, lädt die feste Vorlage; genau das zeigen |
 
 ## Bekannte Kleinigkeiten (bei Nachfrage erklären)
 

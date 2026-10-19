@@ -1,6 +1,6 @@
 # Prüfungsfragen – Vorbereitung auf die Fragerunde
 
-Gehört zu `praesentation_v5.html` und `SPRECHTEXT_V5_DE.md`. Stand: 17.10.2026.
+Gehört zu `praesentation_v5.html` und `SPRECHTEXT_V5_DE.md`. Stand: 19.10.2026.
 
 20 Fragen, wie sie ein kritischer, aber fairer Prüfer im Kurs KI-Manager stellen
 könnte, geordnet nach Wahrscheinlichkeit. Jede Antwort dauert gesprochen etwa
@@ -24,15 +24,21 @@ KI-Management.**
 dasselbe Ergebnis liefern und jedes Ergebnis einen Grund hat. Ein Sprachmodell
 liefert das nicht garantiert, und den Rechnungstext schreibt der Absender, im
 schlimmsten Fall der Betrüger. KI setze ich dort ein, wo ein Fehler wenig
-kostet: Sie erklärt, warum eine Rechnung gestoppt wurde. Das ist gebaut,
-standardmäßig aus und noch nicht mit dem echten Modell bewertet. Die nächste
-sinnvolle Stelle wäre das Auslesen von PDF-Rechnungen, mit Bestätigung durch
-einen Menschen. Das ist eine Idee, nicht gebaut.
+kostet und ein Mensch draufschaut: Sie entwirft die Rückfrage an den
+Lieferanten. Rechnungsnummer und Lieferant bekommt sie nicht, sie schreibt
+Platzhalter;
+die Anwendung prüft den Entwurf, ein Mensch gibt frei und verschickt von Hand.
+Bei einer abweichenden IBAN gibt es keinen Entwurf. Mit dem echten Modell
+waren zuerst 16 von 24 Entwürfen zulässig, nach einer Zeile mehr im Prompt in
+der Nachprüfung 15 von 15. Erklären, warum eine Rechnung gestoppt wurde, kann
+sie auch; das ist gebaut, aber noch nicht mit dem echten Modell bewertet.
+PDF-Rechnungen auszulesen wäre die nächste Stelle, das ist nur eine Idee.
 
 **Nachfrage:** „Dann ist die KI doch nur Dekoration?“
-→ Nein, sie ist bewusst klein gehalten. Der Wert liegt darin, dass Jonas eine
-Ausnahme schneller versteht. Ob sie das wirklich tut, muss eine Bewertung erst
-zeigen, deshalb habe ich sie nicht eingeschaltet.
+→ Nein. Sie nimmt Jonas das Formulieren der Rückfrage ab, und was sie
+schreibt, ist gemessen: zulässig oder nicht, mit Grund. Ob die Texte besser
+sind als die feste Vorlage, zeigt erst der Blindvergleich. Ist er es nicht,
+reicht die Vorlage, und auch das wäre eine gute Entscheidung.
 
 ---
 
@@ -41,7 +47,7 @@ zeigen, deshalb habe ich sie nicht eingeschaltet.
 **Kern: ehrlich sagen, wie gearbeitet wurde, und die eigene Rolle klar
 benennen.**
 
-Sehr wahrscheinlich, weil 751 Tests und 83 Entscheidungen in wenigen Wochen
+Sehr wahrscheinlich, weil 788 Tests und 84 Entscheidungen in wenigen Wochen
 auffallen. Antwortgerüst, mit den eigenen Fakten zu füllen:
 
 „Ich habe mit KI-Programmierassistenten gearbeitet: […welche Werkzeuge, wofür].
@@ -110,7 +116,9 @@ Passwörter und Sitzungen nur als Hash, Protokolle ohne Inhalte der Anfragen,
 Kennzahlen pro Prozess, nicht pro Person. Der offizielle Prüfer läuft lokal,
 dafür verlässt keine Rechnung das System. Die KI ist aus, und eingeschaltet
 bekäme sie nur minimierte Prüfinformationen, keine Rechnungsdatei, keine Namen,
-IBANs gekürzt. Vor echten Daten fehlen der Vertrag zur Auftragsverarbeitung,
+IBANs gekürzt; für die Rückfrage dazu die Namen von Platzhaltern, nie deren
+Werte. Im Google
+Sheet stehen keine Bankdaten, n8n sieht die IBAN aber beim Transport. Vor echten Daten fehlen der Vertrag zur Auftragsverarbeitung,
 ein Aufbewahrungs- und Löschkonzept und die Abstimmung mit dem
 Datenschutzbeauftragten.
 
@@ -165,10 +173,17 @@ Urteil, keine Messung der Anwendung allein.
 
 ---
 
-## 8. Wie stellen Sie sicher, dass die KI-Erklärung nichts Falsches sagt? ●●●
+## 8. Wie stellen Sie sicher, dass die KI nichts Falsches schreibt? ●●●
 
 **Kern: Ganz ausschließen lässt es sich nicht. Deshalb ist sie ein
 gekennzeichneter Vorschlag und entscheidet nichts.**
+
+Bei der Rückfrage schreibt das Modell Platzhalter statt Werte; die Anwendung
+setzt Rechnungsnummer und Betrag erst nach der Prüfung ein. Jeder Entwurf ohne
+belegte Zahlen, mit Kontakt- oder Bankdaten oder mit einer Aussage über
+Freigabe oder Zahlung wird abgelehnt, dann springt die Vorlage ein. In der
+Bewertung waren alle Ablehnungen solche unbelegten Zahlen, darunter zwei
+richtig gerechnete Differenzen, die die Prüfung bewusst nicht zulässt.
 
 Jede Antwort wird vor der Anzeige gegen die Belege geprüft. Nennt sie eine Zahl
 oder Kennung, die nicht in den Prüfergebnissen steht, oder klingt sie nach
@@ -263,7 +278,7 @@ im Parallelbetrieb, mit einer Go/No-go-Entscheidung nach Woche vier und am Ende.
 
 ---
 
-## 13. Was beweisen 751 Tests, und was nicht? ●●
+## 13. Was beweisen 788 Tests, und was nicht? ●●
 
 **Kern: Sie beweisen, dass sich die Kontrollen im Proof of Concept wie
 beschrieben verhalten. Sie beweisen keine Produktionsreife.**
