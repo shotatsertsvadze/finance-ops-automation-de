@@ -1,6 +1,6 @@
 # Prüfungsfragen – Vorbereitung auf die Fragerunde
 
-Gehört zu `praesentation_v5.html` und `SPRECHTEXT_V5_DE.md`. Stand: 19.10.2026.
+Gehört zu `praesentation_v5.html` und `SPRECHTEXT_V5_DE.md`. Stand: 20.10.2026.
 
 20 Fragen, wie sie ein kritischer, aber fairer Prüfer im Kurs KI-Manager stellen
 könnte, geordnet nach Wahrscheinlichkeit. Jede Antwort dauert gesprochen etwa
@@ -80,7 +80,9 @@ die Prüfung, die abweichenden Zeichen werden markiert.
 Ich habe angenommen: 2.000 Rechnungen im Monat, jede fünfte braucht Klärung.
 Eine saubere Rechnung kostet heute sechs Minuten, mit dem System eine Minute
 für die Freigabe. Eine Ausnahme 25 Minuten, mit dem System 8, weil der Beleg
-schon daliegt. Daraus ergeben sich rund 327 und rund 80 Stunden. Diese
+schon daliegt. Bei 1.600 sauberen Rechnungen und
+400 Ausnahmen: 1.600 × 6 + 400 × 25 = 19.600 Minuten, rund 327 Stunden;
+1.600 × 1 + 400 × 8 = 4.800 Minuten, also 80 Stunden. Diese
 Minutenwerte sind in der Anwendung als Annahmen hinterlegt und werden im
 Dashboard neben jeder daraus berechneten Zahl angezeigt. Ob das in einem echten
 Unternehmen stimmt, muss ein Pilot messen.
@@ -108,6 +110,13 @@ im Code?“
 → Für die Demo zeigt n8n den Eingang sichtbar und Schritt für Schritt, ohne
 Änderung an der Anwendung. Ein Postfach-Eingang im Code ist für einen echten
 Betrieb geplant, nicht gebaut.
+
+**Nachfrage:** „Warum Google Sheets und keine richtige Datenbank, etwa Supabase?“
+→ Die Datenbank gibt es schon: Finance-Ops speichert alle Daten, Entscheidungen
+und den Prüfpfad in PostgreSQL. Das Sheet ist nur ein zusätzliches Protokoll,
+das n8n schreibt; es wirkt nicht auf Finance-Ops zurück. Eine Umstellung auf
+Supabase ist dafür nicht nötig. In einem echten Betrieb würde ich das Sheet
+weglassen oder durch eine Ansicht in Finance-Ops ersetzen.
 
 ---
 
