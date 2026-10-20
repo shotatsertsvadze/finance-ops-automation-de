@@ -17,15 +17,15 @@ Klammern sind Regieanweisungen.
 | 5 | Anderer Prozess, gleiches Grundproblem | 1:00 | 4:35 |
 | 6 | Jonas, Finance-Team Nordwerk | 1:00 | 5:35 |
 | 7 | Vorher / Nachher | 1:00 | 6:35 |
-| 8 | Zwei Rechnungen, zwei Ergebnisse | 0:50 | 7:25 |
-| 9 | **Demo-Video** (4:05 plus Start) | 4:15 | 11:40 |
-| 10 | Was Jonas sieht, und was dahinter steht | 0:35 | 12:15 |
-| 11 | Menschliche Kontrolle | 1:35 | 13:50 |
-| 12 | **Warum hier nicht die KI entscheidet** | 3:35 | 17:25 |
-| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 18:40 |
-| 14 | Nutzen und wie man ihn misst | 1:35 | 20:15 |
-| 15 | Reflexion und Einführung | 1:05 | 21:20 |
-| 16 | Abschluss | 0:25 | 21:45 |
+| 8 | Zwei Rechnungen, zwei Ergebnisse | 0:55 | 7:30 |
+| 9 | **Demo-Video** (4:05 plus Start) | 4:15 | 11:45 |
+| 10 | Was Jonas sieht, und was dahinter steht | 0:35 | 12:20 |
+| 11 | Menschliche Kontrolle | 1:35 | 13:55 |
+| 12 | **Warum hier nicht die KI entscheidet** | 3:35 | 17:30 |
+| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 18:45 |
+| 14 | Nutzen und wie man ihn misst | 1:35 | 20:20 |
+| 15 | Reflexion und Einführung | 1:05 | 21:25 |
+| 16 | Abschluss | 0:25 | 21:50 |
 
 Wenn die Zeit knapp wird: auf Folie 10 den zweiten Absatz weglassen, auf
 Folie 15 die Erkenntnisse nur nennen. Die Ausfall-Folie 13 nicht streichen:
@@ -135,7 +135,7 @@ frei, darüber unterschreibt ein Mensch.
 
 Und es entscheiden feste Regeln, keine KI. Warum, dazu komme ich nach der Demo.
 
-## 8 · Zwei Rechnungen, zwei Ergebnisse (0:50)
+## 8 · Zwei Rechnungen, zwei Ergebnisse (0:55)
 
 Ich zeige das an zwei Rechnungen. Die erste ist eine kleine
 Bürobedarf-Rechnung über 380 Euro, alles in Ordnung. Die sollte automatisch
@@ -144,8 +144,9 @@ mit der abweichenden IBAN. Die sollte gestoppt werden.
 
 Der Weg: Die Mail geht an ein Postfach. n8n, ein Werkzeug, das Abläufe
 zwischen Diensten verbindet, holt den Anhang ab und reicht ihn an Finance-Ops
-weiter. Finance-Ops prüft und entscheidet. Google Sheets protokolliert das
-Ergebnis. Den Ablauf habe ich aufgezeichnet.
+weiter. Finance-Ops prüft, entscheidet und speichert alles in seiner
+PostgreSQL-Datenbank, auch den Prüfpfad. n8n schreibt zusätzlich eine
+Protokollzeile ins Google Sheet. Den Ablauf habe ich aufgezeichnet.
 
 ## 9 · Demo-Video (4:15)
 
@@ -372,9 +373,10 @@ Vielen Dank. Ich freue mich auf Ihre Fragen.
 
 ## Kurze Antworten auf erwartbare Fragen
 
-Die früheren Backup-Folien B1 bis B7 sind nicht mehr Teil des Vortrags. Bei
-Bedarf `referenz/backup_folien_v3.html` öffnen; die Verweise unten nennen die
-passende Folie.
+Die Backup-Folien B1 bis B8 sind nicht Teil des Vortrags. Sie liegen in
+`backup_folien_v5.html`: vor Beginn in einem zweiten Tab öffnen und auf B8
+„Fünf Wege“ stellen, nach dem Video bei Bedarf kurz dorthin wechseln. Die
+Verweise unten nennen die passende Folie.
 
 **Hat das System einen Betrug erkannt?**
 Nein. Es hat erkannt, dass die IBAN nicht zu den freigegebenen
@@ -446,6 +448,13 @@ die Rechnung transportiert. Für ein Echtsystem: kein Sheet mit
 Rechnungsdaten, n8n im eigenen Netz, ein technisches Konto, das nur hochladen
 darf. (`docs/course/DATENFLUSS_DE.md`)
 
+**Warum Google Sheets und keine richtige Datenbank, etwa Supabase?**
+Die Datenbank gibt es schon: Finance-Ops speichert alle Daten, Entscheidungen
+und den Prüfpfad in PostgreSQL. Das Sheet ist nur ein zusätzliches Protokoll,
+das n8n schreibt; es wirkt nicht auf Finance-Ops zurück. Eine Umstellung auf
+Supabase ist dafür nicht nötig. In einem echten Betrieb würde ich das Sheet
+weglassen oder durch eine Ansicht in Finance-Ops ersetzen. → Referenzfolie B8.
+
 **Woher wissen Sie, dass sich das lohnt?**
 Noch gar nicht. 327 und 80 Stunden sind eine Modellrechnung. Ein Pilot im
 Parallelbetrieb würde Automatisierungsquote, Bearbeitungszeit und Fehlalarme
@@ -461,7 +470,8 @@ der Kreditorenbuchhaltung und kurze Schulungen am echten Fall gehören dazu
 n8n holt die Mail ab, meldet sich an, übergibt die Datei und schreibt das
 Ergebnis ins Sheet. Die Regeln liegen an einer Stelle in der Anwendung, sind
 dort getestet und gelten unabhängig davon, ob eine Rechnung per Mail, Formular
-oder Upload kommt. → Referenzfolie B3.
+oder Upload kommt. Eine grüne n8n-Ausführung heißt nur: transportiert, nicht
+freigegeben. → Referenzfolien B3 und B8.
 
 **Warum drei Personen? Ist das nicht zu viel?**
 Das ist die Regel, die ich für das Projekt gewählt habe, und sie ist im
@@ -475,8 +485,12 @@ nachvollziehbar: Nummer aus den Stammdaten, vorgelesene IBAN, wer wann, und
 eine dritte Person muss zustimmen. → Referenzfolie B5.
 
 **Woher kommen die 327 und 80 Stunden?**
-Aus Annahmen für die fiktive Firma: Minuten pro Rechnung, Anteil der
-Ausnahmen. Nichts davon ist gemessen. → Referenzfolie B4.
+Aus einer Modellrechnung für die fiktive Firma, nichts davon ist gemessen.
+Angenommen sind 2.000 Rechnungen im Monat, davon 20 Prozent Ausnahmen, also
+1.600 saubere und 400 Ausnahmen. Heute 6 Minuten je saubere Rechnung und 25 je
+Ausnahme: 19.600 Minuten, rund 327 Stunden. Mit dem System 1 und 8 Minuten:
+4.800 Minuten, also 80 Stunden. Ein Pilot müsste jede dieser Annahmen messen.
+→ Referenzfolie B4.
 
 **Funktioniert das auch mit PDF-Rechnungen?**
 Nein. Die Anwendung liest XRechnung im UBL-Format. Andere Formate wie CII oder

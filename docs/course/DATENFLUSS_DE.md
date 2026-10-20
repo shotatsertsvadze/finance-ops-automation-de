@@ -1,7 +1,7 @@
 # Prozess und Datenfluss
 
 Zwei Diagramme für den Rechnungseingang der fiktiven Nordwerk GmbH: wer was
-tut (Prozess) und welche Daten wohin gehen (Datenfluss). Stand: 19.10.2026,
+tut (Prozess) und welche Daten wohin gehen (Datenfluss). Stand: 20.10.2026,
 mit der KI-gestützten Lieferantenrückfrage (ADR-084).
 
 ## 1. Prozess: wer tut was
@@ -14,9 +14,9 @@ flowchart TD
   subgraph LIEF["Lieferant"]
     L1["schickt XRechnung per E-Mail"]
   end
-  subgraph N8N["n8n: transportiert nur"]
+  subgraph N8N["n8n: Transport, Protokoll"]
     N1["holt die Mail ab,<br/>nimmt den XML-Anhang"]
-    N2["schreibt eine Zeile<br/>ins Google Sheet"]
+    N2["schreibt zusätzlich eine<br/>Protokollzeile ins Google Sheet"]
   end
   subgraph FO["Finance-Ops: prüft und ordnet nach festen Regeln"]
     F1["liest die Rechnung ein,<br/>speichert das Original"]
@@ -26,12 +26,15 @@ flowchart TD
     F5["automatisch freigegeben<br/>bis 500 €"]
     F6["zur Freigabe<br/>nach Betragsstufe"]
     F7["Sichtprüfung<br/>mit Grund und Beleg"]
-    F8["Prüfpfad: jede Entscheidung<br/>mit Person, Zeit und Grund"]
+    F8["Prüfpfad in PostgreSQL:<br/>jede Entscheidung mit<br/>Person, Zeit und Grund"]
   end
   subgraph TEAM["Finance-Team"]
     T0["lädt eine Rechnung<br/>im Browser hoch"]
     T1["klärt die Ausnahme"]
-    T2["Rückfrage an den Lieferanten:<br/>Entwurf von KI oder Vorlage,<br/>Mensch prüft, gibt frei,<br/>versendet von Hand"]
+    T2["Rückfrage an den Lieferanten:<br/>KI-Entwurf auf Knopfdruck"]
+    T4{"Anwendung prüft<br/>den Entwurf"}
+    T5["feste Vorlage"]
+    T6["Mensch prüft, gibt frei,<br/>versendet von Hand"]
     T3["abweichende IBAN:<br/>Rückruf unter der<br/>hinterlegten Nummer"]
   end
   subgraph FREI["Freigebende"]
@@ -49,10 +52,15 @@ flowchart TD
   F7 --> T1
   T1 -- "geklärt" --> A1
   T1 -- "Angaben fehlen oder falsch" --> T2
-  T1 -- "IBAN weicht ab" --> T3 --> A2
+  T1 -- "Rückfrage ohne KI" --> T5
+  T2 --> T4
+  T4 -- "zulässig" --> T6
+  T4 -- "abgelehnt" --> T5 --> T6
+  T1 -- "IBAN weicht ab:<br/>keine Rückfrage,<br/>kein KI-Entwurf" --> T3 --> A2
   A2 -- "neu prüfen" --> F3
   F4 --> F8
   F4 -. "nur beim Eingang per E-Mail" .-> N2
+  N1 -. "Ausfall von n8n oder der Verbindung:<br/>nichts geprüft, nichts freigegeben" .-> T0
 ```
 
 Danach folgen Buchung (CSV-Export), Zahlung und Abgleich mit dem
@@ -66,12 +74,18 @@ Kontoauszug. Zahlung und Kontoauszug sind simuliert.
 | Zur Freigabe | alle Prüfungen bestanden, über 500 € | Kostenstellenleitung; über 5.000 € auch Finanzen; über 25.000 € auch CFO |
 | Sichtprüfung | mindestens eine Prüfung fehlgeschlagen | Finance-Team; danach noch mindestens eine Freigabe |
 
+Dazu kommt der technische Ausfall: Sind n8n oder die Verbindung zu
+Finance-Ops weg, wird nichts geprüft und nichts freigegeben. Die Rechnung wird
+erneut gesendet oder im Browser hochgeladen; doppelt senden ist sicher. Eine
+automatische Benachrichtigung bei Ausfall ist nicht gebaut.
+
 **Wo die KI hilft und wo nicht.** Bei einer Ausnahme kann ein Mensch einen
 KI-Entwurf der Rückfrage an den Lieferanten anfordern. Die Anwendung prüft den
 Entwurf, ein Mensch bearbeitet ihn, gibt ihn frei und versendet ihn von Hand.
-Bei einer abweichenden IBAN gibt es keinen Entwurf: Dort gilt nur der Rückruf
-unter der hinterlegten Nummer. Die KI entscheidet in keinem Fall, und ohne KI
-läuft der Prozess unverändert.
+Lehnt die Prüfung den Entwurf ab, lädt die Anwendung die feste Vorlage. Bei
+einer abweichenden IBAN gibt es weder Rückfrage noch Entwurf: Dort gilt nur
+der Rückruf unter der hinterlegten Nummer. Die KI entscheidet in keinem Fall,
+und ohne KI läuft der Prozess unverändert.
 
 ## 2. Datenfluss: welche Daten wohin gehen
 
@@ -133,6 +147,7 @@ n8n und Google Sheets.
 - **n8n ist austauschbar.** Fällt n8n aus, bleiben die Mails im Postfach, und
   das Team lädt die Rechnungen im Browser hoch. Am Ergebnis ändert das nichts.
 - **Das Sheet ist nur Anzeige.** Es wirkt nicht auf Finance-Ops zurück. Der
-  verbindliche Nachweis ist der Prüfpfad in der Anwendung.
+  verbindliche Nachweis ist der Prüfpfad in der PostgreSQL-Datenbank von
+  Finance-Ops.
 - **Eine grüne n8n-Ausführung heißt nicht „freigegeben“.** Grün heißt nur:
   transportiert. Ob eine Rechnung frei ist, entscheidet Finance-Ops.
