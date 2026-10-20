@@ -7,7 +7,8 @@ Stand: 30. September 2026, Feature Freeze. Grundlage ist der Code auf `main`.
 > - **Eingang per E-Mail über n8n** mit Protokoll in Google Sheets, für die
 >   Präsentation. n8n transportiert nur, die Regeln bleiben in der Anwendung.
 > - **KI-gestützte Lieferantenrückfrage** mit menschlicher Freigabe
->   (ADR-084). Der Feature Freeze wurde nur dafür aufgehoben.
+>   (ADR-084). Der Feature Freeze wurde nur dafür aufgehoben. Mit dem echten
+>   Modell bewertet: [KI_BEWERTUNG_DE.md](KI_BEWERTUNG_DE.md).
 > - **Soll/Ist-Auswertung** mit 20 synthetischen Rechnungen:
 >   [SOLL_IST_DE.md](SOLL_IST_DE.md).
 > - **Prozess- und Datenflussdiagramm** auf Deutsch:
@@ -307,13 +308,19 @@ Freigabe bewegt Geld.
 
 **Nachtrag: Entwurf der Lieferantenrückfrage (ADR-084).** Bei einer Ausnahme
 kann ein Prüfer einen Entwurf der Rückfrage an den Lieferanten anfordern. Das
-Modell schreibt Platzhalter wie `{{rechnungsnummer}}`, nie Werte aus der
-Rechnung; die Anwendung setzt die Werte erst nach der Prüfung ein. Ein Mensch
+Modell bekommt die fehlgeschlagenen Prüfungen mit ihren freigegebenen Belegen,
+etwa Netto- und Bestellbetrag, aber keine Rechnungsnummer, keinen Lieferanten
+und keinen Firmennamen; dafür schreibt es Platzhalter wie `{{rechnungsnummer}}`,
+und die Anwendung setzt die Werte erst nach der Prüfung ein. Ein Mensch
 bearbeitet den Text, gibt ihn frei und versendet ihn von Hand. Erst „von Hand
 versendet“ ändert den Status der Rechnung. Bei einer abweichenden IBAN gibt es
 keinen Entwurf, nur den Rückruf. Fällt das Modell aus, steht eine feste Vorlage
-bereit. Standardmodell ist seitdem `claude-sonnet-5-5`; die Bewertung mit dem
-echten Modell steht für beide KI-Funktionen noch aus.
+bereit. Standardmodell ist seitdem `claude-sonnet-5-5`. Mit dem echten Modell
+bewertet ist die Rückfrage, auf Zulässigkeit: 16 von 24 Entwürfen in der
+Erstbewertung; nach einer Prompt-Anpassung 15 von 15 in einer gezielten
+Nachprüfung mit 5 Fällen, keine neue Gesamtquote
+([KI_BEWERTUNG_DE.md](KI_BEWERTUNG_DE.md)). Die Erklärung ist noch nicht mit
+dem echten Modell bewertet.
 
 ---
 

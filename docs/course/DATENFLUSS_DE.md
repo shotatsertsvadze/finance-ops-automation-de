@@ -103,7 +103,7 @@ flowchart LR
   WEB -- "Anmeldung, Upload,<br/>Entscheidungen" --> APP
   APP --- DB
   APP -- "XML-Datei" --> KOSIT
-  APP -- "nur auf Knopfdruck: Prüfcodes,<br/>feste Sätze, Platzhalternamen" --> KI
+  APP -- "nur auf Knopfdruck: Prüfcodes,<br/>Beträge der Prüfung, Platzhalternamen" --> KI
   KI -- "Entwurf mit Platzhaltern" --> APP
 
   style EXT stroke-dasharray: 5 5
@@ -116,7 +116,7 @@ flowchart LR
 | **Tunnel** | dieselben Daten wie n8n, über HTTPS; der Tunnelanbieter (Cloudflare) leitet sie weiter | ja, auf dem Weg | nur in der Demo genutzt |
 | **Google Sheet** | Eingang, Rechnungsnummer, Lieferant, Betrag, Ergebnis, Status, Grund, Invoice ID, Eingangskanal | **nein**: Der Grund nennt eine IBAN-Abweichung, nie die IBAN | in Google Drive |
 | **KoSIT-Prüfer** | die XML-Datei | ja | nein; läuft im eigenen Netz, die Datei verlässt das System nicht |
-| **KI-Anbieter** | nur freigegebene Prüfinformationen, nur auf Knopfdruck, standardmäßig aus | höchstens eine gekürzte IBAN bei der Erklärung; bei der Rückfrage keine | beim Anbieter nach dessen Bedingungen; in Finance-Ops genau das, was gesendet wurde |
+| **KI-Anbieter** | nur freigegebene Prüfinformationen, etwa Netto- und Bestellbetrag einer Überschreitung; keine Rechnungsnummer, kein Lieferant, kein Firmenname; nur auf Knopfdruck, standardmäßig aus | höchstens eine gekürzte IBAN bei der Erklärung; bei der Rückfrage keine | beim Anbieter nach dessen Bedingungen; in Finance-Ops genau das, was gesendet wurde |
 
 Die Antwort an n8n ist dieselbe wie im Browser. Für die Demo ist das
 gewollt, weil n8n die Werte für die Sheet-Zeile braucht. Für ein Echtsystem

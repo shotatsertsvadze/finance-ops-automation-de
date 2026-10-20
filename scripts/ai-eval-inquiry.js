@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { aiExplanationsFromEnv, createAnthropicExplainer } from "../server/integrations/ai-explainer.js";
 import { verifyInquiry } from "../server/domain/ai/inquiry-grounding.js";
-import { inquirySystemPrompt, inquiryTool, inquiryUserMessage } from "../server/domain/ai/inquiry-prompt.js";
+import { INQUIRY_PROMPT_VERSION, inquirySystemPrompt, inquiryTool, inquiryUserMessage } from "../server/domain/ai/inquiry-prompt.js";
 import { templateInquiry } from "../server/domain/inquiries/template.js";
 import { fill } from "../server/domain/inquiries/placeholders.js";
 
@@ -23,9 +23,12 @@ import { fill } from "../server/domain/inquiries/placeholders.js";
  * The checks say whether a draft is admissible, not whether it is good; the
  * blind sheet is for a person to judge that. AI_EVAL_URL points at a stand-in
  * instead of Anthropic, to try the script itself; its results say nothing
- * about the model.
+ * about the model. AI_EVAL_CASES (comma-separated scenario names) limits a run
+ * to those cases, for a follow-up after a change. All output files go to the
+ * working directory, so a follow-up run elsewhere leaves an earlier one intact.
  */
 const RUNS = Number(process.env.AI_EVAL_RUNS ?? 3);
+const ONLY = process.env.AI_EVAL_CASES?.split(",").map((name) => name.trim()).filter(Boolean);
 const OUT = process.env.AI_EVAL_OUT ?? "ai-inquiry-eval-report.json";
 const configured = aiExplanationsFromEnv({ ...process.env, AI_EXPLANATIONS: "true" });
 if (!configured.explainer) {
@@ -37,13 +40,14 @@ const explainer = process.env.AI_EVAL_URL
   : configured.explainer;
 
 const dir = new URL("../fixtures/ai/inquiry/", import.meta.url);
-const cases = readdirSync(dir).filter((f) => f.endsWith(".json")).sort().map((f) => JSON.parse(readFileSync(new URL(f, dir), "utf8")));
+const cases = readdirSync(dir).filter((f) => f.endsWith(".json")).sort().map((f) => JSON.parse(readFileSync(new URL(f, dir), "utf8")))
+  .filter((c) => !ONLY || ONLY.includes(c.scenario));
 const rendered = (draft, values) => ({ subject: fill(draft.subject, values), body: fill(draft.body, values) });
 const median = (xs) => (xs.length ? [...xs].sort((a, b) => a - b)[Math.floor(xs.length / 2)] : null);
 
 const results = [];
 const templates = {};
-console.log(`Modell ${explainer.model}, ${RUNS} Läufe je Fall${process.env.AI_EVAL_URL ? ` (Stand-in ${process.env.AI_EVAL_URL})` : ""}`);
+console.log(`Modell ${explainer.model}, Prompt ${INQUIRY_PROMPT_VERSION}, ${RUNS} Läufe je Fall, ${cases.length} Fälle${process.env.AI_EVAL_URL ? ` (Stand-in ${process.env.AI_EVAL_URL})` : ""}`);
 for (const c of cases) {
   if (!c.eligible) {
     results.push({ scenario: c.scenario, eligible: false, code: c.code, calls: 0 });
@@ -75,6 +79,7 @@ for (const r of drafts) for (const { rule } of r.reasons) rules[rule] = (rules[r
 const accepted = drafts.filter((r) => r.status === "ACCEPTED");
 const summary = {
   model: explainer.model, stand_in: Boolean(process.env.AI_EVAL_URL), runs_per_case: RUNS, run_at: new Date().toISOString(),
+  prompt_version: INQUIRY_PROMPT_VERSION, cases: cases.map((c) => c.scenario),
   drafts: drafts.length, accepted: accepted.length, rejected: drafts.filter((r) => r.status === "REJECTED").length,
   failed: drafts.filter((r) => r.status === "FAILED").length,
   acceptance_rate: drafts.length ? Math.round((accepted.length / drafts.length) * 1000) / 10 : 0,
