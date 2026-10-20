@@ -5,7 +5,7 @@ dahinter Reservefolien R1 bis R4. Die Fassung v5 bleibt unverändert
 (`praesentation_v5.html`, `SPRECHTEXT_V5_DE.md`, Git-Tag `deck-v5-final`).
 Klickfolge, Start der Demo-Instanz und Reserveplan: `LIVE_DEMO_DE.md`.
 
-Ziel: etwa 19:00 Minuten, Obergrenze 22 bis 23 Minuten. Die Dauern
+Ziel: etwa 19:15 Minuten, Obergrenze 22 bis 23 Minuten. Die Dauern
 rechnen mit 95 Wörtern pro Minute, dem Tempo aus der Probe vom 17.10.2026.
 Die Live-Demo hat eine feste Zeit von 7:55, Tab-Wechsel inklusive.
 Sätze in eckigen Klammern sind Regieanweisungen.
@@ -16,16 +16,16 @@ Sätze in eckigen Klammern sind Regieanweisungen.
 | 2 | Eine Rechnung wie jede andere | 0:30 | 0:45 |
 | 3 | Der zweite Blick | 1:30 | 2:15 |
 | 4 | Woher ich das kenne | 1:15 | 3:30 |
-| 5 | Für wen: Jonas | 1:05 | 4:35 |
-| 6 | Fünf Wege. Eine Stelle entscheidet. | 1:00 | 5:35 |
-| 7 | **Live-Demo** (8 Schritte) | 7:55 | 13:30 |
-| 8 | Menschliche Kontrolle | 1:05 | 14:35 |
-| 9 | Warum hier nicht die KI entscheidet | 2:05 | 16:40 |
-| 10 | Nutzen und wie man ihn misst | 1:10 | 17:50 |
-| 11 | Reflexion und Einführung | 0:45 | 18:35 |
-| 12 | Abschluss | 0:25 | 19:00 |
+| 5 | Für wen: Jonas | 1:10 | 4:40 |
+| 6 | Fünf Wege. Eine Stelle entscheidet. | 1:10 | 5:50 |
+| 7 | **Live-Demo** (8 Schritte) | 7:55 | 13:45 |
+| 8 | Menschliche Kontrolle | 1:05 | 14:50 |
+| 9 | Warum hier nicht die KI entscheidet | 2:05 | 16:55 |
+| 10 | Nutzen und wie man ihn misst | 1:10 | 18:05 |
+| 11 | Reflexion und Einführung | 0:45 | 18:50 |
+| 12 | Abschluss | 0:25 | 19:15 |
 
-Puffer bis 22:00: 3:00. Er ist für Wartezeiten in der Live-Demo gedacht.
+Puffer bis 22:00: 2:45. Er ist für Wartezeiten in der Live-Demo gedacht.
 
 Wenn die Zeit knapp wird: in der Live-Demo die Schritte 7 und 8 nur ansagen,
 auf Folie 10 die Pilotkennzahlen nur nennen, auf Folie 11 die Einführung nur
@@ -89,7 +89,7 @@ nötig ist, und jeder Schritt ist belegt. Die E-Rechnung eignet sich dafür: Sie
 ist strukturiert, ich kann sie mit synthetischen Daten vorführen, und seit 2025
 müssen Unternehmen sie empfangen können.
 
-## 5 · Für wen: Jonas (1:05)
+## 5 · Für wen: Jonas (1:10)
 
 Damit es konkret wird: Jonas Weber, eine erfundene Person im Finance-Team der
 Nordwerk GmbH, einem ausgedachten Mittelständler mit rund 2.000
@@ -99,10 +99,11 @@ mir die ansehen? Wenn ja, warum genau? Und was ist der nächste Schritt?
 
 Mit Finance-Ops prüft das System jede Rechnung nach festen Regeln. In unserem
 Modell kommen acht von zehn ohne Sachprüfung durch, zwei landen mit Grund bei
-Jonas. Ohne Sachprüfung heißt nicht automatisch bezahlt: Bis 500 Euro gibt das
-System frei, darüber unterschreibt ein Mensch.
+Jonas. Ohne Sachprüfung heißt aber nicht automatisch freigegeben: Nur bis 500
+Euro gibt das System selbst frei. Darüber gibt ein Mensch frei, auch wenn
+fachlich alles stimmt.
 
-## 6 · Fünf Wege. Eine Stelle entscheidet. (1:00)
+## 6 · Fünf Wege. Eine Stelle entscheidet. (1:10)
 
 So läuft eine Rechnung durch. Links der Eingang: Im Betrieb kommt sie per
 E-Mail, gleich in der Demo über ein Formular. n8n nimmt die Datei an und reicht
@@ -112,7 +113,9 @@ liegt in der PostgreSQL-Datenbank von Finance-Ops, auch der Prüfpfad.
 Rechts die Wege. Drei davon zeige ich gleich live: automatisch frei, Freigabe
 durch einen Menschen und gestoppt wegen der IBAN. Bei einer anderen Abweichung
 kann die KI eine Rückfrage entwerfen, auch das zeige ich. Und unten der
-technische Ausfall: Dann wird nichts geprüft und nichts freigegeben.
+technische Ausfall: Fallen n8n oder die Verbindung aus, wird nichts geprüft und
+nichts freigegeben. Fällt nur das Sheet aus, hat Finance-Ops trotzdem
+entschieden; es fehlt nur die Protokollzeile.
 
 ## 7 · Live-Demo (7:55)
 
@@ -218,8 +221,8 @@ davon nichts.
 
 ## 12 · Abschluss (0:25)
 
-Die Rechnung vom Anfang: gestoppt, bevor Geld überwiesen wird. In der Demo ist die
-Zahlung simuliert, die Kontrolle dahinter ist echt.
+Die Rechnung vom Anfang: gestoppt vor der Zahlungsfreigabe. Zahlungen sind im
+Projekt nur simuliert, echtes Geld fließt nicht; die Kontrolle davor ist echt.
 Automatisieren, was Routine ist. Kontrollieren, was kritisch ist.
 
 Vielen Dank. Ich freue mich auf Ihre Fragen.
