@@ -1,6 +1,6 @@
 # Bewertung der KI-Lieferantenrückfrage mit dem echten Modell
 
-Stand: 19.10.2026. Modell `claude-sonnet-5-5` von Anthropic. Funktion: die
+Stand: 20.10.2026. Modell `claude-sonnet-5-5` von Anthropic. Funktion: die
 KI-gestützte Lieferantenrückfrage mit menschlicher Freigabe (ADR-084). Alle
 Fälle sind synthetisch.
 
@@ -15,8 +15,7 @@ Fälle sind synthetisch.
   keine Kontaktdaten, keine Bankdaten, keine Aussage über Freigabe oder
   Zahlung.
 - **Diese Prüfungen sagen, ob ein Entwurf zulässig ist, nicht ob er gut ist.**
-  Ob er besser ist als die feste Vorlage, beurteilt ein Mensch im
-  Blindvergleich (siehe unten).
+  Ob er besser ist als die feste Vorlage, zeigt der Vergleich weiter unten.
 
 ## Lauf 1: Erstbewertung, Prompt `supplier-inquiry/1`, 24 Entwürfe
 
@@ -96,15 +95,65 @@ Nicht erneut gelaufen sind „Bestellnummer fehlt“, „Bestellung unbekannt“
 greift die Änderung nicht: Die Regel gegen selbst gerechnete Beträge bleibt
 bewusst streng.
 
+## Vergleich mit der festen Vorlage (qualitative Präferenz, 20.10.2026)
+
+Pro Fall standen ein angenommener KI-Entwurf aus Lauf 1 (Prompt v1) und die
+feste Vorlage nebeneinander, als A und B in einer Reihenfolge, die sich nicht
+erraten lässt. „Rechnungsnummer doppelt“ und „E-Rechnung abgelehnt“ fehlen,
+weil es dort in Lauf 1 keinen angenommenen Entwurf gab.
+
+Shota Tsertsvadze hat je Fall den Text gewählt, den er vorzieht. Punktzahlen
+gibt es nicht. Die Auflösung wurde erst danach geöffnet.
+
+| Fall | Gewählt | Stammt aus |
+|---|---|---|
+| Bestellung überschritten | A | Vorlage |
+| Bestellnummer fehlt | B | Vorlage |
+| Bestellung unbekannt | B | Vorlage |
+| Summen falsch | A | Vorlage |
+| Falscher Empfänger | A | Vorlage |
+| Untergeschobene Anweisung in der Rechnung | B | Vorlage |
+
+**Ergebnis: In 6 von 6 Fällen fiel die Wahl auf die feste Vorlage, in keinem
+auf den KI-Entwurf.**
+
+**Wie belastbar das ist:**
+- Eine Person, eine Präferenz je Fall, keine Punktzahlen.
+- Nicht unabhängig: Die Auswahl ist gemeinsam mit ChatGPT entstanden, also
+  mit Hilfe eines anderen Sprachmodells.
+- Nicht ganz blind: Vorher war bekannt, dass die KI-Entwürfe im Median länger
+  sind, und ein Probeentwurf für „Bestellung überschritten“ war vorher zu sehen.
+- 6 synthetische Fälle mit je genau einer fehlgeschlagenen Prüfung, Entwürfe
+  mit Prompt v1. Fälle mit mehreren Problemen gleichzeitig sind nicht
+  verglichen.
+
+**Was die Texte unterscheidet** (Beobachtung beim Auswerten, nicht Teil der
+Bewertung):
+- Die KI-Entwürfe sind länger: 615 bis 745 Zeichen, die Vorlagen 401 bis 495.
+- Sie sprechen den Lieferanten mit Namen an und nennen die Bestellnummer auch
+  dort, wo die Vorlage sie weglässt.
+- Sie erklären interne Regeln, die der Lieferant nicht braucht, etwa die
+  Betragsgrenze, ab der eine Bestellnummer Pflicht ist, oder die Rechenformel
+  der Summenprüfung.
+- Einmal steht eine Zahl im Rohformat („1240.00 gegenüber 1340.00“), während
+  der Rest des Briefs deutsche Schreibweise nutzt.
+- Die Vorlagen sind kurz, gleich aufgebaut und enden mit einer klaren Bitte.
+
+**Folgerung:** Für Standardfälle mit einer einzigen Abweichung hat die KI in
+diesem Vergleich keinen Mehrwert gegenüber der festen Vorlage gezeigt. Die
+Vorlage ist kürzer, einheitlich, kostet nichts und braucht keine Prüfung. Für
+eine Einführung wäre die Vorlage der Standard, die KI-Funktion bliebe
+ausgeschaltet. Offen ist, ob die KI bei mehreren gleichzeitigen Problemen oder
+ungewöhnlichen Fällen hilft; das ist nicht verglichen.
+
 ## Was das zeigt und was nicht
 
 - **Zeigt:** Die meisten Entwürfe sind zulässig. Was nicht zulässig ist, wird
   gestoppt, und die Vorlage springt ein. Bei abweichender IBAN gibt es nie
   einen Entwurf. Eine in der Rechnung versteckte Anweisung erreicht das
   Modell nicht.
-- **Zeigt nicht**, ob die Entwürfe besser sind als die feste Vorlage. Das
-  beurteilt Shota Tsertsvadze im Blindvergleich: pro Fall zwei Texte, ohne zu
-  wissen, welcher von der KI stammt. **Die Bewertung steht noch aus.**
+- **Zeigt auch:** Zulässig heißt nicht besser. Im Vergleich wurde jedes Mal
+  die Vorlage vorgezogen.
 - **15 von 15 ist keine Gesamtquote.** Es ist eine gezielte Nachprüfung mit
   5 Fällen, ausgewählt nach dem Fehler, den die Änderung beheben sollte. Die
   einzige Bewertung über alle 8 Fälle bleibt Lauf 1 mit 16 von 24. Beides gilt
@@ -138,5 +187,12 @@ aus. `AI_EVAL_CASES` begrenzt einen Lauf auf einzelne Fälle. Die Berichte
 landen im aktuellen Ordner, ein zweiter Lauf woanders lässt den ersten
 unberührt.
 
-Die vollständigen Berichte mit allen Entwürfen lege ich erst nach dem
-Blindvergleich ab, weil sie verraten, welcher Text von der KI stammt.
+## Rohdaten
+
+In [`ki-bewertung/`](ki-bewertung/), unverändert aus den Läufen:
+
+- `lauf1-bericht.json`: alle 24 Entwürfe von Lauf 1 mit Prüfergebnis,
+  Antwortzeit und Tokens
+- `lauf1-blindbogen.md` und `lauf1-aufloesung.json`: der Bogen, wie er
+  verglichen wurde, und welcher Text von der KI stammt
+- `lauf2-bericht.json`: die 15 Entwürfe der Nachprüfung

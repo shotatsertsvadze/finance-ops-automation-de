@@ -319,8 +319,10 @@ bereit. Standardmodell ist seitdem `claude-sonnet-5-5`. Mit dem echten Modell
 bewertet ist die Rückfrage, auf Zulässigkeit: 16 von 24 Entwürfen in der
 Erstbewertung; nach einer Prompt-Anpassung 15 von 15 in einer gezielten
 Nachprüfung mit 5 Fällen, keine neue Gesamtquote
-([KI_BEWERTUNG_DE.md](KI_BEWERTUNG_DE.md)). Die Erklärung ist noch nicht mit
-dem echten Modell bewertet.
+([KI_BEWERTUNG_DE.md](KI_BEWERTUNG_DE.md)). Im Vergleich mit der festen
+Vorlage fiel die Wahl in 6 von 6 Fällen auf die Vorlage; für Standardfälle hat
+die KI also keinen Mehrwert gezeigt. Die Erklärung ist noch nicht mit dem
+echten Modell bewertet.
 
 ---
 

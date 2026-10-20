@@ -173,6 +173,12 @@ Erklärung lässt sich gegen die Belege prüfen, und ein Fehler kostet einen
 Moment. Offen bleibt, ob sie im Alltag Zeit spart. Das muss ein Pilot messen;
 eine Bewertung mit dem echten Modell steht noch aus.
 
+**Die KI-Rückfrage hat gegen die Vorlage verloren.** Mit dem echten Modell
+waren 16 von 24 Entwürfen zulässig, aber im Vergleich wurde in allen sechs
+Fällen die feste Vorlage vorgezogen: kürzer, einheitlich, ohne interne Regeln,
+die den Lieferanten nichts angehen. Die Lehre: Erst messen, dann einführen.
+Eine KI-Funktion, die gebaut ist, muss nicht eingeschaltet werden.
+
 **Ehrliche Kennzahlen.** Jede Zahl im Dashboard nennt ihre Quelle.
 Einsparungen sind als Modellwert gekennzeichnet, Kundenwerte als „nicht
 gemessen". Eine beeindruckende Zahl ohne Herkunft hätte der Glaubwürdigkeit
