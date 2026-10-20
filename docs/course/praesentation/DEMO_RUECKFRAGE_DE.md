@@ -36,11 +36,24 @@ soll. `npm run demo:reset` stellt den Demo-Monat wieder her.
    nicht versendet. Die Rechnung steht weiter in der Sichtprüfung.*
 4. **Text kopieren**. Versendet wird außerhalb der Anwendung.
 5. **Als von Hand versendet vermerken**, Rückfrage bestätigen. Erst jetzt geht
-   die Rechnung auf *Rückfrage gestellt*. Im Verlauf stehen beide Einträge:
+   die Rechnung auf den Status *Rückfrage offen*. Im Verlauf stehen beide Einträge:
    freigegeben, dann versendet.
 6. Zum Vergleich Havel Logistik (HL-2026-7731) öffnen: keine Rückfrage, nur der
    Hinweis auf den Rückruf. Sagen: *Bei einer geänderten IBAN wäre eine Mail
    der falsche Kanal: Sie könnte genau beim Betrüger landen.*
+
+## Reserve: Screenshots
+
+Falls live nichts geht, liegen die Schritte als Bilder in
+[`reserve_ki_rueckfrage/`](reserve_ki_rueckfrage/), aufgenommen am 19.10.2026
+mit dem echten Modell auf einer Testdatenbank:
+
+1. `1_panel.png`: das Panel vor dem Entwurf
+2. `2_ki_entwurf.png`: der KI-Entwurf mit eingesetzten Werten
+3. `3_freigegeben.png`: freigegeben, noch nicht versendet
+4. `4_versendet.png` und `4_seite.png`: von Hand versendet, die Rechnung steht
+   auf „Rückfrage offen“, im Verlauf „Rückfrage gestellt“
+5. `5_iban.png`: Havel Logistik, nur der Hinweis auf den Rückruf
 
 ## Wenn das Modell nicht antwortet
 
@@ -56,7 +69,10 @@ Ersatz.
   Nachprüfung mit 5 Fällen 15 von 15; das ist keine neue Gesamtquote
   (`docs/course/KI_BEWERTUNG_DE.md`). Zulässig heißt: Die feste Prüfung hat
   nichts gefunden, nicht: Der Text ist gut.
-- Ob die KI-Entwürfe besser sind als die Vorlage, zeigt erst der
-  Blindvergleich.
+- Im Vergleich mit der festen Vorlage fiel die Wahl in 6 von 6 Fällen auf die
+  Vorlage. Die Vorführung zeigt also den abgesicherten Ablauf, keinen Vorteil
+  der KI. Wer fragt, bekommt das so: Für Standardfälle reicht die Vorlage, die
+  KI bliebe in einer Einführung aus. Den Knopf **Vorlage verwenden** gleich
+  mitzeigen.
 - Der Entwurf ist bei jedem Aufruf etwas anders formuliert. Live kann also ein
   anderer Text kommen als in der Probe.

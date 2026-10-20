@@ -21,11 +21,11 @@ Klammern sind Regieanweisungen.
 | 9 | **Demo-Video** (4:05 plus Start) | 4:15 | 11:40 |
 | 10 | Was Jonas sieht, und was dahinter steht | 0:35 | 12:15 |
 | 11 | Menschliche Kontrolle | 1:35 | 13:50 |
-| 12 | **Warum hier nicht die KI entscheidet** | 3:15 | 17:05 |
-| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 18:20 |
-| 14 | Nutzen und wie man ihn misst | 1:35 | 19:55 |
-| 15 | Reflexion und Einführung | 1:05 | 21:00 |
-| 16 | Abschluss | 0:25 | 21:25 |
+| 12 | **Warum hier nicht die KI entscheidet** | 3:20 | 17:10 |
+| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 18:25 |
+| 14 | Nutzen und wie man ihn misst | 1:35 | 20:00 |
+| 15 | Reflexion und Einführung | 1:05 | 21:05 |
+| 16 | Abschluss | 0:25 | 21:30 |
 
 Wenn die Zeit knapp wird: auf Folie 10 den zweiten Absatz weglassen, auf
 Folie 15 die Erkenntnisse nur nennen. Die Ausfall-Folie 13 nicht streichen:
@@ -264,7 +264,7 @@ Die Idee ist das Vier-Augen-Prinzip, hier bewusst mit drei Personen. Das ist
 meine Projektregel, keine allgemeine Pflicht. Der Punkt: Wer vorschlägt, prüft
 und gibt nicht selbst frei.
 
-## 12 · Warum hier nicht die KI entscheidet (3:15)
+## 12 · Warum hier nicht die KI entscheidet (3:20)
 
 Sie fragen sich vielleicht: Das ist ein KI-Kurs. Warum entscheidet hier keine
 KI? Das war eine bewusste Entscheidung.
@@ -276,17 +276,21 @@ Rechnung schreibt der Absender, im schlimmsten Fall der Betrüger.
 
 Wo hilft KI dann? Bei der Rückfrage an den Lieferanten. Ist eine Rechnung
 gestoppt, entwirft die KI den Brief. Rechnungsnummer und Lieferant bekommt sie
-gar nicht, sie schreibt Platzhalter. Zahlen darf sie nur nennen, wenn sie in
-den Prüfergebnissen stehen. Die Anwendung prüft das und setzt erst dann die
-Werte ein. Ein Mensch gibt frei und verschickt von Hand. Bei einer
-abweichenden IBAN gibt es keinen Entwurf, nur den Rückruf.
+nicht, sie schreibt Platzhalter, und die Anwendung prüft jeden Entwurf. Ein
+Mensch gibt frei und verschickt von Hand. Bei einer abweichenden IBAN gibt es
+keinen Entwurf, nur den Rückruf.
 
-Mit dem echten Modell bestanden zuerst 16 von 24 Entwürfen die Prüfung. Die
-meisten Ablehnungen waren nummerierte Listen. Nach einer Zeile mehr im Prompt
-habe ich gezielt nachgeprüft: fünf Fälle, darunter die abgelehnten, 15 von 15
-bestanden. Eine neue Gesamtquote ist das nicht, die bleibt bei 16 von 24.
-Fällt ein Entwurf durch, springt eine feste Vorlage ein. Ob die Entwürfe besser sind als die Vorlage, muss ein
-Blindvergleich zeigen. Die Verantwortung tragen Menschen.
+Mit dem echten Modell waren 16 von 24 Entwürfen zulässig. Nach einer Korrektur
+am Prompt bestanden in einer gezielten Nachprüfung 15 von 15. Eine neue
+Gesamtquote ist das nicht.
+
+Entscheidend war der Vergleich mit einer festen Vorlage. In sechs Fällen habe
+ich gewählt, ohne die Auflösung zu kennen. Sechsmal fiel die Wahl auf die
+Vorlage. Die KI-Texte waren länger und erklärten Regeln, die der Lieferant
+nicht braucht. Die Stichprobe ist klein, und ganz blind und unabhängig war sie
+nicht. Aber für Standardfälle bringt die KI hier keinen Mehrwert, die Vorlage
+reicht. Gebaut, gemessen und dann die einfachere Lösung gewählt: Das ist für
+mich KI-Management.
 
 Ich habe mir drei bestehende Lösungen angesehen: DATEV, Candis und finway.
 DATEV ist eng mit der Buchhaltung verbunden, Candis nutzt unter anderem KI für
@@ -390,8 +394,8 @@ von einer Differenz, die das Modell selbst gerechnet hatte, und ein Entwurf
 brach an der Längengrenze ab. Nach einer Zeile im Prompt waren in einer
 gezielten Nachprüfung mit fünf Fällen 15 von 15 zulässig. Eine neue
 Gesamtquote ist das nicht. Beide IBAN-Fälle wurden vor jedem Aufruf
-verweigert. Zusammen etwa 30 Cent. Ob die Texte besser sind als die Vorlage,
-bewertet ein Mensch blind. Die Erklärfunktion ist noch nicht mit dem echten
+verweigert. Zusammen etwa 30 Cent. Im Vergleich mit der festen Vorlage fiel
+meine Wahl sechsmal von sechs auf die Vorlage. Die Erklärfunktion ist noch nicht mit dem echten
 Modell bewertet. (`docs/course/KI_BEWERTUNG_DE.md`)
 
 **Sieht die KI die Rechnungsdaten?**
@@ -401,6 +405,19 @@ Bestellbetrag. Keine Rechnungsnummer, keinen Lieferanten, keinen Firmennamen,
 keine IBAN. Diese Werte setzt die Anwendung erst nach der Prüfung über
 Platzhalter ein. Eine Anweisung, die jemand in der Rechnung versteckt, kommt
 beim Modell gar nicht an.
+
+**Warum haben Sie die KI gebaut, wenn die Vorlage besser ist?**
+Weil man das erst weiß, wenn man misst. Die Frage war, wo die KI eine echte
+Aufgabe bekommt. Ich habe sie gebaut, abgesichert und gegen die einfachste
+Lösung getestet. Für Standardfälle reicht die Vorlage. In einer Einführung
+bliebe die KI aus. Ob sie bei mehreren gleichzeitigen Problemen hilft, habe
+ich nicht verglichen.
+
+**Wie unabhängig war der Vergleich?**
+Nicht ganz. Eine Person, eine Präferenz je Fall, keine Punkte. Verglichen habe
+ich mit Hilfe von ChatGPT, und ich wusste vorher, dass die KI-Texte im Schnitt
+länger sind. Deshalb sage ich: kein Mehrwert gezeigt. Ich sage nicht: Die KI
+ist schlechter. (`docs/course/KI_BEWERTUNG_DE.md`)
 
 **Haben Sie die Prüfung gelockert, damit mehr Entwürfe durchkommen?**
 Nein. Geändert habe ich eine Zeile im Prompt: Spiegelstriche statt
