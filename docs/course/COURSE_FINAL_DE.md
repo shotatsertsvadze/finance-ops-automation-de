@@ -320,8 +320,8 @@ bewertet ist die Rückfrage, auf Zulässigkeit: 16 von 24 Entwürfen in der
 Erstbewertung; nach einer Prompt-Anpassung 15 von 15 in einer gezielten
 Nachprüfung mit 5 Fällen, keine neue Gesamtquote
 ([KI_BEWERTUNG_DE.md](KI_BEWERTUNG_DE.md)). Im Vergleich mit der festen
-Vorlage fiel die Wahl in 6 von 6 Fällen auf die Vorlage; für Standardfälle hat
-die KI also keinen Mehrwert gezeigt. Die Erklärung ist noch nicht mit dem
+Vorlage fiel die Wahl in 6 von 6 Fällen auf die Vorlage; für diese
+untersuchten Standardfälle zeigte sich kein erkennbarer Zusatznutzen durch KI. Die Erklärung ist noch nicht mit dem
 echten Modell bewertet.
 
 ---

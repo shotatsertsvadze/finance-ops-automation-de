@@ -32,18 +32,19 @@ Bei einer abweichenden IBAN gibt es keinen Entwurf. Mit dem echten Modell
 waren zuerst 16 von 24 Entwürfen zulässig. Nach einer Zeile mehr im Prompt
 waren es in einer gezielten Nachprüfung mit fünf Fällen 15 von 15, keine neue
 Gesamtquote. Im Vergleich mit der festen Vorlage habe ich aber in sechs von
-sechs Fällen die Vorlage gewählt: Für Standardfälle bringt die KI keinen
-Mehrwert. Erklären, warum eine Rechnung gestoppt wurde, kann sie auch; das ist gebaut, aber noch nicht mit dem echten Modell bewertet.
+sechs Fällen die Vorlage gewählt. Für diese untersuchten Standardfälle zeigte sich kein erkennbarer Zusatznutzen durch KI. Erklären, warum eine Rechnung gestoppt wurde, kann sie auch; das ist gebaut, aber noch nicht mit dem echten Modell bewertet.
 PDF-Rechnungen auszulesen wäre die nächste Stelle, das ist nur eine Idee.
 
 **Nachfrage:** „Dann ist die KI doch nur Dekoration?“
-→ Für Standardfälle: ja, und das ist gemessen. Die KI war meine Hypothese,
-der Vergleich mit der Vorlage hat sie nicht bestätigt: sechsmal von sechs fiel
-die Wahl auf die Vorlage. In einer Einführung bliebe die KI deshalb aus. Offen
-ist nur, ob sie bei mehreren gleichzeitigen Problemen hilft; das habe ich
-nicht verglichen. Ehrlich dazu: Der Vergleich war klein, mit Hilfe von
-ChatGPT und nicht ganz blind. Ich sage deshalb „kein Mehrwert gezeigt“, nicht
-„die KI ist schlechter“.
+→ Nein. Sie ist gebaut und mit einem echten Sprachmodell getestet. Aber in
+den sechs untersuchten Standardfällen zeigte sich kein erkennbarer
+Zusatznutzen: Sechsmal fiel die Wahl auf die Vorlage. Meine Hypothese hat sich
+dort nicht bestätigt, deshalb würde ich mit der Vorlage starten. Offen ist, ob
+die KI bei mehreren gleichzeitigen Problemen oder mit der verbesserten
+Prompt-Fassung hilft. Ehrlich dazu: Der Vergleich war klein, mit Hilfe von
+ChatGPT, nicht ganz blind und mit Entwürfen der ersten Prompt-Fassung. Ich
+sage deshalb „kein erkennbarer Zusatznutzen in diesen Fällen“, nicht „die KI
+ist schlechter“.
 
 ---
 

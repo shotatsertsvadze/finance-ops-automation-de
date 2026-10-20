@@ -21,11 +21,11 @@ Klammern sind Regieanweisungen.
 | 9 | **Demo-Video** (4:05 plus Start) | 4:15 | 11:40 |
 | 10 | Was Jonas sieht, und was dahinter steht | 0:35 | 12:15 |
 | 11 | Menschliche Kontrolle | 1:35 | 13:50 |
-| 12 | **Warum hier nicht die KI entscheidet** | 3:20 | 17:10 |
-| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 18:25 |
-| 14 | Nutzen und wie man ihn misst | 1:35 | 20:00 |
-| 15 | Reflexion und Einführung | 1:05 | 21:05 |
-| 16 | Abschluss | 0:25 | 21:30 |
+| 12 | **Warum hier nicht die KI entscheidet** | 3:35 | 17:25 |
+| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 18:40 |
+| 14 | Nutzen und wie man ihn misst | 1:35 | 20:15 |
+| 15 | Reflexion und Einführung | 1:05 | 21:20 |
+| 16 | Abschluss | 0:25 | 21:45 |
 
 Wenn die Zeit knapp wird: auf Folie 10 den zweiten Absatz weglassen, auf
 Folie 15 die Erkenntnisse nur nennen. Die Ausfall-Folie 13 nicht streichen:
@@ -264,7 +264,7 @@ Die Idee ist das Vier-Augen-Prinzip, hier bewusst mit drei Personen. Das ist
 meine Projektregel, keine allgemeine Pflicht. Der Punkt: Wer vorschlägt, prüft
 und gibt nicht selbst frei.
 
-## 12 · Warum hier nicht die KI entscheidet (3:20)
+## 12 · Warum hier nicht die KI entscheidet (3:35)
 
 Sie fragen sich vielleicht: Das ist ein KI-Kurs. Warum entscheidet hier keine
 KI? Das war eine bewusste Entscheidung.
@@ -280,17 +280,19 @@ nicht, sie schreibt Platzhalter, und die Anwendung prüft jeden Entwurf. Ein
 Mensch gibt frei und verschickt von Hand. Bei einer abweichenden IBAN gibt es
 keinen Entwurf, nur den Rückruf.
 
-Mit dem echten Modell waren 16 von 24 Entwürfen zulässig. Nach einer Korrektur
-am Prompt bestanden in einer gezielten Nachprüfung 15 von 15. Eine neue
-Gesamtquote ist das nicht.
+Das ist kein Konzept: Die Funktion ist gebaut und mit einem echten
+Sprachmodell getestet, Claude Sonnet 5.5 von Anthropic. 16 von 24 Entwürfen
+waren zulässig. Nach einer Korrektur am Prompt bestanden in einer gezielten
+Nachprüfung 15 von 15. Eine neue Gesamtquote ist das nicht.
 
 Entscheidend war der Vergleich mit einer festen Vorlage. In sechs Fällen habe
 ich gewählt, ohne die Auflösung zu kennen. Sechsmal fiel die Wahl auf die
 Vorlage. Die KI-Texte waren länger und erklärten Regeln, die der Lieferant
-nicht braucht. Die Stichprobe ist klein, und ganz blind und unabhängig war sie
-nicht. Aber für Standardfälle bringt die KI hier keinen Mehrwert, die Vorlage
-reicht. Gebaut, gemessen und dann die einfachere Lösung gewählt: Das ist für
-mich KI-Management.
+nicht braucht. Der Vergleich war klein, mit Hilfe von ChatGPT und mit
+Entwürfen der ersten Prompt-Fassung. Für diese untersuchten Standardfälle
+zeigte sich kein erkennbarer Zusatznutzen durch KI. Verallgemeinern lässt sich
+das nicht. Gebaut, gemessen und dann die einfachere Lösung gewählt: Das ist
+für mich KI-Management.
 
 Ich habe mir drei bestehende Lösungen angesehen: DATEV, Candis und finway.
 DATEV ist eng mit der Buchhaltung verbunden, Candis nutzt unter anderem KI für
@@ -406,18 +408,26 @@ keine IBAN. Diese Werte setzt die Anwendung erst nach der Prüfung über
 Platzhalter ein. Eine Anweisung, die jemand in der Rechnung versteckt, kommt
 beim Modell gar nicht an.
 
-**Warum haben Sie die KI gebaut, wenn die Vorlage besser ist?**
+**Ist die KI-Funktion wirklich gebaut, oder nur ein Konzept?**
+Gebaut und mit einem echten Sprachmodell getestet, Claude Sonnet 5.5: 24
+Entwürfe in der Erstbewertung, 15 in der Nachprüfung, dazu ein Durchlauf in
+der Anwendung bis „von Hand versendet“. Ich kann sie live zeigen, und als
+Reserve gibt es Screenshots.
+
+**Warum haben Sie die KI gebaut, wenn die Vorlage bevorzugt wurde?**
 Weil man das erst weiß, wenn man misst. Die Frage war, wo die KI eine echte
-Aufgabe bekommt. Ich habe sie gebaut, abgesichert und gegen die einfachste
-Lösung getestet. Für Standardfälle reicht die Vorlage. In einer Einführung
-bliebe die KI aus. Ob sie bei mehreren gleichzeitigen Problemen hilft, habe
-ich nicht verglichen.
+Aufgabe bekommt. Ich habe sie gebaut, abgesichert und mit einem echten
+Sprachmodell gegen die einfachste Lösung getestet. Für die untersuchten
+Standardfälle zeigte sich kein erkennbarer Zusatznutzen. In einer Einführung
+würde ich mit der Vorlage starten. Ob die KI bei mehreren gleichzeitigen
+Problemen oder mit der verbesserten Prompt-Fassung hilft, habe ich nicht
+verglichen.
 
 **Wie unabhängig war der Vergleich?**
 Nicht ganz. Eine Person, eine Präferenz je Fall, keine Punkte. Verglichen habe
 ich mit Hilfe von ChatGPT, und ich wusste vorher, dass die KI-Texte im Schnitt
-länger sind. Deshalb sage ich: kein Mehrwert gezeigt. Ich sage nicht: Die KI
-ist schlechter. (`docs/course/KI_BEWERTUNG_DE.md`)
+länger sind. Deshalb sage ich: kein erkennbarer Zusatznutzen in diesen
+Fällen. Ich sage nicht: Die KI ist schlechter. (`docs/course/KI_BEWERTUNG_DE.md`)
 
 **Haben Sie die Prüfung gelockert, damit mehr Entwürfe durchkommen?**
 Nein. Geändert habe ich eine Zeile im Prompt: Spiegelstriche statt

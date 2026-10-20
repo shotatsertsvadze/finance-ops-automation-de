@@ -139,11 +139,11 @@ Bewertung):
   der Rest des Briefs deutsche Schreibweise nutzt.
 - Die Vorlagen sind kurz, gleich aufgebaut und enden mit einer klaren Bitte.
 
-**Folgerung:** Für Standardfälle mit einer einzigen Abweichung hat die KI in
-diesem Vergleich keinen Mehrwert gegenüber der festen Vorlage gezeigt. Die
-Vorlage ist kürzer, einheitlich, kostet nichts und braucht keine Prüfung. Für
-eine Einführung wäre die Vorlage der Standard, die KI-Funktion bliebe
-ausgeschaltet. Offen ist, ob die KI bei mehreren gleichzeitigen Problemen oder
+**Folgerung:** Im kleinen Präferenzvergleich wurden in 6 von 6 Fällen die festen Vorlagen bevorzugt. Für diese untersuchten Standardfälle zeigte sich kein erkennbarer Zusatznutzen durch KI. Das gilt für Entwürfe aus Prompt v1
+und Fälle mit einer einzigen Abweichung. Auf Prompt v2 und auf andere
+KI-Einsatzfälle lässt es sich nicht übertragen. Die Vorlage ist kürzer,
+einheitlich, kostet nichts und braucht keine Prüfung; eine Einführung würde
+deshalb mit der Vorlage starten. Offen ist, ob die KI bei mehreren gleichzeitigen Problemen oder
 ungewöhnlichen Fällen hilft; das ist nicht verglichen.
 
 ## Was das zeigt und was nicht

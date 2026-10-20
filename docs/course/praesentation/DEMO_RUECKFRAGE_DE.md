@@ -71,8 +71,9 @@ Ersatz.
   nichts gefunden, nicht: Der Text ist gut.
 - Im Vergleich mit der festen Vorlage fiel die Wahl in 6 von 6 Fällen auf die
   Vorlage. Die Vorführung zeigt also den abgesicherten Ablauf, keinen Vorteil
-  der KI. Wer fragt, bekommt das so: Für Standardfälle reicht die Vorlage, die
-  KI bliebe in einer Einführung aus. Den Knopf **Vorlage verwenden** gleich
+  der KI. Wer fragt: Für die untersuchten Standardfälle zeigte sich kein
+  erkennbarer Zusatznutzen; in einer Einführung würde ich mit der Vorlage
+  starten. Den Knopf **Vorlage verwenden** gleich
   mitzeigen.
 - Der Entwurf ist bei jedem Aufruf etwas anders formuliert. Live kann also ein
   anderer Text kommen als in der Probe.

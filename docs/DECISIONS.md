@@ -2132,6 +2132,7 @@ feature is frozen at that version until the presentation.
 
 Compared with the fixed template on 2026-10-20, the template was preferred in
 all six compared cases (one person, assisted by ChatGPT, not fully blind,
-preferences only). For single-issue cases the AI draft showed no benefit, so
-in a rollout the template would be the default and the AI draft would stay
-off. Whether it helps with several issues at once was not compared.
+preferences only). For the single-issue cases compared, with drafts from
+prompt v1, the AI draft showed no recognisable benefit, so a rollout would
+start with the template. This does not carry over to prompt v2 or to other
+uses of AI; whether it helps with several issues at once was not compared.
