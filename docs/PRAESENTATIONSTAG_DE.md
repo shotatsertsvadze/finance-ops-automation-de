@@ -9,7 +9,7 @@ stoppt. Am Tag selbst braucht es weder Tunnel noch n8n. Finance-Ops läuft nur
 lokal mit, falls in den Fragen jemand die Anwendung sehen will.
 
 Diese Liste ist der Ersatzweg für den Vortrag. Was im Betrieb bei einem
-Ausfall passiert, steht auf den Folien 12 und 13 und gehört nicht hierher.
+Ausfall passiert, steht auf Folie 13 und gehört nicht hierher.
 
 ```
 E-Mail → n8n (Cloud) → Cloudflare-Tunnel → Finance-Ops (lokal) → Google Sheets
@@ -17,8 +17,8 @@ E-Mail → n8n (Cloud) → Cloudflare-Tunnel → Finance-Ops (lokal) → Google 
 
 Videoquelle: `docs/course/praesentation/demo_v4.mp4`. In
 `praesentation_v5.html` ist es eingebettet, die Datei funktioniert also
-allein. Die Vorgängerfassung mit Backup-Folien liegt in
-`docs/course/praesentation/referenz/`.
+allein. Backup-Folien B1 bis B8: `docs/course/praesentation/backup_folien_v5.html`.
+B8 zeigt schematisch die fünf Wege einer Rechnung.
 
 ## Am Vortag
 
@@ -57,6 +57,10 @@ allein. Die Vorgängerfassung mit Backup-Folien liegt in
        einen Entwurf für Rechnung C erzeugen (prüft Schlüssel und Guthaben).
        Die Hauptdemo braucht die KI nicht.
 
+4. [ ] Backup-Folien `backup_folien_v5.html#8` in einem zweiten Tab desselben
+       Fensters öffnen (B8, „Fünf Wege“). Nach dem Video bei Bedarf mit
+       Ctrl + Tab hin- und zurückwechseln.
+
 ## Während des Vortrags
 
 - Folie 9: Leertaste oder Klick auf das Play-Symbol. Die Referentenansicht
@@ -69,7 +73,7 @@ allein. Die Vorgängerfassung mit Backup-Folien liegt in
 |---|---|
 | Video startet nicht | `demo_v4.mp4` vom Desktop in QuickTime öffnen, Vollbild |
 | Präsentation lässt sich nicht öffnen | PDF zeigen; Folie 9 zeigt dort ein Standbild, das Video separat abspielen |
-| In den Fragen will jemand die Anwendung live sehen | Finance-Ops öffnen, die beiden Dateien aus `~/Desktop/Demo-Anhaenge/` über „Datei auswählen“ hochladen. Kanal zeigt dann „Upload“ |
+| In den Fragen will jemand die Anwendung live sehen | Finance-Ops öffnen, die beiden Dateien aus `Demo-Anhaenge/` im Projektordner über „Datei auswählen“ hochladen. Kanal zeigt dann „Upload“ |
 | Jemand will die KI-Rückfrage sehen | Vorführung nach `docs/course/praesentation/DEMO_RUECKFRAGE_DE.md`, etwa 90 Sekunden. Antwortet das Modell nicht, lädt die feste Vorlage; genau das zeigen |
 
 ## Bekannte Kleinigkeiten (bei Nachfrage erklären)
