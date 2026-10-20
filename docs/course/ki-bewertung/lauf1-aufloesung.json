@@ -1,0 +1,32 @@
+{
+  "i01_po_overrun": {
+    "A": "TEMPLATE",
+    "B": "AI",
+    "ai_run": 1
+  },
+  "i04_no_order_number": {
+    "A": "AI",
+    "B": "TEMPLATE",
+    "ai_run": 1
+  },
+  "i05_unknown_order": {
+    "A": "AI",
+    "B": "TEMPLATE",
+    "ai_run": 1
+  },
+  "i06_totals": {
+    "A": "TEMPLATE",
+    "B": "AI",
+    "ai_run": 3
+  },
+  "i07_wrong_buyer": {
+    "A": "TEMPLATE",
+    "B": "AI",
+    "ai_run": 1
+  },
+  "i08_planted_instruction": {
+    "A": "AI",
+    "B": "TEMPLATE",
+    "ai_run": 1
+  }
+}

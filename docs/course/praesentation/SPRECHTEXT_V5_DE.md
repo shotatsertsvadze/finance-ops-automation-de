@@ -2,8 +2,8 @@
 
 Gehört zu `praesentation_v5.html` (16 Folien). Die Fassung v4 bleibt
 unverändert in `praesentation_v4.html` mit `SPRECHTEXT_DE.md`. Ziel: etwa
-19 Minuten, davon gut 4 Minuten Demo-Video, das ich live erkläre. Rahmen des
-Dozenten: 15 bis 20 Minuten. Die Dauern rechnen mit 95 Wörtern pro Minute,
+21 Minuten, davon gut 4 Minuten Demo-Video, das ich live erkläre. Obergrenze:
+22 bis 23 Minuten. Die Dauern rechnen mit 95 Wörtern pro Minute,
 dem Tempo aus der Probe vom 17.10.2026, Pausen und Folienwechsel inklusive.
 Der Text ist zum Sprechen geschrieben, nicht zum Ablesen: Sätze in eckigen
 Klammern sind Regieanweisungen.
@@ -21,11 +21,11 @@ Klammern sind Regieanweisungen.
 | 9 | **Demo-Video** (4:05 plus Start) | 4:15 | 11:40 |
 | 10 | Was Jonas sieht, und was dahinter steht | 0:35 | 12:15 |
 | 11 | Menschliche Kontrolle | 1:35 | 13:50 |
-| 12 | **Warum hier nicht die KI entscheidet** | 2:05 | 15:55 |
-| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 17:10 |
-| 14 | Nutzen und wie man ihn misst | 1:05 | 18:15 |
-| 15 | Reflexion und Einführung | 1:05 | 19:20 |
-| 16 | Abschluss | 0:25 | 19:45 |
+| 12 | **Warum hier nicht die KI entscheidet** | 3:35 | 17:25 |
+| 13 | **Gestoppt ist nicht ausgefallen** | 1:15 | 18:40 |
+| 14 | Nutzen und wie man ihn misst | 1:35 | 20:15 |
+| 15 | Reflexion und Einführung | 1:05 | 21:20 |
+| 16 | Abschluss | 0:25 | 21:45 |
 
 Wenn die Zeit knapp wird: auf Folie 10 den zweiten Absatz weglassen, auf
 Folie 15 die Erkenntnisse nur nennen. Die Ausfall-Folie 13 nicht streichen:
@@ -236,7 +236,7 @@ Zusammengefasst: kein Rätselraten. Oben steht in einem Satz, was blockiert.
 Darunter der Beleg, die abweichenden Ziffern markiert. Der Rest ohne Befund.
 Und direkt darunter der nächste Schritt.
 
-Das ist die Oberfläche. Dahinter stehen 751 automatisierte Tests und 83
+Das ist die Oberfläche. Dahinter stehen 788 automatisierte Tests und 84
 dokumentierte Architekturentscheidungen. Die Kontrollen sind also geprüft und
 nachvollziehbar. Getestet ist das mit synthetischen Daten, nicht im
 Echtbetrieb.
@@ -264,7 +264,7 @@ Die Idee ist das Vier-Augen-Prinzip, hier bewusst mit drei Personen. Das ist
 meine Projektregel, keine allgemeine Pflicht. Der Punkt: Wer vorschlägt, prüft
 und gibt nicht selbst frei.
 
-## 12 · Warum hier nicht die KI entscheidet (2:05)
+## 12 · Warum hier nicht die KI entscheidet (3:35)
 
 Sie fragen sich vielleicht: Das ist ein KI-Kurs. Warum entscheidet hier keine
 KI? Das war eine bewusste Entscheidung.
@@ -274,10 +274,25 @@ Ergebnis hat einen Grund. Ein Sprachmodell liefert nicht garantiert jedes Mal
 dasselbe. Eine plausible Begründung ist noch kein Beleg. Und den Text der
 Rechnung schreibt der Absender, im schlimmsten Fall der Betrüger.
 
-KI hilft beim Verstehen: Sie kann erklären, warum eine Rechnung gestoppt
-wurde. Das ist gebaut, aber aus und mit dem echten Modell noch nicht bewertet.
-Später denkbar: PDF-Rechnungen auslesen, ein Mensch bestätigt. Die
-Verantwortung tragen Menschen.
+Wo hilft KI dann? Bei der Rückfrage an den Lieferanten. Ist eine Rechnung
+gestoppt, entwirft die KI den Brief. Rechnungsnummer und Lieferant bekommt sie
+nicht, sie schreibt Platzhalter, und die Anwendung prüft jeden Entwurf. Ein
+Mensch gibt frei und verschickt von Hand. Bei einer abweichenden IBAN gibt es
+keinen Entwurf, nur den Rückruf.
+
+Das ist kein Konzept: Die Funktion ist gebaut und mit einem echten
+Sprachmodell getestet, Claude Sonnet 5.5 von Anthropic. 16 von 24 Entwürfen
+waren zulässig. Nach einer Korrektur am Prompt bestanden in einer gezielten
+Nachprüfung 15 von 15. Eine neue Gesamtquote ist das nicht.
+
+Entscheidend war der Vergleich mit einer festen Vorlage. In sechs Fällen habe
+ich gewählt, ohne die Auflösung zu kennen. Sechsmal fiel die Wahl auf die
+Vorlage. Die KI-Texte waren länger und erklärten Regeln, die der Lieferant
+nicht braucht. Der Vergleich war klein, mit Hilfe von ChatGPT und mit
+Entwürfen der ersten Prompt-Fassung. Für diese untersuchten Standardfälle
+zeigte sich kein erkennbarer Zusatznutzen durch KI. Verallgemeinern lässt sich
+das nicht. Gebaut, gemessen und dann die einfachere Lösung gewählt: Das ist
+für mich KI-Management.
 
 Ich habe mir drei bestehende Lösungen angesehen: DATEV, Candis und finway.
 DATEV ist eng mit der Buchhaltung verbunden, Candis nutzt unter anderem KI für
@@ -310,7 +325,7 @@ fortgesetzt. Von Hand heißt heute: in n8n nachsehen und erneut senden. Noch
 nicht gebaut ist eine automatische Benachrichtigung. Einen Ausfall sieht heute
 nur, wer nachschaut.
 
-## 14 · Geschäftlicher Nutzen und wie man ihn misst (1:05)
+## 14 · Geschäftlicher Nutzen und wie man ihn misst (1:35)
 
 Was bringt das? Links eine Modellrechnung für Nordwerk, klar gesagt:
 Annahmen, nicht gemessen. 2.000 Rechnungen im Monat, jede fünfte braucht eine
@@ -318,7 +333,13 @@ Klärung. Eine saubere Rechnung kostet heute sechs Minuten, mit dem System eine,
 eine Ausnahme 25 statt 8. Dann sinkt der Aufwand von rund 327 auf rund 80
 Stunden im Monat.
 
-Ob das stimmt, muss ein Pilot zeigen. Messen würde ich drei Dinge: Wie viele
+Ob das stimmt, muss ein Pilot zeigen. Vorab habe ich die Regeln an 20
+synthetischen Rechnungen mit bekanntem Soll-Ergebnis geprüft. Alle 20 landen
+dort, wo sie hingehören: 16 ohne Sachprüfung, 4 gestoppt mit dem richtigen
+Grund, darunter beide mit fremder IBAN. Die Mischung habe ich gewählt. Gemessen
+ist also nicht die Quote, sondern dass die Regeln richtig greifen.
+
+Im Pilot würde ich drei Dinge messen: Wie viele
 Rechnungen kommen ohne Sachprüfung durch? Wie lange braucht eine Rechnung,
 gemessen wie vorher? Und wie viele Stopps waren Fehlalarme? Dazu eine
 Leitplanke: keine Zahlung auf ein ungeprüftes Konto. Schneller ist kein
@@ -363,15 +384,67 @@ der Rückruf. Das System sorgt nur dafür, dass vorher nicht gezahlt wird.
 **Warum ist das ein KI-Projekt, wenn Regeln entscheiden?**
 Weil die Wahl der richtigen Technik Teil des KI-Managements ist. Über Geld
 entscheiden Regeln, weil sie wiederholbar und begründet sind. KI setze ich
-dort ein, wo ein Fehler wenig kostet: beim Erklären einer Ausnahme, später
-beim Auslesen von PDF-Rechnungen mit menschlicher Bestätigung. → Folie 12.
+dort ein, wo ein Fehler wenig kostet und ein Mensch draufschaut: Sie entwirft
+die Rückfrage an den Lieferanten und erklärt Ausnahmen. Später denkbar:
+PDF-Rechnungen auslesen, mit Bestätigung durch einen Menschen. → Folie 12.
 
-**Wie würden Sie die KI-Erklärung bewerten?**
-Gegen die Belege: Nennt sie nur, was in den Prüfergebnissen steht? Und hilft
-sie Jonas, schneller zu entscheiden? Fünf Bewertungsszenarien sind
-vorbereitet, gegen das echte Modell sind sie noch nicht gelaufen, weil keine
-kostenpflichtige API-Nutzung freigeschaltet ist. Jede Antwort wird schon heute
-vor der Anzeige gegen die Belege geprüft.
+**Wie haben Sie die KI bewertet?**
+Die Rückfrage mit dem echten Modell: acht Fälle, je dreimal, jeder Entwurf
+durch dieselben festen Prüfungen wie in der Anwendung. In der ersten Runde
+waren 16 von 24 zulässig. Fünf Ablehnungen kamen von nummerierten Listen, zwei
+von einer Differenz, die das Modell selbst gerechnet hatte, und ein Entwurf
+brach an der Längengrenze ab. Nach einer Zeile im Prompt waren in einer
+gezielten Nachprüfung mit fünf Fällen 15 von 15 zulässig. Eine neue
+Gesamtquote ist das nicht. Beide IBAN-Fälle wurden vor jedem Aufruf
+verweigert. Zusammen etwa 30 Cent. Im Vergleich mit der festen Vorlage fiel
+meine Wahl sechsmal von sechs auf die Vorlage. Die Erklärfunktion ist noch nicht mit dem echten
+Modell bewertet. (`docs/course/KI_BEWERTUNG_DE.md`)
+
+**Sieht die KI die Rechnungsdaten?**
+Nicht die Rechnung selbst. Sie bekommt die fehlgeschlagenen Prüfungen mit
+ihren freigegebenen Belegen, bei einer Überschreitung etwa Netto- und
+Bestellbetrag. Keine Rechnungsnummer, keinen Lieferanten, keinen Firmennamen,
+keine IBAN. Diese Werte setzt die Anwendung erst nach der Prüfung über
+Platzhalter ein. Eine Anweisung, die jemand in der Rechnung versteckt, kommt
+beim Modell gar nicht an.
+
+**Ist die KI-Funktion wirklich gebaut, oder nur ein Konzept?**
+Gebaut und mit einem echten Sprachmodell getestet, Claude Sonnet 5.5: 24
+Entwürfe in der Erstbewertung, 15 in der Nachprüfung, dazu ein Durchlauf in
+der Anwendung bis „von Hand versendet“. Ich kann sie live zeigen, und als
+Reserve gibt es Screenshots.
+
+**Warum haben Sie die KI gebaut, wenn die Vorlage bevorzugt wurde?**
+Weil man das erst weiß, wenn man misst. Die Frage war, wo die KI eine echte
+Aufgabe bekommt. Ich habe sie gebaut, abgesichert und mit einem echten
+Sprachmodell gegen die einfachste Lösung getestet. Für die untersuchten
+Standardfälle zeigte sich kein erkennbarer Zusatznutzen. In einer Einführung
+würde ich mit der Vorlage starten. Ob die KI bei mehreren gleichzeitigen
+Problemen oder mit der verbesserten Prompt-Fassung hilft, habe ich nicht
+verglichen.
+
+**Wie unabhängig war der Vergleich?**
+Nicht ganz. Eine Person, eine Präferenz je Fall, keine Punkte. Verglichen habe
+ich mit Hilfe von ChatGPT, und ich wusste vorher, dass die KI-Texte im Schnitt
+länger sind. Deshalb sage ich: kein erkennbarer Zusatznutzen in diesen
+Fällen. Ich sage nicht: Die KI ist schlechter. (`docs/course/KI_BEWERTUNG_DE.md`)
+
+**Haben Sie die Prüfung gelockert, damit mehr Entwürfe durchkommen?**
+Nein. Geändert habe ich eine Zeile im Prompt: Spiegelstriche statt
+Nummern. Die Prüfregeln sind gleich geblieben. Eine selbst gerechnete Zahl
+lehnt die Prüfung weiterhin ab, auch wenn sie stimmt.
+
+**Wie haben Sie die Testmenge festgelegt?**
+20 synthetische Rechnungen, das Soll vorher aus den Regeln abgeleitet, viele
+Grenzfälle: genau 500 Euro, ein Cent darüber, fremde IBAN bei einem
+Kleinbetrag. Alle 20 landen richtig. Dass 16 durchlaufen, habe ich gewählt,
+passend zur Annahme acht von zehn. (`docs/course/SOLL_IST_DE.md`)
+
+**Stehen Bankdaten im Google Sheet?**
+Nein. Das Sheet hat neun Spalten ohne IBAN. n8n sieht die IBAN aber, weil es
+die Rechnung transportiert. Für ein Echtsystem: kein Sheet mit
+Rechnungsdaten, n8n im eigenen Netz, ein technisches Konto, das nur hochladen
+darf. (`docs/course/DATENFLUSS_DE.md`)
 
 **Woher wissen Sie, dass sich das lohnt?**
 Noch gar nicht. 327 und 80 Stunden sind eine Modellrechnung. Ein Pilot im
@@ -427,8 +500,8 @@ Abholung der Mail bis zur Zeile im Sheet. Wie lange das Postfach braucht, bis
 n8n die Mail abholt, habe ich nicht gemessen. → Referenzfolie B1.
 
 **Wie viele Tests gibt es?**
-Über 740 automatisierte Tests, dazu 83 dokumentierte
-Architekturentscheidungen. → Referenzfolie B6.
+788 automatisierte Tests, alle grün in der CI vom 19.10.2026, dazu 84
+dokumentierte Architekturentscheidungen. → Referenzfolie B6.
 
 **Bekommt jemand eine Nachricht, wenn etwas ausfällt?**
 Nein, heute nicht. Einen Ausfall sieht, wer in n8n die Ausführungen oder das

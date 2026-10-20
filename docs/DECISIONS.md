@@ -2129,3 +2129,10 @@ ungrounded numbers; two were a difference the model computed itself, which
 stays rejected. Prompt `supplier-inquiry/2` adds one line asking for bullet
 points; no check changed. A follow-up on five cases accepted 15 of 15. The
 feature is frozen at that version until the presentation.
+
+Compared with the fixed template on 2026-10-20, the template was preferred in
+all six compared cases (one person, assisted by ChatGPT, not fully blind,
+preferences only). For the single-issue cases compared, with drafts from
+prompt v1, the AI draft showed no recognisable benefit, so a rollout would
+start with the template. This does not carry over to prompt v2 or to other
+uses of AI; whether it helps with several issues at once was not compared.
