@@ -140,7 +140,7 @@ Gemessen am 20.10.2026:
 | Situation | Dann | Folie |
 |---|---|---|
 | **Plan B:** Tunnel oder n8n schon beim Go/No-go nicht erreichbar | Folie 7 zeigen, **V** drücken: Video bis 2:16 abspielen (n8n und Sheet), anhalten. Dann in Finance-Ops als Anna die drei Dateien über „Datei auswählen“ hochladen. Das ergibt dieselben Entscheidungen live, ohne n8n. Weiter mit Schritt 6. Sagen: „Die Verzweigung in n8n habe ich am 20.10. getestet; heute ist der Weg nicht erreichbar.“ | R1 |
-| Das Formular meldet „Problem submitting response“ oder antwortet nach 15 s nicht | Einmal neu versuchen. Klappt es dann nicht: „Genau dafür gibt es den Fehlerpfad“, Schritt 5 zeigen, danach lokal hochladen wie in Plan B. | – |
+| Das Formular meldet „Problem submitting response“ oder antwortet nach 15 s nicht | Erst in Finance-Ops (Tab 5) nachsehen, ob die Rechnung angekommen ist. **Ja:** Finance-Ops hat geprüft und entschieden, nur das Protokoll im Sheet ist gescheitert, so beim ersten Testlauf am 20.10. Nicht neu einreichen, sonst entsteht ein Duplikat; das Ergebnis in Finance-Ops zeigen. **Nein:** einmal neu einreichen. Klappt es dann nicht, Schritt 5 zeigen und lokal hochladen wie in Plan B. | – |
 | n8n-Oberfläche lädt nicht | Schritte 4 und 5 nur ansagen, Folie R4 zeigen, weiter mit Schritt 6 | R4 |
 | Finance-Ops lädt nicht | R3 (Was Jonas sieht) und R2 (KI) zeigen, Schritt 8 ansagen | R3, R2 |
 | Das Modell antwortet nicht | Das Panel lädt die feste Vorlage und sagt das: „Kein KI-Entwurf verfügbar. Die feste Vorlage ist geladen.“ Genau das zeigen. Kommt gar nichts: R2 | R2 |
@@ -162,14 +162,6 @@ Hinter Folie 12 liegen die Reservefolien:
 
 ## Generalprobe am Donnerstag
 
-1. Start komplett wie oben, mit Stoppuhr ab „Demo-Datenbank“. Ziel: unter
-   20 Minuten.
-2. Ganzer Vortrag mit Referentenansicht. Zwischenzeiten notieren: nach
-   Folie 6 (Soll 5:35), nach der Demo (Soll 13:30), Ende (Soll 19:00).
-3. Jeden Schritt der Klickfolge einmal messen, vor allem Dateidialog und
-   Anmeldung als Tim.
-4. Plan B einmal üben: Video bis 2:16, dann lokal hochladen (etwa 3 Minuten).
-5. Prüfen, ob Ausführung 200216 noch in der Liste steht.
-6. Danach entscheiden: Kürzungen nötig? Reihenfolge so lassen?
-7. Für Freitag: Demo-Datenbank wieder frisch aufsetzen (Schritt 1). Sonst wären
-   die drei Rechnungen Duplikate.
+Go/No-go-Checkliste: `GENERALPROBE_DE.md`. Danach die Demo-Datenbank für
+Freitag wieder frisch aufsetzen (Start, Schritt 1), sonst wären die drei
+Rechnungen Duplikate.

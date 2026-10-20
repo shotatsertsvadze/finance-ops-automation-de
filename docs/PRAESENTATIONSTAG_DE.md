@@ -32,8 +32,9 @@ allein. Weitere Referenzfolien B1 bis B7: `docs/course/praesentation/backup_foli
 
 ## Am Vortag
 
-- [ ] Generalprobe nach `LIVE_DEMO_DE.md`, Abschnitt Generalprobe: Start,
-      ganzer Vortrag mit Zwischenzeiten, Plan B einmal üben.
+- [ ] Generalprobe mit der Go/No-go-Checkliste
+      `docs/course/praesentation/GENERALPROBE_DE.md`: Start, ganzer Vortrag mit
+      Zwischenzeiten, Plan B einmal üben.
 - [ ] Wechsel zwischen Präsentation und Demo-Fenster am Beamer üben
       (Cmd + Tab). Liegen beide im Vollbild, wechselt macOS den Schreibtisch.
       Wirkt das zu unruhig, beide Fenster nur maximieren.
