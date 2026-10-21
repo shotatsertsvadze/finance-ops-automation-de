@@ -35,7 +35,7 @@ def block(b):
     if b.startswith("# "):
         return f"<h1>{inline(b[2:])}</h1>"
     if b.startswith("## "):
-        m = re.match(r"## (\d+) · (.+?) \((\d+:\d\d)\)$", b)
+        m = re.match(r"## ([RB]?\d+) · (.+?) \((\d+:\d\d)\)$", b)
         if m:
             return f'<h2><span class="no">{m[1]}</span>{inline(m[2])}<span class="dur">{m[3]}</span></h2>'
         return f"<h2>{inline(b[3:])}</h2>"
