@@ -1,22 +1,28 @@
 # Präsentationstag – Checkliste
 
-Vortragsfassung: `docs/course/praesentation/praesentation_v7.html`.
+Vortragsfassung: `docs/course/praesentation/praesentation_v8.html`.
 - Genau 12 Folien, die Live-Demo auf Folie 7.
-- Reserve als eigene Präsentation: `reserve_v7.html` mit R1 bis R4 (Demo) und
-  B1 bis B8 (Referenz für Fragen).
-- Sprechtext: `SPRECHTEXT_V7_DE.md`. Geplant sind etwa 20 Minuten; vorgesehen
+- Reserve als eigene Präsentation: `reserve_v8.html` mit R1 bis R4 (Demo) und
+  B1 bis B9 (Referenz für Fragen).
+- Sprechtext: `SPRECHTEXT_V8_DE.md`. Geplant sind etwa 20 Minuten; vorgesehen
   sind 15 bis 20 Minuten mit 2 bis 3 Minuten Spielraum.
 - Live-Demo: `docs/course/praesentation/LIVE_DEMO_DE.md`, mit Start,
   Klickfolge, Go/No-go und Reserve.
 
 Die Demo zeigt drei Rechnungen live, Eingang über das Formular der n8n-Testkopie
-v2: eine wird automatisch frei, eine geht zur Freigabe, eine wird wegen der
-IBAN gestoppt. n8n verzweigt nach der Antwort von Finance-Ops. Danach folgen
-in Finance-Ops die Entscheidungen der Menschen und die KI-Rückfrage.
+v3: eine wird automatisch frei, eine geht zur Freigabe, eine wird wegen der
+IBAN gestoppt. n8n verzweigt nach der Antwort von Finance-Ops und schreibt
+danach eine Zeile in das Protokoll in Supabase. Entschieden und gespeichert wird
+in Finance-Ops; Supabase ist nur ein zusätzliches Protokoll. Danach folgen in
+Finance-Ops die Entscheidungen der Menschen und die KI-Rückfrage.
 
 Rückfallebenen:
-- Das Video vom 15.10.2026 liegt unverändert als R1 in `reserve_v7.html`
-  (Tab 6 im Demo-Fenster) und als eigene Datei `demo_v4.mp4`.
+- Das Video vom 15.10.2026 liegt unverändert als R1 in `reserve_v8.html`
+  (Tab 6 im Demo-Fenster) und als eigene Datei `demo_v4.mp4`. Es zeigt noch
+  den ursprünglichen Workflow mit Google Sheets.
+- v7 mit dem Workflow v2 und Google Sheets bleibt unverändert als Rückfall
+  (`praesentation_v7.html`, `reserve_v7.html`, `SPRECHTEXT_V7_DE.md`,
+  `Live-Demo Ablauf v7.pdf`). Wann er gilt: `GENERALPROBE_DE.md`.
 - Die Fassung v6 (12 Folien mit R1 bis R4 in einer Datei) bleibt als
   `praesentation_v6.html` erhalten (Git-Tag `deck-v6-final`), ebenso v5
   (`praesentation_v5.html`, Git-Tag `deck-v5-final`).
@@ -26,12 +32,13 @@ Ausfall passiert, steht auf R4 und gehört nicht hierher.
 
 ```
 Formular (live) oder E-Mail (Betrieb) → n8n → Cloudflare-Tunnel → Finance-Ops (Demo-Instanz, lokal)
-                                         n8n verzweigt nach der Antwort → Google Sheet
+                                         n8n verzweigt nach der Antwort → Protokoll in Supabase
 ```
 
-Videoquelle: `docs/course/praesentation/demo_v4.mp4`. In `reserve_v7.html`
-ist es als R1 eingebettet, die Datei funktioniert also allein. Die
-Referenzfolien B1 bis B8 aus `backup_folien_v5.html` liegen dort dahinter.
+Videoquelle: `docs/course/praesentation/demo_v4.mp4`. In `reserve_v8.html`
+ist es als R1 eingebettet, die Datei funktioniert also allein. Dahinter liegen
+die Referenzfolien B1 bis B8 aus `backup_folien_v5.html` und B9 mit dem Test
+von v3.
 
 ## Am Vortag
 
@@ -43,10 +50,10 @@ Referenzfolien B1 bis B8 aus `backup_folien_v5.html` liegen dort dahinter.
       Chrome-Fenstern Cmd + < (deutsche Tastatur). Liegen beide im Vollbild,
       wechselt macOS den Schreibtisch. Wirkt das zu unruhig, beide Fenster nur
       maximieren.
-- [ ] Reserve R1 einmal abspielen: Tab 6 (`reserve_v7.html`), Leertaste oder
+- [ ] Reserve R1 einmal abspielen: Tab 6 (`reserve_v8.html`), Leertaste oder
       K. Zurück in die Präsentation, dort 8 und Enter für Folie 8.
-- [ ] Am Beamer prüfen: Lesbar sind Formular-Antworten, n8n-Ausführungen und
-      Finance-Ops bei Zoom 125 %?
+- [ ] Am Beamer prüfen: Lesbar sind Formular-Antworten, n8n-Ausführungen,
+      Finance-Ops und die Supabase-Tabelle bei Zoom 125 %?
 - [ ] Referentenansicht probieren: In der Präsentation **S** drücken. Ein
       zweites Fenster zeigt den Sprechtext der aktuellen Folie und folgt beim
       Weiterschalten von selbst. Auf Folie 7 steht dort die Klickfolge, auf
@@ -55,7 +62,7 @@ Referenzfolien B1 bis B8 aus `backup_folien_v5.html` liegen dort dahinter.
       auf R1 folgt ihr Text dem Video. Den Beamer auf „erweitern“
       stellen, nicht „spiegeln“, sonst sieht das Publikum den Text. Öffnet
       sich kein Fenster: Pop-ups für die Datei erlauben (getestet in Chrome).
-- [ ] Ersatz bereitlegen: PDF von Haupt- und Reservepräsentation (v7) und `demo_v4.mp4` als
+- [ ] Ersatz bereitlegen: PDF von Haupt- und Reservepräsentation (v8, dazu v7 als Rückfall) und `demo_v4.mp4` als
       eigene Datei, auf dem Desktop und auf einem USB-Stick.
 - [ ] Die Schriften der Präsentation kommen aus dem Internet (Google Fonts).
       Ohne Netz sieht sie leicht anders aus; im Zweifel das PDF zeigen.
@@ -72,7 +79,7 @@ Referenzfolien B1 bis B8 aus `backup_folien_v5.html` liegen dort dahinter.
        Vollbild springt deshalb zur Referentenansicht weg. Benachrichtigungen
        aus (Fokus-Modus).
 3. [ ] Demo-Fenster mit den Tabs nach `LIVE_DEMO_DE.md` vorbereiten (Tab 6:
-       `reserve_v7.html` auf R1), ebenfalls
+       `reserve_v8.html` auf R1), ebenfalls
        auf dem Beamer.
 4. [ ] Go/No-go nach `LIVE_DEMO_DE.md`, 10 Minuten vorher. Fällt ein Punkt
        aus: Plan B.
@@ -102,8 +109,12 @@ Referenzfolien B1 bis B8 aus `backup_folien_v5.html` liegen dort dahinter.
   und liegt am Präsentationstag in der Vergangenheit.
 - `npm run demo:reset` schreibt `client/public/demo/statement_2026-09.json`
   mit neuen Daten. Diese Änderung nicht committen.
-- Die Testkopie v2 schreibt ihr Protokoll in den Tab „Branching Test Log“; das
-  „Demo Log“ des Originals bleibt unberührt.
+- Die Testkopie v3 schreibt ihr Protokoll in Supabase (Projekt
+  finops-demo-log, Tabelle `finops_demo.processing_log`). Das „Demo Log“ des
+  Originals und der Tab „Branching Test Log“ von v2 bleiben unberührt.
+- n8n prüft das Zertifikat von Supabase nicht (Ignore SSL Issues). Die
+  Verbindung ist verschlüsselt, die Rolle darf nur einfügen; Antwort im
+  Sprechtext unter „Ist die Verbindung zu Supabase sicher?“.
 
 ## Video neu aufnehmen
 

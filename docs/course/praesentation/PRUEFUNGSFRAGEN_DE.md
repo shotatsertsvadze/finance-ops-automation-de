@@ -1,6 +1,6 @@
 # Prüfungsfragen – Vorbereitung auf die Fragerunde
 
-Gehört zu `praesentation_v7.html` und `SPRECHTEXT_V7_DE.md` (Reserve: `reserve_v7.html`, Live-Demo: `LIVE_DEMO_DE.md`). Stand: 21.10.2026.
+Gehört zu `praesentation_v8.html` und `SPRECHTEXT_V8_DE.md` (Reserve: `reserve_v8.html`, Live-Demo: `LIVE_DEMO_DE.md`). Stand: 21.10.2026.
 
 20 Fragen, wie sie ein kritischer, aber fairer Prüfer im Kurs KI-Manager stellen
 könnte, geordnet nach Wahrscheinlichkeit. Jede Antwort dauert gesprochen etwa
@@ -99,7 +99,7 @@ zuerst messen, weil das Ergebnis stark davon abhängt.
 keine Freigabe.**
 
 n8n holt die Mail ab, nimmt den XML-Anhang, meldet sich bei Finance-Ops an,
-übergibt die Datei und schreibt das Ergebnis ins Sheet. Die Regeln liegen nur
+übergibt die Datei und schreibt das Ergebnis ins Protokoll in Supabase. Die Regeln liegen nur
 in der Anwendung. Dort sind sie getestet und gelten gleich, egal ob eine
 Rechnung per Mail, Formular oder Upload kommt. Lägen sie zusätzlich in
 n8n-Knoten, gäbe es zwei Stellen, die auseinanderlaufen können. Das habe ich
@@ -111,12 +111,20 @@ im Code?“
 Änderung an der Anwendung. Ein Postfach-Eingang im Code ist für einen echten
 Betrieb geplant, nicht gebaut.
 
-**Nachfrage:** „Warum Google Sheets und keine richtige Datenbank, etwa Supabase?“
-→ Die Datenbank gibt es schon: Finance-Ops speichert alle Daten, Entscheidungen
-und den Prüfpfad in PostgreSQL. Das Sheet ist nur ein zusätzliches Protokoll,
-das n8n schreibt; es wirkt nicht auf Finance-Ops zurück. Eine Umstellung auf
-Supabase ist dafür nicht nötig. In einem echten Betrieb würde ich das Sheet
-weglassen oder durch eine Ansicht in Finance-Ops ersetzen.
+**Nachfrage:** „Warum Supabase, wenn Finance-Ops schon eine Datenbank hat?“
+→ Finance-Ops bleibt die zentrale Quelle: Rechnungen, Entscheidungen und der
+Prüfpfad liegen in der PostgreSQL-Datenbank der Anwendung. Supabase ist nur das
+Verarbeitungsprotokoll von n8n, eine Zeile pro Lauf, geschrieben über eine
+Rolle, die nur einfügen darf. Es ersetzt das Google Sheet der früheren Fassung
+und wirkt nicht auf Finance-Ops zurück. Fällt Supabase aus, steht die
+Entscheidung trotzdem, und die Bestätigung erscheint.
+
+**Nachfrage:** „Ist die Verbindung zu Supabase sicher?“
+→ Verschlüsselt ja, aber n8n prüft das Server-Zertifikat nicht: Supabase nutzt
+eine eigene Zertifizierungsstelle, und die n8n-Zugangsdaten haben kein Feld
+dafür. Für synthetische Daten vertretbar, die Rolle darf nur in eine Tabelle
+einfügen. Für echten Betrieb gehört das Zertifikat auf den n8n-Server, dann
+wird die Prüfung eingeschaltet.
 
 ---
 
@@ -132,16 +140,17 @@ Kennzahlen pro Prozess, nicht pro Person. Der offizielle Prüfer läuft lokal,
 dafür verlässt keine Rechnung das System. Die KI ist aus, und eingeschaltet
 bekäme sie nur minimierte Prüfinformationen, keine Rechnungsdatei, keine Namen,
 IBANs gekürzt; für die Rückfrage dazu die Namen von Platzhaltern, nie deren
-Werte. Im Google
-Sheet stehen keine Bankdaten, n8n sieht die IBAN aber beim Transport. Vor echten Daten fehlen der Vertrag zur Auftragsverarbeitung,
+Werte. Im
+Protokoll in Supabase stehen keine Bankdaten, n8n sieht die IBAN aber beim Transport. Vor echten Daten fehlen der Vertrag zur Auftragsverarbeitung,
 ein Aufbewahrungs- und Löschkonzept und die Abstimmung mit dem
 Datenschutzbeauftragten.
 
-**Nachfrage:** „Und n8n und Google Sheets? Da laufen ja auch Daten durch.“
+**Nachfrage:** „Und n8n und Supabase? Da laufen ja auch Daten durch.“
 → Richtig, im Datenschutzkonzept sind sie noch nicht behandelt. In der Demo
 laufen nur synthetische Daten durch. Für echte Daten bräuchte es auch dafür
-einen Vertrag zur Auftragsverarbeitung, oder n8n im eigenen Netz. Das Sheet ist
-nur eine Anzeige. Den maßgeblichen Prüfpfad führt Finance-Ops selbst.
+einen Vertrag zur Auftragsverarbeitung, oder n8n im eigenen Netz. Supabase ist
+nur ein Protokoll, das Projekt liegt in Frankfurt. Den maßgeblichen Prüfpfad
+führt Finance-Ops selbst.
 
 ---
 
