@@ -126,23 +126,47 @@ table.t td { padding: 18px 14px; border-bottom: 1px solid var(--line); vertical-
   .print-only { display: revert; }
 }
 @media (prefers-reduced-motion: reduce) { .mark { animation: none !important; } }
-/* B8: five paths */
+/* 6: five paths */
 .chip.go { background: var(--blue-soft); color: var(--blue); } .chip.go .dot { background: var(--blue); }
-.chip.off { background: #EDF0F6; color: var(--muted); } .chip.off .dot { background: #98A1B3; }
-.down { font: 500 28px var(--mono); color: var(--muted); padding: 6px 0 6px 34px; }
-.down span { font-size: 20px; margin-left: 10px; }
-.lane { display: grid; grid-template-columns: 330px 235px 1fr; gap: 20px; align-items: center; padding: 13px 24px; border-radius: 22px; }
-.lane .cond { font: 700 24px/1.25 var(--body); }
-.lane .what { font-size: 20px; line-height: 1.35; color: var(--muted); }
-.lane .what b { color: var(--ink); }
-.sub { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding-top: 4px; }
-.sub .lab { margin-right: 6px; }
-.pill { font: 600 18px var(--body); padding: 5px 13px; border-radius: 100px; background: #EDF0F6; white-space: nowrap; }
-.pill.ai { background: var(--violet-soft); color: var(--violet); }
-.pill.tpl { background: var(--marker-soft); }
-.sub .to { color: var(--muted); font: 500 20px var(--mono); }
-.lane { padding: 9px 24px; }
-.demo { font: 500 17px var(--mono); color: var(--blue); margin-top: 2px; }
+.paths { position: relative; width: 1700px; height: 640px; margin-top: 28px; }
+.paths .wires { position: absolute; inset: 0; width: 1700px; height: 640px; overflow: visible; }
+.paths > div { position: absolute; }
+.paths .card { border-radius: 24px; }
+.paths .src { left: 0; width: 220px; height: 80px; display: flex; align-items: center; gap: 14px; padding: 0 14px; }
+.paths .src b, .paths .sheet b { display: block; font-size: 25px; font-weight: 600; line-height: 1.2; }
+.paths .src span, .paths .sheet span { display: block; font-size: 18px; color: var(--muted); line-height: 1.3; }
+.paths .bypass { left: 250px; top: 22px; padding: 0 12px; background: var(--canvas); font: 500 19px var(--mono); color: var(--muted); }
+.paths .n8n { left: 270px; top: 156px; width: 250px; height: 170px; padding: 20px 22px; text-align: center; }
+.paths .n8n .big { font: 700 31px/1.1 var(--display); margin-top: 6px; }
+.paths .n8n .small { font-size: 19px; line-height: 1.3; color: var(--muted); margin-top: 10px; }
+.paths .n8n .small b { color: var(--ink); }
+.paths .sheet { left: 120px; top: 400px; width: 400px; display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
+.paths .sheet b { font-size: 22px; }
+.paths .hub { left: 590px; top: 90px; width: 340px; height: 302px; border-radius: 36px; background: var(--blue); color: #fff; text-align: center; padding: 0 22px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 6px 12px rgba(47,91,234,.2), 0 24px 56px rgba(47,91,234,.32); }
+.paths .hub .gear { width: 72px; height: 72px; border-radius: 22px; background: rgba(255,255,255,.18); display: grid; place-items: center; margin: 0 auto; }
+.paths .hub .gear svg { width: 40px; height: 40px; }
+.paths .hub .name { font: 750 42px/1.1 var(--display); margin-top: 14px; white-space: nowrap; }
+.paths .hub .does { font-size: 26px; font-weight: 600; margin-top: 2px; }
+.paths .hub .db { font-size: 18px; line-height: 1.3; opacity: .85; border-top: 1.5px solid rgba(255,255,255,.3); margin-top: 14px; padding-top: 10px; }
+.paths .out { left: 1060px; width: 640px; height: 104px; display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: center; padding: 0 24px 0 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); }
+.paths .out .dot { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+.paths .out .dot svg { width: 28px; height: 28px; stroke-width: 2.6; }
+.paths .out.ok .dot { background: var(--mint); } .paths .out.go .dot { background: var(--blue); }
+.paths .out.stop .dot { background: var(--coral); } .paths .out.off .dot { background: #98A1B3; }
+.paths .out .t { display: flex; justify-content: space-between; align-items: center; gap: 12px; font: 700 28px/1.2 var(--display); }
+.paths .out.ok .t { color: var(--mint-ink); } .paths .out.go .t { color: var(--blue); } .paths .out.stop .t { color: var(--coral-ink); } .paths .out.off .t { color: var(--muted); }
+.paths .out .c { font-size: 20px; line-height: 1.3; color: var(--muted); margin-top: 3px; }
+.paths .out .live { flex: none; font: 500 16px var(--mono); letter-spacing: .02em; color: var(--blue); background: var(--blue-soft); border-radius: 8px; padding: 3px 10px; }
+.paths .out.fail { background: transparent; border: 2.5px dashed #B6BFCF; box-shadow: none; }
+.paths .out.fail .live { color: var(--muted); background: #E7EBF2; }
+.paths .ai { font-weight: 600; color: var(--violet); background: var(--violet-soft); border-radius: 6px; padding: 0 7px; margin-right: 4px; }
+body.present .slide.active .paths .fan path { stroke-dasharray: 1; animation: fan .55s cubic-bezier(.3,.7,.3,1) both; }
+body.present .slide.active .paths .fan path:nth-child(2) { animation-delay: .08s; }
+body.present .slide.active .paths .fan path:nth-child(3) { animation-delay: .16s; }
+body.present .slide.active .paths .fan path:nth-child(4) { animation-delay: .24s; }
+@keyframes fan { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .paths .fan path { animation: none !important; } }
+@media print { .paths .hub, .paths .out { box-shadow: none; } .paths .out:not(.fail) { border: 2px solid #DDE2EC; } }
 </style>
 </head>
 <body>
@@ -367,25 +391,36 @@ table.t td { padding: 18px 14px; border-bottom: 1px solid var(--line); vertical-
 <section class="slide" data-chapter="Lösung">
   <div class="tag">So läuft eine Rechnung</div>
   <h1>Fünf Wege. <span class="mark">Eine Stelle entscheidet.</span></h1>
-  <div style="display:grid;grid-template-columns:470px 1fr;gap:40px;margin-top:20px">
-    <div style="display:grid;align-content:start">
-      <div class="card row" style="padding:18px 24px;gap:16px"><div class="ico sm gray"><svg class="i"><use href="#i-mail"/></svg></div><div><div style="font-size:25px;font-weight:600">E-Mail mit XRechnung</div><div class="muted" style="font-size:19px">in der Live-Demo: per Formular</div></div></div>
-      <div class="down">↓</div>
-      <div class="card" style="padding:22px 26px"><div class="lab muted">N8N · TRANSPORT</div><p style="font-size:23px;line-height:1.35;margin-top:6px">Lädt die Datei in Finance-Ops hoch, verzweigt nach dessen Antwort, schreibt eine Protokollzeile ins Sheet.</p><div class="note" style="margin-top:14px;font-size:21px;padding:12px 16px;gap:12px;border-radius:16px"><div>Grün in n8n heißt: transportiert. <b>Nicht: freigegeben.</b></div></div></div>
-      <div class="down">↓ <span>oder Upload im Browser</span></div>
-      <div class="card" style="padding:22px 26px;border:3px solid var(--blue)"><div class="lab" style="color:var(--blue)">FINANCE-OPS · ENTSCHEIDUNG</div><p style="font-size:23px;line-height:1.35;margin-top:6px">Feste Regeln prüfen und entscheiden. <b>Alle Daten und der Prüfpfad liegen in PostgreSQL.</b></p></div>
-    </div>
-    <div style="display:grid;align-content:start;gap:8px">
-      <div class="lab muted">ERGEBNIS DER PRÜFUNG IN FINANCE-OPS</div>
-      <div class="card lane"><div class="cond">Alles bestanden, bis 500&nbsp;€</div><div><span class="chip ok" style="font-size:22px;padding:6px 16px 6px 8px"><span class="dot" style="width:30px;height:30px"><svg class="i" style="stroke-width:3;width:18px;height:18px"><use href="#i-check"/></svg></span>Automatisch frei</span><div class="demo">Live: 380 €</div></div><div class="what">Kein Mensch nötig.</div></div>
-      <div class="card lane"><div class="cond">Alles bestanden, über 500&nbsp;€</div><div><span class="chip go" style="font-size:22px;padding:6px 16px 6px 8px"><span class="dot" style="width:30px;height:30px"><svg class="i" style="stroke-width:3;width:18px;height:18px"><use href="#i-user"/></svg></span>Zur Freigabe</span><div class="demo">Live: 1.240 €</div></div><div class="what">Kostenstellenleitung; über 5.000&nbsp;€ auch Finanzen, über 25.000&nbsp;€ auch CFO.</div></div>
-      <div class="card lane"><div class="cond">IBAN weicht ab</div><div><span class="chip stop" style="font-size:22px;padding:6px 16px 6px 8px"><span class="dot" style="width:30px;height:30px"><svg class="i" style="stroke-width:3;width:18px;height:18px"><use href="#i-excl"/></svg></span>Sichtprüfung</span><div class="demo">Live: 2.499 €</div></div><div class="what">Nur Rückruf unter der hinterlegten Nummer, neues Konto durch drei Personen. <b>Keine Rückfrage, nie ein KI-Entwurf.</b></div></div>
-      <div class="card lane"><div class="cond">Andere fachliche Abweichung</div><div><span class="chip stop" style="font-size:22px;padding:6px 16px 6px 8px"><span class="dot" style="width:30px;height:30px"><svg class="i" style="stroke-width:3;width:18px;height:18px"><use href="#i-excl"/></svg></span>Sichtprüfung</span><div class="demo">Live: KI-Rückfrage</div></div><div class="what">z. B. Betrag über der Bestellung. Ein Mensch klärt, bei Bedarf mit einer Rückfrage an den Lieferanten.</div><div class="sub"><span class="lab muted">RÜCKFRAGE</span><span class="pill ai">KI-Entwurf</span><span class="to">→</span><span class="pill">Anwendung prüft</span><span class="to">→</span><span class="pill tpl">bei Ablehnung: feste Vorlage</span><span class="to">→</span><span class="pill">Mensch gibt frei, versendet von Hand</span></div></div>
-      <div class="lab muted" style="margin-top:6px">TECHNISCHER AUSFALL</div>
-      <div class="card lane"><div class="cond">n8n oder Verbindung weg</div><div><span class="chip off" style="font-size:22px;padding:6px 16px 6px 8px"><span class="dot" style="width:30px;height:30px"><svg class="i" style="stroke-width:3;width:18px;height:18px"><use href="#i-plug"/></svg></span>Nicht geprüft</span><div class="demo">Ausführung vom 20.10.</div></div><div class="what">Erneut senden oder im Browser hochladen. <span class="badge model" style="font-size:17px;padding:2px 10px">Alarm bei Ausfall: nicht gebaut</span><br><b>Nur das Sheet weg:</b> Finance-Ops hat geprüft und entschieden, es fehlt nur die Protokollzeile.</div></div>
-    </div>
+  <div class="paths">
+    <svg class="wires" viewBox="0 0 1700 640" aria-hidden="true">
+      <defs>
+        <marker id="p6-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#98A1B3"/></marker>
+      </defs>
+      <path d="M220 186C245 186 245 221 266 221M220 296C245 296 245 261 266 261M520 241H584" stroke="#98A1B3" stroke-width="4" fill="none" marker-end="url(#p6-gray)"/>
+      <path d="M110 146V70Q110 40 140 40H730Q760 40 760 70V86" stroke="#98A1B3" stroke-width="3" stroke-dasharray="9 9" fill="none" marker-end="url(#p6-gray)"/>
+      <path d="M395 326V396" stroke="#98A1B3" stroke-width="3" stroke-dasharray="4 8" stroke-linecap="round" fill="none"/>
+      <path d="M545 241V560Q545 580 565 580H1054" stroke="#98A1B3" stroke-width="4" stroke-dasharray="12 10" fill="none" marker-end="url(#p6-gray)"/>
+      <circle cx="545" cy="241" r="7" fill="#98A1B3"/>
+      <g class="fan" fill="none" stroke-width="6" stroke-linecap="round">
+        <path pathLength="1" d="M930 241C995 241 995 52 1060 52" stroke="var(--mint)"/>
+        <path pathLength="1" d="M930 241C995 241 995 178 1060 178" stroke="var(--blue)"/>
+        <path pathLength="1" d="M930 241C995 241 995 304 1060 304" stroke="var(--coral)"/>
+        <path pathLength="1" d="M930 241C995 241 995 430 1060 430" stroke="var(--coral)"/>
+      </g>
+    </svg>
+    <div class="bypass">oder Upload im Browser</div>
+    <div class="card src" style="top:146px"><div class="ico sm gray"><svg class="i"><use href="#i-mail"/></svg></div><div><b>E-Mail</b><span>im Betrieb</span></div></div>
+    <div class="card src" style="top:256px"><div class="ico sm blue"><svg class="i"><use href="#i-doc"/></svg></div><div><b>Formular</b><span style="color:var(--blue)">Live-Demo</span></div></div>
+    <div class="card n8n"><div class="lab muted">N8N</div><div class="big">transportiert</div><div class="small">Ein grüner Lauf ist <b>keine Freigabe.</b></div></div>
+    <div class="card sheet"><div class="ico sm gray"><svg class="i"><use href="#i-table"/></svg></div><div><b>Sheet: nur Protokoll</b><span>Fällt es aus, hat Finance-Ops trotzdem entschieden.</span></div></div>
+    <div class="hub"><div class="gear"><svg class="i"><use href="#i-gear"/></svg></div><div class="name">Finance-Ops</div><div class="does">prüft und entscheidet</div><div class="db">Daten und Prüfpfad: PostgreSQL</div></div>
+    <div class="out ok" style="top:0px"><span class="dot"><svg class="i"><use href="#i-check"/></svg></span><div><div class="t">Automatisch frei<span class="live">LIVE 380&nbsp;€</span></div><div class="c">alles bestanden, bis 500&nbsp;€</div></div></div>
+    <div class="out go" style="top:126px"><span class="dot"><svg class="i"><use href="#i-user"/></svg></span><div><div class="t">Ein Mensch gibt frei<span class="live">LIVE 1.240&nbsp;€</span></div><div class="c">alles bestanden, über 500&nbsp;€</div></div></div>
+    <div class="out stop" style="top:252px"><span class="dot"><svg class="i"><use href="#i-phone"/></svg></span><div><div class="t">Gestoppt: nur Rückruf<span class="live">LIVE 2.499&nbsp;€</span></div><div class="c">IBAN weicht ab · keine Mail, keine KI</div></div></div>
+    <div class="out stop" style="top:378px"><span class="dot"><svg class="i"><use href="#i-chat"/></svg></span><div><div class="t">Gestoppt: Rückfrage<span class="live">LIVE KI</span></div><div class="c">andere Abweichung · <span class="ai">KI entwirft</span> → Mensch gibt frei</div></div></div>
+    <div class="out off fail" style="top:528px"><span class="dot"><svg class="i"><use href="#i-x"/></svg></span><div><div class="t">Nicht geprüft<span class="live">Test 20.10.</span></div><div class="c">n8n oder Verbindung weg · nichts freigegeben</div></div></div>
   </div>
-  <p class="caption" style="margin-top:16px">Schematisch und vereinfacht · gebaut bis auf den markierten Alarm · blau markiert: zeige ich gleich live</p>
+  <p class="caption" style="margin-top:14px">Schematisch und vereinfacht · gebaut bis auf einen Alarm bei Ausfall · LIVE: zeige ich gleich in der Demo</p>
 </section>
 
 <!-- 7 · Live-Demo -->
