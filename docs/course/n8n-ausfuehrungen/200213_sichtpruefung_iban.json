@@ -1,0 +1,50 @@
+{
+  "quelle": "n8n-Ausführung 200213 des Workflows „Finance Ops – Invoice Intake Demo v2 (Wege)“, Version f9122671, gelesen über die n8n-Schnittstelle am 21.10.2026",
+  "bereinigt": "Auszug. Entfernt: Anmeldeantwort, Sitzungscookie, CSRF-Token, Tunnel-Adresse, Formular-Link mit Signatur, Resume-Token, Speicherpfade der Dateien, vollständige Antwort von Finance-Ops einschließlich der IBANs. Alle Rechnungsdaten sind synthetisch.",
+  "ausfuehrung": {
+    "id": "200213",
+    "status": "success",
+    "modus": "webhook",
+    "gestartet": "2026-10-20T16:01:33.339Z",
+    "beendet": "2026-10-20T16:01:37.278Z"
+  },
+  "eingang": {
+    "kanal": "FORM",
+    "datei": "B_iban_changed_2499.xml",
+    "groesse_bytes": 4644
+  },
+  "zweig": {
+    "switch": "Entscheidung von Finance-Ops",
+    "knoten": "Gestoppt: Sichtprüfung in Finance-Ops"
+  },
+  "antwort_finance_ops": {
+    "id": "30f2b7bd-3271-4be3-b07e-263f3230bbfc",
+    "state": "REVIEW_REQUIRED",
+    "review_reason": "SUPPLIER_IBAN_MATCH",
+    "routing_decision": "REVIEW",
+    "routing_reasons": ["supplier_iban_match: IBAN weicht von den freigegebenen Bankverbindungen des Lieferanten ab (Betrugsrisiko)"],
+    "required_steps": [],
+    "payable_blockers": ["supplier_iban_match"],
+    "invoice_number": "HL-2026-7731",
+    "supplier_name": "Havel Logistik GmbH",
+    "gross_amount": "2499.00",
+    "currency": "EUR",
+    "received_at": "2026-10-20T16:01:33.943Z",
+    "official_validation": "SKIPPED: Kein Validator konfiguriert (nur außerhalb des Produktivbetriebs zulässig): nicht offiziell geprüft"
+  },
+  "sheet_zeile": {
+    "Eingang": "20.10.2026 18:01",
+    "Rechnungsnummer": "HL-2026-7731",
+    "Lieferant": "Havel Logistik GmbH",
+    "Betrag": "2.499,00 €",
+    "Ergebnis": "Zur Prüfung",
+    "Status": "Sichtprüfung",
+    "Grund": "IBAN weicht von den freigegebenen Bankverbindungen des Lieferanten ab (Betrugsrisiko)",
+    "Invoice ID": "30f2b7bd-3271-4be3-b07e-263f3230bbfc",
+    "Eingangskanal": "Formular"
+  },
+  "danach": {
+    "Demo Log aktualisieren": "success, 2028 ms",
+    "Bestätigung anzeigen": "success"
+  }
+}

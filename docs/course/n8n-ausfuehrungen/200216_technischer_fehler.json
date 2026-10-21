@@ -1,0 +1,25 @@
+{
+  "quelle": "n8n-Ausführung 200216 des Workflows „Finance Ops – Invoice Intake Demo v2 (Wege)“, Version f9122671, gelesen über die n8n-Schnittstelle am 21.10.2026",
+  "bereinigt": "Auszug. Entfernt: Tunnel-Adresse (auch in der Fehlermeldung), Resume-Token, Speicherpfade der Dateien, Stacktraces. Alle Daten sind synthetisch.",
+  "versuchsaufbau": "Die Finance-Ops-API der Demo-Instanz war absichtlich gestoppt, der Tunnel lief weiter. Der Tunnel antwortete deshalb mit HTTP 502.",
+  "ausfuehrung": {
+    "id": "200216",
+    "status": "error",
+    "modus": "webhook",
+    "gestartet": "2026-10-20T16:01:55.461Z",
+    "beendet": "2026-10-20T16:01:56.134Z",
+    "letzter_knoten": "Technischer Fehler – nicht geprüft"
+  },
+  "eingang": {
+    "kanal": "FORM",
+    "datei": "I_discount_499.xml",
+    "groesse_bytes": 4889
+  },
+  "weg": [
+    {"knoten": "Finance Ops Login", "ergebnis": "Fehlerausgang (Ausgang 1): HTTP 502 Bad gateway, Cloudflare origin_bad_gateway"},
+    {"knoten": "Technischer Fehler – nicht geprüft", "ergebnis": "error, Ausführung endet rot"}
+  ],
+  "nicht_ausgefuehrt": ["Rechnung prüfen", "Entscheidung von Finance-Ops", "Ergebnis vorbereiten", "Demo Log aktualisieren", "Bestätigung anzeigen"],
+  "fehlermeldung": "Technischer Fehler: Finance-Ops nicht erreichbar oder Anfrage abgelehnt (502 - Error 502: Bad gateway, [Tunnel-Adresse entfernt]). Die Rechnung wurde nicht geprüft, nichts wurde freigegeben. Erneut senden oder im Browser hochladen.",
+  "folge": "Keine Rechnung an Finance-Ops übergeben, keine Entscheidung, keine Sheet-Zeile, keine Bestätigung im Formular."
+}
