@@ -11,6 +11,9 @@ Mitnehmen:
 Jeder Punkt hat ein Kriterium. Ein Punkt gilt erst nach höchstens zwei
 Versuchen als No-go.
 
+Reihenfolge: A, dann der ganze Vortrag mit B und C ohne Unterbrechung, danach
+D und E.
+
 ## A · Aufbau
 
 | | Punkt | Go, wenn |
@@ -46,8 +49,10 @@ Versuchen als No-go.
 
 | | Punkt | Go, wenn |
 |---|---|---|
+| ☐ | Demo-Datenbank zurücksetzen | vor Plan B: Demo-API mit Ctrl + C stoppen, `LIVE_DEMO_DE.md` Start Schritt 1, API neu starten (Schritt 2). Sonst legt Finance-Ops die drei Dateien als Duplikate ab. |
 | ☐ | Plan B | Fensterwechsel, Tab 6 (R1), Leertaste, Video bis 2:16, K; dann als Anna die drei Dateien lokal hochladen; die drei Entscheidungen sind sichtbar; zusammen unter 4 Minuten |
 | ☐ | Rückweg | 8 und Enter führt zu Folie 8 |
+| ☐ | Rückfall v7 und v2 | `praesentation_v7.html` und `reserve_v7.html` öffnen und durchblättern; in n8n ist v2 vorhanden und deaktiviert. Ohne Lauf mit v2. |
 | ☐ | Ersatzdateien | PDF v8 und v7 (Haupt- und Reservepräsentation) und `demo_v4.mp4` auf dem Desktop und auf einem USB-Stick |
 
 ## E · Verbindung und Sicherheit
