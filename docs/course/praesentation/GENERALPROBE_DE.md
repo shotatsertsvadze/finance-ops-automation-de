@@ -17,7 +17,7 @@ Versuchen als No-go.
 | ☐ | Demo-Instanz starten (Datenbank, API, Oberfläche) | `http://localhost:5401` lädt, Anna und Jonas können sich anmelden; Aufbau unter 10 Minuten |
 | ☐ | Tunnel und n8n | Tunnel-Adresse in CONFIG der Kopie v2 eingetragen und veröffentlicht; `https://<Tunnel>/api/health` liefert `{"ok":true}`; das Formular lädt |
 | ☐ | Rechnung für die KI vorbereitet | SIT-2026-0918 steht bei Jonas in der Sichtprüfung |
-| ☐ | Fenster | Präsentation und Demo-Fenster mit fünf Tabs auf dem Beamer, Referentenansicht auf dem Laptop |
+| ☐ | Fenster | Präsentation (`praesentation_v7.html`) und Demo-Fenster mit sechs Tabs auf dem Beamer, Tab 6 ist `reserve_v7.html` auf R1; Referentenansicht auf dem Laptop |
 
 ## B · Live-Demo
 
@@ -30,22 +30,22 @@ Versuchen als No-go.
 | ☐ | Finance-Ops | Havel: Grund und markierte Ziffern, kein Rückfrage-Knopf, nur der Rückruf-Hinweis |
 | ☐ | KI-Rückfrage | Entwurf in unter 15 s oder der Hinweis auf die feste Vorlage; Text freigegeben, nicht versendet |
 | ☐ | Freigabe durch Tim | INV-2026-00421 steht auf „Freigegeben“, im Verlauf steht Tim Kessler |
-| ☐ | Wechsel Präsentation und Browser | Cmd + Tab hin und zurück ohne Suchen; Vollbild oder maximiert ist danach festgelegt |
+| ☐ | Wechsel Präsentation und Browser | Fensterwechsel hin und zurück ohne Suchen. Beide sind Chrome: Cmd + Tab wechselt nur zwischen Programmen, deshalb Cmd + < testen. Danach festgelegt: welche Taste, Vollbild oder maximiert |
 
 ## C · Zeit
 
 | | Punkt | Go, wenn |
 |---|---|---|
-| ☐ | Gesamtdauer | unter 22:00 (Plan 19:15) |
-| ☐ | Zwischenzeiten | nach Folie 6 etwa 5:50, nach der Demo etwa 13:45, Ende etwa 19:15. Gemessen: ______ / ______ / ______ |
+| ☐ | Gesamtdauer | unter 22:00 (Plan 20:05; vorgesehen 15 bis 20 Minuten mit 2 bis 3 Minuten Spielraum) |
+| ☐ | Zwischenzeiten | nach Folie 6 etwa 5:55, nach der Demo etwa 13:50, Ende etwa 20:05. Gemessen: ______ / ______ / ______ |
 
 ## D · Reserve
 
 | | Punkt | Go, wenn |
 |---|---|---|
-| ☐ | Plan B | Taste V, Video bis 2:16, dann als Anna die drei Dateien lokal hochladen; die drei Entscheidungen sind sichtbar; zusammen unter 4 Minuten |
+| ☐ | Plan B | Fensterwechsel, Tab 6 (R1), Leertaste, Video bis 2:16, K; dann als Anna die drei Dateien lokal hochladen; die drei Entscheidungen sind sichtbar; zusammen unter 4 Minuten |
 | ☐ | Rückweg | 8 und Enter führt zu Folie 8 |
-| ☐ | Ersatzdateien | PDF v6 und `demo_v4.mp4` auf dem Desktop und auf einem USB-Stick |
+| ☐ | Ersatzdateien | PDF v7 (Haupt- und Reservepräsentation) und `demo_v4.mp4` auf dem Desktop und auf einem USB-Stick |
 
 ## Entscheidung für Freitag
 

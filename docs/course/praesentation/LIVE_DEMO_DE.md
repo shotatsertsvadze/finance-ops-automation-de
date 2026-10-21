@@ -1,6 +1,7 @@
 # Live-Demo – Start, Klickfolge, Reserve
 
-Gehört zu `praesentation_v6.html`, Folie 7 (Sprechtext: `SPRECHTEXT_V6_DE.md`).
+Gehört zu `praesentation_v7.html`, Folie 7 (Sprechtext: `SPRECHTEXT_V7_DE.md`).
+Die Reserve ist eine eigene Präsentation: `reserve_v7.html`.
 
 Getestet am 20.10.2026:
 
@@ -23,7 +24,7 @@ zweiter Versuch, dann die Reserve aus diesem Dokument.
 | Tunnel | temporärer Cloudflare-Tunnel, nur zur Demo-API | Die Adresse ändert sich bei jedem Start. |
 
 Offen sagen: Der Eingang läuft live über ein Formular. Im Betrieb kommt die
-Rechnung per E-Mail (Original-Workflow, Video R1), danach ist der Weg derselbe.
+Rechnung per E-Mail (Original-Workflow, Video R1 in der Reserve), danach ist der Weg derselbe.
 
 ## Start am Präsentationstag (etwa 25 Minuten vorher)
 
@@ -92,12 +93,18 @@ Tabs von links nach rechts:
 | 1, 2, 3 | je einmal das Formular (gleiche Adresse). So bleibt jede Antwort stehen, und es muss nichts neu geladen werden. |
 | 4 | n8n: Testkopie v2, Ansicht „Executions“, angemeldet |
 | 5 | Finance-Ops `http://localhost:5401` als Jonas, Posteingang |
-| (6) | optional: Google Sheet, Tab „Branching Test Log“ |
+| 6 | Reservepräsentation `reserve_v7.html`, auf R1 (Video) |
+| (7) | optional: Google Sheet, Tab „Branching Test Log“ |
 
-Die Präsentation läuft im ersten Fenster. Wechsel zwischen Präsentation und
-Demo mit **Cmd + Tab**, zwischen den Tabs mit **Ctrl + Tab**. Liegen beide im
-Vollbild, wechselt macOS dabei den Schreibtisch. In der Generalprobe testen;
-wirkt es zu unruhig, beide Fenster nur maximieren.
+Die Präsentation läuft im ersten Fenster, alles andere im Demo-Fenster.
+Zwischen den Tabs wechselt **Ctrl + Tab**.
+
+**Fensterwechsel:** Präsentation und Demo-Fenster sind beide Chrome. **Cmd +
+Tab** wechselt zwischen Programmen, nicht zwischen zwei Fenstern desselben
+Programms. Zwischen Chrome-Fenstern wechselt **Cmd + <** (deutsche Tastatur;
+US-Tastatur Cmd + `). In der Generalprobe festlegen, welcher Weg zuverlässig
+klappt, auch im Vollbild; wirkt es zu unruhig, beide Fenster nur maximieren.
+Unten steht dafür „Fensterwechsel“.
 
 ## Go/No-go, 10 Minuten vorher
 
@@ -107,7 +114,9 @@ wirkt es zu unruhig, beide Fenster nur maximieren.
 - [ ] In Finance-Ops sieht Jonas SIT-2026-0918 in der Sichtprüfung, sonst
       nichts von heute.
 - [ ] In der Ausführungsliste von v2 steht noch **200216** (rot). Fehlt sie,
-      in Schritt 5 R4 zeigen.
+      in Schritt 5 R4 zeigen (Tab 6, Pfeiltaste).
+- [ ] Tab 6 zeigt `reserve_v7.html` auf R1; Leertaste startet das Video, K
+      hält es an. Danach wieder auf 0:00 stellen (Seite neu laden).
 
 Fällt ein Punkt aus und lässt sich nicht in einer Minute beheben: **Plan B**
 (siehe Reserve).
@@ -116,7 +125,7 @@ Fällt ein Punkt aus und lässt sich nicht in einer Minute beheben: **Plan B**
 
 | Schritt | Klicks | Erwartet | Satz | Soll |
 |---|---|---|---|---|
-| Einstieg | Folie 7 zeigen, dann Cmd + Tab | – | „Drei Rechnungen, drei Erwartungen. Eingang heute per Formular, im Betrieb per E-Mail.“ | 0:15 |
+| Einstieg | Folie 7 zeigen, dann Fensterwechsel | – | „Drei Rechnungen, drei Erwartungen. Eingang heute per Formular, im Betrieb per E-Mail.“ | 0:15 |
 | 1 · 380 € | Tab 1: Datei auswählen → `G_clean_380.xml` → **Rechnung einreichen** | nach 4–6 s: „Rechnung INV-2026-00433 – Status: Freigegeben – Bruttobetrag innerhalb der Auto-Grenze (500 EUR) …“ | „Kein Mensch nötig.“ | 0:40 |
 | 2 · 1.240 € | Ctrl + Tab, `A_clean_1240.xml` | „Status: Freigabe ausstehend – Freigabe durch MANAGER laut Betragsstufe“ | „Über 500 €: Ein Mensch muss unterschreiben.“ | 0:30 |
 | 3 · 2.499 € | Ctrl + Tab, `B_iban_changed_2499.xml` | „Status: Sichtprüfung – IBAN weicht von den freigegebenen Bankverbindungen des Lieferanten ab (Betrugsrisiko)“ | „Die Rechnung vom Anfang.“ | 0:30 |
@@ -125,7 +134,7 @@ Fällt ein Punkt aus und lässt sich nicht in einer Minute beheben: **Plan B**
 | 6 · Jonas | Ctrl + Tab, Posteingang neu laden, **HL-2026-7731** | oben der Grund, die Ziffern markiert; unten im Panel „Lieferantenrückfrage“ nur der Hinweis auf den Rückruf, **kein Knopf** | „Bei geänderter IBAN wäre eine Mail der falsche Kanal. Dahinter stehen 788 Tests.“ | 1:00 |
 | 7 · KI | Posteingang → **SIT-2026-0918** → **KI-Entwurf erstellen** → einen Satz ändern → **Text freigeben** | nach etwa 5 s „KI-Entwurf – bitte prüfen und anpassen“, danach „Freigegeben, noch nicht versendet“ | „Die Werte setzt die Anwendung ein, nicht das Modell. Freigegeben ist nicht versendet.“ | 1:30 |
 | 8 · Tim | **Abmelden** (unten links) → tim.kessler@nordwerk.example, Passwort → **Freigaben** → **INV-2026-00421** → **Freigeben** | Status „Freigegeben“, im Verlauf „Tim Kessler“ | „Anna, die eingereicht hat, könnte das nicht.“ | 0:45 |
-| Rückweg | Cmd + Tab, Pfeiltaste | Folie 8 | – | – |
+| Rückweg | Fensterwechsel, Pfeiltaste | Folie 8 | – | – |
 
 Summe der Schritte: 6:55. Dazu etwa 1:00 für Tab-Wechsel und Dateidialoge,
 ergibt 7:55.
@@ -139,21 +148,25 @@ Gemessen am 20.10.2026:
 
 | Situation | Dann | Folie |
 |---|---|---|
-| **Plan B:** Tunnel oder n8n schon beim Go/No-go nicht erreichbar | Folie 7 zeigen, **V** drücken: Video bis 2:16 abspielen (n8n und Sheet), anhalten. Dann in Finance-Ops als Anna die drei Dateien über „Datei auswählen“ hochladen. Das ergibt dieselben Entscheidungen live, ohne n8n. Weiter mit Schritt 6. Sagen: „Die Verzweigung in n8n habe ich am 20.10. getestet; heute ist der Weg nicht erreichbar.“ | R1 |
+| **Plan B:** Tunnel oder n8n schon beim Go/No-go nicht erreichbar | Folie 7 zeigen, Fensterwechsel, Tab 6 (R1): **Leertaste**, Video bis 2:16 abspielen (n8n und Sheet), mit **K** anhalten. Dann in Finance-Ops als Anna die drei Dateien über „Datei auswählen“ hochladen. Das ergibt dieselben Entscheidungen live, ohne n8n. Weiter mit Schritt 6. Sagen: „Die Verzweigung in n8n habe ich am 20.10. getestet; heute ist der Weg nicht erreichbar.“ | R1 |
 | Das Formular meldet „Problem submitting response“ oder antwortet nach 15 s nicht | Erst in Finance-Ops (Tab 5) nachsehen, ob die Rechnung angekommen ist. **Ja:** Finance-Ops hat geprüft und entschieden, nur das Protokoll im Sheet ist gescheitert, so beim ersten Testlauf am 20.10. Nicht neu einreichen, sonst entsteht ein Duplikat; das Ergebnis in Finance-Ops zeigen. **Nein:** einmal neu einreichen. Klappt es dann nicht, Schritt 5 zeigen und lokal hochladen wie in Plan B. | – |
-| n8n-Oberfläche lädt nicht | Schritte 4 und 5 nur ansagen, Folie R4 zeigen, weiter mit Schritt 6 | R4 |
-| Finance-Ops lädt nicht | R3 (Was Jonas sieht) und R2 (KI) zeigen, Schritt 8 ansagen | R3, R2 |
+| n8n-Oberfläche lädt nicht | Schritte 4 und 5 nur ansagen, R4 zeigen (Tab 6, Pfeiltaste), weiter mit Schritt 6 | R4 |
+| Finance-Ops lädt nicht | R3 (Was Jonas sieht) und R2 (KI) zeigen (Tab 6), Schritt 8 ansagen | R3, R2 |
 | Das Modell antwortet nicht | Das Panel lädt die feste Vorlage und sagt das: „Kein KI-Entwurf verfügbar. Die feste Vorlage ist geladen.“ Genau das zeigen. Kommt gar nichts: R2 | R2 |
 | Zeit knapp | Schritte 7 und 8 nur ansagen | – |
 
-Sprung in der Präsentation: **Zahl und Enter** (etwa 13 Enter für R1, 8 Enter
-zurück zu Folie 8), **V** springt direkt zum Video.
-
-Hinter Folie 12 liegen die Reservefolien:
-- R1: Demo-Video, unverändert
+Die Hauptpräsentation hat genau 12 Folien; **Zahl und Enter** springt zu einer
+Folie (8 Enter zurück zu Folie 8). Die Reserve liegt in `reserve_v7.html`
+(Tab 6), dort mit den Pfeiltasten blättern:
+- R1: Demo-Video, unverändert (Leertaste oder K: abspielen und anhalten)
 - R2: KI-Rückfrage
 - R3: Was Jonas sieht
 - R4: Gestoppt ist nicht ausgefallen
+- B1 bis B8: Referenzfolien für Fragen
+
+Das Video liegt zusätzlich als eigene Datei `demo_v4.mp4` bereit.
+Die getesteten n8n-Läufe sind als bereinigte Auszüge gesichert:
+`docs/course/n8n-ausfuehrungen/`.
 
 ## Danach
 

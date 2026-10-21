@@ -1,6 +1,6 @@
 # Prüfungsfragen – Vorbereitung auf die Fragerunde
 
-Gehört zu `praesentation_v6.html` und `SPRECHTEXT_V6_DE.md` (Live-Demo: `LIVE_DEMO_DE.md`). Stand: 20.10.2026.
+Gehört zu `praesentation_v7.html` und `SPRECHTEXT_V7_DE.md` (Reserve: `reserve_v7.html`, Live-Demo: `LIVE_DEMO_DE.md`). Stand: 21.10.2026.
 
 20 Fragen, wie sie ein kritischer, aber fairer Prüfer im Kurs KI-Manager stellen
 könnte, geordnet nach Wahrscheinlichkeit. Jede Antwort dauert gesprochen etwa
