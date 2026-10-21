@@ -179,13 +179,21 @@ Gemessen:
 
 ## Reserve
 
+**Am Freitag gibt es während der Präsentation keinen Datenbank-Reset.** Was
+schon in Finance-Ops angekommen ist, wird gezeigt; nur was fehlt, wird direkt
+hochgeladen. Jonas (Tab 5) darf hochladen, ein Benutzerwechsel ist nicht nötig.
+Getestet am 21.10.2026 auf der Testdatenbank: 380 € über den n8n-Weg, danach
+1.240 € und 2.499 € im Browser hochgeladen, beide mit ihrer normalen
+Entscheidung. Nur die erneut gesendete 380-€-Datei wurde zum Duplikat.
+
 | Situation | Dann | Folie |
 |---|---|---|
-| **Plan B:** Tunnel oder n8n schon beim Go/No-go nicht erreichbar | Folie 7 zeigen, Fensterwechsel, Tab 6 (R1): **Leertaste**, Video bis 2:16 abspielen (n8n und Protokoll; im Video noch Google Sheets, der ursprüngliche Workflow), mit **K** anhalten. Dann in Finance-Ops als Anna die drei Dateien über „Datei auswählen“ hochladen. Das ergibt dieselben Entscheidungen live, ohne n8n. Weiter mit Schritt 6. Sagen: „Die Verzweigung in n8n und das Protokoll in Supabase habe ich am 21.10. getestet; heute ist der Weg nicht erreichbar.“ | R1, B9 |
-| Das Formular meldet „Problem submitting response“ oder antwortet nach 15 s nicht | Erst in Finance-Ops (Tab 5) nachsehen, ob die Rechnung angekommen ist. **Ja:** Finance-Ops hat geprüft und entschieden; nicht neu einreichen, sonst entsteht ein Duplikat. Das Ergebnis in Finance-Ops zeigen. **Nein:** einmal neu einreichen. Klappt es dann nicht, Schritt 5 zeigen und lokal hochladen wie in Plan B. | – |
+| **Plan B:** Tunnel oder n8n schon beim Go/No-go nicht erreichbar | Folie 7 zeigen, Fensterwechsel, Tab 6 (R1): **Leertaste**, Video bis 2:16 abspielen (n8n und Protokoll; im Video noch Google Sheets, der ursprüngliche Workflow), mit **K** anhalten. Dann in Tab 5 (Jonas) die drei Dateien aus `~/Desktop/Live-Demo` über „Datei auswählen“ hochladen. Das ergibt dieselben Entscheidungen live, ohne n8n. Weiter mit Schritt 6. Sagen: „Die Verzweigung in n8n und das Protokoll in Supabase habe ich am 21.10. getestet; heute ist der Weg nicht erreichbar.“ In Schritt 8 dann: „Wer eingereicht hat, darf nicht selbst freigeben.“ | R1, B9 |
+| **Teilausfall während der Demo:** eine oder zwei Rechnungen sind schon durch, dann fallen Formular, n8n oder Tunnel aus | Kein Reset. Tab 5, Posteingang neu laden: Was angekommen ist, steht oben mit Status; das zeigen. Nur die fehlenden Dateien über „Datei auswählen“ hochladen. Angekommene Dateien nie erneut senden, sonst entsteht ein Duplikat. Schritte 4 und 5 mit einer schon gelaufenen Ausführung zeigen, wenn n8n lädt, sonst nur ansagen und R4 zeigen. Satz in Schritt 8 wie bei Plan B. | R4 |
+| Das Formular meldet „Problem submitting response“ oder antwortet nach 15 s nicht | Erst Tab 5, Posteingang neu laden. **Angekommen:** Finance-Ops hat geprüft und entschieden; nicht neu einreichen, sondern das Ergebnis zeigen. **Nicht angekommen:** einmal neu einreichen. Klappt es dann nicht, weiter wie beim Teilausfall. | – |
 | In n8n läuft der Weg „Supabase-Protokoll fehlgeschlagen“ | Nichts tun. Die Bestätigung kam, die Entscheidung steht in Finance-Ops, nur die Zeile fehlt. Sagen: „Das Protokoll ist ausgefallen, die Entscheidung steht. Genau dafür ist dieser Weg gebaut.“ | R4 |
 | n8n-Oberfläche lädt nicht | Schritte 4 und 5 nur ansagen, R4 zeigen (Tab 6, Pfeiltaste), weiter mit Schritt 6 | R4 |
-| Finance-Ops lädt nicht | R3 (Was Jonas sieht) und R2 (KI) zeigen (Tab 6), Schritt 8 ansagen | R3, R2 |
+| Finance-Ops lädt nicht | Nicht reparieren. Tab 6: R3 (Was Jonas sieht) und R2 (KI-Rückfrage) zeigen, für das Protokoll B9; Schritt 8 ansagen. Wenn Zeit ist: `demo_v4.mp4` vom Desktop in QuickTime ab 2:16 (Posteingang und die zwei Rechnungen). Das Video in Tab 6 hat keine Zeitleiste und startet immer bei 0:00. | R3, R2, B9 |
 | Das Modell antwortet nicht | Das Panel lädt die feste Vorlage und sagt das: „Kein KI-Entwurf verfügbar. Die feste Vorlage ist geladen.“ Genau das zeigen. Kommt gar nichts: R2 | R2 |
 | Zeit knapp | Schritte 7 und 8 nur ansagen | – |
 
