@@ -214,10 +214,46 @@ Dann gilt der Ablauf v7 (`Live-Demo Ablauf v7.pdf` auf dem Desktop):
 - Formular `…/form/finance-ops-rechnung-v2`, Fehlerpfad 200216, Protokoll im
   Google Sheet.
 
+## Sicherheitsgrenze: Zertifikat zu Supabase
+
+Befund vom 21.10.2026: n8n verbindet sich verschlüsselt mit Supabase (SSL
+„Require“), prüft aber das Server-Zertifikat nicht („Ignore SSL Issues“ an).
+Supabase signiert es mit einer eigenen Zertifizierungsstelle („Supabase
+Intermediate 2021 CA“), die n8n nicht kennt, und die Postgres-Zugangsdaten in
+n8n haben kein Feld für ein eigenes Zertifikat. Folge: Wer sich in den Netzweg
+zwischen n8n und Supabase schalten kann, könnte sich als Supabase ausgeben, die
+Protokollzeilen mitlesen oder eigene einschleusen.
+
+Korrektur, nicht umgesetzt: das CA-Zertifikat aus dem Supabase-Dashboard im
+n8n-Container hinterlegen (Ordner `/opt/custom-certificates` des
+n8n-Docker-Images oder `NODE_EXTRA_CA_CERTS`), n8n neu starten, „Ignore SSL
+Issues“ ausschalten. Das kann nur der Betreiber von n8n.skill-sprinters.de und
+braucht einen Neustart des Kursservers; vor Freitag ist das nicht geplant.
+
+Bis dahin gilt der Einsatz nur für die Demo bis zum 23.10.2026 und nur unter
+diesen Bedingungen, geprüft am 21.10.2026:
+
+| Bedingung | Stand |
+|---|---|
+| Nur synthetische Daten | Das Projekt finops-demo-log enthält nur `finops_demo.processing_log` mit Testrechnungen aus `fixtures/`; keine Nutzerkonten, kein Storage, nichts im Schema `public`. |
+| Nur Einfügen | Rolle `finops_demo_logger`: kein Superuser, keine Rollen- oder Datenbankrechte, kein Umgehen von RLS, höchstens 3 Verbindungen. Auf Tabellen nur INSERT in das Protokoll; kein Lesen, Ändern oder Löschen, kein Anlegen in einem Schema. Über die Standardrechte für alle Rollen darf sie das leere Schema `public` sehen und temporäre Tabellen in ihrer eigenen Sitzung anlegen. |
+| Keine produktiven Daten | Finance-Ops läuft für die Demo auf der Testdatenbank; nichts Produktives ist angebunden. Das Passwort der Rolle steht nur in der n8n-Credential. |
+| Zugang danach deaktivieren | nach der Präsentation, siehe unten |
+
 ## Danach
 
 - Tunnel, Oberfläche und Demo-API mit Ctrl + C beenden.
 - In n8n die Testkopie v3 deaktivieren. Das Original bleibt, wie es ist.
+
+**Nach der Präsentation am Freitag** (nicht nach der Generalprobe) zusätzlich
+den Zugang deaktivieren. In Supabase, Projekt finops-demo-log, SQL Editor:
+
+```sql
+alter role finops_demo_logger nologin;
+```
+
+Danach in n8n die Credential „Supabase Demo-Log“ löschen und bei Bedarf das
+Projekt finops-demo-log pausieren.
 
 ## Generalprobe am Donnerstag
 

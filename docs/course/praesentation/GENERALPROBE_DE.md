@@ -55,7 +55,7 @@ Versuchen als No-go.
 | | Punkt | Go, wenn |
 |---|---|---|
 | ☐ | Verbindung zu Supabase | keine Ausführung lief über „Supabase-Protokoll fehlgeschlagen“ |
-| ☐ | Zertifikat zu Supabase | entweder die Korrektur ist umgesetzt und getestet (Prüfung an), oder die bekannte Grenze (Ignore SSL Issues, nur synthetische Daten, Rolle darf nur einfügen) ist für Freitag ausdrücklich akzeptiert |
+| ☐ | Zertifikat zu Supabase | entweder die Korrektur ist umgesetzt und getestet (Prüfung an), oder die bekannte Grenze (Ignore SSL Issues, nur synthetische Daten, Rolle darf nur einfügen) ist für Freitag ausdrücklich akzeptiert; Bedingungen in `LIVE_DEMO_DE.md`, Abschnitt „Sicherheitsgrenze“ |
 | ☐ | Keine Zugangsdaten sichtbar | weder in n8n noch in Supabase noch in Terminals auf dem Beamer |
 
 ## Entscheidung für Freitag
