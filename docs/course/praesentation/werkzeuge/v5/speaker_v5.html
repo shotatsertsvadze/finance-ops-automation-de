@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Referentenansicht</title>
+<style>
+:root { color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: #0E1117; color: #EEF1F7; font-family: Figtree, system-ui, sans-serif; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); }
+.bar { display: flex; align-items: center; gap: 18px; padding: 12px 24px; border-bottom: 1px solid #232A3A; font: 600 18px ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }
+.bar.bottom { border-top: 1px solid #232A3A; border-bottom: 0; font: 500 15px system-ui, sans-serif; color: #8D97AB; }
+#title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 18px system-ui, sans-serif; color: #AEB7C9; }
+#slideClock.warn { color: #F2C35B; }
+#slideClock.over { color: #FF8C76; }
+#total { background: #1C2333; border: 1px solid #2E3850; color: inherit; font: inherit; border-radius: 10px; padding: 6px 12px; cursor: pointer; }
+#body { overflow-y: auto; padding: 28px 40px; }
+#text { max-width: 1100px; margin: 0 auto; display: grid; gap: .7em; line-height: 1.45; font-weight: 500; }
+#text p { margin: 0; scroll-margin-top: 16vh; transition: opacity .25s; }
+#text b { color: #FFD84D; }
+#text .regie { font-size: .55em; color: #C2B3FA; background: #221C3D; border-radius: 10px; padding: .6em .9em; }
+#text.video p:not(.now) { opacity: .38; }
+#next { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (prefers-reduced-motion: reduce) { #text p { transition: none; } }
+</style>
+</head>
+<body>
+<div class="bar"><span id="no"></span><span id="title"></span><span id="slideClock"></span><button id="total" title="Klick setzt die Gesamtzeit auf 0:00">0:00</button></div>
+<div id="body"><div id="text"></div></div>
+<div class="bar bottom"><span id="next"></span><span>→ ← Folie · Leertaste oder K: Video</span></div>
+<script>
+const deck = opener;
+const NOTES = deck.SPEAKER_NOTES;
+const $ = (id) => document.getElementById(id);
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const inline = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+const markOf = (p) => { const m = p.match(/^\*\*\((\d+):(\d\d)\)/); return m ? +m[1] * 60 + +m[2] : ""; };
+const noteFor = (i) => NOTES.find((n) => +n.slide === i + 1);
+let shown = -1, nowPara = null, slideStart = performance.now(), totalStart = performance.now();
+
+function render(i) {
+  const n = noteFor(i), next = noteFor(i + 1);
+  $("no").textContent = `${i + 1} / ${deck.SPEAKER_COUNT}`;
+  $("title").textContent = n ? n.title : "";
+  $("text").className = n && n.video ? "video" : "";
+  $("text").innerHTML = n
+    ? n.paras.map((p) => `<p class="${p.startsWith("[") ? "regie" : ""}" data-at="${markOf(p)}">${inline(p)}</p>`).join("")
+    : "<p>Kein Sprechtext für diese Folie.</p>";
+  $("next").textContent = next ? `Als Nächstes: ${next.slide} · ${next.title}` : "Letzte Folie";
+  $("body").scrollTop = 0;
+  nowPara = null;
+  fit(n && n.video);
+}
+
+// A normal slide's text fits the window, so nothing has to scroll.
+// The video slide keeps one size and scrolls along with the video instead.
+function fit(video) {
+  const text = $("text"), box = $("body");
+  if (video) { text.style.fontSize = "30px"; return; }
+  let lo = 16, hi = 46;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    text.style.fontSize = mid + "px";
+    if (box.scrollHeight <= box.clientHeight) lo = mid; else hi = mid;
+  }
+  text.style.fontSize = lo + "px";
+}
+
+function follow(video) {
+  const marked = [...document.querySelectorAll("#text p")].filter((p) => p.dataset.at !== "");
+  const cur = marked.filter((p) => +p.dataset.at <= video.currentTime + 0.5).pop() || marked[0];
+  if (!cur || cur === nowPara) return;
+  nowPara?.classList.remove("now");
+  cur.classList.add("now");
+  nowPara = cur;
+  cur.scrollIntoView({ block: "start", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+
+function poll() {
+  if (deck.closed) { clearInterval(timer); $("text").innerHTML = "<p>Die Präsentation ist geschlossen.</p>"; return; }
+  const i = Math.max(0, parseInt(deck.location.hash.slice(1) || "1", 10) - 1);
+  if (i !== shown) { shown = i; slideStart = performance.now(); render(i); }
+  const n = noteFor(i), s = (performance.now() - slideStart) / 1000;
+  $("slideClock").textContent = n ? `${fmt(s)} / ${fmt(n.target)}` : fmt(s);
+  $("slideClock").className = !n ? "" : s > n.target * 1.1 ? "over" : s > n.target * 0.9 ? "warn" : "";
+  $("total").textContent = fmt((performance.now() - totalStart) / 1000);
+  const video = deck.document.querySelector(".slide.active video");
+  if (video && n && n.video) follow(video);
+}
+
+const timer = setInterval(poll, 200);
+$("total").addEventListener("click", () => { totalStart = performance.now(); });
+addEventListener("resize", () => fit(noteFor(shown)?.video));
+// Keys pressed here drive the presentation, as if they were pressed there.
+// Letters count in either case, so Caps Lock or Shift does not swallow them.
+addEventListener("keydown", (e) => {
+  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (!["ArrowRight", "ArrowLeft", " ", "PageDown", "PageUp", "Home", "End", "k"].includes(key)) return;
+  e.preventDefault();
+  deck.dispatchEvent(new deck.KeyboardEvent("keydown", { key }));
+});
+poll();
+</script>
+</body>
+</html>
