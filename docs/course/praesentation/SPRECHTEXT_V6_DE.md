@@ -41,7 +41,8 @@ springt zu einer Folie (etwa 8 Enter), **V** springt zum Reserve-Video, **S**
 ## 1 · Titel (0:15)
 
 Guten Tag. Ich bin Shota Tsertsvadze, und mein Abschlussprojekt heißt
-Finance Operations Automation. Ich beginne mit einer Rechnung.
+Finance Operations Automation, kurz Finance-Ops. Ich beginne mit einer
+Rechnung.
 
 ## 2 · Eine Rechnung wie jede andere (0:30)
 
