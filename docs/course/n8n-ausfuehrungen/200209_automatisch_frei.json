@@ -1,0 +1,50 @@
+{
+  "quelle": "n8n-Ausführung 200209 des Workflows „Finance Ops – Invoice Intake Demo v2 (Wege)“, Version f9122671, gelesen über die n8n-Schnittstelle am 21.10.2026",
+  "bereinigt": "Auszug. Entfernt: Anmeldeantwort, Sitzungscookie, CSRF-Token, Tunnel-Adresse, Formular-Link mit Signatur, Resume-Token, Speicherpfade der Dateien, vollständige Antwort von Finance-Ops. Alle Rechnungsdaten sind synthetisch.",
+  "ausfuehrung": {
+    "id": "200209",
+    "status": "success",
+    "modus": "webhook",
+    "gestartet": "2026-10-20T16:01:17.227Z",
+    "beendet": "2026-10-20T16:01:22.639Z"
+  },
+  "eingang": {
+    "kanal": "FORM",
+    "datei": "G_clean_380.xml",
+    "groesse_bytes": 5807
+  },
+  "zweig": {
+    "switch": "Entscheidung von Finance-Ops",
+    "ausgang": 0,
+    "knoten": "Automatisch freigegeben (laut Finance-Ops)"
+  },
+  "antwort_finance_ops": {
+    "id": "8b3e54f9-839f-4425-9405-935b71c2e3ba",
+    "state": "APPROVED",
+    "routing_decision": "AUTO_APPROVE",
+    "routing_reasons": ["Bruttobetrag innerhalb der Auto-Grenze (500 EUR), alle Prüfungen bestanden"],
+    "required_steps": [],
+    "payable_blockers": [],
+    "invoice_number": "INV-2026-00433",
+    "supplier_name": "Berliner Bürobedarf GmbH",
+    "gross_amount": "380.00",
+    "currency": "EUR",
+    "received_at": "2026-10-20T16:01:18.395Z",
+    "official_validation": "SKIPPED: Kein Validator konfiguriert (nur außerhalb des Produktivbetriebs zulässig): nicht offiziell geprüft"
+  },
+  "sheet_zeile": {
+    "Eingang": "20.10.2026 18:01",
+    "Rechnungsnummer": "INV-2026-00433",
+    "Lieferant": "Berliner Bürobedarf GmbH",
+    "Betrag": "380,00 €",
+    "Ergebnis": "Automatisch freigegeben",
+    "Status": "Freigegeben",
+    "Grund": "Bruttobetrag innerhalb der Auto-Grenze (500 EUR), alle Prüfungen bestanden",
+    "Invoice ID": "8b3e54f9-839f-4425-9405-935b71c2e3ba",
+    "Eingangskanal": "Formular"
+  },
+  "danach": {
+    "Demo Log aktualisieren": "success, 2070 ms",
+    "Bestätigung anzeigen": "success"
+  }
+}

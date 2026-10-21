@@ -1,0 +1,51 @@
+{
+  "quelle": "n8n-Ausführung 200211 des Workflows „Finance Ops – Invoice Intake Demo v2 (Wege)“, Version f9122671, gelesen über die n8n-Schnittstelle am 21.10.2026",
+  "bereinigt": "Auszug. Entfernt: Anmeldeantwort, Sitzungscookie, CSRF-Token, Tunnel-Adresse, Formular-Link mit Signatur, Resume-Token, Speicherpfade der Dateien, vollständige Antwort von Finance-Ops. Alle Rechnungsdaten sind synthetisch.",
+  "ausfuehrung": {
+    "id": "200211",
+    "status": "success",
+    "modus": "webhook",
+    "gestartet": "2026-10-20T16:01:25.929Z",
+    "beendet": "2026-10-20T16:01:29.857Z"
+  },
+  "eingang": {
+    "kanal": "FORM",
+    "datei": "A_clean_1240.xml",
+    "groesse_bytes": 5844
+  },
+  "zweig": {
+    "switch": "Entscheidung von Finance-Ops",
+    "ausgang": 1,
+    "knoten": "Wartet auf Freigabe in Finance-Ops"
+  },
+  "antwort_finance_ops": {
+    "id": "1d7e7964-b101-43d4-a53b-a8b6323bc231",
+    "state": "READY_FOR_APPROVAL",
+    "routing_decision": "APPROVAL",
+    "routing_reasons": ["Freigabe durch MANAGER laut Betragsstufe"],
+    "required_steps": [{"step_no": 1, "required_role": "MANAGER"}],
+    "approval_steps": [{"step_no": 1, "required_role": "MANAGER", "status": "PENDING"}],
+    "payable_blockers": [],
+    "invoice_number": "INV-2026-00421",
+    "supplier_name": "Berliner Bürobedarf GmbH",
+    "gross_amount": "1240.00",
+    "currency": "EUR",
+    "received_at": "2026-10-20T16:01:26.507Z",
+    "official_validation": "SKIPPED: Kein Validator konfiguriert (nur außerhalb des Produktivbetriebs zulässig): nicht offiziell geprüft"
+  },
+  "sheet_zeile": {
+    "Eingang": "20.10.2026 18:01",
+    "Rechnungsnummer": "INV-2026-00421",
+    "Lieferant": "Berliner Bürobedarf GmbH",
+    "Betrag": "1.240,00 €",
+    "Ergebnis": "Zur Freigabe",
+    "Status": "Freigabe ausstehend",
+    "Grund": "Freigabe durch MANAGER laut Betragsstufe",
+    "Invoice ID": "1d7e7964-b101-43d4-a53b-a8b6323bc231",
+    "Eingangskanal": "Formular"
+  },
+  "danach": {
+    "Demo Log aktualisieren": "success, 1616 ms",
+    "Bestätigung anzeigen": "success"
+  }
+}
