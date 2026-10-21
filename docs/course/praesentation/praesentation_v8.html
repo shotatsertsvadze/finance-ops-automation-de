@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Finance Operations Automation · v8</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+:root {
+  --canvas: #F4F6FB; --paper: #FFFFFF; --ink: #182033; --muted: #5B6477; --line: #E3E7F0; --bar: #C9D1E3;
+  --blue: #2F5BEA; --blue-mid: #8FA7F3; --blue-soft: #DCE5FD;
+  --violet: #6D4AE0; --violet-soft: #ECE6FD;
+  --coral: #F0563D; --coral-ink: #B8321D; --coral-soft: #FDE3DE;
+  --mint: #12A57F; --mint-ink: #0B7A5E; --mint-soft: #DDF5EC;
+  --marker: #FFE45C; --marker-soft: #FFF6C7;
+  --shadow: 0 2px 4px rgba(24,32,51,.05), 0 18px 48px rgba(24,32,51,.09);
+  --display: "Bricolage Grotesque", system-ui, sans-serif;
+  --body: "Figtree", system-ui, sans-serif;
+  --mono: "DM Mono", ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: #DDE2EC; }
+body { font-family: var(--body); color: var(--ink); -webkit-font-smoothing: antialiased; }
+.deck { display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 40px 0; }
+.slide { position: relative; width: 1920px; height: 1080px; overflow: hidden; background: var(--canvas); padding: 78px 110px 0; font-size: 30px; line-height: 1.4; }
+body.present { overflow: hidden; background: var(--canvas); }
+body.present .deck { display: block; padding: 0; }
+body.present .slide { position: absolute; left: 50%; top: 50%; display: none; transform-origin: center; }
+body.present .slide.active { display: block; }
+body.present .slide.active .mark { animation: draw .9s .25s cubic-bezier(.3,.7,.3,1) both; }
+@keyframes draw { from { background-size: 0% 58%; } }
+
+.tag { display: inline-flex; align-items: center; gap: 10px; font: 500 22px var(--mono); color: var(--blue); background: var(--blue-soft); padding: 7px 18px; border-radius: 100px; margin-bottom: 24px; }
+.tag.backup { color: var(--muted); background: #E7EBF2; }
+.tag.live { color: var(--coral-ink); background: var(--coral-soft); }
+.tag.live::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: var(--coral); }
+h1 { font-family: var(--display); font-weight: 700; letter-spacing: -.012em; line-height: 1.08; font-size: 78px; }
+h1.xl { font-size: 112px; }
+.lede { font-size: 34px; line-height: 1.38; color: var(--muted); max-width: 40ch; margin-top: 26px; }
+.mark { background-image: linear-gradient(100deg, transparent 0 .5%, var(--marker) 1.5% 98.5%, transparent 99.5%); background-repeat: no-repeat; background-size: 100% 58%; background-position: 0 90%; padding: 0 .08em; border-radius: .2em .7em .3em .5em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.card { background: var(--paper); border: 1px solid var(--line); border-radius: 32px; box-shadow: var(--shadow); }
+.caption { font: 400 20px var(--mono); color: var(--muted); }
+.muted { color: var(--muted); }
+h3 { font: 700 34px/1.15 var(--display); }
+.chip { display: inline-flex; align-items: center; gap: 12px; font: 700 26px var(--body); border-radius: 100px; padding: 10px 22px 10px 12px; white-space: nowrap; }
+.chip .dot { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+.chip .dot svg { width: 22px; height: 22px; }
+.chip.ok { background: var(--mint-soft); color: var(--mint-ink); } .chip.ok .dot { background: var(--mint); }
+.chip.stop { background: var(--coral-soft); color: var(--coral-ink); } .chip.stop .dot { background: var(--coral); }
+.chip.plain { padding: 8px 20px; font-size: 24px; }
+.badge { display: inline-flex; align-items: center; gap: 10px; font: 500 20px var(--mono); border-radius: 10px; padding: 6px 14px; white-space: nowrap; }
+.badge.model { border: 2.5px dashed #8E9AAE; color: var(--muted); }
+.badge.test { background: var(--ink); color: #fff; }
+.badge.demo { background: #E7EBF2; color: var(--muted); }
+.badge.fict { background: var(--violet-soft); color: var(--violet); }
+svg.i { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ico { width: 76px; height: 76px; border-radius: 22px; display: grid; place-items: center; flex: none; }
+.ico svg { width: 40px; height: 40px; }
+.ico.sm { width: 60px; height: 60px; border-radius: 18px; } .ico.sm svg { width: 32px; height: 32px; }
+.ico.blue { background: var(--blue-soft); color: var(--blue); }
+.ico.violet { background: var(--violet-soft); color: var(--violet); }
+.ico.coral { background: var(--coral-soft); color: var(--coral-ink); }
+.ico.mint { background: var(--mint-soft); color: var(--mint-ink); }
+.ico.gray { background: #EDF0F6; color: var(--muted); }
+.ico.yellow { background: var(--marker); color: var(--ink); }
+.avatar { width: 136px; height: 136px; border-radius: 50%; display: grid; place-items: center; border: 6px solid #fff; box-shadow: var(--shadow); margin: 0 auto; }
+.avatar svg { width: 62px; height: 62px; }
+.avatar.violet { background: var(--violet-soft); color: var(--violet); }
+.avatar.blue { background: var(--blue-soft); color: var(--blue); border-radius: 36px; }
+.avatar.mint { background: var(--mint-soft); color: var(--mint-ink); }
+.avatar.coral { background: var(--coral-soft); color: var(--coral-ink); }
+.avatar.gray { background: #EDF0F6; color: var(--muted); }
+.iban { font-family: var(--mono); font-weight: 500; letter-spacing: .02em; white-space: nowrap; }
+.iban .d { color: var(--coral-ink); background: var(--coral-soft); border-radius: 6px; padding: 0 2px; }
+.note { display: flex; gap: 22px; align-items: center; background: var(--marker-soft); border-radius: 24px; padding: 22px 30px; font-size: 28px; }
+.note .ico { background: var(--marker); color: var(--ink); width: 60px; height: 60px; border-radius: 18px; }
+.note .ico svg { width: 32px; height: 32px; }
+.row { display: flex; gap: 22px; align-items: center; }
+.tile { padding: 30px 32px; }
+.tile p { font-size: 24px; color: var(--muted); margin-top: 8px; line-height: 1.38; }
+.lab { font: 500 20px var(--mono); letter-spacing: .03em; }
+.stat { font: 750 112px/1 var(--display); letter-spacing: -.03em; }
+.list { list-style: none; display: grid; gap: 18px; }
+.list li { display: flex; gap: 16px; align-items: flex-start; font-size: 28px; }
+.list li .ck { flex: none; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: #fff; margin-top: 1px; }
+.list li .ck svg { width: 22px; height: 22px; stroke-width: 3; }
+.list.ok .ck { background: var(--mint); } .list.no .ck { background: var(--coral); } .list.info .ck { background: var(--blue-mid); }
+table.t { width: 100%; border-collapse: collapse; font-size: 24px; }
+table.t th { text-align: left; font: 500 19px var(--mono); color: var(--muted); padding: 0 14px 14px; border-bottom: 2px solid var(--line); }
+table.t td { padding: 18px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+.flowline { position: absolute; height: 0; border-top: 4px dashed var(--bar); }
+
+.num { width: 52px; height: 52px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font: 750 28px var(--display); flex: none; box-shadow: 0 4px 12px rgba(47,91,234,.35); }
+.step-n { width: 64px; height: 64px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font: 750 32px var(--display); flex: none; border: 6px solid #fff; box-shadow: var(--shadow); }
+/* footer rail */
+.foot { position: absolute; left: 110px; right: 110px; bottom: 34px; display: flex; align-items: center; gap: 28px; }
+.rail { display: flex; gap: 10px; flex: 1; }
+.rail span { flex: 1; font: 700 18px var(--body); color: #98A1B3; }
+.rail span::before { content: ""; display: block; height: 7px; border-radius: 7px; background: var(--line); margin-bottom: 8px; }
+.rail span.done::before { background: var(--blue-soft); }
+.rail span.on { color: var(--ink); }
+.rail span.on::before { background: var(--blue); }
+.pageno { font: 500 18px var(--mono); color: var(--muted); }
+.print-only { display: none; }
+.frow { display: grid; grid-template-columns: 1.05fr 1.5fr 1.15fr; gap: 30px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); }
+.frow.fhead { border-top: 0; padding: 4px 0 8px; font: 500 19px var(--mono); color: var(--muted); letter-spacing: .03em; }
+.ftitle { font: 700 27px var(--display); line-height: 1.15; }
+.fcell { font-size: 23px; line-height: 1.32; color: var(--muted); }
+.fcell b { color: var(--ink); font-weight: 600; }
+/* Recording: no native controls (they cover the captions), so a play symbol shows it is a video. */
+.player { position: relative; cursor: pointer; }
+.player .play { position: absolute; left: 50%; top: 50%; width: 150px; height: 150px; margin: -75px 0 0 -75px; border-radius: 50%; background: rgba(15,23,42,.82); display: grid; place-items: center; transition: opacity .3s; }
+.player .play::after { content: ""; margin-left: 12px; border-style: solid; border-width: 32px 0 32px 52px; border-color: transparent transparent transparent #fff; }
+.player.playing .play { opacity: 0; }
+
+@page { size: 1920px 1080px; margin: 0; }
+@media print {
+  html, body { background: var(--canvas); }
+  .deck { display: block; padding: 0; gap: 0; }
+  .slide { break-after: page; }
+  /* Blurred shadows rasterise as grey boxes in PDF viewers; a border reads the same. */
+  .card, .avatar, .num, .step-n { box-shadow: none !important; }
+  .card { border: 2px solid #DDE2EC; }
+  .print-only { display: revert; }
+}
+@media (prefers-reduced-motion: reduce) { .mark { animation: none !important; } }
+/* 6: five paths */
+.chip.go { background: var(--blue-soft); color: var(--blue); } .chip.go .dot { background: var(--blue); }
+.paths { position: relative; width: 1700px; height: 640px; margin-top: 28px; }
+.paths .wires { position: absolute; inset: 0; width: 1700px; height: 640px; overflow: visible; }
+.paths > div { position: absolute; }
+.paths .card { border-radius: 24px; }
+.paths .src { left: 0; width: 220px; height: 80px; display: flex; align-items: center; gap: 14px; padding: 0 14px; }
+.paths .src b, .paths .sheet b { display: block; font-size: 25px; font-weight: 600; line-height: 1.2; }
+.paths .src span, .paths .sheet span { display: block; font-size: 18px; color: var(--muted); line-height: 1.3; }
+.paths .bypass { left: 250px; top: 22px; padding: 0 12px; background: var(--canvas); font: 500 19px var(--mono); color: var(--muted); }
+.paths .n8n { left: 270px; top: 156px; width: 250px; height: 170px; padding: 20px 22px; text-align: center; }
+.paths .n8n .big { font: 700 31px/1.1 var(--display); margin-top: 6px; }
+.paths .n8n .small { font-size: 19px; line-height: 1.3; color: var(--muted); margin-top: 10px; }
+.paths .n8n .small b { color: var(--ink); }
+.paths .sheet { left: 120px; top: 400px; width: 400px; display: flex; align-items: center; gap: 14px; padding: 14px 18px; }
+.paths .sheet b { font-size: 22px; }
+.paths .hub { left: 590px; top: 90px; width: 340px; height: 302px; border-radius: 36px; background: var(--blue); color: #fff; text-align: center; padding: 0 22px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 6px 12px rgba(47,91,234,.2), 0 24px 56px rgba(47,91,234,.32); }
+.paths .hub .gear { width: 72px; height: 72px; border-radius: 22px; background: rgba(255,255,255,.18); display: grid; place-items: center; margin: 0 auto; }
+.paths .hub .gear svg { width: 40px; height: 40px; }
+.paths .hub .name { font: 750 42px/1.1 var(--display); margin-top: 14px; white-space: nowrap; }
+.paths .hub .does { font-size: 26px; font-weight: 600; margin-top: 2px; }
+.paths .hub .db { font-size: 18px; line-height: 1.3; opacity: .85; border-top: 1.5px solid rgba(255,255,255,.3); margin-top: 14px; padding-top: 10px; }
+.paths .out { left: 1060px; width: 640px; height: 104px; display: grid; grid-template-columns: 56px 1fr; gap: 18px; align-items: center; padding: 0 24px 0 20px; background: var(--paper); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow); }
+.paths .out .dot { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+.paths .out .dot svg { width: 28px; height: 28px; stroke-width: 2.6; }
+.paths .out.ok .dot { background: var(--mint); } .paths .out.go .dot { background: var(--blue); }
+.paths .out.stop .dot { background: var(--coral); } .paths .out.off .dot { background: #98A1B3; }
+.paths .out .t { display: flex; justify-content: space-between; align-items: center; gap: 12px; font: 700 28px/1.2 var(--display); }
+.paths .out.ok .t { color: var(--mint-ink); } .paths .out.go .t { color: var(--blue); } .paths .out.stop .t { color: var(--coral-ink); } .paths .out.off .t { color: var(--muted); }
+.paths .out .c { font-size: 20px; line-height: 1.3; color: var(--muted); margin-top: 3px; }
+.paths .out .live { flex: none; font: 500 16px var(--mono); letter-spacing: .02em; color: var(--blue); background: var(--blue-soft); border-radius: 8px; padding: 3px 10px; }
+.paths .out.fail { background: transparent; border: 2.5px dashed #B6BFCF; box-shadow: none; }
+.paths .out.fail .live { color: var(--muted); background: #E7EBF2; }
+.paths .ai { font-weight: 600; color: var(--violet); background: var(--violet-soft); border-radius: 6px; padding: 0 7px; margin-right: 4px; }
+body.present .slide.active .paths .fan path { stroke-dasharray: 1; animation: fan .55s cubic-bezier(.3,.7,.3,1) both; }
+body.present .slide.active .paths .fan path:nth-child(2) { animation-delay: .08s; }
+body.present .slide.active .paths .fan path:nth-child(3) { animation-delay: .16s; }
+body.present .slide.active .paths .fan path:nth-child(4) { animation-delay: .24s; }
+@keyframes fan { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .paths .fan path { animation: none !important; } }
+@media print { .paths .hub, .paths .out { box-shadow: none; } .paths .out:not(.fail) { border: 2px solid #DDE2EC; } }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="env" viewBox="0 0 44 30"><rect x="1" y="1" width="42" height="28" rx="5" fill="currentColor"/><path d="M4 5l18 12L40 5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l10 18H2z"/><path d="M12 10v5M12 18h.01"/></symbol>
+  <symbol id="i-excl" viewBox="0 0 24 24"><path d="M12 6v8M12 18h.01"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-doccheck" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 15l2 2 4-4"/></symbol>
+  <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></symbol>
+  <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M17 2l3 3-3 3M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 0 1-4 4H4"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M5 7h14M5 7l-3 7a3 3 0 0 0 6 0zM19 7l-3 7a3 3 0 0 0 6 0z"/></symbol>
+  <symbol id="i-building" viewBox="0 0 24 24"><path d="M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6M9 11h.01M15 11h.01"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></symbol>
+  <symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L4.5 18.5A2 2 0 0 0 6.2 21h11.6a2 2 0 0 0 1.7-2.5L14 9V3M7 15h10"/></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></symbol>
+  <symbol id="i-plug" viewBox="0 0 24 24"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 12h4M11.5 12l5-5M11.5 12l5 5"/></symbol>
+  <symbol id="i-bulb" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.8V16h5v-.3c0-.7.4-1.4 1-1.8A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-server" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></symbol>
+  <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.8 7L4 20l1.1-4.6A8 8 0 1 1 21 12z"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l5.5 3.5-5.5 3.5z"/></symbol>
+</defs></svg>
+
+<main class="deck">
+
+<!-- 1 · Titel -->
+<section class="slide" data-chapter="Anlass">
+  <div style="display:grid;grid-template-columns:1fr 760px;gap:70px;align-items:center;height:880px">
+    <div>
+      <div class="tag">Abschlussprojekt · Oktober 2026</div>
+      <h1 class="xl">Finance Operations <span class="mark">Automation</span></h1>
+      <p class="lede">Eingangsrechnungen automatisch prüfen. Und genau dort stoppen, wo ein Mensch entscheiden muss.</p>
+      <div class="row" style="margin-top:56px">
+        <div class="ico violet"><svg class="i"><use href="#i-user"/></svg></div>
+        <div><div style="font:700 34px var(--display)">Shota Tsertsvadze</div><div class="muted" style="font-size:24px">Demo-Firma Nordwerk GmbH · alle Daten synthetisch</div></div>
+      </div>
+    </div>
+    <div class="card" style="padding:44px 40px;position:relative">
+      <svg viewBox="0 0 740 600" style="width:100%;height:560px" aria-hidden="true">
+        <g color="#C9D1E3"><use href="#env" x="20" y="230" width="110" height="75"/><use href="#env" x="40" y="250" width="110" height="75"/><use href="#env" x="60" y="270" width="110" height="75"/></g>
+        <text x="105" y="390" text-anchor="middle" font-family="Figtree" font-size="26" font-weight="700" fill="#5B6477">E-Rechnung</text>
+        <path d="M190 300 H 250" stroke="#8FA7F3" stroke-width="6" stroke-linecap="round"/>
+        <rect x="260" y="210" width="180" height="180" rx="40" fill="#DCE5FD"/>
+        <use href="#i-gear" x="300" y="250" width="100" height="100" stroke="#2F5BEA" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="350" y="430" text-anchor="middle" font-family="Figtree" font-size="26" font-weight="700" fill="#2F5BEA">Regeln prüfen</text>
+        <path d="M445 260 C 500 260, 500 150, 550 150" stroke="#12A57F" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <path d="M445 340 C 500 340, 500 450, 550 450" stroke="#F0563D" stroke-width="6" fill="none" stroke-linecap="round"/>
+        <circle cx="610" cy="150" r="58" fill="#DDF5EC"/>
+        <use href="#i-check" x="575" y="115" width="70" height="70" stroke="#0B7A5E" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="610" y="250" text-anchor="middle" font-family="Figtree" font-size="24" font-weight="700" fill="#0B7A5E">läuft durch</text>
+        <circle cx="610" cy="450" r="58" fill="#ECE6FD"/>
+        <use href="#i-user" x="580" y="420" width="60" height="60" stroke="#6D4AE0" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <text x="610" y="550" text-anchor="middle" font-family="Figtree" font-size="24" font-weight="700" fill="#6D4AE0">Mensch entscheidet</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- 2 · Die Frage -->
+<section class="slide" data-chapter="Anlass">
+  <div style="display:grid;grid-template-columns:1fr 820px;gap:80px;align-items:center;height:880px">
+    <div>
+      <div class="tag"><svg class="i" width="24" height="24"><use href="#env"/></svg>Posteingang · Nordwerk GmbH</div>
+      <h1 class="xl">Eine Rechnung wie <span class="mark">jede andere.</span></h1>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:48px">
+        <span class="chip ok"><span class="dot"><svg class="i" style="stroke-width:3"><use href="#i-check"/></svg></span>Bekannter Lieferant</span>
+        <span class="chip ok"><span class="dot"><svg class="i" style="stroke-width:3"><use href="#i-check"/></svg></span>Passende Bestellung</span>
+        <span class="chip ok"><span class="dot"><svg class="i" style="stroke-width:3"><use href="#i-check"/></svg></span>Betrag im Rahmen</span>
+      </div>
+    </div>
+    <!-- invoice illustration -->
+    <div style="position:relative;height:820px">
+      <div class="card" style="position:absolute;inset:40px 30px 30px 60px;transform:rotate(4deg);background:#EEF1F8;box-shadow:none"></div>
+      <div class="card" style="position:absolute;inset:20px 40px 50px 30px;padding:52px 56px;transform:rotate(-1.5deg)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="display:flex;gap:18px;align-items:center">
+            <div style="width:64px;height:64px;border-radius:18px;background:var(--ink);color:#fff;display:grid;place-items:center;font:800 30px var(--display)">HL</div>
+            <div><div style="font:700 34px var(--display)">Havel Logistik GmbH</div><div style="font-size:22px;color:var(--muted)">Hafenweg 3 · Potsdam</div></div>
+          </div>
+          <div style="font:500 20px var(--mono);color:var(--muted);text-align:right">RECHNUNG<br>HL-2026-7731</div>
+        </div>
+        <div style="margin-top:44px;display:grid;gap:16px;font-size:26px">
+          <div style="display:flex;justify-content:space-between;border-bottom:2px dashed var(--line);padding-bottom:14px"><span>Palettentransport Berlin – Hamburg</span><span class="iban">2.100,00 €</span></div>
+          <div style="display:flex;justify-content:space-between;color:var(--muted)"><span>USt 19 %</span><span class="iban">399,00 €</span></div>
+          <div style="display:flex;justify-content:space-between;font:700 40px var(--display);margin-top:10px"><span>Gesamt</span><span>2.499,00 €</span></div>
+        </div>
+        <div style="margin-top:46px;background:var(--canvas);border-radius:20px;padding:22px 26px">
+          <div style="font:500 18px var(--mono);color:var(--muted)">BANKVERBINDUNG</div>
+          <div class="iban" style="font-size:30px;margin-top:6px">DE02 3002 0900 0106 5310 65</div>
+        </div>
+        <div style="margin-top:30px;display:flex;justify-content:space-between;font-size:20px;color:var(--muted)"><span>Bestellung PO-2026-0201</span><span>Fällig 25.09.2026</span></div>
+      </div>
+      <!-- magnifier over IBAN -->
+      <svg style="position:absolute;right:95px;top:400px;width:230px;height:230px" viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="42" cy="42" r="30" fill="rgba(255,228,92,.18)" stroke="#182033" stroke-width="5"/>
+        <path d="M64 64l24 24" stroke="#182033" stroke-width="9" stroke-linecap="round"/>
+      </svg>
+    </div>
+  </div>
+  <p class="caption" style="position:absolute;left:110px;bottom:96px">Synthetische Testrechnung</p>
+</section>
+
+<!-- 3 · Der zweite Blick -->
+<section class="slide" data-chapter="Anlass">
+  <div class="tag"><svg class="i" width="22" height="22"><use href="#i-search"/></svg>Der zweite Blick</div>
+  <h1>Alles stimmt. <span class="mark">Nur das Konto nicht.</span></h1>
+  <div style="display:grid;grid-template-columns:1fr 470px;gap:50px;margin-top:52px;align-items:center">
+    <div class="card" style="padding:50px 54px">
+      <div class="row" style="gap:16px"><span style="width:18px;height:18px;border-radius:50%;background:var(--mint)"></span><span class="lab muted">IN DEN STAMMDATEN FREIGEGEBEN</span></div>
+      <div class="iban" style="font-size:54px;margin:12px 0 40px 34px">DE02 1203 0000 0000 2020 51</div>
+      <div class="row" style="gap:16px"><span style="width:18px;height:18px;border-radius:50%;background:var(--coral)"></span><span class="lab muted">AUF DIESER RECHNUNG · ABWEICHUNGEN MARKIERT</span></div>
+      <div class="iban" data-iban data-ref="DE02 1203 0000 0000 2020 51" style="font-size:54px;margin:12px 0 0 34px">DE02 3002 0900 0106 5310 65</div>
+    </div>
+    <div style="display:grid;gap:18px">
+      <span class="chip ok"><span class="dot"><svg class="i" style="stroke-width:3"><use href="#i-check"/></svg></span>Lieferant bekannt</span>
+      <span class="chip ok"><span class="dot"><svg class="i" style="stroke-width:3"><use href="#i-check"/></svg></span>Bestellung passt</span>
+      <span class="chip ok"><span class="dot"><svg class="i" style="stroke-width:3"><use href="#i-check"/></svg></span>Betrag im Rahmen</span>
+      <span class="chip stop"><span class="dot"><svg class="i" style="stroke-width:3"><use href="#i-excl"/></svg></span>IBAN weicht ab</span>
+    </div>
+  </div>
+  <div class="note" style="margin-top:36px"><div class="ico"><svg class="i"><use href="#i-alert"/></svg></div><div>Eine echt aussehende Rechnung mit anderem Konto ist ein <b>bekanntes Betrugsmuster</b>. Von Hand fällt sie nur auf, wenn jemand jedes Mal genau hinschaut.</div></div>
+  <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:22px;align-items:center;margin-top:24px">
+    <div class="card" style="padding:18px 28px;box-shadow:none;border:2px solid var(--blue-soft)"><div class="lab" style="color:var(--blue)">BEI DER RECHNUNG · MEINE ANWENDUNG</div><div style="font-size:26px;margin-top:4px">Ist das Konto in den Stammdaten freigegeben?</div></div>
+    <div style="font:700 40px var(--display);color:var(--muted)">→</div>
+    <div class="card" style="padding:18px 28px;box-shadow:none"><div class="lab muted">BEI DER ÜBERWEISUNG · BANK, SEIT OKT. 2025</div><div style="font-size:26px;margin-top:4px">Passt der Name zur IBAN?</div></div>
+  </div>
+</section>
+
+<!-- 4 · Woher ich das kenne -->
+<section class="slide" data-chapter="Hintergrund">
+  <div class="tag">Woher ich das kenne</div>
+  <h1>Anderer Prozess. <span class="mark">Gleiches Grundproblem.</span></h1>
+  <div style="display:grid;grid-template-columns:auto 1fr 1fr;gap:26px;margin-top:38px;align-items:center">
+    <p style="font-size:28px;color:var(--muted);max-width:19ch;line-height:1.3">Operations in einem FinTech, Girokonten für Privatkunden.</p>
+    <div class="card" style="padding:22px 28px;display:flex;gap:20px;align-items:center"><div class="ico sm violet"><svg class="i"><use href="#i-scale"/></svg></div><div style="font:700 30px var(--display)">Pfändungen</div></div>
+    <div class="card" style="padding:22px 28px;display:flex;gap:20px;align-items:center"><div class="ico sm violet"><svg class="i"><use href="#i-building"/></svg></div><div style="font:700 30px/1.15 var(--display)">Behördliche Auskunftsersuchen</div></div>
+  </div>
+  <div class="card" style="margin-top:30px;padding:30px 44px 26px">
+    <div style="display:grid;grid-template-columns:repeat(6,1fr);position:relative">
+      <div class="flowline" style="left:8%;right:8%;top:62px"></div>
+      <div style="text-align:center;position:relative"><div class="avatar gray" style="width:124px;height:124px"><svg class="i" style="width:54px;height:54px"><use href="#i-mail"/></svg></div><div style="font:700 28px var(--display);margin-top:16px">Eingang</div></div>
+      <div style="text-align:center;position:relative"><div class="avatar gray" style="width:124px;height:124px"><svg class="i" style="width:54px;height:54px"><use href="#i-search"/></svg></div><div style="font:700 28px var(--display);margin-top:16px">Abgleichen</div></div>
+      <div style="text-align:center;position:relative"><div class="avatar gray" style="width:124px;height:124px"><svg class="i" style="width:54px;height:54px"><use href="#i-list"/></svg></div><div style="font:700 28px var(--display);margin-top:16px">Regeln</div></div>
+      <div style="text-align:center;position:relative"><div class="avatar gray" style="width:124px;height:124px"><svg class="i" style="width:54px;height:54px"><use href="#i-alert"/></svg></div><div style="font:700 28px var(--display);margin-top:16px">Ausnahme?</div></div>
+      <div style="text-align:center;position:relative"><div class="avatar gray" style="width:124px;height:124px"><svg class="i" style="width:54px;height:54px"><use href="#i-user"/></svg></div><div style="font:700 28px var(--display);margin-top:16px">Entscheiden</div></div>
+      <div style="text-align:center;position:relative"><div class="avatar gray" style="width:124px;height:124px"><svg class="i" style="width:54px;height:54px"><use href="#i-doccheck"/></svg></div><div style="font:700 28px var(--display);margin-top:16px">Nachweis</div></div>
+    </div>
+    <div style="display:flex;justify-content:center;gap:20px;margin-top:26px;font-size:24px" class="muted">
+      <span class="chip plain" style="background:#EDF0F6;color:var(--muted)">früher: Auskunftsersuchen</span><span style="align-self:center">dasselbe Muster wie</span><span class="chip plain" style="background:var(--blue-soft);color:var(--blue)">jetzt: Eingangsrechnung</span>
+    </div>
+  </div>
+  <div class="note" style="margin-top:24px;font-size:25px"><div class="ico"><svg class="i"><use href="#i-clock"/></svg></div><div><b>Viele Schritte, immer wieder von Hand.</b> Die E-Rechnung hat dasselbe Muster: strukturiert, mit synthetischen Daten vorführbar, seit 2025 beim Empfang Pflicht.</div></div>
+  <p class="caption" style="margin-top:14px">Übertragener Ansatz, vereinfacht · kein Abbild der Systeme oder Abläufe meines früheren Arbeitgebers · Quelle Pflicht: BMF, FAQ E-Rechnung</p>
+</section>
+
+<!-- 5 · Jonas: vorher und nachher -->
+<section class="slide" data-chapter="Lösung">
+  <div class="tag">Für wen</div>
+  <h1>Jonas will wissen: <span class="mark">Muss ich da ran?</span></h1>
+  <div style="display:grid;grid-template-columns:440px 1fr;gap:36px;margin-top:34px">
+    <div class="card" style="padding:28px 32px;text-align:center">
+      <div class="avatar violet" style="width:120px;height:120px"><svg class="i" style="width:60px;height:60px"><use href="#i-user"/></svg></div>
+      <div style="font:700 38px var(--display);margin-top:14px">Jonas Weber</div>
+      <div class="muted" style="font-size:24px">Finance-Team, Nordwerk GmbH</div>
+      <div style="margin-top:14px"><span class="badge fict">Fiktive Person</span></div>
+      <div style="border-top:2px solid var(--line);margin-top:18px;padding-top:14px">
+        <div class="stat" style="color:var(--violet);font-size:76px">≈ 327 h</div>
+        <div style="font-size:23px;margin-top:4px">Prüfaufwand im Monat, heute</div>
+        <div style="margin-top:10px"><span class="badge model">Modell: 2.000 Rechnungen/Monat</span></div>
+      </div>
+    </div>
+    <div style="display:grid;gap:16px;align-content:start">
+      <div class="row" style="gap:12px;flex-wrap:wrap"><span class="chip plain" style="background:var(--violet-soft);color:var(--violet);font-size:23px">„Muss ich mir die ansehen?“</span><span class="chip plain" style="background:var(--violet-soft);color:var(--violet);font-size:23px">„Wenn ja: warum genau?“</span><span class="chip plain" style="background:var(--violet-soft);color:var(--violet);font-size:23px">„Was ist der nächste Schritt?“</span></div>
+      <div class="card" style="padding:22px 32px">
+        <div style="display:flex;align-items:center;gap:14px"><span class="chip ok" style="padding:6px 18px;font-size:22px">Nachher</span><span style="font-size:22px;color:var(--muted)">System prüft, Jonas nur bei Ausnahmen · <b style="color:var(--ink)">über 500 € gibt immer ein Mensch frei</b></span></div>
+        <svg viewBox="0 0 760 450" style="width:100%;height:390px;margin-top:4px" aria-hidden="true">
+        <g color="#C9D1E3">
+          <use href="#env" x="0" y="110" width="66" height="45"/><use href="#env" x="0" y="170" width="66" height="45"/><use href="#env" x="0" y="230" width="66" height="45"/><use href="#env" x="0" y="290" width="66" height="45"/>
+          <use href="#env" x="78" y="140" width="66" height="45"/><use href="#env" x="78" y="200" width="66" height="45"/><use href="#env" x="78" y="260" width="66" height="45"/>
+        </g>
+        <path d="M150 220 H 215" stroke="#8FA7F3" stroke-width="5" stroke-linecap="round"/>
+        <rect x="220" y="135" width="170" height="170" rx="36" fill="#DCE5FD"/>
+        <use href="#i-gear" x="255" y="170" width="100" height="100" stroke="#2F5BEA" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="305" y="340" text-anchor="middle" font-family="Figtree" font-size="24" font-weight="700" fill="#2F5BEA">Regeln prüfen</text>
+        <path d="M395 190 C 450 190, 450 110, 500 110" stroke="#12A57F" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="M395 250 C 450 250, 450 340, 500 340" stroke="#F0563D" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <g color="#12A57F">
+          <use href="#env" x="510" y="40" width="60" height="41"/><use href="#env" x="580" y="40" width="60" height="41"/><use href="#env" x="650" y="40" width="60" height="41"/>
+          <use href="#env" x="510" y="92" width="60" height="41"/><use href="#env" x="580" y="92" width="60" height="41"/><use href="#env" x="650" y="92" width="60" height="41"/>
+          <use href="#env" x="545" y="144" width="60" height="41"/><use href="#env" x="615" y="144" width="60" height="41"/>
+        </g>
+        <text x="612" y="222" text-anchor="middle" font-family="Figtree" font-size="24" font-weight="700" fill="#0B7A5E">8 ohne Sachprüfung</text>
+        <g color="#F0563D"><use href="#env" x="510" y="300" width="60" height="41"/><use href="#env" x="510" y="350" width="60" height="41"/></g>
+        <circle cx="660" cy="345" r="62" fill="#ECE6FD"/>
+        <use href="#i-user" x="626" y="311" width="68" height="68" stroke="#6D4AE0" stroke-width="1.9" fill="none" stroke-linecap="round"/>
+        <text x="612" y="440" text-anchor="middle" font-family="Figtree" font-size="24" font-weight="700" fill="#B8321D">2 mit Grund zu Jonas</text>
+      </svg>
+      </div>
+    </div>
+  </div>
+  <p class="caption" style="margin-top:14px">Schematisch: 2 von 10 nach der Modellannahme „jede fünfte braucht Klärung“ · bis 500 € gibt das System frei, darüber ein Mensch, auch wenn alles stimmt</p>
+</section>
+
+<!-- 6 · Fünf Wege -->
+<section class="slide" data-chapter="Lösung">
+  <div class="tag">So läuft eine Rechnung</div>
+  <h1>Fünf Wege. <span class="mark">Eine Stelle entscheidet.</span></h1>
+  <div class="paths">
+    <svg class="wires" viewBox="0 0 1700 640" aria-hidden="true">
+      <defs>
+        <marker id="p6-gray" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0 0L10 5L0 10z" fill="#98A1B3"/></marker>
+      </defs>
+      <path d="M220 186C245 186 245 221 266 221M220 296C245 296 245 261 266 261M520 241H584" stroke="#98A1B3" stroke-width="4" fill="none" marker-end="url(#p6-gray)"/>
+      <path d="M110 146V70Q110 40 140 40H730Q760 40 760 70V86" stroke="#98A1B3" stroke-width="3" stroke-dasharray="9 9" fill="none" marker-end="url(#p6-gray)"/>
+      <path d="M395 326V396" stroke="#98A1B3" stroke-width="3" stroke-dasharray="4 8" stroke-linecap="round" fill="none"/>
+      <path d="M545 241V560Q545 580 565 580H1054" stroke="#98A1B3" stroke-width="4" stroke-dasharray="12 10" fill="none" marker-end="url(#p6-gray)"/>
+      <circle cx="545" cy="241" r="7" fill="#98A1B3"/>
+      <g class="fan" fill="none" stroke-width="6" stroke-linecap="round">
+        <path pathLength="1" d="M930 241C995 241 995 52 1060 52" stroke="var(--mint)"/>
+        <path pathLength="1" d="M930 241C995 241 995 178 1060 178" stroke="var(--blue)"/>
+        <path pathLength="1" d="M930 241C995 241 995 304 1060 304" stroke="var(--coral)"/>
+        <path pathLength="1" d="M930 241C995 241 995 430 1060 430" stroke="var(--coral)"/>
+      </g>
+    </svg>
+    <div class="bypass">oder Upload im Browser</div>
+    <div class="card src" style="top:146px"><div class="ico sm gray"><svg class="i"><use href="#i-mail"/></svg></div><div><b>E-Mail</b><span>im Betrieb</span></div></div>
+    <div class="card src" style="top:256px"><div class="ico sm blue"><svg class="i"><use href="#i-doc"/></svg></div><div><b>Formular</b><span style="color:var(--blue)">Live-Demo</span></div></div>
+    <div class="card n8n"><div class="lab muted">N8N</div><div class="big">transportiert</div><div class="small">Ein grüner Lauf ist <b>keine Freigabe.</b></div></div>
+    <div class="card sheet"><div class="ico sm gray"><svg class="i"><use href="#i-table"/></svg></div><div><b>Supabase: nur Protokoll</b><span>Fällt es aus, hat Finance-Ops trotzdem entschieden.</span></div></div>
+    <div class="hub"><div class="gear"><svg class="i"><use href="#i-gear"/></svg></div><div class="name">Finance-Ops</div><div class="does">prüft und entscheidet</div><div class="db">Daten und Prüfpfad: PostgreSQL</div></div>
+    <div class="out ok" style="top:0px"><span class="dot"><svg class="i"><use href="#i-check"/></svg></span><div><div class="t">Automatisch frei<span class="live">LIVE 380&nbsp;€</span></div><div class="c">alles bestanden, bis 500&nbsp;€</div></div></div>
+    <div class="out go" style="top:126px"><span class="dot"><svg class="i"><use href="#i-user"/></svg></span><div><div class="t">Ein Mensch gibt frei<span class="live">LIVE 1.240&nbsp;€</span></div><div class="c">alles bestanden, über 500&nbsp;€</div></div></div>
+    <div class="out stop" style="top:252px"><span class="dot"><svg class="i"><use href="#i-phone"/></svg></span><div><div class="t">Gestoppt: nur Rückruf<span class="live">LIVE 2.499&nbsp;€</span></div><div class="c">IBAN weicht ab · keine Mail, keine KI</div></div></div>
+    <div class="out stop" style="top:378px"><span class="dot"><svg class="i"><use href="#i-chat"/></svg></span><div><div class="t">Gestoppt: Rückfrage<span class="live">LIVE KI</span></div><div class="c">andere Abweichung · <span class="ai">KI entwirft</span> → Mensch gibt frei</div></div></div>
+    <div class="out off fail" style="top:528px"><span class="dot"><svg class="i"><use href="#i-x"/></svg></span><div><div class="t">Nicht geprüft<span class="live">Test 21.10.</span></div><div class="c">n8n oder Verbindung weg · nichts freigegeben</div></div></div>
+  </div>
+  <p class="caption" style="margin-top:14px">Schematisch und vereinfacht · gebaut bis auf einen Alarm bei Ausfall · LIVE: zeige ich gleich in der Demo</p>
+</section>
+
+<!-- 7 · Live-Demo -->
+<section class="slide" data-chapter="Demo">
+  <div class="tag live">Live-Demo</div>
+  <h1>Drei Rechnungen. <span class="mark">Drei Wege.</span></h1>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:28px;margin-top:36px">
+    <div class="card" style="padding:26px 30px;border-left:12px solid var(--mint)">
+      <div class="muted" style="font-size:22px">Berliner Bürobedarf GmbH</div>
+      <div class="iban" style="font-size:30px;margin-top:2px">INV-2026-00433</div>
+      <div style="font:750 64px/1.1 var(--display);margin-top:10px">380 €</div>
+      <div style="margin-top:14px"><span class="chip ok" style="font-size:22px;padding:6px 16px 6px 8px"><span class="dot" style="width:30px;height:30px"><svg class="i" style="stroke-width:3;width:18px;height:18px"><use href="#i-check"/></svg></span>Erwartet: automatisch frei</span></div>
+      <p class="muted" style="font-size:22px;margin-top:12px;line-height:1.35">Bekanntes Konto, Bestellung passt, bis 500 €.</p>
+    </div>
+    <div class="card" style="padding:26px 30px;border-left:12px solid var(--blue)">
+      <div class="muted" style="font-size:22px">Berliner Bürobedarf GmbH</div>
+      <div class="iban" style="font-size:30px;margin-top:2px">INV-2026-00421</div>
+      <div style="font:750 64px/1.1 var(--display);margin-top:10px">1.240 €</div>
+      <div style="margin-top:14px"><span class="chip go" style="font-size:22px;padding:6px 16px 6px 8px"><span class="dot" style="width:30px;height:30px"><svg class="i" style="stroke-width:3;width:18px;height:18px"><use href="#i-user"/></svg></span>Erwartet: ein Mensch gibt frei</span></div>
+      <p class="muted" style="font-size:22px;margin-top:12px;line-height:1.35">Alles bestanden, aber über 500 €: Kostenstellenleitung.</p>
+    </div>
+    <div class="card" style="padding:26px 30px;border-left:12px solid var(--coral)">
+      <div class="muted" style="font-size:22px">Havel Logistik GmbH</div>
+      <div class="iban" style="font-size:30px;margin-top:2px">HL-2026-7731</div>
+      <div style="font:750 64px/1.1 var(--display);margin-top:10px">2.499 €</div>
+      <div style="margin-top:14px"><span class="chip stop" style="font-size:22px;padding:6px 16px 6px 8px"><span class="dot" style="width:30px;height:30px"><svg class="i" style="stroke-width:3;width:18px;height:18px"><use href="#i-excl"/></svg></span>Erwartet: gestoppt</span></div>
+      <p class="muted" style="font-size:22px;margin-top:12px;line-height:1.35">Die Rechnung vom Anfang. Die IBAN passt nicht.</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:26px;padding:22px 30px">
+    <div class="lab muted">SO ZEIGE ICH ES</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:12px">
+      <div class="row" style="align-items:flex-start;gap:14px"><span class="num">1</span><div><div style="font:700 24px var(--display)">Einreichen</div><div class="muted" style="font-size:19px;line-height:1.3">über ein n8n-Formular; im Betrieb kommt die Rechnung per E-Mail</div></div></div>
+      <div class="row" style="align-items:flex-start;gap:14px"><span class="num">2</span><div><div style="font:700 24px var(--display)">Wege in n8n</div><div class="muted" style="font-size:19px;line-height:1.3">Verzweigung nur nach Finance-Ops, Protokoll in Supabase</div></div></div>
+      <div class="row" style="align-items:flex-start;gap:14px"><span class="num">3</span><div><div style="font:700 24px var(--display)">Entscheiden in Finance-Ops</div><div class="muted" style="font-size:19px;line-height:1.3">Grund, Rückruf statt Rückfrage, Freigabe durch Tim</div></div></div>
+      <div class="row" style="align-items:flex-start;gap:14px"><span class="num">4</span><div><div style="font:700 24px var(--display)">KI-Rückfrage</div><div class="muted" style="font-size:19px;line-height:1.3">bei einer anderen Ausnahme; ein Mensch gibt frei</div></div></div>
+    </div>
+  </div>
+  <p class="caption" style="margin-top:16px">Live auf einer Testinstanz mit synthetischen Daten · Reserve: Video vom 15.10.2026 und Screenshots in der Reservepräsentation</p>
+</section>
+
+<!-- 11 · Menschliche Kontrolle -->
+<section class="slide" data-chapter="Kontrolle">
+  <div class="tag">Menschliche Kontrolle</div>
+  <h1>Neues Konto? <span class="mark">Drei Menschen</span> entscheiden.</h1>
+  <div class="card" style="margin-top:44px;padding:44px 50px 38px">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0;position:relative">
+      <svg style="position:absolute;left:12%;right:12%;top:62px;width:76%;height:20px" viewBox="0 0 100 4" preserveAspectRatio="none" aria-hidden="true"><path d="M0 2H100" stroke="#C9D1E3" stroke-width="1.4" stroke-dasharray="1.5 2"/></svg>
+      <div style="text-align:center;position:relative">
+        <div style="width:136px;height:136px;margin:0 auto;border-radius:50%;background:var(--violet-soft);display:grid;place-items:center;color:var(--violet);border:6px solid #fff;box-shadow:var(--shadow)"><svg class="i" style="width:64px;height:64px"><use href="#i-doc"/></svg></div>
+        <div style="font:500 20px var(--mono);color:var(--violet);margin-top:20px">PERSON 1</div>
+        <div style="font:700 34px var(--display);margin-top:4px">Schlägt vor</div>
+        <div style="font-size:24px;color:var(--muted);margin-top:6px;padding:0 20px">neue Bankverbindung mit Begründung</div>
+      </div>
+      <div style="text-align:center;position:relative">
+        <div style="width:136px;height:136px;margin:0 auto;border-radius:50%;background:var(--violet-soft);display:grid;place-items:center;color:var(--violet);border:6px solid #fff;box-shadow:var(--shadow)"><svg class="i" style="width:60px;height:60px"><use href="#i-phone"/></svg></div>
+        <div style="font:500 20px var(--mono);color:var(--violet);margin-top:20px">PERSON 2</div>
+        <div style="font:700 34px var(--display);margin-top:4px">Ruft zurück</div>
+        <div style="font-size:24px;color:var(--muted);margin-top:6px;padding:0 20px">nur über die hinterlegte Nummer, IBAN wird vorgelesen</div>
+      </div>
+      <div style="text-align:center;position:relative">
+        <div style="width:136px;height:136px;margin:0 auto;border-radius:50%;background:var(--violet-soft);display:grid;place-items:center;color:var(--violet);border:6px solid #fff;box-shadow:var(--shadow)"><svg class="i" style="width:64px;height:64px"><use href="#i-shield"/></svg></div>
+        <div style="font:500 20px var(--mono);color:var(--violet);margin-top:20px">PERSON 3</div>
+        <div style="font:700 34px var(--display);margin-top:4px">Gibt das Konto frei</div>
+        <div style="font-size:24px;color:var(--muted);margin-top:6px;padding:0 20px">erst dann gilt es als bekannt</div>
+      </div>
+      <div style="text-align:center;position:relative">
+        <div style="width:136px;height:136px;margin:0 auto;border-radius:36px;background:var(--blue-soft);display:grid;place-items:center;color:var(--blue);border:6px solid #fff;box-shadow:var(--shadow)"><svg class="i" style="width:64px;height:64px"><use href="#i-repeat"/></svg></div>
+        <div style="font:500 20px var(--mono);color:var(--blue);margin-top:20px">SYSTEM</div>
+        <div style="font:700 34px var(--display);margin-top:4px">Prüft erneut</div>
+        <div style="font-size:24px;color:var(--muted);margin-top:6px;padding:0 20px">automatisch, alle Prüfungen</div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1.15fr 1fr;gap:30px;margin-top:30px">
+    <div class="card" style="padding:28px 34px;display:flex;gap:26px;align-items:center;box-shadow:none;border:2px solid var(--violet-soft)">
+      <div class="ico violet"><svg class="i"><use href="#i-pen"/></svg></div>
+      <div><div style="font:700 30px var(--display)">Danach: Rechnung freigeben</div><div style="font-size:24px;color:var(--muted)">Eine eigene Entscheidung. Nie automatisch, ein Mensch unterschreibt.</div></div>
+    </div>
+    <div class="note" style="font-size:24px;align-items:flex-start"><div class="ico"><svg class="i"><use href="#i-ban"/></svg></div><div><b>Wer vorschlägt, prüft nicht und gibt nicht frei.</b><br>Drei Personen sind meine Projektregel, im System fest eingestellt. Keine allgemeine Pflicht.</div></div>
+  </div>
+</section>
+
+<!-- 12 · Wer entscheidet was -->
+<section class="slide" data-chapter="Kontrolle">
+  <div class="tag">Technikwahl</div>
+  <h1>Warum hier <span class="mark">nicht die KI entscheidet.</span></h1>
+  <div style="display:grid;grid-template-columns:repeat(3, minmax(0, 1fr));gap:28px;margin-top:26px">
+    <div class="card" style="padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+      <div class="row" style="gap:16px"><div class="ico sm blue"><svg class="i"><use href="#i-gear"/></svg></div><h3 style="font-size:32px">Regeln entscheiden</h3></div>
+      <ul class="list" style="gap:12px"><li><span class="ck" style="background:var(--blue)"><svg class="i"><use href="#i-check"/></svg></span>IBAN, Beträge, Bestellung</li><li><span class="ck" style="background:var(--blue)"><svg class="i"><use href="#i-check"/></svg></span>Freigabegrenzen</li><li><span class="ck" style="background:var(--blue)"><svg class="i"><use href="#i-check"/></svg></span>gleiche Daten, gleiches Ergebnis, mit Grund</li></ul>
+      <div style="margin-top:auto"><span class="badge test">gebaut und getestet</span></div>
+    </div>
+    <div class="card" style="padding:24px 28px;display:flex;flex-direction:column;gap:14px">
+      <div class="row" style="gap:16px"><div class="ico sm violet"><svg class="i"><use href="#i-spark"/></svg></div><h3 style="font-size:32px">KI schlägt vor</h3></div>
+      <div><div style="font-size:26px;line-height:1.3">Entwirft die Rückfrage an den Lieferanten</div><div class="muted" style="font-size:21px;line-height:1.3;margin-top:4px">Mensch prüft, gibt frei, verschickt von Hand · nie bei IBAN-Abweichung</div><div style="margin-top:8px"><span class="badge test" style="white-space:normal;line-height:1.35">gebaut · mit echtem LLM getestet</span></div><div class="muted" style="font-size:20px;line-height:1.3;margin-top:6px">Claude Sonnet 5.5: 16 von 24 zulässig · gezielte Nachprüfung (5 Fälle): 15 von 15, keine Gesamtquote</div></div>
+      <div style="border-top:2px dashed var(--bar);padding-top:12px"><div style="font:700 22px var(--display);line-height:1.3">Im kleinen Präferenzvergleich wurden in 6 von 6 Fällen die festen Vorlagen bevorzugt.</div><div class="muted" style="font-size:20px;line-height:1.3;margin-top:4px">Für diese untersuchten Standardfälle zeigte sich kein erkennbarer Zusatznutzen durch KI.</div></div>
+    </div>
+    <div class="card" style="padding:24px 28px;display:flex;flex-direction:column;gap:16px">
+      <div class="row" style="gap:16px"><div class="ico sm mint"><svg class="i"><use href="#i-user"/></svg></div><h3 style="font-size:32px">Menschen verantworten</h3></div>
+      <ul class="list" style="gap:12px"><li><span class="ck" style="background:var(--mint)"><svg class="i"><use href="#i-check"/></svg></span>Ausnahmen</li><li><span class="ck" style="background:var(--mint)"><svg class="i"><use href="#i-check"/></svg></span>neue Bankverbindungen</li><li><span class="ck" style="background:var(--mint)"><svg class="i"><use href="#i-check"/></svg></span>Freigaben über 500 €</li></ul>
+      <div style="margin-top:auto"><span class="badge test">im System erzwungen</span></div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:22px">
+    <div class="note" style="font-size:24px;padding:18px 26px;align-items:flex-start"><div class="ico"><svg class="i"><use href="#i-alert"/></svg></div><div><b>Kein Sprachmodell über Zahlungen:</b> nicht garantiert gleich, eine Begründung ist kein Beleg, den Rechnungstext schreibt der Absender.</div></div>
+    <div class="card" style="padding:18px 26px;box-shadow:none;display:flex;gap:20px;align-items:flex-start"><div class="ico sm gray"><svg class="i"><use href="#i-building"/></svg></div><div style="font-size:24px"><b>Mein PoC:</b> Fokus auf nachvollziehbare Regeln, Ausnahmen und menschliche Verantwortung.</div></div>
+  </div>
+  <p style="font-size:28px;margin-top:22px"><b>Nicht nur: Wo kann ich KI einsetzen?</b> <span class="muted">Sondern: Wo bringt sie messbaren Nutzen, und wo ist eine Regel sicherer?</span></p>
+</section>
+
+<!-- 14 · Nutzen -->
+<section class="slide" data-chapter="Nutzen">
+  <div class="tag">Geschäftlicher Nutzen</div>
+  <h1>Weniger Routine. <span class="mark">Mehr Zeit</span> für Ausnahmen.</h1>
+  <div style="display:grid;grid-template-columns:840px 1fr;gap:44px;margin-top:26px">
+    <div class="card" style="padding:28px 44px">
+      <div class="row" style="justify-content:space-between"><div style="font:700 30px var(--display)">Prüfaufwand pro Monat bei Nordwerk</div><span class="badge model">Modellrechnung</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:end;height:350px;margin-top:16px;border-bottom:3px solid var(--ink);padding:0 40px">
+        <div style="text-align:center"><div style="font:750 64px var(--display);color:var(--coral-ink)">327 h</div><div style="height:250px;background:var(--coral);border-radius:18px 18px 4px 4px;margin-top:10px"></div></div>
+        <div style="text-align:center"><div style="font:750 64px var(--display);color:var(--mint-ink)">80 h</div><div style="height:61px;background:var(--mint);border-radius:18px 18px 4px 4px;margin-top:10px"></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;padding:12px 40px 0;text-align:center;font:700 28px var(--display)"><span>Vorher</span><span>Nachher</span></div>
+      <p class="caption" style="margin-top:18px">Annahmen: 2.000 Rechnungen, 20 % Ausnahmen · 6 → 1 min je saubere, 25 → 8 min je Ausnahme · nicht gemessen</p>
+    </div>
+    <div style="display:grid;gap:20px;align-content:start">
+      <div class="row" style="justify-content:space-between"><div style="font:700 30px var(--display)">So würde ein Pilot es messen</div><span class="badge model">Vorschlag</span></div>
+      <div class="card row" style="padding:20px 26px"><div class="ico sm blue"><svg class="i"><use href="#i-gear"/></svg></div><div><div style="font:700 28px var(--display)">Automatisierungsquote</div><div class="muted" style="font-size:22px">Anteil ohne Sachprüfung</div></div></div>
+      <div class="card row" style="padding:20px 26px"><div class="ico sm gray"><svg class="i"><use href="#i-clock"/></svg></div><div><div style="font:700 28px var(--display)">Bearbeitungszeit</div><div class="muted" style="font-size:22px">pro Rechnung, gemessen wie vorher</div></div></div>
+      <div class="card row" style="padding:20px 26px"><div class="ico sm coral"><svg class="i"><use href="#i-alert"/></svg></div><div><div style="font:700 28px var(--display)">Fehlalarme</div><div class="muted" style="font-size:22px">Stopps ohne echten Befund</div></div></div>
+      <div class="card row" style="padding:20px 26px;border:2px solid var(--violet-soft);background:var(--violet-soft);box-shadow:none"><div class="ico sm violet"><svg class="i"><use href="#i-shield"/></svg></div><div><div style="font:700 28px var(--display)">Leitplanke: keine Zahlung auf ein ungeprüftes Konto</div><div class="muted" style="font-size:22px">Schneller zählt nur, wenn das Risiko nicht steigt</div></div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:18px;padding:12px 28px;box-shadow:none;border:2px solid var(--mint-soft);background:var(--mint-soft);display:flex;gap:22px;align-items:center">
+    <div class="ico sm mint"><svg class="i"><use href="#i-check"/></svg></div>
+    <div><div style="font:700 26px var(--display)">Vorab geprüft: 20 von 20 Testrechnungen richtig eingeordnet, beide fremden IBANs gestoppt</div><div class="muted" style="font-size:21px">20 synthetische Rechnungen mit bekanntem Soll · 16 ohne Sachprüfung, 4 mit richtigem Grund gestoppt · Mischung gewählt, nicht gemessen</div></div>
+    <span class="badge test" style="margin-left:auto;flex:none">getestet</span>
+  </div>
+</section>
+
+<!-- 15 · Reflexion und Einführung -->
+<section class="slide" data-chapter="Ausblick">
+  <div class="tag">Reflexion</div>
+  <h1>Was ich mitnehme. <span class="mark">Wie ich es einführen würde.</span></h1>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:44px;margin-top:40px">
+    <div style="display:grid;gap:20px;align-content:start">
+      <div class="row" style="gap:14px"><div class="ico sm yellow"><svg class="i"><use href="#i-bulb"/></svg></div><div style="font:700 32px var(--display)">Erkenntnisse</div></div>
+      <div class="card tile" style="padding:24px 30px"><h3 style="font-size:30px">Die schwierigste Frage: Wo entscheidet ein Mensch?</h3><p>Nicht: Was lässt sich automatisieren.</p></div>
+      <div class="card tile" style="padding:24px 30px"><h3 style="font-size:30px">Ein Prototyp ist noch kein eingeführter Prozess</h3><p>Vertrauen entsteht im Alltag, nicht in der Demo.</p></div>
+      <div class="card tile" style="padding:24px 30px"><h3 style="font-size:30px">Eine Demo braucht Betriebsdisziplin</h3><p>Die Tunnel-Adresse fiel mehrfach weg. Daraus entstand eine Checkliste.</p></div>
+    </div>
+    <div>
+      <div class="row" style="gap:14px;margin-bottom:20px;justify-content:space-between"><div class="row" style="gap:14px"><div class="ico sm blue"><svg class="i"><use href="#i-flag"/></svg></div><div style="font:700 32px var(--display)">Einführung bei Nordwerk</div></div><span class="badge model">Vorschlag, nicht umgesetzt</span></div>
+      <div class="card" style="padding:32px 40px;position:relative">
+        <div style="position:absolute;left:83px;top:66px;bottom:66px;border-left:4px dashed var(--bar)"></div>
+        <div class="row" style="align-items:flex-start;position:relative"><span class="step-n">1</span><div><h3 style="font-size:30px">Regeln abstimmen</h3><p class="muted" style="font-size:23px">mit dem Finance-Team: Grenzen, Zuständige je Ausnahme</p></div></div>
+        <div class="row" style="align-items:flex-start;position:relative;margin-top:30px"><span class="step-n">2</span><div><h3 style="font-size:30px">Parallelbetrieb</h3><p class="muted" style="font-size:23px">echte Rechnungen laufen mit, Jonas entscheidet wie bisher</p></div></div>
+        <div class="row" style="align-items:flex-start;position:relative;margin-top:30px"><span class="step-n">3</span><div><h3 style="font-size:30px">Vergleichen und messen</h3><p class="muted" style="font-size:23px">System gegen Jonas: Abweichungen, Zeit, Rückmeldung</p></div></div>
+        <div class="row" style="align-items:flex-start;position:relative;margin-top:30px"><span class="step-n">4</span><div><h3 style="font-size:30px">Ausweiten oder nachschärfen</h3><p class="muted" style="font-size:23px">Entscheidung nach vorher vereinbarten Kriterien</p></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:26px;padding:20px 30px;display:grid;grid-template-columns:auto 1fr 1fr 1.35fr;gap:30px;align-items:start">
+    <div class="row" style="gap:16px;align-self:center"><div class="ico sm blue"><svg class="i"><use href="#i-shield"/></svg></div><div style="font:700 30px var(--display)">Datenschutz</div></div>
+    <div><div class="lab muted">DEMO</div><div style="font-size:23px;line-height:1.3">nur synthetische Daten</div></div>
+    <div><div class="lab muted">KI</div><div style="font-size:23px;line-height:1.3">keine Namen, keine Rechnungsnummer</div></div>
+    <div><div class="lab muted">ECHTBETRIEB</div><div style="font-size:23px;line-height:1.3">AV-Verträge, KI-Anbieter prüfen, Supabase mit Zertifikatsprüfung</div></div>
+  </div>
+</section>
+
+<!-- 16 · Abschluss -->
+<section class="slide" data-chapter="Ausblick">
+  <div style="display:grid;grid-template-columns:1fr 620px;gap:70px;align-items:center;height:880px">
+    <div>
+      <div class="tag">HL-2026-7731 · Havel Logistik · 2.499,00 €</div>
+      <h1 class="xl">Gestoppt, <span class="mark">vor der Zahlungsfreigabe.</span></h1>
+      <p class="lede">Automatisieren, was Routine ist. Kontrollieren, was kritisch ist.</p>
+      <div class="note" style="margin-top:34px;font-size:27px;padding:18px 26px;gap:18px"><div class="ico"><svg class="i"><use href="#i-flag"/></svg></div><div><b>Empfehlung:</b> kontrollierter Pilot im Parallelbetrieb. Ausweiten erst nach vereinbarten Kriterien.</div></div>
+      <div style="margin-top:40px;font:700 44px var(--display)">Vielen Dank. <span class="muted" style="font-weight:600">Ihre Fragen?</span></div>
+    </div>
+    <div style="position:relative;height:640px">
+      <div class="card" style="position:absolute;inset:40px 20px 40px 40px;transform:rotate(-3deg);padding:48px">
+        <div class="row"><div style="width:58px;height:58px;border-radius:16px;background:var(--ink);color:#fff;display:grid;place-items:center;font:800 26px var(--display)">HL</div><div style="font:700 32px var(--display)">Havel Logistik GmbH</div></div>
+        <div style="margin-top:40px;display:grid;gap:22px">
+          <div style="height:18px;border-radius:9px;background:#EDF0F6;width:90%"></div><div style="height:18px;border-radius:9px;background:#EDF0F6;width:70%"></div><div style="height:18px;border-radius:9px;background:#EDF0F6;width:80%"></div>
+        </div>
+        <div style="margin-top:44px;font:700 44px var(--display);text-align:right">2.499,00 €</div>
+        <div class="iban" style="margin-top:30px;font-size:26px;color:var(--coral-ink)">DE02 3002 0900 0106 5310 65</div>
+      </div>
+      <div style="position:absolute;left:100px;top:470px;transform:rotate(-12deg);border:8px solid var(--coral);color:var(--coral);border-radius:20px;padding:10px 34px;font:800 76px var(--display);letter-spacing:.06em;background:rgba(255,255,255,.75)">GESTOPPT</div>
+    </div>
+  </div>
+</section>
+
+</main>
+<script>
+const CHAPTERS = ["Anlass", "Hintergrund", "Lösung", "Demo", "Kontrolle", "Nutzen", "Ausblick"];
+const slides = [...document.querySelectorAll(".slide")];
+// The fallback slides (data-extra) are not counted, so slide numbers in the script stay valid.
+const isMain = (s) => s.dataset.chapter !== "Backup" && !("extra" in s.dataset);
+const mainCount = slides.filter(isMain).length;
+const lastMain = slides.findLastIndex(isMain);
+window.SPEAKER_NOTES = [{"slide": "1", "title": "Titel", "target": 15, "video": false, "paras": ["Guten Tag. Ich bin Shota Tsertsvadze, und mein Abschlussprojekt heißt Finance Operations Automation, kurz Finance-Ops. Ich beginne mit einer Rechnung."]}, {"slide": "2", "title": "Eine Rechnung wie jede andere", "target": 30, "video": false, "paras": ["Stellen Sie sich vor, das liegt heute Morgen in Ihrem Posteingang. Eine Rechnung von Havel Logistik: Den Lieferanten kennen wir, es gibt eine passende Bestellung, der Betrag liegt im Rahmen. 2.499 Euro für einen Palettentransport.", "Auf den ersten Blick spricht nichts dagegen, sie zu bezahlen. Alles sieht normal aus."]}, {"slide": "3", "title": "Der zweite Blick", "target": 90, "video": false, "paras": ["Schauen wir genauer hin. Oben steht die IBAN, die wir für Havel Logistik in unseren Stammdaten haben. Unten die IBAN auf dieser Rechnung. Alles rot Markierte weicht ab.", "Lieferant, Bestellung und Betrag stimmen. Nur das Konto nicht.", "Eine echt aussehende Rechnung mit einem anderen Konto ist ein bekanntes Muster beim Rechnungsbetrug. Ob es hier Betrug ist, wissen wir nicht. Aber wir sollten nicht zahlen, bevor wir es wissen.", "Seit Oktober 2025 gibt es bei Überweisungen die sogenannte Empfängerüberprüfung. Banken gleichen den Namen mit der IBAN ab, bevor das Geld überwiesen wird. Meine Anwendung setzt einen Schritt früher an: Sie prüft bereits bei der Rechnung, ob die Bankverbindung in den Stammdaten des Unternehmens hinterlegt und freigegeben ist.", "Ohne diese Prüfung fällt so etwas von Hand nur auf, wenn jemand jedes Mal ganz genau hinschaut, auch bei der hundertsten Rechnung des Tages."]}, {"slide": "4", "title": "Woher ich das kenne", "target": 75, "video": false, "paras": ["Warum gerade dieses Thema? Ich habe in den Operations eines FinTech-Unternehmens gearbeitet, das Girokonten für Privatkunden anbietet. Zwei meiner Bereiche waren Pfändungen und behördliche Auskunftsersuchen: viele Schritte, die sich ständig wiederholen, fast alles von Hand. Gerade bei solcher Arbeit ist der Mensch nicht die beste Prüfinstanz. Die Aufmerksamkeit lässt nach, nicht aus Nachlässigkeit, sondern weil die Arbeit so ist.", "Mein Projekt baut diesen Prozess nicht nach. Ich habe einen anderen Fall gewählt, mit demselben Muster: Ein Dokument kommt an, Daten werden abgeglichen, feste Regeln angewendet, Abweichungen erkannt, ein Mensch entscheidet, wo es nötig ist, und jeder Schritt ist belegt. Die E-Rechnung eignet sich dafür: Sie ist strukturiert, ich kann sie mit synthetischen Daten vorführen, und seit 2025 müssen Unternehmen sie empfangen können."]}, {"slide": "5", "title": "Für wen: Jonas", "target": 75, "video": false, "paras": ["Damit es konkret wird: Jonas Weber, eine erfundene Person im Finance-Team der Nordwerk GmbH, einem ausgedachten Mittelständler mit rund 2.000 Eingangsrechnungen im Monat. Heute prüft Jonas jede Rechnung selbst. Nach meiner Modellrechnung sind das rund 327 Stunden Prüfaufwand im Monat; das ist eine Annahme, keine gemessene Zahl. Er will aber nur drei Dinge wissen: Muss ich mir die ansehen? Wenn ja, warum genau? Und was ist der nächste Schritt?", "Mit Finance-Ops prüft das System jede Rechnung nach festen Regeln. In unserem Modell kommen acht von zehn ohne Sachprüfung durch, zwei landen mit Grund bei Jonas. Ohne Sachprüfung heißt aber nicht automatisch freigegeben: Nur bis 500 Euro gibt das System selbst frei. Darüber gibt ein Mensch frei, auch wenn fachlich alles stimmt."]}, {"slide": "6", "title": "Fünf Wege. Eine Stelle entscheidet.", "target": 70, "video": false, "paras": ["So läuft eine Rechnung durch. Links der Eingang: Im Betrieb kommt sie per E-Mail, gleich in der Demo über ein Formular. n8n nimmt die Datei an und reicht sie an Finance-Ops weiter. Geprüft und entschieden wird nur dort, und alles liegt in der PostgreSQL-Datenbank von Finance-Ops, auch der Prüfpfad.", "Rechts die Wege. Drei davon zeige ich gleich live: automatisch frei, Freigabe durch einen Menschen und gestoppt wegen der IBAN. Bei einer anderen Abweichung kann die KI eine Rückfrage entwerfen, auch das zeige ich. Und unten der technische Ausfall: Fallen n8n oder die Verbindung aus, wird nichts geprüft und nichts freigegeben. Danach protokolliert n8n zusätzlich in Supabase. Fällt nur das aus, hat Finance-Ops trotzdem entschieden."]}, {"slide": "7", "title": "Live-Demo", "target": 475, "video": false, "paras": ["[Fensterwechsel zum Demo-Fenster. Tabs: Formular 1, 2, 3 · n8n-Ausführungen v3 · Finance-Ops · Reserve. Klappt etwas nicht: Reserve in Tab 6, nicht reparieren.]", "Eingang heute per n8n-Formular. Im Betrieb kommt die Rechnung per E-Mail, danach ist der Weg derselbe.", "**1 · 380 €** G_clean_380 einreichen: „Freigegeben“. Kein Mensch nötig.", "**2 · 1.240 €** A_clean_1240: „Freigabe ausstehend“. Ein Mensch muss unterschreiben.", "**3 · 2.499 €** B_iban_changed_2499: „Sichtprüfung“. Die IBAN weicht ab.", "**4 · Wege in n8n** Havel-Ausführung öffnen: Der Switch ging nach „Gestoppt: Sichtprüfung“, danach die Zeile ins Protokoll in Supabase. n8n folgt nur der Antwort von Finance-Ops. Grün heißt: transportiert.", "**5 · Fehlerpfad** Ausführung 207510: rot, „Technischer Fehler – nicht geprüft“. Nichts geprüft, nichts freigegeben, keine Zeile im Protokoll. Getestet, nicht live provoziert.", "**6 · Jonas** Havel öffnen: Grund, markierte Ziffern, keine Rückfrage, nur Rückruf. Dahinter stehen 788 automatisierte Tests.", "**7 · KI** Spree IT: KI-Entwurf erstellen. Die Werte setzt die Anwendung ein. Einen Satz ändern, Text freigeben: freigegeben, nicht versendet.", "**8 · Tim** Abmelden, als Tim Kessler anmelden, die 1.240 € freigeben. Anna, die eingereicht hat, könnte das nicht.", "[Fensterwechsel zurück, Pfeiltaste zu Folie 8.]"]}, {"slide": "8", "title": "Menschliche Kontrolle", "target": 65, "video": false, "paras": ["Und wenn Havel Logistik wirklich die Bank gewechselt hat? Dann gilt: Eine Rechnung kann die Bankverbindung nie ändern. Die IBAN auf der Rechnung ist genau das, was ein Betrüger kontrolliert.", "Person eins schlägt die neue Bankverbindung vor. Person zwei ruft beim Lieferanten an, nur über die Nummer aus den Stammdaten, und lässt sich die IBAN vorlesen. Person drei gibt frei. Erst dann prüft das System die Rechnung noch einmal, und auch dann unterschreibt ein Mensch: Eine einmal gestoppte Rechnung wird nie automatisch freigegeben.", "Drei Personen sind meine Projektregel, keine allgemeine Pflicht. Der Punkt: Wer vorschlägt, prüft und gibt nicht selbst frei."]}, {"slide": "9", "title": "Warum hier nicht die KI entscheidet", "target": 125, "video": false, "paras": ["Sie haben eben gesehen: Entschieden haben feste Regeln, keine KI. Das war eine bewusste Entscheidung. Über Geld entscheiden Regeln: gleiche Daten, gleiches Ergebnis, und jedes Ergebnis hat einen Grund. Ein Sprachmodell liefert nicht garantiert jedes Mal dasselbe, eine plausible Begründung ist kein Beleg, und den Rechnungstext schreibt der Absender, im schlimmsten Fall der Betrüger.", "Die KI-Rückfrage ist gebaut und mit einem echten Sprachmodell getestet, Claude Sonnet 5.5 von Anthropic. 16 von 24 Entwürfen waren zulässig. Nach einer Korrektur am Prompt bestanden in einer gezielten Nachprüfung 15 von 15. Eine neue Gesamtquote ist das nicht.", "Entscheidend war der Vergleich mit der festen Vorlage. Im kleinen Präferenzvergleich wurden in 6 von 6 Fällen die festen Vorlagen bevorzugt. Für diese untersuchten Standardfälle zeigte sich kein erkennbarer Zusatznutzen durch KI. Die KI-Texte waren länger und erklärten Regeln, die der Lieferant nicht braucht. Der Vergleich war klein, mit Hilfe von ChatGPT und mit Entwürfen der ersten Prompt-Fassung; verallgemeinern lässt sich das nicht. Gebaut, gemessen und dann die einfachere Lösung gewählt: Das ist für mich KI-Management.", "Fertige Lösungen wie DATEV, Candis oder finway würde ich in einem Unternehmen zuerst prüfen. Mir ging es darum, die Entscheidungen dahinter nachvollziehbar zu machen."]}, {"slide": "10", "title": "Nutzen und wie man ihn misst", "target": 70, "video": false, "paras": ["Was bringt das? Links eine Modellrechnung für Nordwerk, klar gesagt: Annahmen, nicht gemessen. 2.000 Rechnungen im Monat, jede fünfte braucht eine Klärung. Eine saubere Rechnung kostet heute sechs Minuten, mit dem System eine, eine Ausnahme 25 statt 8. Dann sinkt der Aufwand von rund 327 auf 80 Stunden im Monat.", "Ob das stimmt, muss ein Pilot zeigen. Vorab habe ich die Regeln an 20 synthetischen Rechnungen mit bekanntem Soll geprüft: Alle 20 landen richtig, beide fremden IBANs gestoppt. Die Mischung habe ich gewählt.", "Im Pilot würde ich messen: Automatisierungsquote, Bearbeitungszeit und Fehlalarme. Dazu eine Leitplanke: keine Zahlung auf ein ungeprüftes Konto. Schneller ist kein Erfolg, wenn das Risiko steigt."]}, {"slide": "11", "title": "Reflexion und Einführung", "target": 70, "video": false, "paras": ["Was nehme ich mit? Die schwierigste Frage war nicht, was man automatisiert, sondern wo ein Mensch entscheiden muss. Ein Prototyp ist noch kein eingeführter Prozess. Und eine Demo braucht Betriebsdisziplin; deshalb gibt es für heute einen Ausfallplan.", "Bei Nordwerk würde ich so einführen: Regeln mit dem Finance-Team abstimmen, dann ein Parallelbetrieb, in dem Jonas wie bisher entscheidet, vergleichen und erst dann ausweiten oder nachschärfen. Das ist ein Vorschlag, umgesetzt ist davon nichts.", "Zum Datenschutz: In der Demo gibt es nur synthetische Daten. Die KI bekommt keine Namen und keine Rechnungsnummer, nur freigegebene Prüfbelege mit Platzhaltern. Für echte Rechnungen bräuchte es Verträge zur Auftragsverarbeitung, eine Prüfung des KI-Anbieters und eine Verbindung zu Supabase mit Zertifikatsprüfung."]}, {"slide": "12", "title": "Abschluss", "target": 45, "video": false, "paras": ["Die Rechnung vom Anfang: gestoppt vor der Zahlungsfreigabe. Zahlungen sind im Projekt nur simuliert, echtes Geld fließt nicht; die Kontrolle davor ist echt. Automatisieren, was Routine ist. Kontrollieren, was kritisch ist.", "Meine Empfehlung an die Geschäftsführung: ein kontrollierter Pilot im Parallelbetrieb. Echte Rechnungen laufen mit, Jonas entscheidet weiter selbst, und ausgeweitet wird erst, wenn die vorher vereinbarten Kriterien erfüllt sind.", "Vielen Dank. Ich freue mich auf Ihre Fragen."]}];
+window.SPEAKER_COUNT = mainCount;
+const SPEAKER_HTML = "<!doctype html>\n<html lang=\"de\">\n<head>\n<meta charset=\"utf-8\">\n<title>Referentenansicht<\/title>\n<style>\n:root { color-scheme: dark; }\n* { box-sizing: border-box; }\nhtml, body { height: 100%; margin: 0; }\nbody { background: #0E1117; color: #EEF1F7; font-family: Figtree, system-ui, sans-serif; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); }\n.bar { display: flex; align-items: center; gap: 18px; padding: 12px 24px; border-bottom: 1px solid #232A3A; font: 600 18px ui-monospace, Menlo, monospace; font-variant-numeric: tabular-nums; }\n.bar.bottom { border-top: 1px solid #232A3A; border-bottom: 0; font: 500 15px system-ui, sans-serif; color: #8D97AB; }\n#title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 18px system-ui, sans-serif; color: #AEB7C9; }\n#slideClock.warn { color: #F2C35B; }\n#slideClock.over { color: #FF8C76; }\n#total { background: #1C2333; border: 1px solid #2E3850; color: inherit; font: inherit; border-radius: 10px; padding: 6px 12px; cursor: pointer; }\n#body { overflow-y: auto; padding: 28px 40px; }\n#text { max-width: 1100px; margin: 0 auto; display: grid; gap: .7em; line-height: 1.45; font-weight: 500; }\n#text p { margin: 0; scroll-margin-top: 16vh; transition: opacity .25s; }\n#text b { color: #FFD84D; }\n#text .regie { font-size: .55em; color: #C2B3FA; background: #221C3D; border-radius: 10px; padding: .6em .9em; }\n#text.video p:not(.now) { opacity: .38; }\n#next { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }\n@media (prefers-reduced-motion: reduce) { #text p { transition: none; } }\n<\/style>\n<\/head>\n<body>\n<div class=\"bar\"><span id=\"no\"><\/span><span id=\"title\"><\/span><span id=\"slideClock\"><\/span><button id=\"total\" title=\"Klick setzt die Gesamtzeit auf 0:00\">0:00<\/button><\/div>\n<div id=\"body\"><div id=\"text\"><\/div><\/div>\n<div class=\"bar bottom\"><span id=\"next\"><\/span><span>→ ← Folie · Zahl + Enter: Sprung<\/span><\/div>\n<script>\nconst deck = opener;\nconst NOTES = deck.SPEAKER_NOTES;\nconst $ = (id) => document.getElementById(id);\nconst fmt = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, \"0\")}`;\nconst inline = (t) => t.replace(/&/g, \"&amp;\").replace(/<\/g, \"&lt;\").replace(/\\*\\*(.+?)\\*\\*/g, \"<b>$1<\/b>\");\nconst markOf = (p) => { const m = p.match(/^\\*\\*\\((\\d+):(\\d\\d)\\)/); return m ? +m[1] * 60 + +m[2] : \"\"; };\nconst noteFor = (i) => NOTES.find((n) => +n.slide === i + 1);\nlet shown = -1, nowPara = null, slideStart = performance.now(), totalStart = performance.now();\n\nfunction render(i) {\n  const n = noteFor(i), next = noteFor(i + 1);\n  $(\"no\").textContent = `${i + 1} / ${deck.SPEAKER_COUNT}`;\n  $(\"title\").textContent = n ? n.title : \"\";\n  $(\"text\").className = n && n.video ? \"video\" : \"\";\n  $(\"text\").innerHTML = n\n    ? n.paras.map((p) => `<p class=\"${p.startsWith(\"[\") ? \"regie\" : \"\"}\" data-at=\"${markOf(p)}\">${inline(p)}<\/p>`).join(\"\")\n    : \"<p>Kein Sprechtext für diese Folie.<\/p>\";\n  $(\"next\").textContent = next ? `Als Nächstes: ${next.slide} · ${next.title}` : \"Letzte Folie\";\n  $(\"body\").scrollTop = 0;\n  nowPara = null;\n  fit(n && n.video);\n}\n\n// A normal slide's text fits the window, so nothing has to scroll.\n// The video slide keeps one size and scrolls along with the video instead.\nfunction fit(video) {\n  const text = $(\"text\"), box = $(\"body\");\n  if (video) { text.style.fontSize = \"30px\"; return; }\n  let lo = 16, hi = 46;\n  while (hi - lo > 1) {\n    const mid = (lo + hi) >> 1;\n    text.style.fontSize = mid + \"px\";\n    if (box.scrollHeight <= box.clientHeight) lo = mid; else hi = mid;\n  }\n  text.style.fontSize = lo + \"px\";\n}\n\nfunction follow(video) {\n  const marked = [...document.querySelectorAll(\"#text p\")].filter((p) => p.dataset.at !== \"\");\n  const cur = marked.filter((p) => +p.dataset.at <= video.currentTime + 0.5).pop() || marked[0];\n  if (!cur || cur === nowPara) return;\n  nowPara?.classList.remove(\"now\");\n  cur.classList.add(\"now\");\n  nowPara = cur;\n  cur.scrollIntoView({ block: \"start\", behavior: matchMedia(\"(prefers-reduced-motion: reduce)\").matches ? \"auto\" : \"smooth\" });\n}\n\nfunction poll() {\n  if (deck.closed) { clearInterval(timer); $(\"text\").innerHTML = \"<p>Die Präsentation ist geschlossen.<\/p>\"; return; }\n  const i = Math.max(0, parseInt(deck.location.hash.slice(1) || \"1\", 10) - 1);\n  if (i !== shown) { shown = i; slideStart = performance.now(); render(i); }\n  const n = noteFor(i), s = (performance.now() - slideStart) / 1000;\n  $(\"slideClock\").textContent = n ? `${fmt(s)} / ${fmt(n.target)}` : fmt(s);\n  $(\"slideClock\").className = !n ? \"\" : s > n.target * 1.1 ? \"over\" : s > n.target * 0.9 ? \"warn\" : \"\";\n  $(\"total\").textContent = fmt((performance.now() - totalStart) / 1000);\n  const video = deck.document.querySelector(\".slide.active video\");\n  if (video && n && n.video) follow(video);\n}\n\nconst timer = setInterval(poll, 200);\n$(\"total\").addEventListener(\"click\", () => { totalStart = performance.now(); });\naddEventListener(\"resize\", () => fit(noteFor(shown)?.video));\n// Keys pressed here drive the presentation, as if they were pressed there.\n// Letters count in either case, so Caps Lock or Shift does not swallow them.\naddEventListener(\"keydown\", (e) => {\n  const key = e.key.length === 1 ? e.key.toLowerCase() : e.key;\n  if (![\"ArrowRight\", \"ArrowLeft\", \" \", \"PageDown\", \"PageUp\", \"Home\", \"End\", \"Enter\"].includes(key) && !/^[0-9]$/.test(key)) return;\n  e.preventDefault();\n  deck.dispatchEvent(new deck.KeyboardEvent(\"keydown\", { key }));\n});\npoll();\n<\/script>\n<\/body>\n<\/html>\n";
+let mainNo = 0, backupNo = 0;
+slides.forEach((slide) => {
+  const foot = document.createElement("div");
+  foot.className = "foot";
+  if (slide.dataset.chapter === "Backup") {
+    foot.innerHTML = `<div class="rail"><span class="on" style="flex:none;color:var(--muted)">Reserve</span></div><span class="pageno">R${++backupNo}</span>`;
+  } else {
+    const at = CHAPTERS.indexOf(slide.dataset.chapter);
+    const no = isMain(slide) ? `${++mainNo} / ${mainCount}` : slide.dataset.extra;
+    foot.innerHTML = `<div class="rail">${CHAPTERS.map((c, k) => `<span class="${k === at ? "on" : k < at ? "done" : ""}">${c}</span>`).join("")}</div><span class="pageno">${no}</span>`;
+  }
+  slide.appendChild(foot);
+});
+document.querySelectorAll(".player video").forEach((v) => ["play", "pause", "ended"].forEach((ev) => v.addEventListener(ev, () => v.parentElement.classList.toggle("playing", !v.paused))));
+document.querySelectorAll("[data-iban]").forEach((el) => {
+  const ref = el.dataset.ref.replace(/\s/g, ""); let n = 0;
+  el.innerHTML = [...el.textContent].map((ch) => ch === " " ? " " : ch === ref[n++] ? ch : `<span class="d">${ch}</span>`).join("");
+});
+let current = Math.max(0, parseInt(location.hash.slice(1) || "1", 10) - 1);
+if (!new URLSearchParams(location.search).has("print")) {
+  document.body.classList.add("present");
+  const fit = () => { const s = Math.min(innerWidth / 1920, innerHeight / 1080); slides.forEach((sl) => sl.style.transform = `translate(-50%, -50%) scale(${s})`); };
+  const show = (i) => { current = Math.max(0, Math.min(slides.length - 1, i)); slides.forEach((sl, k) => sl.classList.toggle("active", k === current)); history.replaceState(null, "", `#${current + 1}`); document.querySelectorAll(".slide:not(.active) video").forEach((v) => v.pause()); document.activeElement.blur(); };
+  fit(); show(current);
+  addEventListener("resize", fit);
+  // S opens the speaker view, or brings it to the front if it is already open.
+  let speaker = null;
+  const openSpeaker = () => {
+    if (speaker && !speaker.closed) return speaker.focus();
+    speaker = open("", "referentenansicht", "width=1100,height=720");
+    speaker.document.open();
+    speaker.document.write(SPEAKER_HTML);
+    speaker.document.close();
+  };
+  // A number and Enter jump to that slide.
+  let typed = "";
+  addEventListener("keydown", (e) => {
+    if (e.key.toLowerCase() === "s" && !e.metaKey && !e.ctrlKey) return openSpeaker();
+    if (/^[0-9]$/.test(e.key)) { typed = (typed + e.key).slice(-2); return; }
+    if (e.key === "Enter" && typed) { show(+typed - 1); typed = ""; return; }
+    typed = "";
+    if (["ArrowRight", " ", "PageDown"].includes(e.key)) show(current + 1);
+    if (["ArrowLeft", "PageUp"].includes(e.key)) show(current - 1);
+    if (e.key === "Home") show(0);
+    if (e.key === "End") show(lastMain);
+  });
+  // No native controls: they would cover the burned-in captions. A click plays or pauses.
+  addEventListener("click", (e) => {
+    const video = e.target.closest(".player")?.querySelector("video");
+    if (video) return video.paused ? video.play() : video.pause();
+    show(current + (e.clientX > innerWidth / 3 ? 1 : -1));
+  });
+}
+</script>
+</body>
+</html>
