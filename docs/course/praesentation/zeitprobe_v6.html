@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<title>Zeitprobe v6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Figtree:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a sticky stopwatch bar on top, the script to read in the middle, the section list to the side. */
+:root {
+  --bg: #F4F6FB; --surface: #FFFFFF; --ink: #182033; --muted: #5B6477; --line: #E3E7F0;
+  --blue: #2F5BEA; --blue-soft: #DCE5FD;
+  --ok: #0B7A5E; --ok-bg: #DDF5EC;
+  --warn: #8A5A00; --warn-bg: #FFF1C9;
+  --over: #B8321D; --over-bg: #FDE3DE;
+  --regie: #6D4AE0; --regie-bg: #ECE6FD;
+  --marker: #FFE45C;
+  --display: "Bricolage Grotesque", system-ui, sans-serif;
+  --body: "Figtree", system-ui, sans-serif;
+  --mono: "DM Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11151F; --surface: #1A2030; --ink: #E8ECF5; --muted: #9AA4B8; --line: #2B3346;
+  --blue: #8FA7F3; --blue-soft: #243159;
+  --ok: #5BD3AE; --ok-bg: #123A30; --warn: #F2C35B; --warn-bg: #3A2F12; --over: #FF8C76; --over-bg: #45201A;
+  --regie: #B5A2F7; --regie-bg: #2C2450; --marker: #8C7A1E; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #11151F; --surface: #1A2030; --ink: #E8ECF5; --muted: #9AA4B8; --line: #2B3346;
+  --blue: #8FA7F3; --blue-soft: #243159;
+  --ok: #5BD3AE; --ok-bg: #123A30; --warn: #F2C35B; --warn-bg: #3A2F12; --over: #FF8C76; --over-bg: #45201A;
+  --regie: #B5A2F7; --regie-bg: #2C2450; --marker: #8C7A1E; color-scheme: dark; }
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.55 var(--body); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 3px solid var(--blue); outline-offset: 2px; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.bar-in { max-width: 1240px; margin: 0 auto; padding: 14px 20px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 28px; }
+.clock { display: flex; align-items: baseline; gap: 10px; }
+.clock .big { font: 600 40px/1 var(--mono); font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.clock .of { font: 500 15px var(--mono); color: var(--muted); }
+.meter { flex: 1; min-width: 220px; }
+.meter-track { position: relative; height: 12px; border-radius: 12px; background: var(--line); overflow: hidden; }
+.meter-fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--blue); border-radius: 12px; transition: width .3s linear; }
+.meter-mark { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); opacity: .5; }
+.meter-legend { display: flex; justify-content: space-between; font: 500 12.5px var(--mono); color: var(--muted); margin-top: 6px; }
+.ctrl { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 16px; font-weight: 700; }
+.btn:hover { border-color: var(--blue); }
+.btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; min-width: 120px; }
+:root[data-theme="dark"] .btn.primary { color: #11151F; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary { color: #11151F; } }
+.keys { font: 500 12.5px var(--mono); color: var(--muted); }
+
+main { max-width: 1240px; margin: 0 auto; padding-block: 24px 60px; padding-inline: 20px; display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 24px; }
+@media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+.now { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 26px 30px 30px; min-width: 0; }
+.now-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.pill { font: 500 13.5px var(--mono); padding: 4px 11px; border-radius: 100px; background: var(--blue-soft); color: var(--blue); white-space: nowrap; }
+.pill.ok { background: var(--ok-bg); color: var(--ok); } .pill.warn { background: var(--warn-bg); color: var(--warn); } .pill.over { background: var(--over-bg); color: var(--over); }
+h1 { font: 750 34px/1.12 var(--display); letter-spacing: -.015em; margin: 14px 0 4px; text-wrap: balance; }
+.sec-clock { display: flex; align-items: baseline; gap: 12px; margin: 14px 0 6px; }
+.sec-clock .t { font: 600 56px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.sec-clock .goal { font: 500 16px var(--mono); color: var(--muted); }
+.sec-track { height: 10px; border-radius: 10px; background: var(--line); overflow: hidden; }
+.sec-fill { height: 100%; width: 0; background: var(--ok); border-radius: 10px; }
+.sec-fill.warn { background: var(--warn); } .sec-fill.over { background: var(--over); }
+.hint { font-size: 14.5px; color: var(--muted); margin-top: 8px; }
+.script { margin-top: 24px; display: grid; gap: 16px; font-size: 21px; line-height: 1.6; max-width: 68ch; }
+.script p { margin: 0; }
+.script .regie { font-size: 16px; line-height: 1.45; color: var(--regie); background: var(--regie-bg); border-radius: 12px; padding: 10px 14px; }
+.script b { font-weight: 700; }
+
+aside { display: grid; gap: 16px; align-content: start; min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 18px 18px 14px; }
+.panel h2 { font: 700 17px var(--display); margin: 0 0 10px; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.list button { width: 100%; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; align-items: center; text-align: left; background: none; border: 0; border-radius: 10px; padding: 7px 8px; }
+.list button:hover { background: var(--bg); }
+.list button[aria-current="step"] { background: var(--blue-soft); }
+.list .n { font: 500 13px var(--mono); color: var(--muted); }
+.list .name { font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.list .tt { font: 500 13px var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tt.ok { color: var(--ok); } .tt.warn { color: var(--warn); } .tt.over { color: var(--over); } .tt.none { color: var(--muted); }
+
+.result { grid-column: 1 / -1; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 24px 28px; }
+.result h2 { font: 750 28px var(--display); margin: 0 0 6px; }
+.verdict { display: inline-block; font-weight: 700; padding: 2px 10px; border-radius: 8px; background: linear-gradient(transparent 45%, var(--marker) 45% 90%, transparent 90%); }
+.tablewrap { overflow-x: auto; margin-top: 14px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; min-width: 560px; }
+th { text-align: left; font: 500 12.5px var(--mono); color: var(--muted); border-bottom: 1px solid var(--line); padding: 6px 10px; }
+td { padding: 7px 10px; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+td.num, th.num { text-align: right; font-family: var(--mono); }
+tfoot td { font-weight: 700; border-bottom: 0; }
+.row-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+.confirm { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 15px; }
+.note { font-size: 14px; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .meter-fill { transition: none; } }
+
+/* Prompter: one slide per screen, large text, always dark so a phone below the laptop does not glare. */
+.prompter { position: fixed; inset: 0; z-index: 20; background: #0E1117; color: #EEF1F7; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; grid-template-columns: minmax(0, 1fr); }
+.prompter[hidden] { display: none; }
+.p-head, .p-foot { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-color: #232A3A; }
+.p-head { padding-top: calc(env(safe-area-inset-top, 0px) + 10px); border-bottom: 1px solid #232A3A; }
+.p-foot { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); border-top: 1px solid #232A3A; }
+.p-slide { font: 600 16px var(--mono); white-space: nowrap; }
+.p-title { flex: 1; min-width: 0; font: 600 16px var(--body); color: #AEB7C9; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p-btn { background: #1C2333; border: 1px solid #2E3850; color: #EEF1F7; border-radius: 10px; min-width: 44px; min-height: 44px; padding: 8px 12px; font: 600 15px var(--body); }
+.p-btn.big { padding: 10px 22px; font-size: 17px; }
+.p-btn:focus-visible { outline: 3px solid #8FA7F3; outline-offset: 2px; }
+.p-clock { font: 600 16px var(--mono); font-variant-numeric: tabular-nums; }
+.p-clock.run { color: #5BD3AE; }
+.p-body { overflow-y: auto; padding: 24px 20px 48px; overscroll-behavior: contain; }
+.p-text { max-width: 36ch; margin: 0 auto; display: grid; gap: .8em; font: 500 calc(var(--pscale, 1) * clamp(24px, 4.6vw, 42px))/1.5 var(--body); }
+.p-text p { margin: 0; }
+.p-text b { color: #FFD84D; }
+.p-text .regie { font-size: .55em; line-height: 1.45; color: #C2B3FA; background: #221C3D; border-radius: 10px; padding: .6em .9em; }
+.p-next { flex: 1; min-width: 0; font: 500 15px var(--body); color: #8D97AB; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+@media (max-width: 520px) { .p-title { display: none; } .p-next { font-size: 13px; } }
+</style>
+
+<header class="bar">
+  <div class="bar-in">
+    <div class="clock" aria-live="off"><span class="big" id="total">0:00</span><span class="of">von 19:15 · Grenze 23:00</span></div>
+    <div class="meter" aria-hidden="true">
+      <div class="meter-track"><div class="meter-fill" id="totalFill"></div><div class="meter-mark" id="planMark"></div></div>
+      <div class="meter-legend"><span>0:00</span><span id="planPos">Plan: Folie 1</span><span>19:15 | 23:00</span></div>
+    </div>
+    <div class="ctrl">
+      <button class="btn" id="prev" aria-label="Vorheriger Abschnitt">Zurück</button>
+      <button class="btn primary" id="play">Start</button>
+      <button class="btn" id="next" aria-label="Nächster Abschnitt">Weiter</button>
+      <button class="btn" id="openPrompter">Prompter</button>
+    </div>
+    <span class="keys">Leertaste Start/Pause · → Weiter · ← Zurück · P Prompter</span>
+  </div>
+</header>
+
+<section class="prompter" id="prompter" hidden aria-label="Prompter">
+  <div class="p-head">
+    <button class="p-btn" id="pClose" aria-label="Prompter schließen">✕</button>
+    <span class="p-slide" id="pSlide"></span>
+    <span class="p-title" id="pTitle"></span>
+    <button class="p-btn" id="pSmaller" aria-label="Schrift kleiner">A−</button>
+    <button class="p-btn" id="pBigger" aria-label="Schrift größer">A+</button>
+    <button class="p-btn p-clock" id="pClock" aria-label="Uhr starten oder anhalten">0:00</button>
+  </div>
+  <div class="p-body" id="pBody"><div class="p-text" id="pText"></div></div>
+  <div class="p-foot">
+    <button class="p-btn big" id="pPrev" aria-label="Vorherige Folie">‹ Zurück</button>
+    <span class="p-next" id="pNext"></span>
+    <button class="p-btn big" id="pFwd" aria-label="Nächste Folie">Weiter ›</button>
+  </div>
+</section>
+
+<main>
+  <section class="now" aria-live="polite">
+    <div class="now-head"><span class="pill" id="slideTag">Folie 1</span><span class="pill" id="state">bereit</span><span class="pill" id="estimate"></span></div>
+    <h1 id="title"></h1>
+    <div class="sec-clock"><span class="t" id="secTime">0:00</span><span class="goal" id="secGoal"></span></div>
+    <div class="sec-track"><div class="sec-fill" id="secFill"></div></div>
+    <p class="hint" id="hint">Laut lesen, bei „Weiter“ springt die Uhr zum nächsten Abschnitt. Bei Folie 9 läuft das Demo-Video; sprich zu den Zeitmarken im Text.</p>
+    <div class="script" id="script"></div>
+  </section>
+
+  <aside>
+    <div class="panel">
+      <h2>Abschnitte</h2>
+      <ul class="list" id="list"></ul>
+    </div>
+    <div class="panel">
+      <h2>Letzte Probe</h2>
+      <p class="note" id="lastRun">Noch keine Probe gespeichert. Nach einer Probe steht hier die Gesamtzeit zum Vergleich.</p>
+    </div>
+  </aside>
+
+  <section class="result" id="result">
+    <h2>Auswertung</h2>
+    <p id="verdict" class="note">Noch keine Zeit gemessen. Die Tabelle füllt sich, während du probst.</p>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Folie</th><th>Abschnitt</th><th class="num">Plan</th><th class="num">Text geschätzt</th><th class="num">Gemessen</th><th class="num">Abweichung</th></tr></thead>
+      <tbody id="rows"></tbody>
+      <tfoot><tr><td></td><td>Gesamt</td><td class="num" id="sumPlan"></td><td class="num" id="sumEst"></td><td class="num" id="sumReal"></td><td class="num" id="sumDiff"></td></tr></tfoot>
+    </table></div>
+    <div class="row-actions">
+      <button class="btn" id="copy">Ergebnis kopieren</button>
+      <button class="btn" id="save">Als letzte Probe merken</button>
+      <span class="confirm" id="resetBox"><button class="btn" id="reset">Neu beginnen</button></span>
+      <span class="note" id="msg" role="status"></span>
+    </div>
+    <p class="note" style="margin-top:12px">„Text geschätzt“ rechnet mit 95 Wörtern pro Minute, dem Tempo aus der Probe, ohne Regieanweisungen. Bei der Live-Demo gilt die feste Zeit aus dem Plan, Tab-Wechsel inklusive.</p>
+  </section>
+</main>
+
+<script>
+const SECTIONS = [{"slide": "1", "title": "Titel", "target": 15, "video": false, "paras": ["Guten Tag. Ich bin Shota Tsertsvadze, und mein Abschlussprojekt heißt Finance Operations Automation, kurz Finance-Ops. Ich beginne mit einer Rechnung."]}, {"slide": "2", "title": "Eine Rechnung wie jede andere", "target": 30, "video": false, "paras": ["Stellen Sie sich vor, das liegt heute Morgen in Ihrem Posteingang. Eine Rechnung von Havel Logistik: Den Lieferanten kennen wir, es gibt eine passende Bestellung, der Betrag liegt im Rahmen. 2.499 Euro für einen Palettentransport.", "Auf den ersten Blick spricht nichts dagegen, sie zu bezahlen. Alles sieht normal aus."]}, {"slide": "3", "title": "Der zweite Blick", "target": 90, "video": false, "paras": ["Schauen wir genauer hin. Oben steht die IBAN, die wir für Havel Logistik in unseren Stammdaten haben. Unten die IBAN auf dieser Rechnung. Alles rot Markierte weicht ab.", "Lieferant, Bestellung und Betrag stimmen. Nur das Konto nicht.", "Eine echt aussehende Rechnung mit einem anderen Konto ist ein bekanntes Muster beim Rechnungsbetrug. Ob es hier Betrug ist, wissen wir nicht. Aber wir sollten nicht zahlen, bevor wir es wissen.", "Seit Oktober 2025 gibt es bei Überweisungen die sogenannte Empfängerüberprüfung. Banken gleichen den Namen mit der IBAN ab, bevor das Geld überwiesen wird. Meine Anwendung setzt einen Schritt früher an: Sie prüft bereits bei der Rechnung, ob die Bankverbindung in den Stammdaten des Unternehmens hinterlegt und freigegeben ist.", "Ohne diese Prüfung fällt so etwas von Hand nur auf, wenn jemand jedes Mal ganz genau hinschaut, auch bei der hundertsten Rechnung des Tages."]}, {"slide": "4", "title": "Woher ich das kenne", "target": 75, "video": false, "paras": ["Warum gerade dieses Thema? Ich habe in den Operations eines FinTech-Unternehmens gearbeitet, das Girokonten für Privatkunden anbietet. Zwei meiner Bereiche waren Pfändungen und behördliche Auskunftsersuchen: viele Schritte, die sich ständig wiederholen, fast alles von Hand. Gerade bei solcher Arbeit ist der Mensch nicht die beste Prüfinstanz. Die Aufmerksamkeit lässt nach, nicht aus Nachlässigkeit, sondern weil die Arbeit so ist.", "Mein Projekt baut diesen Prozess nicht nach. Ich habe einen anderen Fall gewählt, mit demselben Muster: Ein Dokument kommt an, Daten werden abgeglichen, feste Regeln angewendet, Abweichungen erkannt, ein Mensch entscheidet, wo es nötig ist, und jeder Schritt ist belegt. Die E-Rechnung eignet sich dafür: Sie ist strukturiert, ich kann sie mit synthetischen Daten vorführen, und seit 2025 müssen Unternehmen sie empfangen können."]}, {"slide": "5", "title": "Für wen: Jonas", "target": 70, "video": false, "paras": ["Damit es konkret wird: Jonas Weber, eine erfundene Person im Finance-Team der Nordwerk GmbH, einem ausgedachten Mittelständler mit rund 2.000 Eingangsrechnungen im Monat. Das ist eine Annahme, keine gemessene Zahl. Heute prüft Jonas jede Rechnung selbst. Er will aber nur drei Dinge wissen: Muss ich mir die ansehen? Wenn ja, warum genau? Und was ist der nächste Schritt?", "Mit Finance-Ops prüft das System jede Rechnung nach festen Regeln. In unserem Modell kommen acht von zehn ohne Sachprüfung durch, zwei landen mit Grund bei Jonas. Ohne Sachprüfung heißt aber nicht automatisch freigegeben: Nur bis 500 Euro gibt das System selbst frei. Darüber gibt ein Mensch frei, auch wenn fachlich alles stimmt."]}, {"slide": "6", "title": "Fünf Wege. Eine Stelle entscheidet.", "target": 70, "video": false, "paras": ["So läuft eine Rechnung durch. Links der Eingang: Im Betrieb kommt sie per E-Mail, gleich in der Demo über ein Formular. n8n nimmt die Datei an und reicht sie an Finance-Ops weiter. Geprüft und entschieden wird nur dort, und alles liegt in der PostgreSQL-Datenbank von Finance-Ops, auch der Prüfpfad.", "Rechts die Wege. Drei davon zeige ich gleich live: automatisch frei, Freigabe durch einen Menschen und gestoppt wegen der IBAN. Bei einer anderen Abweichung kann die KI eine Rückfrage entwerfen, auch das zeige ich. Und unten der technische Ausfall: Fallen n8n oder die Verbindung aus, wird nichts geprüft und nichts freigegeben. Fällt nur das Sheet aus, hat Finance-Ops trotzdem entschieden; es fehlt nur die Protokollzeile."]}, {"slide": "7", "title": "Live-Demo", "target": 475, "video": true, "paras": ["[Cmd + Tab zum Demo-Fenster. Tabs: Formular 1, 2, 3 · n8n-Ausführungen · Finance-Ops. Klappt etwas nicht: Reserve, nicht reparieren.]", "Eingang heute per n8n-Formular. Im Betrieb kommt die Rechnung per E-Mail, danach ist der Weg derselbe.", "**1 · 380 €** G_clean_380 einreichen: „Freigegeben“. Kein Mensch nötig.", "**2 · 1.240 €** A_clean_1240: „Freigabe ausstehend“. Ein Mensch muss unterschreiben.", "**3 · 2.499 €** B_iban_changed_2499: „Sichtprüfung“. Die IBAN weicht ab.", "**4 · Wege in n8n** Havel-Ausführung öffnen: Der Switch ging nach „Gestoppt: Sichtprüfung“. n8n folgt nur der Antwort von Finance-Ops. Grün heißt: transportiert.", "**5 · Fehlerpfad** Ausführung 200216: rot, „Technischer Fehler – nicht geprüft“. Nichts geprüft, nichts freigegeben. Getestet, nicht live provoziert.", "**6 · Jonas** Havel öffnen: Grund, markierte Ziffern, keine Rückfrage, nur Rückruf. Dahinter stehen 788 automatisierte Tests.", "**7 · KI** Spree IT: KI-Entwurf erstellen. Die Werte setzt die Anwendung ein. Einen Satz ändern, Text freigeben: freigegeben, nicht versendet.", "**8 · Tim** Abmelden, als Tim Kessler anmelden, die 1.240 € freigeben. Anna, die eingereicht hat, könnte das nicht.", "[Cmd + Tab zurück, Pfeiltaste zu Folie 8.]"]}, {"slide": "8", "title": "Menschliche Kontrolle", "target": 65, "video": false, "paras": ["Und wenn Havel Logistik wirklich die Bank gewechselt hat? Dann gilt: Eine Rechnung kann die Bankverbindung nie ändern. Die IBAN auf der Rechnung ist genau das, was ein Betrüger kontrolliert.", "Person eins schlägt die neue Bankverbindung vor. Person zwei ruft beim Lieferanten an, nur über die Nummer aus den Stammdaten, und lässt sich die IBAN vorlesen. Person drei gibt frei. Erst dann prüft das System die Rechnung noch einmal, und auch dann unterschreibt ein Mensch: Eine einmal gestoppte Rechnung wird nie automatisch freigegeben.", "Drei Personen sind meine Projektregel, keine allgemeine Pflicht. Der Punkt: Wer vorschlägt, prüft und gibt nicht selbst frei."]}, {"slide": "9", "title": "Warum hier nicht die KI entscheidet", "target": 125, "video": false, "paras": ["Sie haben eben gesehen: Entschieden haben feste Regeln, keine KI. Das war eine bewusste Entscheidung. Über Geld entscheiden Regeln: gleiche Daten, gleiches Ergebnis, und jedes Ergebnis hat einen Grund. Ein Sprachmodell liefert nicht garantiert jedes Mal dasselbe, eine plausible Begründung ist kein Beleg, und den Rechnungstext schreibt der Absender, im schlimmsten Fall der Betrüger.", "Die KI-Rückfrage ist gebaut und mit einem echten Sprachmodell getestet, Claude Sonnet 5.5 von Anthropic. 16 von 24 Entwürfen waren zulässig. Nach einer Korrektur am Prompt bestanden in einer gezielten Nachprüfung 15 von 15. Eine neue Gesamtquote ist das nicht.", "Entscheidend war der Vergleich mit der festen Vorlage. Im kleinen Präferenzvergleich wurden in 6 von 6 Fällen die festen Vorlagen bevorzugt. Für diese untersuchten Standardfälle zeigte sich kein erkennbarer Zusatznutzen durch KI. Die KI-Texte waren länger und erklärten Regeln, die der Lieferant nicht braucht. Der Vergleich war klein, mit Hilfe von ChatGPT und mit Entwürfen der ersten Prompt-Fassung; verallgemeinern lässt sich das nicht. Gebaut, gemessen und dann die einfachere Lösung gewählt: Das ist für mich KI-Management.", "Fertige Lösungen wie DATEV, Candis oder finway würde ich in einem Unternehmen zuerst prüfen. Mir ging es darum, die Entscheidungen dahinter nachvollziehbar zu machen."]}, {"slide": "10", "title": "Nutzen und wie man ihn misst", "target": 70, "video": false, "paras": ["Was bringt das? Links eine Modellrechnung für Nordwerk, klar gesagt: Annahmen, nicht gemessen. 2.000 Rechnungen im Monat, jede fünfte braucht eine Klärung. Eine saubere Rechnung kostet heute sechs Minuten, mit dem System eine, eine Ausnahme 25 statt 8. Dann sinkt der Aufwand von rund 327 auf 80 Stunden im Monat.", "Ob das stimmt, muss ein Pilot zeigen. Vorab habe ich die Regeln an 20 synthetischen Rechnungen mit bekanntem Soll geprüft: Alle 20 landen richtig, beide fremden IBANs gestoppt. Die Mischung habe ich gewählt.", "Im Pilot würde ich messen: Automatisierungsquote, Bearbeitungszeit und Fehlalarme. Dazu eine Leitplanke: keine Zahlung auf ein ungeprüftes Konto. Schneller ist kein Erfolg, wenn das Risiko steigt."]}, {"slide": "11", "title": "Reflexion und Einführung", "target": 45, "video": false, "paras": ["Was nehme ich mit? Die schwierigste Frage war nicht, was man automatisiert, sondern wo ein Mensch entscheiden muss. Ein Prototyp ist noch kein eingeführter Prozess. Und eine Demo braucht Betriebsdisziplin; deshalb gibt es für heute einen Ausfallplan.", "Bei Nordwerk würde ich so einführen: Regeln mit dem Finance-Team abstimmen, dann ein Parallelbetrieb, in dem Jonas wie bisher entscheidet, vergleichen und erst dann ausweiten oder nachschärfen. Das ist ein Vorschlag, umgesetzt ist davon nichts."]}, {"slide": "12", "title": "Abschluss", "target": 25, "video": false, "paras": ["Die Rechnung vom Anfang: gestoppt vor der Zahlungsfreigabe. Zahlungen sind im Projekt nur simuliert, echtes Geld fließt nicht; die Kontrolle davor ist echt. Automatisieren, was Routine ist. Kontrollieren, was kritisch ist.", "Vielen Dank. Ich freue mich auf Ihre Fragen."]}];
+const WPM = 95, PLAN_TOTAL = 1155, LIMIT = 1380, VIDEO_LENGTH = "4:05";
+
+const $ = (id) => document.getElementById(id);
+const fmt = (s) => { s = Math.round(s); const sign = s < 0 ? "−" : ""; s = Math.abs(s); return `${sign}${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; };
+const diffFmt = (s) => (Math.round(s) > 0 ? "+" : "") + fmt(s);
+const isRegie = (p) => p.startsWith("[");
+const words = (sec) => sec.paras.filter((p) => !isRegie(p)).join(" ").replace(/\*\*[^*]+\*\*/g, "").split(/\s+/).filter(Boolean).length;
+const estimate = (sec) => (sec.video ? sec.target : words(sec) / WPM * 60);
+const tone = (spent, target) => (spent > target * 1.1 ? "over" : spent > target * 0.9 ? "warn" : "ok");
+const label = (sec) => sec.slide;
+
+const spent = SECTIONS.map(() => 0);
+let idx = 0, running = false, last = null, timer = null;
+const total = () => spent.reduce((a, b) => a + b, 0);
+
+function inline(text) {
+  const esc = text.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  return esc.replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+}
+
+function renderSection() {
+  const sec = SECTIONS[idx];
+  $("slideTag").textContent = sec.video ? `Folie ${sec.slide} · Live-Demo` : `Folie ${sec.slide}`;
+  $("title").textContent = sec.title;
+  const est = estimate(sec);
+  const tight = !sec.video && est > sec.target * 1.1;
+  $("estimate").textContent = sec.video ? `Live-Demo: feste Zeit 7:55` : `Text ≈ ${fmt(est)}${tight ? " · knapp" : ""}`;
+  $("estimate").className = "pill " + (tight ? "over" : "ok");
+  const paras = sec.paras.map((p) => `<p class="${isRegie(p) ? "regie" : ""}">${inline(p)}</p>`).join("");
+  $("script").innerHTML = paras;
+  document.querySelectorAll(".list button").forEach((b, k) => b.setAttribute("aria-current", k === idx ? "step" : "false"));
+  $("pSlide").textContent = `${sec.slide} / ${SECTIONS.length}`;
+  $("pTitle").textContent = sec.title;
+  $("pText").innerHTML = paras;
+  const next = SECTIONS[idx + 1];
+  $("pNext").textContent = next ? `Als Nächstes: ${next.slide} · ${next.title}` : "Letzte Folie";
+  $("pBody").scrollTop = 0;
+  tick();
+}
+
+function tick() {
+  const now = performance.now();
+  if (running && last !== null) spent[idx] += (now - last) / 1000;
+  last = running ? now : null;
+  const sec = SECTIONS[idx];
+  const t = total();
+  $("total").textContent = fmt(t);
+  $("totalFill").style.width = Math.min(100, t / LIMIT * 100) + "%";
+  $("totalFill").style.background = t > LIMIT ? "var(--over)" : t > PLAN_TOTAL ? "var(--warn)" : "var(--blue)";
+  $("secTime").textContent = fmt(spent[idx]);
+  $("secGoal").textContent = `Plan ${fmt(sec.target)}`;
+  const tn = tone(spent[idx], sec.target);
+  $("secFill").style.width = Math.min(100, spent[idx] / sec.target * 100) + "%";
+  $("secFill").className = "sec-fill " + (tn === "ok" ? "" : tn);
+  $("state").textContent = running ? (tn === "over" ? "überzogen" : tn === "warn" ? "gleich vorbei" : "läuft") : t > 0 ? "pausiert" : "bereit";
+  $("state").className = "pill " + (running ? tn : "");
+  $("play").textContent = running ? "Pause" : t > 0 ? "Weiter laufen" : "Start";
+  $("pClock").textContent = fmt(t);
+  $("pClock").classList.toggle("run", running);
+  // Where the plan says you should be by now.
+  let acc = 0, planned = SECTIONS[SECTIONS.length - 1];
+  for (const s of SECTIONS) { acc += s.target; if (t < acc) { planned = s; break; } }
+  $("planPos").textContent = `Plan jetzt: Folie ${planned.slide}`;
+  renderList(); renderResult();
+}
+
+function buildList() {
+  $("list").innerHTML = SECTIONS.map((s, k) => `<li><button data-k="${k}"><span class="n">${label(s)}</span><span class="name">${inline(s.title)}</span><span class="tt none" id="tt${k}"></span></button></li>`).join("");
+}
+// Only the times change while the clock runs; rebuilding the buttons would swallow clicks.
+function renderList() {
+  SECTIONS.forEach((s, k) => {
+    const el = $("tt" + k);
+    el.className = "tt " + (spent[k] < 1 ? "none" : tone(spent[k], s.target));
+    el.textContent = spent[k] < 1 ? fmt(s.target) : `${fmt(spent[k])} / ${fmt(s.target)}`;
+  });
+}
+
+function renderResult() {
+  $("rows").innerHTML = SECTIONS.map((s, k) => {
+    const d = spent[k] - s.target;
+    const measured = spent[k] >= 1;
+    const cls = measured ? tone(spent[k], s.target) : "none";
+    return `<tr><td class="mono">${label(s)}</td><td>${inline(s.title)}</td><td class="num">${fmt(s.target)}</td><td class="num">${fmt(estimate(s))}</td><td class="num">${measured ? fmt(spent[k]) : "–"}</td><td class="num"><span class="tt ${cls}">${measured ? diffFmt(d) : "–"}</span></td></tr>`;
+  }).join("");
+  const t = total(), est = SECTIONS.reduce((a, s) => a + estimate(s), 0);
+  $("sumPlan").textContent = fmt(PLAN_TOTAL);
+  $("sumEst").textContent = fmt(est);
+  $("sumReal").textContent = t >= 1 ? fmt(t) : "–";
+  $("sumDiff").textContent = t >= 1 ? diffFmt(t - PLAN_TOTAL) : "–";
+  if (t < 1) return;
+  const done = spent.filter((x) => x >= 1).length;
+  const worst = SECTIONS.map((s, k) => ({ s, d: spent[k] - s.target })).filter((x) => x.d > 5).sort((a, b) => b.d - a.d).slice(0, 2);
+  const left = Math.max(0, LIMIT - t);
+  $("verdict").innerHTML = `${done} von ${SECTIONS.length} Abschnitten gemessen. <span class="verdict">${t > LIMIT ? "Über der 20-Minuten-Grenze" : t > PLAN_TOTAL ? "Über dem Plan, " + fmt(left) + " Puffer bis 23:00" : "Im Plan"}</span>` +
+    (worst.length ? ` Am meisten über Plan: ${worst.map((w) => `${label(w.s)} (${diffFmt(w.d)})`).join(", ")}.` : "");
+}
+
+function go(k) { tick(); idx = Math.max(0, Math.min(SECTIONS.length - 1, k)); renderSection(); window.scrollTo({ top: 0, behavior: "instant" }); }
+function toggle() { tick(); running = !running; last = running ? performance.now() : null; if (running && !timer) timer = setInterval(tick, 250); if (!running) { clearInterval(timer); timer = null; } tick(); }
+
+$("play").addEventListener("click", toggle);
+$("next").addEventListener("click", () => go(idx + 1));
+$("prev").addEventListener("click", () => go(idx - 1));
+$("list").addEventListener("click", (e) => { const b = e.target.closest("button[data-k]"); if (b) go(+b.dataset.k); });
+document.addEventListener("keydown", (e) => {
+  // Space always means start/pause, also right after clicking a section in the list.
+  if (e.key === " ") { e.preventDefault(); toggle(); }
+  if (e.key === "ArrowRight") go(idx + 1);
+  if (e.key === "ArrowLeft") go(idx - 1);
+  if (e.key === "p" || e.key === "P") $("prompter").hidden ? openPrompter() : closePrompter();
+  if (e.key === "Escape" && !$("prompter").hidden) closePrompter();
+});
+
+// Prompter. The screen must not lock during the talk, so it holds a wake lock while open.
+let wakeLock = null;
+async function keepAwake() {
+  try { wakeLock = await navigator.wakeLock.request("screen"); } catch { /* not supported: the device may dim */ }
+}
+function openPrompter() {
+  $("prompter").hidden = false;
+  document.documentElement.requestFullscreen?.().catch(() => {});
+  keepAwake();
+  $("pFwd").focus();
+}
+function closePrompter() {
+  $("prompter").hidden = true;
+  if (document.fullscreenElement) document.exitFullscreen();
+  wakeLock?.release(); wakeLock = null;
+  $("openPrompter").focus();
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && !$("prompter").hidden) keepAwake();
+});
+let pscale = 1;
+try { pscale = +localStorage.getItem("zeitprobe-pscale") || 1; } catch { /* storage unavailable */ }
+function setScale(s) {
+  pscale = Math.min(1.8, Math.max(0.7, Math.round(s * 10) / 10));
+  $("prompter").style.setProperty("--pscale", pscale);
+  try { localStorage.setItem("zeitprobe-pscale", pscale); } catch { /* storage unavailable */ }
+}
+setScale(pscale);
+$("openPrompter").addEventListener("click", openPrompter);
+$("pClose").addEventListener("click", closePrompter);
+$("pSmaller").addEventListener("click", () => setScale(pscale - 0.1));
+$("pBigger").addEventListener("click", () => setScale(pscale + 0.1));
+$("pClock").addEventListener("click", toggle);
+$("pPrev").addEventListener("click", () => go(idx - 1));
+$("pFwd").addEventListener("click", () => go(idx + 1));
+// Swipe left for the next slide, right for the previous one; vertical moves scroll the text.
+let touch = null;
+$("pBody").addEventListener("touchstart", (e) => { touch = e.touches[0]; }, { passive: true });
+$("pBody").addEventListener("touchend", (e) => {
+  const end = e.changedTouches[0], dx = end.clientX - touch.clientX, dy = end.clientY - touch.clientY;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) go(idx + (dx < 0 ? 1 : -1));
+});
+
+function resultText() {
+  const lines = SECTIONS.map((s, k) => `${label(s).padEnd(5)} ${s.title.padEnd(42).slice(0, 42)} Plan ${fmt(s.target).padStart(5)}  Ist ${spent[k] >= 1 ? fmt(spent[k]).padStart(5) : "    –"}`);
+  return `Zeitprobe ${new Date().toLocaleDateString("de-DE")}\n${lines.join("\n")}\nGesamt: ${fmt(total())} (Plan ${fmt(PLAN_TOTAL)}, Grenze 23:00)`;
+}
+$("copy").addEventListener("click", () => {
+  const text = resultText();
+  navigator.clipboard.writeText(text).then(() => { $("msg").textContent = "Ergebnis kopiert."; })
+    .catch(() => { $("msg").textContent = "Kopieren ist hier nicht erlaubt. Die Tabelle lässt sich markieren und kopieren."; });
+});
+$("save").addEventListener("click", () => {
+  try {
+    localStorage.setItem("zeitprobe-letzte", JSON.stringify({ at: new Date().toISOString(), total: total(), spent }));
+    $("msg").textContent = "Als letzte Probe gemerkt (nur in diesem Browser)."; showLast();
+  } catch { $("msg").textContent = "Dieser Browser erlaubt kein Speichern. Kopiere das Ergebnis stattdessen."; }
+});
+function askReset() {
+  $("resetBox").innerHTML = `Alle Zeiten löschen? <button class="btn" id="yes">Ja, neu beginnen</button><button class="btn" id="no">Abbrechen</button>`;
+  $("yes").onclick = () => { running = false; clearInterval(timer); timer = null; last = null; spent.fill(0); idx = 0; restoreReset(); renderSection(); };
+  $("no").onclick = restoreReset;
+}
+function restoreReset() {
+  $("resetBox").innerHTML = `<button class="btn" id="reset">Neu beginnen</button>`;
+  $("reset").onclick = askReset;
+}
+function showLast() {
+  try {
+    const run = JSON.parse(localStorage.getItem("zeitprobe-letzte") || "null");
+    if (!run) return;
+    const when = new Date(run.at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" });
+    $("lastRun").innerHTML = `${when}: <b class="mono">${fmt(run.total)}</b> gesamt (${diffFmt(run.total - PLAN_TOTAL)} zum Plan).`;
+  } catch { /* storage unavailable: keep the default text */ }
+}
+$("planMark").style.left = PLAN_TOTAL / LIMIT * 100 + "%";
+buildList();
+restoreReset();
+showLast();
+renderSection();
+</script>
+
+</body>
+</html>
