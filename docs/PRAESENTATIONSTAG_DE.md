@@ -96,6 +96,8 @@ von v3.
 | Situation | Dann |
 |---|---|
 | Live-Demo nicht erreichbar | Plan B nach `LIVE_DEMO_DE.md`: Video R1 bis 2:16, dann die drei Dateien lokal in Finance-Ops hochladen |
+| Ein Teil der Demo fällt aus, eine oder zwei Rechnungen sind schon durch | Kein Datenbank-Reset. Angekommene Rechnungen in Finance-Ops zeigen, nur die fehlenden hochladen (`LIVE_DEMO_DE.md`, Reserve) |
+| Finance-Ops selbst fällt aus | Video und Screenshots: R3, R2, B9 in der Reserve; optional `demo_v4.mp4` ab 2:16 |
 | Video startet nicht | `demo_v4.mp4` vom Desktop in QuickTime öffnen, Vollbild |
 | Präsentation lässt sich nicht öffnen | PDF zeigen, das Video separat abspielen |
 | In den Fragen will jemand mehr von der Anwendung sehen | Die Demo-Instanz ist ohnehin offen (`http://localhost:5401`). |
