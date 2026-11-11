@@ -17,14 +17,14 @@ test("an ordinary line is quantity times price", () => {
 });
 
 test("a price with four decimals keeps its precision until the last step", () => {
-  assert.equal(productToCents("7", "12.3456"), 8642);   // 86.4192 -> 86.42
+  assert.equal(productToCents("7", "12.3456"), 8642); // 86.4192 -> 86.42
   assert.equal(productToCents("100", "0.0125"), 125);
 });
 
 test("half a cent rounds away from zero, and does so exactly", () => {
   // 0.005 has no exact binary representation; these are the cases where
   // Number arithmetic drifts.
-  assert.equal(productToCents("3", "8.615"), 2585);     // 25.845
+  assert.equal(productToCents("3", "8.615"), 2585); // 25.845
   assert.equal(productToCents("1", "0.005"), 1);
   assert.equal(productToCents("-1", "0.005"), -1);
   assert.equal(productToCents("1", "0.004"), 0);

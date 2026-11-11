@@ -17,10 +17,11 @@ export async function transition(client, { invoiceId, to, actor, action, reason 
   if (!canTransition(from, to)) {
     throw new TransitionError("TRANSITION_NOT_ALLOWED", `Übergang ${from} -> ${to} ist nicht erlaubt`, { from, to, action });
   }
-  await client.query(
-    "update finops.invoices set state = $2, review_reason = $3, updated_at = now() where id = $1",
-    [invoiceId, to, reviewReason],
-  );
+  await client.query("update finops.invoices set state = $2, review_reason = $3, updated_at = now() where id = $1", [
+    invoiceId,
+    to,
+    reviewReason,
+  ]);
   await writeEvent(client, { invoiceId, actor, action, fromState: from, toState: to, reason, evidence });
   // A purchase order is a spending limit, so the claim on it belongs to the
   // state change, not to whichever caller remembered to adjust it.
@@ -36,7 +37,8 @@ export async function recordEvent(client, { invoiceId, actor, action, reason = n
 }
 
 export async function writeEvent(client, { invoiceId, actor, action, fromState, toState, reason, evidence }) {
-  if (actor.type === "HUMAN" && !actor.id) throw new TransitionError("HUMAN_ACTION_WITHOUT_ACTOR", "Menschliche Aktion ohne Akteur", { action });
+  if (actor.type === "HUMAN" && !actor.id)
+    throw new TransitionError("HUMAN_ACTION_WITHOUT_ACTOR", "Menschliche Aktion ohne Akteur", { action });
   await client.query(
     `insert into finops.audit_events (invoice_id, actor_type, actor_id, action, from_state, to_state, reason, evidence)
      values ($1, $2, $3, $4, $5, $6, $7, $8)`,

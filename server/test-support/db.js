@@ -31,7 +31,11 @@ export async function testDeps() {
   // one is exercised by kosit-real.test.js, never by accident through .env.
   // AI is off in the same way; test-support/ai.js has the stand-in.
   return {
-    pool, storage, policy: loadPolicy({}), company: loadCompany({}), officialValidator: { client: null, required: false },
+    pool,
+    storage,
+    policy: loadPolicy({}),
+    company: loadCompany({}),
+    officialValidator: { client: null, required: false },
     ai: aiExplanationsFromEnv({}),
   };
 }
@@ -51,9 +55,9 @@ export async function resetBankChanges(pool) {
 
 /** The server and database a connection actually reached. */
 async function identity(pool) {
-  const { rows: [row] } = await pool.query(
-    "select current_database() as db, current_setting('data_directory', true) as dir",
-  );
+  const {
+    rows: [row],
+  } = await pool.query("select current_database() as db, current_setting('data_directory', true) as dir");
   return `${row.dir ?? "?"}::${row.db}`;
 }
 
@@ -63,9 +67,7 @@ async function refuseSharedDatabase(testPool) {
   try {
     const [test, dev] = await Promise.all([identity(testPool), identity(devPool)]);
     if (test === dev) {
-      throw new Error(
-        `TEST_DATABASE_URL und DATABASE_URL zeigen auf dieselbe Datenbank (${test}): die Tests löschen das Schema`,
-      );
+      throw new Error(`TEST_DATABASE_URL und DATABASE_URL zeigen auf dieselbe Datenbank (${test}): die Tests löschen das Schema`);
     }
   } finally {
     await devPool.end();
@@ -86,7 +88,7 @@ export const USERS = {
 // --test-concurrency=1; without it two files reset the database under each other.
 
 /** Demo accounts by role shorthand. */
-export const EMAILS = {
+const EMAILS = {
   clerk: "anna.berger@nordwerk.example",
   manager: "tim.kessler@nordwerk.example",
   manager2: "lea.sommer@nordwerk.example",
@@ -108,9 +110,7 @@ export async function loginAs(base, key, password = DEMO_PASSWORD) {
     body: JSON.stringify({ email, password }),
   });
   if (!res.ok) throw new Error(`Login für ${email} fehlgeschlagen: ${res.status}`);
-  const cookies = (res.headers.getSetCookie() ?? [])
-    .map((c) => c.split(";")[0])
-    .join("; ");
+  const cookies = (res.headers.getSetCookie() ?? []).map((c) => c.split(";")[0]).join("; ");
   const csrf = /finops_csrf=([^;]+)/.exec(cookies)?.[1];
   const user = (await res.json()).user;
 

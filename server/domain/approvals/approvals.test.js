@@ -65,7 +65,13 @@ test("accepting a review moves the invoice to approval and records who accepted"
   const after = await get(invoice.id);
   assert.equal(after.state, "READY_FOR_APPROVAL");
   assert.equal(after.review_reason, null);
-  assert.deepEqual(after.approval_steps.map((s) => [s.required_role, s.status]), [["MANAGER", "PENDING"], ["FINANCE", "PENDING"]]);
+  assert.deepEqual(
+    after.approval_steps.map((s) => [s.required_role, s.status]),
+    [
+      ["MANAGER", "PENDING"],
+      ["FINANCE", "PENDING"],
+    ],
+  );
   const event = after.audit_events.at(-1);
   assert.equal(event.action, "review_accepted");
   assert.equal(event.actor_type, "HUMAN");
@@ -85,7 +91,10 @@ test("a review of a small invoice still requires one approval, never straight-th
 
   const after = await get(invoice.id);
   assert.equal(after.state, "READY_FOR_APPROVAL", "must not jump to APPROVED");
-  assert.deepEqual(after.approval_steps.map((s) => s.required_role), ["MANAGER"]);
+  assert.deepEqual(
+    after.approval_steps.map((s) => s.required_role),
+    ["MANAGER"],
+  );
 });
 
 test("a changed IBAN cannot be released from review", async () => {
@@ -93,7 +102,8 @@ test("a changed IBAN cannot be released from review", async () => {
   // data, after a call-back to the supplier, then re-validation (ADR-052).
   const invoice = await upload("B_iban_changed_2499.xml");
   const res = await post(`/api/invoices/${invoice.id}/review/accept`, {
-    actor: clients.clerk, body: { comment: "IBAN telefonisch bestätigt" },
+    actor: clients.clerk,
+    body: { comment: "IBAN telefonisch bestätigt" },
   });
   assert.equal(res.status, 422);
   const body = await res.json();
@@ -186,7 +196,10 @@ test("approving the only step approves the invoice", async () => {
 
 test("a multi-step invoice is only approved after the last step", async () => {
   const invoice = await upload("E_high_value_30000.xml");
-  assert.deepEqual(invoice.approval_steps.map((s) => s.required_role), ["MANAGER", "FINANCE", "CFO"]);
+  assert.deepEqual(
+    invoice.approval_steps.map((s) => s.required_role),
+    ["MANAGER", "FINANCE", "CFO"],
+  );
 
   await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
   assert.equal((await get(invoice.id)).state, "READY_FOR_APPROVAL");
@@ -227,10 +240,7 @@ test("one actor cannot satisfy two approval steps of the same invoice", async ()
   const invoice = await upload("A_clean_1240.xml");
   // A second MANAGER step, as a stricter policy would produce. The guard must
   // hold on identity, not on the roles happening to differ.
-  await deps.pool.query(
-    "insert into finops.approval_steps (invoice_id, step_no, required_role) values ($1, 2, 'MANAGER')",
-    [invoice.id],
-  );
+  await deps.pool.query("insert into finops.approval_steps (invoice_id, step_no, required_role) values ($1, 2, 'MANAGER')", [invoice.id]);
 
   const first = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
   assert.equal(first.status, 200);
@@ -256,7 +266,10 @@ test("whoever released an invoice from review cannot also approve it", async () 
   await post(`/api/invoices/${invoice.id}/review/accept`, { actor: clients.finance, body: { comment: "Bestellung erhöht" } });
 
   const released = await get(invoice.id);
-  assert.deepEqual(released.approval_steps.map((s) => s.required_role), ["MANAGER", "FINANCE"]);
+  assert.deepEqual(
+    released.approval_steps.map((s) => s.required_role),
+    ["MANAGER", "FINANCE"],
+  );
 
   const first = await post(`/api/invoices/${invoice.id}/approvals/1/approve`, { actor: clients.manager, body: {} });
   assert.equal(first.status, 200);
@@ -300,7 +313,10 @@ test("rejecting a step needs a reason, ends the invoice and cancels the remainin
 
   const after = await get(invoice.id);
   assert.equal(after.state, "REJECTED");
-  assert.deepEqual(after.approval_steps.map((s) => s.status), ["REJECTED", "CANCELLED", "CANCELLED"]);
+  assert.deepEqual(
+    after.approval_steps.map((s) => s.status),
+    ["REJECTED", "CANCELLED", "CANCELLED"],
+  );
 });
 
 test("a rejected invoice cannot be approved afterwards", async () => {
@@ -362,7 +378,10 @@ test("an approval given before a correction cannot be inherited after re-validat
     after.approval_steps.every((s) => s.status === "PENDING"),
     `every step must start again: ${JSON.stringify(after.approval_steps.map((s) => [s.step_no, s.status]))}`,
   );
-  assert.ok(after.approval_steps.every((s) => s.actor_id === null), "no approver carried over");
+  assert.ok(
+    after.approval_steps.every((s) => s.actor_id === null),
+    "no approver carried over",
+  );
 });
 
 test("an invoice waiting for an answer can be rejected", async () => {
@@ -370,12 +389,14 @@ test("an invoice waiting for an answer can be rejected", async () => {
   // the button, but the handler required REVIEW_REQUIRED and answered 409.
   const invoice = await upload("B_iban_changed_2499.xml");
   await post(`/api/invoices/${invoice.id}/review/request-info`, {
-    actor: clients.clerk, body: { comment: "Bankverbindung schriftlich bestätigen lassen" },
+    actor: clients.clerk,
+    body: { comment: "Bankverbindung schriftlich bestätigen lassen" },
   });
   assert.equal((await get(invoice.id)).state, "INFO_REQUESTED");
 
   const res = await post(`/api/invoices/${invoice.id}/review/reject`, {
-    actor: clients.clerk, body: { comment: "Lieferant antwortet nicht, Rechnung abgelehnt" },
+    actor: clients.clerk,
+    body: { comment: "Lieferant antwortet nicht, Rechnung abgelehnt" },
   });
   assert.equal(res.status, 200, await res.text());
 

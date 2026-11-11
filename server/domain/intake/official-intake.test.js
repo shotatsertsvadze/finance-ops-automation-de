@@ -108,11 +108,24 @@ test("a retry is a new run; the failed attempt stays on record", async () => {
   const after = await (await clerk.get(`/api/invoices/${invoice.id}`)).json();
   // Once in review, always a signature (ADR-020): an outage is no exception.
   assert.equal(after.state, "READY_FOR_APPROVAL");
-  assert.deepEqual((await records(invoice.id)).map((r) => [r.run_no, r.outcome]), [[1, "UNAVAILABLE"], [2, "ACCEPTED"]]);
-  const { rows } = await deps.pool.query(
-    "select run_no, status from finops.validation_results where invoice_id = $1 and check_code = 'official_validation' order by run_no", [invoice.id],
+  assert.deepEqual(
+    (await records(invoice.id)).map((r) => [r.run_no, r.outcome]),
+    [
+      [1, "UNAVAILABLE"],
+      [2, "ACCEPTED"],
+    ],
   );
-  assert.deepEqual(rows.map((r) => [r.run_no, r.status]), [[1, "FAILED"], [2, "PASSED"]]);
+  const { rows } = await deps.pool.query(
+    "select run_no, status from finops.validation_results where invoice_id = $1 and check_code = 'official_validation' order by run_no",
+    [invoice.id],
+  );
+  assert.deepEqual(
+    rows.map((r) => [r.run_no, r.status]),
+    [
+      [1, "FAILED"],
+      [2, "PASSED"],
+    ],
+  );
 });
 
 test("a document the parser cannot read is not sent to the validator", async () => {

@@ -15,13 +15,13 @@ export function bindingOf(invoice, runNo) {
 
 /** The validation run an approver would be looking at right now. */
 export async function latestRunNo(client, invoiceId) {
-  const { rows: [row] } = await client.query(
-    "select coalesce(max(run_no), 0) as run_no from finops.validation_results where invoice_id = $1",
-    [invoiceId],
-  );
+  const {
+    rows: [row],
+  } = await client.query("select coalesce(max(run_no), 0) as run_no from finops.validation_results where invoice_id = $1", [invoiceId]);
   return row.run_no;
 }
 
+/** @type {[string, (a: any, b: any) => boolean][]} */
 const FIELDS = [
   ["document_sha256", (a, b) => a === b],
   ["validation_run_no", (a, b) => Number(a) === Number(b)],

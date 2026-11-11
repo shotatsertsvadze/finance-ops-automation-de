@@ -15,29 +15,37 @@ import assert from "node:assert/strict";
 import { availableActions, pathFor, primaryAction } from "./actions.js";
 
 const invoice = (over = {}) => ({
-  state: "ACCOUNTING_READY", document_type: "INVOICE", approval_steps: [],
-  gross_amount: "1428.00", open_credit_amount: "0", accounting_record: { document_no: "BELEG-1" }, ...over,
+  state: "ACCOUNTING_READY",
+  document_type: "INVOICE",
+  approval_steps: [],
+  gross_amount: "1428.00",
+  open_credit_amount: "0",
+  accounting_record: { document_no: "BELEG-1" },
+  ...over,
 });
 const keys = (inv) => availableActions(inv).actions.map((a) => a.key);
 
 test("a review offers the decisions a reviewer makes", () => {
-  assert.deepEqual(keys(invoice({ state: "REVIEW_REQUIRED" })),
-    ["accept", "request-info", "reject", "reprocess"]);
+  assert.deepEqual(keys(invoice({ state: "REVIEW_REQUIRED" })), ["accept", "request-info", "reject", "reprocess"]);
 });
 
 test("a review whose failures no reviewer may override offers no release", () => {
   // The server refuses the release with NOT_PAYABLE_ELIGIBLE; the button would
   // always fail (ADR-071).
   const result = availableActions(invoice({ state: "REVIEW_REQUIRED", payable_blockers: ["supplier_iban_match"] }));
-  assert.deepEqual(result.actions.map((a) => a.key), ["request-info", "reject", "reprocess"]);
+  assert.deepEqual(
+    result.actions.map((a) => a.key),
+    ["request-info", "reject", "reprocess"],
+  );
   assert.equal(result.prompt.key, "hintNotReleasable");
 });
 
 test("confirming a duplicate is offered only when the invoice number was seen before", () => {
-  const checked = (status) => invoice({
-    state: "REVIEW_REQUIRED",
-    validation: { technical: [], business: [{ check_code: "duplicate_invoice_number", status }] },
-  });
+  const checked = (status) =>
+    invoice({
+      state: "REVIEW_REQUIRED",
+      validation: { technical: [], business: [{ check_code: "duplicate_invoice_number", status }] },
+    });
   assert.ok(keys(checked("FAILED")).includes("confirm-duplicate"));
   assert.ok(!keys(checked("PASSED")).includes("confirm-duplicate"));
 });
@@ -63,7 +71,10 @@ test("an approved invoice offers the booking", () => {
 
 test("a booked invoice with no credits offers payment", () => {
   const result = availableActions(invoice());
-  assert.deepEqual(result.actions.map((a) => a.key), ["pay", "cancel"]);
+  assert.deepEqual(
+    result.actions.map((a) => a.key),
+    ["pay", "cancel"],
+  );
   assert.equal(result.prompt.key, "hintAccountingReady");
 });
 
@@ -71,19 +82,28 @@ test("a booked credit note offers the credit, never the payment", () => {
   // The failure this prevents: sending money in the direction the document
   // reverses.
   const result = availableActions(invoice({ document_type: "CREDIT_NOTE" }));
-  assert.deepEqual(result.actions.map((a) => a.key), ["credit", "cancel"]);
+  assert.deepEqual(
+    result.actions.map((a) => a.key),
+    ["credit", "cancel"],
+  );
   assert.equal(result.prompt.key, "hintCreditNoteReady");
 });
 
 test("a partly credited invoice still pays, and says so", () => {
   const result = availableActions(invoice({ open_credit_amount: "200.00" }));
-  assert.deepEqual(result.actions.map((a) => a.key), ["pay", "cancel"]);
+  assert.deepEqual(
+    result.actions.map((a) => a.key),
+    ["pay", "cancel"],
+  );
   assert.equal(result.prompt.key, "hintNetted", "the reduction is stated before the click");
 });
 
 test("an invoice its credits cover offers settlement, not payment", () => {
   const result = availableActions(invoice({ open_credit_amount: "1428.00" }));
-  assert.deepEqual(result.actions.map((a) => a.key), ["settle", "cancel"]);
+  assert.deepEqual(
+    result.actions.map((a) => a.key),
+    ["settle", "cancel"],
+  );
   assert.equal(result.prompt.key, "hintFullyCredited");
 });
 
@@ -111,7 +131,14 @@ test("a finished invoice offers nothing", () => {
 
 test("every action names the permission it needs", () => {
   // A missing `needs` would show the button to everyone and fail on click.
-  for (const state of ["REVIEW_REQUIRED", "APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "RECONCILIATION_EXCEPTION", "INFO_REQUESTED"]) {
+  for (const state of [
+    "REVIEW_REQUIRED",
+    "APPROVED",
+    "ACCOUNTING_READY",
+    "PAYMENT_PENDING",
+    "RECONCILIATION_EXCEPTION",
+    "INFO_REQUESTED",
+  ]) {
     for (const action of availableActions(invoice({ state })).actions) {
       assert.ok(action.needs, `${state}/${action.key} has no permission`);
     }
@@ -135,18 +162,28 @@ test("an invoice walks the payment path", () => {
 
 test("a credit note is never shown a payment it will not receive", () => {
   const path = pathFor("CREDITED", "CREDIT_NOTE");
-  assert.deepEqual(path.filter((s) => ["PAYMENT_PENDING", "PAID", "RECONCILED"].includes(s)), []);
+  assert.deepEqual(
+    path.filter((s) => ["PAYMENT_PENDING", "PAID", "RECONCILED"].includes(s)),
+    [],
+  );
   assert.equal(path.at(-1), "CREDITED");
 });
 
 test("an invoice settled by credit ends there, whatever its type says", () => {
   const path = pathFor("SETTLED_BY_CREDIT", "INVOICE");
   assert.equal(path.at(-1), "SETTLED_BY_CREDIT");
-  assert.deepEqual(path.filter((s) => ["PAYMENT_PENDING", "PAID"].includes(s)), []);
+  assert.deepEqual(
+    path.filter((s) => ["PAYMENT_PENDING", "PAID"].includes(s)),
+    [],
+  );
 });
 
 test("every path starts at intake and reaches the state it is drawn for", () => {
-  for (const [state, type] of [["PAID", "INVOICE"], ["CREDITED", "CREDIT_NOTE"], ["SETTLED_BY_CREDIT", "INVOICE"]]) {
+  for (const [state, type] of [
+    ["PAID", "INVOICE"],
+    ["CREDITED", "CREDIT_NOTE"],
+    ["SETTLED_BY_CREDIT", "INVOICE"],
+  ]) {
     const path = pathFor(state, type);
     assert.equal(path[0], "RECEIVED", `${state} starts at intake`);
     assert.ok(path.includes(state), `${state} appears on its own path`);
@@ -177,12 +214,23 @@ test("a payment on its way can be reported as failed, with a reason", () => {
 
 test("a failed payment is instructed again or stopped", () => {
   const result = availableActions(invoice({ state: "PAYMENT_FAILED" }));
-  assert.deepEqual(result.actions.map((a) => a.key), ["retry", "cancel"]);
+  assert.deepEqual(
+    result.actions.map((a) => a.key),
+    ["retry", "cancel"],
+  );
   assert.equal(result.prompt.key, "hintPaymentFailed");
 });
 
 test("each context fills at most one button, never a destructive one, and offers the same actions as before", () => {
-  const every = ["REVIEW_REQUIRED", "INFO_REQUESTED", "APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAYMENT_FAILED", "RECONCILIATION_EXCEPTION"];
+  const every = [
+    "REVIEW_REQUIRED",
+    "INFO_REQUESTED",
+    "APPROVED",
+    "ACCOUNTING_READY",
+    "PAYMENT_PENDING",
+    "PAYMENT_FAILED",
+    "RECONCILIATION_EXCEPTION",
+  ];
   for (const state of every) {
     const offered = availableActions(invoice({ state })).actions;
     const key = primaryAction(invoice({ state }), offered);
@@ -192,7 +240,10 @@ test("each context fills at most one button, never a destructive one, and offers
 });
 
 test("the filled button is the step that moves the invoice on, or the one a stopped review expects", () => {
-  const primary = (over) => { const inv = invoice(over); return primaryAction(inv, availableActions(inv).actions); };
+  const primary = (over) => {
+    const inv = invoice(over);
+    return primaryAction(inv, availableActions(inv).actions);
+  };
   assert.equal(primary({ state: "REVIEW_REQUIRED" }), "accept");
   const stuck = { state: "REVIEW_REQUIRED", payable_blockers: ["supplier_iban_match"] };
   assert.equal(primary({ ...stuck, review_reason: "SUPPLIER_IBAN_MATCH" }), "request-info");

@@ -13,21 +13,25 @@ export function authRouter({ pool }) {
 
   router.post("/login", async (req, res, next) => {
     try {
-      const email = String(req.body?.email ?? "").trim().toLowerCase();
+      const email = String(req.body?.email ?? "")
+        .trim()
+        .toLowerCase();
       const password = String(req.body?.password ?? "");
-      if (!email || !password) return res.status(400).json({ error: "E-Mail und Passwort sind erforderlich", code: "CREDENTIALS_REQUIRED" });
+      if (!email || !password)
+        return res.status(400).json({ error: "E-Mail und Passwort sind erforderlich", code: "CREDENTIALS_REQUIRED" });
 
       // Checked before the account is even looked up, so a throttled answer is
       // the same for an address that exists and one that does not.
       if (!(await admitAttempt(pool, req.ip, email))) {
         res.set("Retry-After", String(LOGIN_LIMITS.windowMinutes * 60));
-        return res.status(429).json({ error: "Zu viele Fehlversuche von dieser Adresse. Bitte später erneut versuchen.", code: "LOGIN_THROTTLED" });
+        return res
+          .status(429)
+          .json({ error: "Zu viele Fehlversuche von dieser Adresse. Bitte später erneut versuchen.", code: "LOGIN_THROTTLED" });
       }
 
-      const { rows: [user] } = await pool.query(
-        "select id, name, email, role, password_hash, password_salt from finops.users where lower(email) = $1",
-        [email],
-      );
+      const {
+        rows: [user],
+      } = await pool.query("select id, name, email, role, password_hash, password_salt from finops.users where lower(email) = $1", [email]);
 
       // An unknown address spends the same work as a known one, so the answer
       // cannot be told apart by how long it took.

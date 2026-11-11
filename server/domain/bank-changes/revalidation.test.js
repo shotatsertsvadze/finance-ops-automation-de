@@ -41,30 +41,41 @@ async function upload(buffer, name) {
 
 const invoice = async (id) => (await deps.pool.query("select state, had_exception from finops.invoices where id = $1", [id])).rows[0];
 
-const checksOfRun = async (id, runNo) => Object.fromEntries((await deps.pool.query(
-  "select check_code, status from finops.validation_results where invoice_id = $1 and run_no = $2", [id, runNo],
-)).rows.map((r) => [r.check_code, r.status]));
+const checksOfRun = async (id, runNo) =>
+  Object.fromEntries(
+    (
+      await deps.pool.query("select check_code, status from finops.validation_results where invoice_id = $1 and run_no = $2", [id, runNo])
+    ).rows.map((r) => [r.check_code, r.status]),
+  );
 
-const runs = async (id) => (await deps.pool.query(
-  "select distinct run_no from finops.validation_results where invoice_id = $1 order by run_no", [id],
-)).rows.map((r) => r.run_no);
+const runs = async (id) =>
+  (await deps.pool.query("select distinct run_no from finops.validation_results where invoice_id = $1 order by run_no", [id])).rows.map(
+    (r) => r.run_no,
+  );
 
-const links = async (changeId) => (await deps.pool.query(
-  "select invoice_id, from_state, to_state, from_run_no, to_run_no from finops.bank_change_revalidations where change_id = $1", [changeId],
-)).rows;
+const links = async (changeId) =>
+  (
+    await deps.pool.query(
+      "select invoice_id, from_state, to_state, from_run_no, to_run_no from finops.bank_change_revalidations where change_id = $1",
+      [changeId],
+    )
+  ).rows;
 
 /** A verified change for this supplier and IBAN, ready for the third person. */
 async function verifiedChange(supplierId, iban) {
   const { change } = await proposeChange(deps, { supplierId, iban, reason: "Kontowechsel laut Lieferant", actor: clerk });
   await verifyChange(deps, {
-    changeId: change.id, actor: human(USERS.finance), outcome: "CONFIRMED", contactedRole: "Buchhaltung",
-    calledAt: new Date().toISOString(), ibanReadBack: iban,
+    changeId: change.id,
+    actor: human(USERS.finance),
+    outcome: "CONFIRMED",
+    contactedRole: "Buchhaltung",
+    calledAt: new Date().toISOString(),
+    ibanReadBack: iban,
   });
   return change;
 }
 
-const approve = (change, depsOverride = deps) =>
-  approveAndRevalidate(depsOverride, { changeId: change.id, actor: human(USERS.finance2) });
+const approve = (change, depsOverride = deps) => approveAndRevalidate(depsOverride, { changeId: change.id, actor: human(USERS.finance2) });
 
 test("the invoice that carried the new account is validated again: a new run, the old one kept", async () => {
   const b = await upload(fixture("B_iban_changed_2499.xml"), "B.xml");
@@ -73,19 +84,29 @@ test("the invoice that carried the new account is validated again: a new run, th
 
   const { revalidation } = await approve(change);
 
-  assert.deepEqual(revalidation.revalidated.map((r) => [r.invoice_id, r.to_state]), [[b, "READY_FOR_APPROVAL"]]);
+  assert.deepEqual(
+    revalidation.revalidated.map((r) => [r.invoice_id, r.to_state]),
+    [[b, "READY_FOR_APPROVAL"]],
+  );
   assert.equal((await invoice(b)).state, "READY_FOR_APPROVAL");
   assert.deepEqual(await runs(b), [1, 2]);
   assert.equal((await checksOfRun(b, 1)).supplier_iban_match, "FAILED", "the first run is history, unchanged");
   assert.equal((await checksOfRun(b, 2)).supplier_iban_match, "PASSED");
-  assert.deepEqual(await links(change.id), [{ invoice_id: b, from_state: "REVIEW_REQUIRED", to_state: "READY_FOR_APPROVAL", from_run_no: 1, to_run_no: 2 }]);
+  assert.deepEqual(await links(change.id), [
+    { invoice_id: b, from_state: "REVIEW_REQUIRED", to_state: "READY_FOR_APPROVAL", from_run_no: 1, to_run_no: 2 },
+  ]);
 
-  const { rows: [started] } = await deps.pool.query(
-    "select actor_type, evidence from finops.audit_events where invoice_id = $1 and action = 'reprocessing_started'", [b],
+  const {
+    rows: [started],
+  } = await deps.pool.query(
+    "select actor_type, evidence from finops.audit_events where invoice_id = $1 and action = 'reprocessing_started'",
+    [b],
   );
   assert.equal(started.actor_type, "SYSTEM");
   assert.equal(started.evidence.change_no, change.change_no, "the invoice's trail names the change");
-  const { rows: [done] } = await deps.pool.query("select revalidated_at from finops.bank_account_changes where id = $1", [change.id]);
+  const {
+    rows: [done],
+  } = await deps.pool.query("select revalidated_at from finops.bank_account_changes where id = $1", [change.id]);
   assert.ok(done.revalidated_at, "nothing is left to revalidate");
 });
 
@@ -118,7 +139,10 @@ test("an invoice waiting for information is left alone until a person says it ar
   const change = await verifiedChange(S2, B_IBAN);
 
   const { revalidation } = await approve(change);
-  assert.deepEqual(revalidation.waiting.map((w) => w.invoice_id), [b]);
+  assert.deepEqual(
+    revalidation.waiting.map((w) => w.invoice_id),
+    [b],
+  );
   assert.equal((await invoice(b)).state, "INFO_REQUESTED");
   assert.deepEqual(await runs(b), [1]);
 
@@ -129,9 +153,15 @@ test("an invoice waiting for information is left alone until a person says it ar
   assert.deepEqual(await runs(b), [1]);
 
   const retry = await revalidateChange(deps, change.id, clerk);
-  assert.deepEqual(retry.revalidated.map((r) => r.to_state), ["READY_FOR_APPROVAL"]);
-  const { rows: [started] } = await deps.pool.query(
-    "select actor_type, actor_id from finops.audit_events where invoice_id = $1 and action = 'reprocessing_started'", [b],
+  assert.deepEqual(
+    retry.revalidated.map((r) => r.to_state),
+    ["READY_FOR_APPROVAL"],
+  );
+  const {
+    rows: [started],
+  } = await deps.pool.query(
+    "select actor_type, actor_id from finops.audit_events where invoice_id = $1 and action = 'reprocessing_started'",
+    [b],
   );
   assert.deepEqual(started, { actor_type: "HUMAN", actor_id: USERS.clerk }, "a retry is the person's act");
 });
@@ -188,12 +218,20 @@ test("a crash before the link leaves no run behind, and the retry runs the invoi
   const b = await upload(fixture("B_iban_changed_2499.xml"), "B.xml");
   const change = await verifiedChange(S2, B_IBAN);
 
-  const { change: approved, revalidation } = await approve(change, { ...deps, pool: crashingOnce(deps.pool, /insert into finops\.bank_change_revalidations/) });
+  const { change: approved, revalidation } = await approve(change, {
+    ...deps,
+    pool: crashingOnce(deps.pool, /insert into finops\.bank_change_revalidations/),
+  });
   assert.equal(approved.state, "APPROVED", "the master-data change is committed first");
-  assert.deepEqual(revalidation.failed.map((f) => f.invoice_id), [b]);
+  assert.deepEqual(
+    revalidation.failed.map((f) => f.invoice_id),
+    [b],
+  );
   assert.deepEqual(await runs(b), [1], "the run went with its missing link");
   assert.equal((await invoice(b)).state, "REVIEW_REQUIRED");
-  const { rows: [open] } = await deps.pool.query("select revalidated_at from finops.bank_account_changes where id = $1", [change.id]);
+  const {
+    rows: [open],
+  } = await deps.pool.query("select revalidated_at from finops.bank_account_changes where id = $1", [change.id]);
   assert.equal(open.revalidated_at, null, "incomplete until the retry");
 
   const [first, second] = await Promise.all([revalidateChange(deps, change.id, clerk), revalidateChange(deps, change.id, clerk)]);
@@ -221,7 +259,9 @@ test("an invoice re-validated by hand in the meantime is no longer pending", asy
   assert.deepEqual(await pendingInvoices(deps.pool, change), []);
   const retry = await revalidateChange(deps, change.id, clerk);
   assert.deepEqual(retry, { revalidated: [], waiting: [], failed: [] });
-  const { rows: [done] } = await deps.pool.query("select revalidated_at from finops.bank_account_changes where id = $1", [change.id]);
+  const {
+    rows: [done],
+  } = await deps.pool.query("select revalidated_at from finops.bank_account_changes where id = $1", [change.id]);
   assert.ok(done.revalidated_at);
 });
 

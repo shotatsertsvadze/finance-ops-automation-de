@@ -7,11 +7,15 @@ import { changesForInvoice } from "../bank-changes/queries.js";
 /** Read models for the API. No business logic here. */
 
 /** One page of the list, newest first, and how many there are in all (ADR-066). */
-export async function listInvoices(pool, { state, limit = 50, offset = 0 } = {}) {
-  const { rows: [count] } = await pool.query(
-    "select count(*)::int as total from finops.invoices where ($1::text is null or state = $1::finops.invoice_state)",
-    [state ?? null],
-  );
+export async function listInvoices(
+  pool,
+  { state, limit = 50, offset = 0 } = /** @type {{ state?: string, limit?: number, offset?: number }} */ ({}),
+) {
+  const {
+    rows: [count],
+  } = await pool.query("select count(*)::int as total from finops.invoices where ($1::text is null or state = $1::finops.invoice_state)", [
+    state ?? null,
+  ]);
   const { rows } = await pool.query(
     `select i.id, i.state, i.review_reason, i.received_at, i.source_channel, i.original_filename,
             i.invoice_number, i.issue_date, i.due_date, i.supplier_name_raw, i.gross_amount, i.currency,
@@ -41,7 +45,9 @@ export async function countInvoices(pool) {
 }
 
 export async function getInvoiceDetail(pool, id) {
-  const { rows: [invoice] } = await pool.query(
+  const {
+    rows: [invoice],
+  } = await pool.query(
     `select i.*, s.supplier_no, s.legal_name as supplier_name, s.status as supplier_status, s.default_cost_center,
             p.po_number, p.remaining_amount as po_remaining_amount, p.approved_amount as po_approved_amount, p.cost_center as po_cost_center,
             d.invoice_number as duplicate_of_number,
@@ -58,36 +64,41 @@ export async function getInvoiceDetail(pool, id) {
     [id],
   );
   if (!invoice) return null;
-  const [lines, results, decision, steps, events, accounting, payment, bankTx, openCredit, poAvailable, bankChanges, officialRuns] = await Promise.all([
-    pool.query("select * from finops.invoice_lines where invoice_id = $1 order by line_no", [id]),
-    pool.query(
-      `select * from finops.validation_results where invoice_id = $1
+  const [lines, results, decision, steps, events, accounting, payment, bankTx, openCredit, poAvailable, bankChanges, officialRuns] =
+    await Promise.all([
+      pool.query("select * from finops.invoice_lines where invoice_id = $1 order by line_no", [id]),
+      pool.query(
+        `select * from finops.validation_results where invoice_id = $1
          and run_no = (select max(run_no) from finops.validation_results where invoice_id = $1)
-       order by phase, id`, [id],
-    ),
-    pool.query("select * from finops.routing_decisions where invoice_id = $1 order by run_no desc limit 1", [id]),
-    pool.query(
-      `select a.*, u.name as actor_name from finops.approval_steps a left join finops.users u on u.id = a.actor_id
-       where a.invoice_id = $1 order by a.round, a.step_no`, [id],
-    ),
-    pool.query(
-      `select e.*, u.name as actor_name from finops.audit_events e left join finops.users u on u.id = e.actor_id
-       where e.invoice_id = $1 order by e.occurred_at, e.id`, [id],
-    ),
-    pool.query("select * from finops.accounting_records where invoice_id = $1 order by reverses_document_no nulls first, tax_key", [id]),
-    // The latest attempt: a failed one stays on record, a retry supersedes it (ADR-055).
-    pool.query("select * from finops.payment_instructions where invoice_id = $1 order by created_at desc limit 1", [id]),
-    pool.query("select * from finops.bank_transactions where matched_invoice_id = $1 order by value_date", [id]),
-    openCreditCents(pool, invoice),
-    invoice.purchase_order_id ? availableCents(pool, invoice.purchase_order_id, id, { lock: false }) : null,
-    changesForInvoice(pool, invoice),
-    // The latest official validation, without the raw report (ADR-078).
-    pool.query(
-      `select run_no, outcome, verdict, http_status, validator_version, configuration_version, scenario, document_sha256,
+       order by phase, id`,
+        [id],
+      ),
+      pool.query("select * from finops.routing_decisions where invoice_id = $1 order by run_no desc limit 1", [id]),
+      pool.query(
+        `select a.*, u.name as actor_name from finops.approval_steps a left join finops.users u on u.id = a.actor_id
+       where a.invoice_id = $1 order by a.round, a.step_no`,
+        [id],
+      ),
+      pool.query(
+        `select e.*, u.name as actor_name from finops.audit_events e left join finops.users u on u.id = e.actor_id
+       where e.invoice_id = $1 order by e.occurred_at, e.id`,
+        [id],
+      ),
+      pool.query("select * from finops.accounting_records where invoice_id = $1 order by reverses_document_no nulls first, tax_key", [id]),
+      // The latest attempt: a failed one stays on record, a retry supersedes it (ADR-055).
+      pool.query("select * from finops.payment_instructions where invoice_id = $1 order by created_at desc limit 1", [id]),
+      pool.query("select * from finops.bank_transactions where matched_invoice_id = $1 order by value_date", [id]),
+      openCreditCents(pool, invoice),
+      invoice.purchase_order_id ? availableCents(pool, invoice.purchase_order_id, id, { lock: false }) : null,
+      changesForInvoice(pool, invoice),
+      // The latest official validation, without the raw report (ADR-078).
+      pool.query(
+        `select run_no, outcome, verdict, http_status, validator_version, configuration_version, scenario, document_sha256,
               reported_document_sha256, messages, error, duration_ms, report_sha256, validated_at
-       from finops.official_validations where invoice_id = $1 order by run_no desc limit 1`, [id],
-    ),
-  ]);
+       from finops.official_validations where invoice_id = $1 order by run_no desc limit 1`,
+        [id],
+      ),
+    ]);
   const { file_path, parsed, ...rest } = invoice;
   return {
     ...rest,
@@ -98,9 +109,15 @@ export async function getInvoiceDetail(pool, id) {
     open_credit_amount: centsToDecimal(openCredit),
     po_available_amount: centsToDecimal(poAvailable),
     lines: lines.rows,
-    validation: { technical: results.rows.filter((r) => r.phase === "TECHNICAL"), business: results.rows.filter((r) => r.phase === "BUSINESS") },
+    validation: {
+      technical: results.rows.filter((r) => r.phase === "TECHNICAL"),
+      business: results.rows.filter((r) => r.phase === "BUSINESS"),
+    },
     // What stops a release from review, as the release itself decides it (ADR-071).
-    payable_blockers: payableBlockers(invoice, results.rows.filter((r) => r.status === "FAILED").map((r) => r.check_code)),
+    payable_blockers: payableBlockers(
+      invoice,
+      results.rows.filter((r) => r.status === "FAILED").map((r) => r.check_code),
+    ),
     // Proposals to trust the IBAN this invoice carries (ADR-077).
     bank_changes: bankChanges,
     official_validation: officialRuns.rows[0] ?? null,

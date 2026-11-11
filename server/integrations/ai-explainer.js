@@ -46,7 +46,11 @@ const UNSUPPORTED = new Set(["maxLength", "minLength", "uniqueItems", "minimum",
 export function outputSchema(schema) {
   if (Array.isArray(schema)) return schema.map(outputSchema);
   if (!schema || typeof schema !== "object") return schema;
-  return Object.fromEntries(Object.entries(schema).filter(([key]) => !UNSUPPORTED.has(key)).map(([key, value]) => [key, outputSchema(value)]));
+  return Object.fromEntries(
+    Object.entries(schema)
+      .filter(([key]) => !UNSUPPORTED.has(key))
+      .map(([key, value]) => [key, outputSchema(value)]),
+  );
 }
 
 export function createAnthropicExplainer({ apiKey, model = DEFAULT_MODEL, timeoutMs, maxTokens, url = "https://api.anthropic.com" }) {
@@ -64,7 +68,9 @@ export function createAnthropicExplainer({ apiKey, model = DEFAULT_MODEL, timeou
           method: "POST",
           headers: { "x-api-key": apiKey, "anthropic-version": API_VERSION, "content-type": "application/json" },
           body: JSON.stringify({
-            model, max_tokens: maxTokens, system,
+            model,
+            max_tokens: maxTokens,
+            system,
             messages: [{ role: "user", content: message }],
             thinking: { type: "between_tools" },
             output_config: { format: { type: "json_schema", schema: outputSchema(tool.input_schema) } },

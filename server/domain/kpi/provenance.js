@@ -10,19 +10,27 @@ const SOURCES = {
   // The PoC holds synthetic data only. Run on a pilot's real invoices, these
   // figures would be PILOT_RESULT, with the period they cover.
   SYNTHETIC: {
-    label: "Synthetische Demo-Daten", available: true, period: null,
+    label: "Synthetische Demo-Daten",
+    available: true,
+    period: null,
     explanation: "Korrekt berechnet, aber aus den synthetischen Demo-Rechnungen und ihrem Prüfprotokoll; kein realer Prozess",
   },
   ASSUMPTION: {
-    label: "Modellannahme", available: true, period: null,
+    label: "Modellannahme",
+    available: true,
+    period: null,
     explanation: "Szenario-Eingabe aus docs/IST_PROCESS.md, nicht gemessen",
   },
   CUSTOMER_BASELINE: {
-    label: "Kunden-Baseline", available: false, period: null,
+    label: "Kunden-Baseline",
+    available: false,
+    period: null,
     explanation: "Nicht gemessen: keine Ausgangswerte eines Kunden erfasst",
   },
   PILOT_RESULT: {
-    label: "Pilot-Ergebnis", available: false, period: null,
+    label: "Pilot-Ergebnis",
+    available: false,
+    period: null,
     explanation: "Nicht gemessen: kein Pilotbetrieb",
   },
 };

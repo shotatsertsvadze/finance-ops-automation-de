@@ -16,9 +16,7 @@ export async function createSession(pool, userId, userAgent) {
   const expiresAt = new Date(Date.now() + SESSION_HOURS * 3600 * 1000);
   // Sessions that ended more than a day ago go at each sign-in; a day's worth
   // stays for anyone asking who was signed in when (ADR-065).
-  await pool.query(
-    "delete from finops.sessions where expires_at < now() - interval '1 day' or revoked_at < now() - interval '1 day'",
-  );
+  await pool.query("delete from finops.sessions where expires_at < now() - interval '1 day' or revoked_at < now() - interval '1 day'");
   await pool.query(
     `insert into finops.sessions (user_id, token_hash, csrf_token, expires_at, user_agent)
      values ($1, $2, $3, $4, $5)`,
@@ -30,7 +28,9 @@ export async function createSession(pool, userId, userAgent) {
 /** The signed-in user, or null. Also refreshes last_seen_at. */
 export async function resolveSession(pool, token) {
   if (!token) return null;
-  const { rows: [row] } = await pool.query(
+  const {
+    rows: [row],
+  } = await pool.query(
     `select s.id, s.csrf_token, s.expires_at, u.id as user_id, u.name, u.email, u.role
      from finops.sessions s join finops.users u on u.id = s.user_id
      where s.token_hash = $1 and s.revoked_at is null and s.expires_at > now()`,
@@ -39,10 +39,9 @@ export async function resolveSession(pool, token) {
   if (!row) return null;
   // At most once a minute: "when was this session last used" needs no finer
   // grain, and a write on every read is a write on every request (ADR-065).
-  await pool.query(
-    "update finops.sessions set last_seen_at = now() where id = $1 and last_seen_at < now() - interval '1 minute'",
-    [row.id],
-  );
+  await pool.query("update finops.sessions set last_seen_at = now() where id = $1 and last_seen_at < now() - interval '1 minute'", [
+    row.id,
+  ]);
   return {
     sessionId: row.id,
     csrfToken: row.csrf_token,

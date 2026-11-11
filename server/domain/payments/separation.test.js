@@ -30,7 +30,11 @@ beforeEach(async () => {
 /** E, 30,000.00: signed by manager, finance (Jonas Weber) and CFO, then booked. */
 async function signedByFinance() {
   const invoice = await (await clients.clerk.upload(fixture("E_high_value_30000.xml"), "E.xml")).json();
-  for (const [step, who] of [[1, "manager"], [2, "finance"], [3, "cfo"]]) {
+  for (const [step, who] of [
+    [1, "manager"],
+    [2, "finance"],
+    [3, "cfo"],
+  ]) {
     assert.equal((await clients[who].post(`/api/invoices/${invoice.id}/approvals/${step}/approve`, {})).status, 200);
   }
   assert.equal((await clients.finance.post(`/api/invoices/${invoice.id}/accounting-record`)).status, 200);

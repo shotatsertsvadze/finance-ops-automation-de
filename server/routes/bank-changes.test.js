@@ -40,7 +40,11 @@ async function uploadH() {
 
 const proposal = (extra = {}) => ({ supplier_id: S1, iban: H_IBAN, comment: "Neue Bankverbindung laut Rechnung", ...extra });
 const callback = (extra = {}) => ({
-  outcome: "CONFIRMED", contacted_role: "Buchhaltung", called_at: new Date().toISOString(), iban_read_back: H_IBAN, ...extra,
+  outcome: "CONFIRMED",
+  contacted_role: "Buchhaltung",
+  called_at: new Date().toISOString(),
+  iban_read_back: H_IBAN,
+  ...extra,
 });
 
 async function proposed() {
@@ -80,20 +84,35 @@ test("the whole loop: proposed from the invoice, verified by call-back, approved
   assert.equal(approve.status, 200);
   const approved = await approve.json();
   assert.equal(approved.state, "APPROVED");
-  assert.deepEqual(approved.revalidation.revalidated.map((r) => r.to_state), ["READY_FOR_APPROVAL"]);
-  assert.deepEqual(approved.revalidations.map((r) => r.invoice_number), [invoice.invoice_number]);
-  assert.deepEqual(approved.events.map((e) => e.action), ["proposed", "verified", "approved", "revalidation_completed"]);
+  assert.deepEqual(
+    approved.revalidation.revalidated.map((r) => r.to_state),
+    ["READY_FOR_APPROVAL"],
+  );
+  assert.deepEqual(
+    approved.revalidations.map((r) => r.invoice_number),
+    [invoice.invoice_number],
+  );
+  assert.deepEqual(
+    approved.events.map((e) => e.action),
+    ["proposed", "verified", "approved", "revalidation_completed"],
+  );
 
   const detail = await (await as.clerk.get(`/api/invoices/${invoice.id}`)).json();
   assert.equal(detail.state, "READY_FOR_APPROVAL");
-  assert.deepEqual(detail.bank_changes.map((c) => [c.change_no, c.state]), [[change.change_no, "APPROVED"]]);
+  assert.deepEqual(
+    detail.bank_changes.map((c) => [c.change_no, c.state]),
+    [[change.change_no, "APPROVED"]],
+  );
 });
 
 test("the list shows open changes to those who may read them", async () => {
   const change = await proposed();
   const res = await as.cfo.get("/api/bank-changes");
   assert.equal(res.status, 200);
-  assert.deepEqual((await res.json()).map((c) => [c.change_no, c.state, c.supplier_no]), [[change.change_no, "PROPOSED", "S-1001"]]);
+  assert.deepEqual(
+    (await res.json()).map((c) => [c.change_no, c.state, c.supplier_no]),
+    [[change.change_no, "PROPOSED", "S-1001"]],
+  );
 });
 
 test("who may read, propose, verify, approve, reject and cancel", async () => {
@@ -113,7 +132,9 @@ test("who may read, propose, verify, approve, reject and cancel", async () => {
     assert.equal(await status(who, "POST", `/api/bank-changes/${change.id}/reject`, { comment: "x" }), 403, `${who} rejects`);
   }
   assert.equal(await status("admin", "GET", `/api/bank-changes/${change.id}`), 200, "admin reads, and only reads");
-  const { rows: [still] } = await deps.pool.query("select state from finops.bank_account_changes where id = $1", [change.id]);
+  const {
+    rows: [still],
+  } = await deps.pool.query("select state from finops.bank_account_changes where id = $1", [change.id]);
   assert.equal(still.state, "PROPOSED");
 });
 
@@ -139,21 +160,36 @@ test("approval without verification is refused over HTTP too", async () => {
 
 test("a shared IBAN is approved only with the explicit acknowledgement", async () => {
   const shared = "DE89370400440532013000";
-  const res = await as.clerk.post("/api/bank-changes", { supplier_id: "10000000-0000-0000-0000-000000000002", iban: shared, comment: "Factoring" });
+  const res = await as.clerk.post("/api/bank-changes", {
+    supplier_id: "10000000-0000-0000-0000-000000000002",
+    iban: shared,
+    comment: "Factoring",
+  });
   const change = await res.json();
-  assert.deepEqual(change.shared_with_now.map((s) => s.supplier_no), ["S-1001"]);
+  assert.deepEqual(
+    change.shared_with_now.map((s) => s.supplier_no),
+    ["S-1001"],
+  );
   // The acknowledgement answers the warning; it is not a way past the three people.
   const acknowledged = { acknowledge_shared_iban: true };
   assert.equal((await (await as.finance2.post(`/api/bank-changes/${change.id}/approve`, acknowledged)).json()).code, "CHANGE_NOT_VERIFIED");
   await as.finance.post(`/api/bank-changes/${change.id}/verify`, callback({ iban_read_back: shared }));
-  assert.equal((await (await as.finance.post(`/api/bank-changes/${change.id}/approve`, acknowledged)).json()).code, "VERIFIER_CANNOT_APPROVE");
-  assert.equal((await (await as.finance2.post(`/api/bank-changes/${change.id}/approve`, { acknowledge_shared_iban: "yes" })).json()).code, "SHARED_IBAN_NOT_ACKNOWLEDGED");
+  assert.equal(
+    (await (await as.finance.post(`/api/bank-changes/${change.id}/approve`, acknowledged)).json()).code,
+    "VERIFIER_CANNOT_APPROVE",
+  );
+  assert.equal(
+    (await (await as.finance2.post(`/api/bank-changes/${change.id}/approve`, { acknowledge_shared_iban: "yes" })).json()).code,
+    "SHARED_IBAN_NOT_ACKNOWLEDGED",
+  );
   assert.equal((await as.finance2.post(`/api/bank-changes/${change.id}/approve`, { acknowledge_shared_iban: true })).status, 200);
 });
 
 test("a state-changing call needs the CSRF token", async () => {
   const res = await fetch(`${base}/api/bank-changes`, {
-    method: "POST", headers: { Cookie: as.clerk.cookies, "Content-Type": "application/json" }, body: JSON.stringify(proposal()),
+    method: "POST",
+    headers: { Cookie: as.clerk.cookies, "Content-Type": "application/json" },
+    body: JSON.stringify(proposal()),
   });
   assert.equal(res.status, 403);
   assert.equal((await res.json()).code, "CSRF_INVALID");

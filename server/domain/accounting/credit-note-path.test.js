@@ -24,20 +24,33 @@ const upload = (xml) =>
   handleUpload(deps, { buffer: Buffer.from(xml, "utf8"), originalFilename: "doc.xml", sourceChannel: "EMAIL", actor: SYSTEM });
 
 const creditNote = (options = {}) =>
-  buildInvoiceXml({ number: `GS-${Date.now()}-${(counter += 1)}`, netCents: 20000, creditNote: true, credits: "RE-2026-0001", po: "PO-2026-0102", ...options });
+  buildInvoiceXml({
+    number: `GS-${Date.now()}-${(counter += 1)}`,
+    netCents: 20000,
+    creditNote: true,
+    credits: "RE-2026-0001",
+    po: "PO-2026-0102",
+    ...options,
+  });
 
 const stateOf = async (id) => (await deps.pool.query("select state from finops.invoices where id = $1", [id])).rows[0].state;
 const finance = () => human(USERS.finance);
 
-before(async () => { deps = await testDeps(); });
-after(async () => { await deps.pool.end(); });
-beforeEach(async () => { await deps.pool.query("delete from finops.invoices"); });
+before(async () => {
+  deps = await testDeps();
+});
+after(async () => {
+  await deps.pool.end();
+});
+beforeEach(async () => {
+  await deps.pool.query("delete from finops.invoices");
+});
 
 test("a credit note is stored as one, with the invoice it credits", async () => {
   const received = await upload(creditNote());
-  const { rows: [row] } = await deps.pool.query(
-    "select document_type, credits_invoice_raw, gross_amount from finops.invoices where id = $1", [received.id],
-  );
+  const {
+    rows: [row],
+  } = await deps.pool.query("select document_type, credits_invoice_raw, gross_amount from finops.invoices where id = $1", [received.id]);
   assert.equal(row.document_type, "CREDIT_NOTE");
   assert.equal(row.credits_invoice_raw, "RE-2026-0001");
   assert.equal(row.gross_amount, "238.00", "positive, as the document states it");
@@ -45,15 +58,22 @@ test("a credit note is stored as one, with the invoice it credits", async () => 
 
 test("an ordinary invoice is still an invoice", async () => {
   const received = await upload(buildInvoiceXml({ number: `RE-${(counter += 1)}`, netCents: 20000, po: "PO-2026-0102" }));
-  const { rows: [row] } = await deps.pool.query("select document_type, credits_invoice_raw from finops.invoices where id = $1", [received.id]);
+  const {
+    rows: [row],
+  } = await deps.pool.query("select document_type, credits_invoice_raw from finops.invoices where id = $1", [received.id]);
   assert.equal(row.document_type, "INVOICE");
   assert.equal(row.credits_invoice_raw, null);
 });
 
 test("the booking record carries the sign, so accounting sees a reversal", () => {
   const [line] = buildBookingLines(
-    { document_type: "CREDIT_NOTE", supplier_no: "S-1001", invoice_number: "GS-1", currency: "EUR",
-      parsed: { taxSubtotals: [{ category: "S", percent: "19", taxable: "200.00", amount: "38.00" }] } },
+    {
+      document_type: "CREDIT_NOTE",
+      supplier_no: "S-1001",
+      invoice_number: "GS-1",
+      currency: "EUR",
+      parsed: { taxSubtotals: [{ category: "S", percent: "19", taxable: "200.00", amount: "38.00" }] },
+    },
     { documentNo: "BELEG-1", bookingDate: "2026-09-18" },
   );
   assert.equal(line.net_amount, "-200.00");
@@ -63,8 +83,13 @@ test("the booking record carries the sign, so accounting sees a reversal", () =>
 
 test("an invoice's booking record is unchanged", () => {
   const [line] = buildBookingLines(
-    { document_type: "INVOICE", supplier_no: "S-1001", invoice_number: "RE-1", currency: "EUR",
-      parsed: { taxSubtotals: [{ category: "S", percent: "19", taxable: "200.00", amount: "38.00" }] } },
+    {
+      document_type: "INVOICE",
+      supplier_no: "S-1001",
+      invoice_number: "RE-1",
+      currency: "EUR",
+      parsed: { taxSubtotals: [{ category: "S", percent: "19", taxable: "200.00", amount: "38.00" }] },
+    },
     { documentNo: "BELEG-1", bookingDate: "2026-09-18" },
   );
   assert.equal(line.net_amount, "200.00");
@@ -92,9 +117,9 @@ test("booking the credit closes it", async () => {
   await bookCredit(deps, { invoiceId: received.id, actor: finance() });
 
   assert.equal(await stateOf(received.id), "CREDITED");
-  const { rows } = await deps.pool.query(
-    "select action from finops.audit_events where invoice_id = $1 order by occurred_at, id", [received.id],
-  );
+  const { rows } = await deps.pool.query("select action from finops.audit_events where invoice_id = $1 order by occurred_at, id", [
+    received.id,
+  ]);
   assert.ok(rows.map((r) => r.action).includes("credit_booked"), rows.map((r) => r.action).join(", "));
 });
 
@@ -110,14 +135,17 @@ test("an invoice cannot be closed as a credit", async () => {
 
 test("a credit note gives capacity back to the purchase order", async () => {
   // The order was spent by the invoice; the credit note un-spends part of it.
-  const { rows: [order] } = await deps.pool.query(
-    "select id, remaining_amount from finops.purchase_orders where po_number = 'PO-2026-0102'",
-  );
+  const {
+    rows: [order],
+  } = await deps.pool.query("select id, remaining_amount from finops.purchase_orders where po_number = 'PO-2026-0102'");
   const available = async () => {
-    const { rows: [row] } = await deps.pool.query(
+    const {
+      rows: [row],
+    } = await deps.pool.query(
       `select (p.remaining_amount - coalesce(sum(c.amount) filter (where c.status = 'ACTIVE'), 0))::text as free
        from finops.purchase_orders p left join finops.po_commitments c on c.purchase_order_id = p.id
-       where p.id = $1 group by p.remaining_amount`, [order.id],
+       where p.id = $1 group by p.remaining_amount`,
+      [order.id],
     );
     return row.free;
   };

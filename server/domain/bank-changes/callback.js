@@ -26,8 +26,12 @@ export function checkCallback(change, { outcome, contactedRole, calledAt, ibanRe
 
   const readBack = normalizeIban(ibanReadBack) || null;
   if (outcome === "CONFIRMED" && readBack !== change.proposed_iban) {
-    throw new RuleError(409, "IBAN_READ_BACK_MISMATCH",
-      "Die vom Lieferanten genannte IBAN stimmt nicht mit dem Vorschlag überein; als nicht bestätigt erfassen", { read_back: readBack });
+    throw new RuleError(
+      409,
+      "IBAN_READ_BACK_MISMATCH",
+      "Die vom Lieferanten genannte IBAN stimmt nicht mit dem Vorschlag überein; als nicht bestätigt erfassen",
+      { read_back: readBack },
+    );
   }
   return { outcome, contactedRole: role, calledAt: at, ibanReadBack: readBack, reference: reference || null, note: note?.trim() || null };
 }

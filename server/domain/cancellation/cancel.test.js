@@ -38,7 +38,8 @@ async function approved() {
 }
 
 const activeClaims = async (id) =>
-  (await deps.pool.query("select count(*)::int as n from finops.po_commitments where invoice_id = $1 and status = 'ACTIVE'", [id])).rows[0].n;
+  (await deps.pool.query("select count(*)::int as n from finops.po_commitments where invoice_id = $1 and status = 'ACTIVE'", [id])).rows[0]
+    .n;
 
 test("an approved invoice can be stopped, with a reason, and gives its order capacity back", async () => {
   const invoice = await approved();

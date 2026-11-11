@@ -12,10 +12,9 @@ import { transition } from "../workflow/transitions.js";
  */
 export async function bookCredit({ pool }, { invoiceId, actor }) {
   return withTransaction(pool, async (client) => {
-    const locked = await client.query(
-      "select state, document_type, gross_amount, currency from finops.invoices where id = $1 for update",
-      [invoiceId],
-    );
+    const locked = await client.query("select state, document_type, gross_amount, currency from finops.invoices where id = $1 for update", [
+      invoiceId,
+    ]);
     if (locked.rowCount === 0) throw new NotFoundError("INVOICE_NOT_FOUND", "Rechnung nicht gefunden");
     const invoice = locked.rows[0];
 
@@ -33,7 +32,10 @@ export async function bookCredit({ pool }, { invoiceId, actor }) {
     }
 
     await transition(client, {
-      invoiceId, to: "CREDITED", actor, action: "credit_booked",
+      invoiceId,
+      to: "CREDITED",
+      actor,
+      action: "credit_booked",
       reason: `Gutschrift ${invoice.gross_amount} ${invoice.currency ?? "EUR"} gebucht, keine Zahlung`,
     });
   });

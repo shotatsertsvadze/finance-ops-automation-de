@@ -15,7 +15,8 @@ const fixture = (name) => readFileSync(new URL(`../../../fixtures/xrechnung/${na
 let deps;
 const upload = (name) => handleUpload(deps, { buffer: fixture(name), originalFilename: name, sourceChannel: "UPLOAD", actor: SYSTEM });
 const detail = (id) => getInvoiceDetail(deps.pool, id);
-const failedCodes = (d) => [...d.validation.technical, ...d.validation.business].filter((c) => c.status === "FAILED").map((c) => c.check_code);
+const failedCodes = (d) =>
+  [...d.validation.technical, ...d.validation.business].filter((c) => c.status === "FAILED").map((c) => c.check_code);
 
 before(async () => {
   deps = await testDeps();
@@ -29,12 +30,18 @@ test("A: clean 1240 EUR waits for one MANAGER approval with a full audit trail",
   assert.equal(d.gross_amount, "1240.00");
   assert.equal(d.supplier_no, "S-1001");
   assert.equal(d.po_number, "PO-2026-0101");
-  assert.deepEqual(d.approval_steps.map((s) => [s.step_no, s.required_role, s.status]), [[1, "MANAGER", "PENDING"]]);
-  assert.deepEqual(d.audit_events.map((e) => [e.action, e.from_state, e.to_state]), [
-    ["received", null, "RECEIVED"],
-    ["processing_started", "RECEIVED", "VALIDATING"],
-    ["routed_to_approval", "VALIDATING", "READY_FOR_APPROVAL"],
-  ]);
+  assert.deepEqual(
+    d.approval_steps.map((s) => [s.step_no, s.required_role, s.status]),
+    [[1, "MANAGER", "PENDING"]],
+  );
+  assert.deepEqual(
+    d.audit_events.map((e) => [e.action, e.from_state, e.to_state]),
+    [
+      ["received", null, "RECEIVED"],
+      ["processing_started", "RECEIVED", "VALIDATING"],
+      ["routed_to_approval", "VALIDATING", "READY_FOR_APPROVAL"],
+    ],
+  );
   assert.equal(d.routing.decision, "APPROVAL");
   assert.equal(d.lines.length, 3);
 });
@@ -72,7 +79,10 @@ const uploadXml = (xml, name) =>
 const checkOf = (d, code) => d.validation.business.find((c) => c.check_code === code);
 
 test("an invoice at two rates that add up is processed like any clean invoice", async () => {
-  const { id } = await uploadXml(buildInvoiceXml({ number: "TAX-MIXED-1", netCents: 5000, reducedNetCents: 5000, po: "PO-2026-0101" }), "mixed.xml");
+  const { id } = await uploadXml(
+    buildInvoiceXml({ number: "TAX-MIXED-1", netCents: 5000, reducedNetCents: 5000, po: "PO-2026-0101" }),
+    "mixed.xml",
+  );
   const d = await detail(id);
   assert.equal(checkOf(d, "tax_breakdown_bookable")?.status, "PASSED");
   assert.equal(d.state, "APPROVED", "113.00 is under the auto-approve limit");
@@ -92,8 +102,11 @@ test("a rate with no tax key stops the invoice, and review cannot release it", a
 
 // --- a line that cannot be recomputed (ADR-081) ------------------------------
 
-const withoutQuantity = (number) => buildInvoiceXml({ number, netCents: 20000, po: "PO-2026-0101" })
-  .replace('<cbc:InvoicedQuantity unitCode="C62">1</cbc:InvoicedQuantity>', "");
+const withoutQuantity = (number) =>
+  buildInvoiceXml({ number, netCents: 20000, po: "PO-2026-0101" }).replace(
+    '<cbc:InvoicedQuantity unitCode="C62">1</cbc:InvoicedQuantity>',
+    "",
+  );
 
 test("without a validator, an invoice whose line has no quantity goes to review, not straight through", async () => {
   const { id } = await uploadXml(withoutQuantity("NOQTY-DEV-1"), "noqty.xml");
@@ -106,9 +119,15 @@ test("without a validator, an invoice whose line has no quantity goes to review,
 test("a required validator that is missing or unreachable still stops the same invoice first", async () => {
   const validators = { missing: { client: null, required: true }, unreachable: standInValidator(ANSWERS.unavailable) };
   for (const [what, officialValidator] of Object.entries(validators)) {
-    const { id } = await handleUpload({ ...deps, officialValidator }, {
-      buffer: Buffer.from(withoutQuantity(`NOQTY-${what}`)), originalFilename: "noqty.xml", sourceChannel: "UPLOAD", actor: SYSTEM,
-    });
+    const { id } = await handleUpload(
+      { ...deps, officialValidator },
+      {
+        buffer: Buffer.from(withoutQuantity(`NOQTY-${what}`)),
+        originalFilename: "noqty.xml",
+        sourceChannel: "UPLOAD",
+        actor: SYSTEM,
+      },
+    );
     const d = await detail(id);
     assert.equal(d.state, "REVIEW_REQUIRED", what);
     assert.equal(d.review_reason, "TECHNICAL_VALIDATION_FAILED", what);
@@ -126,7 +145,10 @@ test("E: 30000 EUR requires MANAGER, FINANCE and CFO", async () => {
   const { id } = await upload("E_high_value_30000.xml");
   const d = await detail(id);
   assert.equal(d.state, "READY_FOR_APPROVAL");
-  assert.deepEqual(d.approval_steps.map((s) => s.required_role), ["MANAGER", "FINANCE", "CFO"]);
+  assert.deepEqual(
+    d.approval_steps.map((s) => s.required_role),
+    ["MANAGER", "FINANCE", "CFO"],
+  );
 });
 
 test("F: malformed file fails closed into the review queue and keeps the file", async () => {
@@ -136,26 +158,38 @@ test("F: malformed file fails closed into the review queue and keeps the file", 
   assert.equal(d.review_reason, "TECHNICAL_VALIDATION_FAILED");
   assert.equal(d.validation.business.length, 0);
   assert.ok(failedCodes(d).includes("required_fields_present"));
-  const file = await deps.storage.read((await deps.pool.query("select file_path from finops.invoices where id = $1", [id])).rows[0].file_path);
+  const file = await deps.storage.read(
+    (await deps.pool.query("select file_path from finops.invoices where id = $1", [id])).rows[0].file_path,
+  );
   assert.equal(file.length, fixture("F_malformed.xml").length);
 });
 
 test("identical file uploaded again becomes DUPLICATE and is not processed", async () => {
-  const first = (await deps.pool.query("select id from finops.invoices where original_filename = 'A_clean_1240.xml' and state <> 'DUPLICATE'")).rows[0].id;
+  const first = (
+    await deps.pool.query("select id from finops.invoices where original_filename = 'A_clean_1240.xml' and state <> 'DUPLICATE'")
+  ).rows[0].id;
   const { id, state } = await upload("A_clean_1240.xml");
   assert.equal(state, "DUPLICATE");
   const d = await detail(id);
   assert.equal(d.state, "DUPLICATE");
   assert.equal(d.duplicate_of, first);
   assert.equal(d.validation.technical.length, 0);
-  assert.deepEqual(d.audit_events.map((e) => e.action), ["duplicate_file_detected"]);
+  assert.deepEqual(
+    d.audit_events.map((e) => e.action),
+    ["duplicate_file_detected"],
+  );
   const original = await detail(first);
   assert.equal(original.audit_events.at(-1).action, "duplicate_attempt");
   assert.equal(original.state, "READY_FOR_APPROVAL");
 });
 
 test("non-XML bytes fail closed and stay visible", async () => {
-  const { id } = await handleUpload(deps, { buffer: Buffer.from("%PDF-1.7 nope"), originalFilename: "scan.xml", sourceChannel: "EMAIL", actor: SYSTEM });
+  const { id } = await handleUpload(deps, {
+    buffer: Buffer.from("%PDF-1.7 nope"),
+    originalFilename: "scan.xml",
+    sourceChannel: "EMAIL",
+    actor: SYSTEM,
+  });
   const d = await detail(id);
   assert.equal(d.state, "REVIEW_REQUIRED");
   assert.equal(d.source_channel, "EMAIL");
@@ -166,10 +200,12 @@ test("database forbids two payable records for the same supplier invoice number"
   // even if application code were wrong. Cleaned up so the audit-completeness
   // test below only sees invoices that went through the real pipeline.
   const supplier = (await deps.pool.query("select id from finops.suppliers where supplier_no = 'S-1001'")).rows[0].id;
-  const insert = (n) => deps.pool.query(
-    `insert into finops.invoices (state, source_channel, original_filename, file_sha256, file_path, file_size_bytes, supplier_id, invoice_number)
-     values ('APPROVED', 'TEST', 'x', $1, 'x', 1, $2, 'INV-DUP-1')`, [`hash-${n}`, supplier],
-  );
+  const insert = (n) =>
+    deps.pool.query(
+      `insert into finops.invoices (state, source_channel, original_filename, file_sha256, file_path, file_size_bytes, supplier_id, invoice_number)
+     values ('APPROVED', 'TEST', 'x', $1, 'x', 1, $2, 'INV-DUP-1')`,
+      [`hash-${n}`, supplier],
+    );
   try {
     await insert(1);
     await assert.rejects(insert(2), (e) => e.code === "23505");
@@ -193,7 +229,9 @@ test("an undeclared transition throws and writes nothing", async () => {
 test("a human action without actor id is refused", async () => {
   const { id } = (await deps.pool.query("select id from finops.invoices where state = 'REVIEW_REQUIRED' limit 1")).rows[0];
   await assert.rejects(
-    withTransaction(deps.pool, (client) => transition(client, { invoiceId: id, to: "REJECTED", actor: { type: "HUMAN", id: null }, action: "review_rejected" })),
+    withTransaction(deps.pool, (client) =>
+      transition(client, { invoiceId: id, to: "REJECTED", actor: { type: "HUMAN", id: null }, action: "review_rejected" }),
+    ),
     /ohne Akteur/,
   );
 });
@@ -204,7 +242,9 @@ test("every state change has exactly one audit event", async () => {
      from finops.invoices i`,
   );
   for (const r of rows) assert.equal(r.last_to, r.state, r.id);
-  const { rows: [gap] } = await deps.pool.query(
+  const {
+    rows: [gap],
+  } = await deps.pool.query(
     `select count(*)::int as n from finops.audit_events e
      where e.from_state is not null and e.from_state <> e.to_state and not exists (
        select 1 from finops.audit_events p where p.invoice_id = e.invoice_id and p.to_state = e.from_state and p.id < e.id)`,
@@ -219,21 +259,33 @@ test("reprocess is allowed from REVIEW_REQUIRED and refused from APPROVED", asyn
   assert.equal(d.state, "REVIEW_REQUIRED");
   assert.equal(d.routing.run_no, 2);
   assert.ok(d.audit_events.some((e) => e.action === "reprocessing_started"));
-  const approved = (await deps.pool.query("select id from finops.invoices where state = 'APPROVED' and invoice_number is not null limit 1")).rows[0].id;
+  const approved = (await deps.pool.query("select id from finops.invoices where state = 'APPROVED' and invoice_number is not null limit 1"))
+    .rows[0].id;
   await assert.rejects(processInvoice(deps, approved, SYSTEM), TransitionError);
 });
 
 test("after the IBAN is approved in master data, re-validation clears the exception", async () => {
   const review = (await deps.pool.query("select id, supplier_id from finops.invoices where review_reason = 'SUPPLIER_IBAN_MATCH'")).rows[0];
-  await deps.pool.query("insert into finops.supplier_bank_accounts (supplier_id, iban, status) values ($1, 'DE02300209000106531065', 'ACTIVE')", [review.supplier_id]);
+  await deps.pool.query(
+    "insert into finops.supplier_bank_accounts (supplier_id, iban, status) values ($1, 'DE02300209000106531065', 'ACTIVE')",
+    [review.supplier_id],
+  );
   await processInvoice(deps, review.id, SYSTEM);
   const d = await detail(review.id);
   assert.equal(d.state, "READY_FOR_APPROVAL");
-  assert.deepEqual(d.approval_steps.map((s) => s.required_role), ["MANAGER"]);
+  assert.deepEqual(
+    d.approval_steps.map((s) => s.required_role),
+    ["MANAGER"],
+  );
 });
 
 test("receiveInvoice writes intake facts that processing never changes", async () => {
-  const received = await receiveInvoice(deps, { buffer: fixture("E_high_value_30000.xml"), originalFilename: "renamed.xml", sourceChannel: "PORTAL", actor: SYSTEM });
+  const received = await receiveInvoice(deps, {
+    buffer: fixture("E_high_value_30000.xml"),
+    originalFilename: "renamed.xml",
+    sourceChannel: "PORTAL",
+    actor: SYSTEM,
+  });
   assert.equal(received.state, "DUPLICATE");
   const d = await detail(received.id);
   assert.equal(d.original_filename, "renamed.xml");

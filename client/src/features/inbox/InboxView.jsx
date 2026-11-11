@@ -5,6 +5,7 @@ import { STATE_TONE } from "../../lib/tones.js";
 import { useI18n } from "../../lib/i18n.js";
 import StateChip from "../../components/StateChip.jsx";
 import UploadPanel from "../upload/UploadPanel.jsx";
+import Button from "../../components/Button.jsx";
 
 const VIEWS = {
   inbox: { title: "navInbox", lead: "leadInbox", state: null },
@@ -57,7 +58,7 @@ export default function InboxView({ view, onChanged }) {
         />
       )}
 
-      <div className="panel" style={{ marginTop: view === "inbox" ? 18 : 0 }}>
+      <div className={`panel${view === "inbox" ? " mt-18" : ""}`}>
         <div className="panel-head">
           <span className="label">{t("invoiceCount", total)}</span>
         </div>
@@ -65,49 +66,48 @@ export default function InboxView({ view, onChanged }) {
         {status === "ready" && invoices.length === 0 && <p className="empty">{t("emptyList")}</p>}
         {invoices.length > 0 && (
           <div className="ledger-scroll">
-          <table className="ledger">
-            <thead>
-              <tr>
-                <th>{t("colInvoice")}</th>
-                <th>{t("colSupplier")}</th>
-                <th>{t("colStatus")}</th>
-                <th>{t("colReceived")}</th>
-                <th className="num">{t("colGross")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoices.map((invoice) => (
-                <tr key={invoice.id}>
-                  <td>
-                    <Link to={`/rechnung/${invoice.id}`} className="mono">
-                      {invoice.invoice_number ?? invoice.original_filename}
-                    </Link>
-                    <div className="supplier-sub">{invoice.invoice_number ? invoice.original_filename : t("noNumberRead")}</div>
-                  </td>
-                  <td>
-                    {invoice.supplier_name ?? invoice.supplier_name_raw ?? "—"}
-                    {invoice.supplier_no && <div className="supplier-sub mono">{invoice.supplier_no}</div>}
-                  </td>
-                  <td>
-                    <StateChip state={invoice.state} />
-                    <div style={{ marginTop: 4 }}>
-                      <Blocker invoice={invoice} />
-                    </div>
-                  </td>
-                  <td className="mono" style={{ fontSize: 12 }}>{formatDate(invoice.received_at)}</td>
-                  <td className="num">{formatMoney(invoice.gross_amount)}</td>
+            <table className="ledger">
+              <thead>
+                <tr>
+                  <th>{t("colInvoice")}</th>
+                  <th>{t("colSupplier")}</th>
+                  <th>{t("colStatus")}</th>
+                  <th>{t("colReceived")}</th>
+                  <th className="num">{t("colGross")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {invoices.map((invoice) => (
+                  <tr key={invoice.id}>
+                    <td>
+                      <Link to={`/rechnung/${invoice.id}`} className="mono">
+                        {invoice.invoice_number ?? invoice.original_filename}
+                      </Link>
+                      <div className="supplier-sub">{invoice.invoice_number ? invoice.original_filename : t("noNumberRead")}</div>
+                    </td>
+                    <td>
+                      {invoice.supplier_name ?? invoice.supplier_name_raw ?? "—"}
+                      {invoice.supplier_no && <div className="supplier-sub mono">{invoice.supplier_no}</div>}
+                    </td>
+                    <td>
+                      <StateChip state={invoice.state} />
+                      <div className="mt-4">
+                        <Blocker invoice={invoice} />
+                      </div>
+                    </td>
+                    <td className="mono text-sm">{formatDate(invoice.received_at)}</td>
+                    <td className="num">{formatMoney(invoice.gross_amount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
         {invoices.length < total && (
           <div className="panel-body">
-            <button className="btn btn-ghost" type="button" disabled={status === "loading"}
-                    onClick={() => fetchPage(invoices.length)}>
+            <Button variant="ghost" type="button" disabled={status === "loading"} onClick={() => fetchPage(invoices.length)}>
               {t("loadMore", invoices.length, total)}
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -122,9 +122,7 @@ function Blocker({ invoice }) {
     return <span className={`blocker is-${STATE_TONE[invoice.state]}`}>{reviewReason(invoice.review_reason)}</span>;
   }
   if (invoice.pending_steps > 0) {
-    return (
-      <span className="blocker is-wait">{t("approvalsOpen", invoice.pending_steps)}</span>
-    );
+    return <span className="blocker is-wait">{t("approvalsOpen", invoice.pending_steps)}</span>;
   }
   return null;
 }

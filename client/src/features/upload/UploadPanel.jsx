@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { uploadInvoice } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
+import Button from "../../components/Button.jsx";
 
 export default function UploadPanel({ onUploaded }) {
   const { t, errorText } = useI18n();
@@ -41,12 +42,12 @@ export default function UploadPanel({ onUploaded }) {
             ref={inputRef}
             type="file"
             accept=".xml,application/xml,text/xml"
-            style={{ display: "none" }}
+            className="is-hidden"
             onChange={(e) => send(e.target.files?.[0])}
           />
-          <button className="btn" onClick={() => inputRef.current?.click()} disabled={busy}>
+          <Button onClick={() => inputRef.current?.click()} disabled={busy}>
             {busy ? t("checking") : t("uploadPick")}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

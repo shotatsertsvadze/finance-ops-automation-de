@@ -13,7 +13,10 @@ const ACCEPTED = report("A_clean_1240.accepted.xml");
 const REJECTED = report("F_malformed.rejected.xml");
 
 const addressedTo = (xml, buffer) =>
-  xml.replace(/<rep:hashValue>[^<]*<\/rep:hashValue>/, `<rep:hashValue>${createHash("sha256").update(buffer).digest("base64")}</rep:hashValue>`);
+  xml.replace(
+    /<rep:hashValue>[^<]*<\/rep:hashValue>/,
+    `<rep:hashValue>${createHash("sha256").update(buffer).digest("base64")}</rep:hashValue>`,
+  );
 
 export const ANSWERS = {
   accept: (buffer) => ({ outcome: "ACCEPTED", httpStatus: 200, report: addressedTo(ACCEPTED, buffer) }),

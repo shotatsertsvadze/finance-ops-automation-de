@@ -33,7 +33,10 @@ const get = (id) => clients.finance.get(`/api/invoices/${id}`).then((r) => r.jso
 async function secondRound() {
   const invoice = await (await clients.clerk.upload(fixture("E_high_value_30000.xml"), "E.xml")).json();
   assert.equal((await clients.manager.post(`/api/invoices/${invoice.id}/approvals/1/approve`, {})).status, 200);
-  assert.equal((await clients.finance.post(`/api/invoices/${invoice.id}/review/request-info`, { comment: "Lieferschein fehlt" })).status, 200);
+  assert.equal(
+    (await clients.finance.post(`/api/invoices/${invoice.id}/review/request-info`, { comment: "Lieferschein fehlt" })).status,
+    200,
+  );
   assert.equal((await clients.clerk.post(`/api/invoices/${invoice.id}/info-received`, { comment: "nachgereicht" })).status, 200);
   assert.equal((await clients.clerk.post(`/api/invoices/${invoice.id}/review/accept`, { comment: "geklärt" })).status, 200);
   return invoice;
@@ -56,7 +59,10 @@ test("the detail shows the current round, and the earlier ones as history", asyn
   const invoice = await secondRound();
   const detail = await get(invoice.id);
   assert.ok(detail.approval_steps.every((s) => s.round === 2));
-  assert.deepEqual(detail.approval_steps.map((s) => s.status), ["PENDING", "PENDING", "PENDING"]);
+  assert.deepEqual(
+    detail.approval_steps.map((s) => s.status),
+    ["PENDING", "PENDING", "PENDING"],
+  );
   const [signed] = detail.approval_history.filter((s) => s.step_no === 1);
   assert.equal(signed.round, 1);
   assert.equal(signed.actor_name, "Tim Kessler");

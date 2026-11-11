@@ -26,8 +26,13 @@ const ACTIONS = [
 ].map((words) => phrase(words, "giu"));
 // Verdicts about the invoice itself; no negation makes these safe to say.
 const VERDICTS = [
-  "(freigeben|genehmigen|bezahlen|überweisen)\\s+sie", "unbedenklich", "keine bedenken", "ist in ordnung",
-  "safe to (pay|approve|release)", "no (issues|concerns|problems)", "nothing to worry",
+  "(freigeben|genehmigen|bezahlen|überweisen)\\s+sie",
+  "unbedenklich",
+  "keine bedenken",
+  "ist in ordnung",
+  "safe to (pay|approve|release)",
+  "no (issues|concerns|problems)",
+  "nothing to worry",
 ].map((words) => phrase(words));
 const NEGATION = phrase("(nicht|kein\\p{L}*|keinesfalls|nie|niemals|not|never|cannot|can't|don't|mustn't|shouldn't|won't)");
 const CLAUSE_BREAK = new RegExp("[.;,:!?]|(?<!\\p{L})(und|aber|sondern|doch|jedoch|and|but|however)(?!\\p{L})", "giu");
@@ -85,7 +90,10 @@ export function facts(text) {
 }
 
 export function evidenceFacts(input) {
-  const corpus = [...input.failed, ...input.warnings].flatMap((c) => [c.expected, c.actual, c.reason]).filter(Boolean).join(" \n ");
+  const corpus = [...input.failed, ...input.warnings]
+    .flatMap((c) => [c.expected, c.actual, c.reason])
+    .filter(Boolean)
+    .join(" \n ");
   const { dates, identifiers } = facts(corpus);
   const numbers = corpus.replace(DATE, " ").match(NUMBER) ?? [];
   return {

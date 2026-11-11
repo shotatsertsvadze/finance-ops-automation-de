@@ -27,8 +27,11 @@ let counter = 0;
 async function upload(netCents = TWO_STEP_NET) {
   const number = `BIND-${Date.now()}-${(counter += 1)}`;
   const xml = buildInvoiceXml({
-    number, netCents, po: "PO-2026-0305",
-    supplierName: "Spree IT-Systeme AG", supplierVat: "DE345678901",
+    number,
+    netCents,
+    po: "PO-2026-0305",
+    supplierName: "Spree IT-Systeme AG",
+    supplierVat: "DE345678901",
     iban: "DE02500105170137075030",
   });
   const res = await clients.clerk.upload(xml, `${number}.xml`);
@@ -41,8 +44,7 @@ const get = (id) => clients.clerk.get(`/api/invoices/${id}`).then((r) => r.json(
 const approve = (id, stepNo, client) => client.post(`/api/invoices/${id}/approvals/${stepNo}/approve`, {});
 
 /** The only way to desynchronise an invoice from its signatures today. */
-const bumpValidationRun = (id) =>
-  deps.pool.query("update finops.validation_results set run_no = run_no + 1 where invoice_id = $1", [id]);
+const bumpValidationRun = (id) => deps.pool.query("update finops.validation_results set run_no = run_no + 1 where invoice_id = $1", [id]);
 
 before(async () => {
   deps = await testDeps();
@@ -68,12 +70,12 @@ test("an approval records the document and the validation run it was given for",
   assert.equal(invoice.state, "READY_FOR_APPROVAL");
   assert.equal((await approve(invoice.id, 1, clients.manager)).status, 200);
 
-  const { rows: [step] } = await deps.pool.query(
-    "select * from finops.approval_steps where invoice_id = $1 and step_no = 1", [invoice.id],
-  );
-  const { rows: [row] } = await deps.pool.query(
-    "select file_sha256, gross_amount from finops.invoices where id = $1", [invoice.id],
-  );
+  const {
+    rows: [step],
+  } = await deps.pool.query("select * from finops.approval_steps where invoice_id = $1 and step_no = 1", [invoice.id]);
+  const {
+    rows: [row],
+  } = await deps.pool.query("select file_sha256, gross_amount from finops.invoices where id = $1", [invoice.id]);
   assert.equal(step.document_sha256, row.file_sha256, "the signature names the document");
   assert.equal(step.validation_run_no, 1, "and the validation run behind it");
   assert.equal(Number(step.decided_gross), Number(row.gross_amount), "and the amount signed for");
@@ -110,7 +112,11 @@ test("an unchanged invoice runs the whole path exactly as before", async () => {
   assert.equal((await approve(invoice.id, 2, clients.finance)).status, 200);
 
   // The payment goes to a second finance user: the signer may not pay (ADR-056).
-  for (const [stage, client] of [["accounting-record", clients.finance], ["payment", clients.finance2], ["payment/confirm", clients.finance2]]) {
+  for (const [stage, client] of [
+    ["accounting-record", clients.finance],
+    ["payment", clients.finance2],
+    ["payment/confirm", clients.finance2],
+  ]) {
     assert.equal((await client.post(`/api/invoices/${invoice.id}/${stage}`, {})).status, 200, stage);
   }
   assert.equal((await get(invoice.id)).state, "PAID");

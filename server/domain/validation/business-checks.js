@@ -3,36 +3,54 @@ import { centsToDecimal, productToCents, toCents } from "../money.js";
 import { approvalTierLabel } from "../../config/policy.js";
 import { checkTaxBreakdown } from "./tax-breakdown.js";
 
-/**
- * "Does this invoice make sense for our company?" Pure function over the
- * parsed invoice and already-loaded master data:
- *   master = { supplier, bankAccounts, purchaseOrder, existingSameNumber }
- */
-export function runBusinessChecks(parsed, master, policy, company) {
-  const checks = [];
-  const { supplier, matchedBy = null, bankAccounts = [], purchaseOrder, existingSameNumber = [] } = master;
-  const isCreditNote = parsed.documentType === "CREDIT_NOTE";
-  const netCents = toCents(parsed.totals.taxExclusive);
-  const vatCents = toCents(parsed.totals.taxAmount);
-  const grossCents = toCents(parsed.totals.payable);
+const sumOf = (values) =>
+  values.reduce((sum, v) => {
+    const cents = toCents(v);
+    return sum === null || cents === null ? null : sum + cents;
+  }, 0);
 
+function supplierChecks({ parsed, supplier, matchedBy }) {
+  const checks = [];
   if (supplier) {
     const how = matchedBy === "VAT_ID" ? "USt-IdNr." : "Namen";
-    checks.push(passed("supplier_known", SEVERITY.HIGH, { expected: "Lieferant im Stammdatenbestand", actual: `${supplier.supplier_no} ${supplier.legal_name}`, reason: `Lieferant über ${how} zugeordnet` }));
+    checks.push(
+      passed("supplier_known", SEVERITY.HIGH, {
+        expected: "Lieferant im Stammdatenbestand",
+        actual: `${supplier.supplier_no} ${supplier.legal_name}`,
+        reason: `Lieferant über ${how} zugeordnet`,
+      }),
+    );
     if (supplier.status === "ACTIVE") {
       checks.push(passed("supplier_active", SEVERITY.HIGH, { expected: "ACTIVE", actual: supplier.status, reason: "Lieferant ist aktiv" }));
     } else {
-      checks.push(failed("supplier_active", SEVERITY.HIGH, { expected: "ACTIVE", actual: supplier.status, reason: `Lieferant ist ${supplier.status}` }));
+      checks.push(
+        failed("supplier_active", SEVERITY.HIGH, {
+          expected: "ACTIVE",
+          actual: supplier.status,
+          reason: `Lieferant ist ${supplier.status}`,
+        }),
+      );
     }
   } else {
-    const reason = {
-      VAT_ID_UNKNOWN: "USt-IdNr. der Rechnung ist keinem Lieferanten zugeordnet; eine Zuordnung über den Namen wäre eine Vermutung",
-      NAME_AMBIGUOUS: "Firmenname trifft auf mehrere Lieferanten zu",
-    }[matchedBy] ?? "Lieferant nicht im Stammdatenbestand";
-    checks.push(failed("supplier_known", SEVERITY.HIGH, { expected: "bekannte USt-IdNr. oder eindeutiger Firmenname", actual: `${parsed.supplier.vatId ?? "(keine USt-IdNr.)"} / ${parsed.supplier.name ?? "(kein Name)"}`, reason }));
+    const reason =
+      {
+        VAT_ID_UNKNOWN: "USt-IdNr. der Rechnung ist keinem Lieferanten zugeordnet; eine Zuordnung über den Namen wäre eine Vermutung",
+        NAME_AMBIGUOUS: "Firmenname trifft auf mehrere Lieferanten zu",
+      }[matchedBy] ?? "Lieferant nicht im Stammdatenbestand";
+    checks.push(
+      failed("supplier_known", SEVERITY.HIGH, {
+        expected: "bekannte USt-IdNr. oder eindeutiger Firmenname",
+        actual: `${parsed.supplier.vatId ?? "(keine USt-IdNr.)"} / ${parsed.supplier.name ?? "(kein Name)"}`,
+        reason,
+      }),
+    );
     checks.push(skipped("supplier_active", { reason: "Lieferant unbekannt" }));
   }
+  return checks;
+}
 
+function buyerChecks({ parsed, company }) {
+  const checks = [];
   // Whose debt is this? An invoice made out to another company is not ours to
   // pay, however well it validates otherwise.
   // Every identifier the document carries must agree. One matching field does
@@ -46,79 +64,179 @@ export function runBusinessChecks(parsed, master, policy, company) {
   if (!buyerVat && !buyerName) mismatches.push("kein Rechnungsempfänger angegeben");
   const buyerMatches = mismatches.length === 0;
   if (buyerMatches) {
-    checks.push(passed("buyer_is_us", SEVERITY.HIGH, { expected: `${company.legalName} / ${company.vatId}`, actual: `${parsed.buyer.name ?? "-"} / ${parsed.buyer.vatId ?? "-"}`, reason: "Rechnung ist an das eigene Unternehmen adressiert" }));
+    checks.push(
+      passed("buyer_is_us", SEVERITY.HIGH, {
+        expected: `${company.legalName} / ${company.vatId}`,
+        actual: `${parsed.buyer.name ?? "-"} / ${parsed.buyer.vatId ?? "-"}`,
+        reason: "Rechnung ist an das eigene Unternehmen adressiert",
+      }),
+    );
   } else {
-    checks.push(failed("buyer_is_us", SEVERITY.HIGH, { expected: `${company.legalName} / ${company.vatId}`, actual: mismatches.join(", "), reason: "Rechnungsempfänger stimmt nicht mit dem eigenen Unternehmen überein" }));
+    checks.push(
+      failed("buyer_is_us", SEVERITY.HIGH, {
+        expected: `${company.legalName} / ${company.vatId}`,
+        actual: mismatches.join(", "),
+        reason: "Rechnungsempfänger stimmt nicht mit dem eigenen Unternehmen überein",
+      }),
+    );
   }
+  return checks;
+}
 
+function ibanChecks({ parsed, supplier, bankAccounts }) {
+  const checks = [];
   const activeIbans = bankAccounts.filter((a) => a.status === "ACTIVE").map((a) => a.iban.replace(/\s+/g, "").toUpperCase());
   const invoiceIban = parsed.payment.iban;
   if (!supplier) {
     checks.push(skipped("supplier_iban_match", { actual: invoiceIban, reason: "Lieferant unbekannt, IBAN nicht prüfbar" }));
   } else if (!invoiceIban) {
-    checks.push(failed("supplier_iban_match", SEVERITY.HIGH, { expected: activeIbans.join(", "), actual: "(keine IBAN)", reason: "Rechnung enthält keine IBAN" }));
+    checks.push(
+      failed("supplier_iban_match", SEVERITY.HIGH, {
+        expected: activeIbans.join(", "),
+        actual: "(keine IBAN)",
+        reason: "Rechnung enthält keine IBAN",
+      }),
+    );
   } else if (activeIbans.includes(invoiceIban)) {
-    checks.push(passed("supplier_iban_match", SEVERITY.HIGH, { expected: activeIbans.join(", "), actual: invoiceIban, reason: "IBAN stimmt mit freigegebener Bankverbindung überein" }));
+    checks.push(
+      passed("supplier_iban_match", SEVERITY.HIGH, {
+        expected: activeIbans.join(", "),
+        actual: invoiceIban,
+        reason: "IBAN stimmt mit freigegebener Bankverbindung überein",
+      }),
+    );
   } else {
-    checks.push(failed("supplier_iban_match", SEVERITY.HIGH, { expected: activeIbans.join(", "), actual: invoiceIban, reason: "IBAN weicht von den freigegebenen Bankverbindungen des Lieferanten ab (Betrugsrisiko)" }));
+    checks.push(
+      failed("supplier_iban_match", SEVERITY.HIGH, {
+        expected: activeIbans.join(", "),
+        actual: invoiceIban,
+        reason: "IBAN weicht von den freigegebenen Bankverbindungen des Lieferanten ab (Betrugsrisiko)",
+      }),
+    );
   }
+  return checks;
+}
 
+function duplicateChecks({ parsed, supplier, existingSameNumber }) {
+  const checks = [];
   if (!supplier) {
     checks.push(skipped("duplicate_invoice_number", { reason: "Lieferant unbekannt" }));
   } else if (existingSameNumber.length) {
-    checks.push(failed("duplicate_invoice_number", SEVERITY.HIGH, { expected: "Rechnungsnummer noch nicht erfasst", actual: `${parsed.invoiceNumber} bereits als ${existingSameNumber.map((e) => e.state).join(", ")}`, reason: "Gleiche Rechnungsnummer desselben Lieferanten bereits im Bestand" }));
+    checks.push(
+      failed("duplicate_invoice_number", SEVERITY.HIGH, {
+        expected: "Rechnungsnummer noch nicht erfasst",
+        actual: `${parsed.invoiceNumber} bereits als ${existingSameNumber.map((e) => e.state).join(", ")}`,
+        reason: "Gleiche Rechnungsnummer desselben Lieferanten bereits im Bestand",
+      }),
+    );
   } else {
-    checks.push(passed("duplicate_invoice_number", SEVERITY.HIGH, { expected: "keine", actual: "keine", reason: "Rechnungsnummer für diesen Lieferanten neu" }));
+    checks.push(
+      passed("duplicate_invoice_number", SEVERITY.HIGH, {
+        expected: "keine",
+        actual: "keine",
+        reason: "Rechnungsnummer für diesen Lieferanten neu",
+      }),
+    );
   }
+  return checks;
+}
 
+function creditNoteChecks({ parsed, isCreditNote }) {
+  const checks = [];
   // Asked only of a credit note. On an invoice it would be SKIPPED every time,
   // which is noise in the one panel a reviewer actually reads.
   if (isCreditNote) {
     if (parsed.creditedInvoice) {
-      checks.push(passed("credit_note_reference", SEVERITY.MEDIUM, {
-        expected: "Bezug auf die gutgeschriebene Rechnung",
-        actual: parsed.creditedInvoice,
-        reason: "Die Gutschrift nennt die Rechnung, auf die sie sich bezieht",
-      }));
+      checks.push(
+        passed("credit_note_reference", SEVERITY.MEDIUM, {
+          expected: "Bezug auf die gutgeschriebene Rechnung",
+          actual: parsed.creditedInvoice,
+          reason: "Die Gutschrift nennt die Rechnung, auf die sie sich bezieht",
+        }),
+      );
     } else {
-      checks.push(failed("credit_note_reference", SEVERITY.MEDIUM, {
-        expected: "Bezug auf die gutgeschriebene Rechnung",
-        actual: "(keiner)",
-        reason: "Die Gutschrift nennt keine Rechnung; welche Verbindlichkeit sie mindert, ist offen",
-      }));
+      checks.push(
+        failed("credit_note_reference", SEVERITY.MEDIUM, {
+          expected: "Bezug auf die gutgeschriebene Rechnung",
+          actual: "(keiner)",
+          reason: "Die Gutschrift nennt keine Rechnung; welche Verbindlichkeit sie mindert, ist offen",
+        }),
+      );
     }
   }
+  return checks;
+}
 
+function poReferenceChecks({ parsed, policy, grossCents }) {
+  const checks = [];
   const poRequired = grossCents !== null && grossCents > policy.poRequiredAboveCents;
   if (parsed.poReference) {
-    checks.push(passed("po_reference_present", SEVERITY.MEDIUM, { expected: "Bestellreferenz", actual: parsed.poReference, reason: "Bestellreferenz vorhanden" }));
+    checks.push(
+      passed("po_reference_present", SEVERITY.MEDIUM, {
+        expected: "Bestellreferenz",
+        actual: parsed.poReference,
+        reason: "Bestellreferenz vorhanden",
+      }),
+    );
   } else if (poRequired) {
-    checks.push(failed("po_reference_present", SEVERITY.MEDIUM, { expected: `Bestellreferenz ab ${centsToDecimal(policy.poRequiredAboveCents)} EUR`, actual: "(keine)", reason: "Bestellreferenz fehlt, obwohl die Richtlinie sie verlangt" }));
+    checks.push(
+      failed("po_reference_present", SEVERITY.MEDIUM, {
+        expected: `Bestellreferenz ab ${centsToDecimal(policy.poRequiredAboveCents)} EUR`,
+        actual: "(keine)",
+        reason: "Bestellreferenz fehlt, obwohl die Richtlinie sie verlangt",
+      }),
+    );
   } else {
-    checks.push(warning("po_reference_present", { expected: "Bestellreferenz", actual: "(keine)", reason: "Keine Bestellreferenz; unterhalb der Pflichtgrenze" }));
+    checks.push(
+      warning("po_reference_present", {
+        expected: "Bestellreferenz",
+        actual: "(keine)",
+        reason: "Keine Bestellreferenz; unterhalb der Pflichtgrenze",
+      }),
+    );
   }
+  return checks;
+}
 
+function purchaseOrderChecks({ parsed, master, policy, supplier, purchaseOrder, isCreditNote, netCents }) {
+  const checks = [];
   if (!parsed.poReference) {
     checks.push(skipped("po_exists", { reason: "keine Bestellreferenz" }));
     checks.push(skipped("po_supplier_match", { reason: "keine Bestellreferenz" }));
     checks.push(skipped("po_amount_within_tolerance", { reason: "keine Bestellreferenz" }));
   } else if (!purchaseOrder || purchaseOrder.status !== "OPEN") {
-    checks.push(failed("po_exists", SEVERITY.HIGH, { expected: "offene Bestellung", actual: purchaseOrder ? `Status ${purchaseOrder.status}` : "nicht gefunden", reason: purchaseOrder ? "Bestellung ist nicht offen" : "Bestellreferenz unbekannt" }));
+    checks.push(
+      failed("po_exists", SEVERITY.HIGH, {
+        expected: "offene Bestellung",
+        actual: purchaseOrder ? `Status ${purchaseOrder.status}` : "nicht gefunden",
+        reason: purchaseOrder ? "Bestellung ist nicht offen" : "Bestellreferenz unbekannt",
+      }),
+    );
     checks.push(skipped("po_supplier_match", { reason: "Bestellung nicht verwendbar" }));
     checks.push(skipped("po_amount_within_tolerance", { reason: "Bestellung nicht verwendbar" }));
   } else {
-    checks.push(passed("po_exists", SEVERITY.HIGH, { expected: "offene Bestellung", actual: purchaseOrder.po_number, reason: "Bestellung gefunden" }));
+    checks.push(
+      passed("po_exists", SEVERITY.HIGH, { expected: "offene Bestellung", actual: purchaseOrder.po_number, reason: "Bestellung gefunden" }),
+    );
     if (supplier && purchaseOrder.supplier_id === supplier.id) {
-      checks.push(passed("po_supplier_match", SEVERITY.HIGH, { expected: `${supplier.supplier_no} ${supplier.legal_name}`, actual: `${purchaseOrder.po_number} gehört zu ${supplier.supplier_no}`, reason: "Bestellung gehört zum Rechnungssteller" }));
+      checks.push(
+        passed("po_supplier_match", SEVERITY.HIGH, {
+          expected: `${supplier.supplier_no} ${supplier.legal_name}`,
+          actual: `${purchaseOrder.po_number} gehört zu ${supplier.supplier_no}`,
+          reason: "Bestellung gehört zum Rechnungssteller",
+        }),
+      );
     } else {
       const orderSupplier = purchaseOrder.supplier_supplier_no
         ? `${purchaseOrder.supplier_supplier_no} ${purchaseOrder.supplier_legal_name ?? ""}`.trim()
         : "(unbekannter Lieferant)";
-      checks.push(failed("po_supplier_match", SEVERITY.HIGH, {
-        expected: supplier ? `${supplier.supplier_no} ${supplier.legal_name}` : "(Lieferant unbekannt)",
-        actual: `${purchaseOrder.po_number} gehört zu ${orderSupplier}`,
-        reason: "Bestellung gehört zu einem anderen Lieferanten",
-      }));
+      checks.push(
+        failed("po_supplier_match", SEVERITY.HIGH, {
+          expected: supplier ? `${supplier.supplier_no} ${supplier.legal_name}` : "(Lieferant unbekannt)",
+          actual: `${purchaseOrder.po_number} gehört zu ${orderSupplier}`,
+          reason: "Bestellung gehört zu einem anderen Lieferanten",
+        }),
+      );
     }
     // Available capacity, not the opening balance: other live invoices already
     // hold part of this order. Tolerance is granted once per order, not once
@@ -133,35 +251,41 @@ export function runBusinessChecks(parsed, master, policy, company) {
     if (isCreditNote) {
       // It gives capacity back rather than taking it, so measuring it against
       // the ceiling would refuse exactly the credit notes that matter most.
-      checks.push(skipped("po_amount_within_tolerance", {
-        expected: `verfügbar ${centsToDecimal(availableCents)} EUR`,
-        actual: `${centsToDecimal(netCents ?? 0)} EUR Gutschrift`,
-        reason: "Eine Gutschrift verbraucht die Bestellung nicht, sondern gibt Betrag frei",
-      }));
+      checks.push(
+        skipped("po_amount_within_tolerance", {
+          expected: `verfügbar ${centsToDecimal(availableCents)} EUR`,
+          actual: `${centsToDecimal(netCents ?? 0)} EUR Gutschrift`,
+          reason: "Eine Gutschrift verbraucht die Bestellung nicht, sondern gibt Betrag frei",
+        }),
+      );
     } else if (netCents === null) {
       checks.push(skipped("po_amount_within_tolerance", { reason: "Nettobetrag nicht lesbar" }));
     } else if (netCents <= ceilingCents) {
-      checks.push(passed("po_amount_within_tolerance", SEVERITY.HIGH, {
-        expected: `<= ${centsToDecimal(ceilingCents)} EUR (verfügbar ${centsToDecimal(availableCents)} + Toleranz${held})`,
-        actual: `${centsToDecimal(netCents)} EUR`,
-        reason: "Nettobetrag innerhalb der verfügbaren Bestellsumme",
-      }));
+      checks.push(
+        passed("po_amount_within_tolerance", SEVERITY.HIGH, {
+          expected: `<= ${centsToDecimal(ceilingCents)} EUR (verfügbar ${centsToDecimal(availableCents)} + Toleranz${held})`,
+          actual: `${centsToDecimal(netCents)} EUR`,
+          reason: "Nettobetrag innerhalb der verfügbaren Bestellsumme",
+        }),
+      );
     } else {
-      checks.push(failed("po_amount_within_tolerance", SEVERITY.HIGH, {
-        expected: `<= ${centsToDecimal(ceilingCents)} EUR (verfügbar ${centsToDecimal(availableCents)} + Toleranz ${policy.poTolerancePct} %${held})`,
-        actual: `${centsToDecimal(netCents)} EUR`,
-        reason: committedCents > 0
-          ? "Nettobetrag überschreitet zusammen mit bereits gebundenen Rechnungen den Bestellwert"
-          : "Nettobetrag überschreitet den offenen Bestellwert",
-      }));
+      checks.push(
+        failed("po_amount_within_tolerance", SEVERITY.HIGH, {
+          expected: `<= ${centsToDecimal(ceilingCents)} EUR (verfügbar ${centsToDecimal(availableCents)} + Toleranz ${policy.poTolerancePct} %${held})`,
+          actual: `${centsToDecimal(netCents)} EUR`,
+          reason:
+            committedCents > 0
+              ? "Nettobetrag überschreitet zusammen mit bereits gebundenen Rechnungen den Bestellwert"
+              : "Nettobetrag überschreitet den offenen Bestellwert",
+        }),
+      );
     }
   }
+  return checks;
+}
 
-  const sumOf = (values) => values.reduce((sum, v) => {
-    const cents = toCents(v);
-    return sum === null || cents === null ? null : sum + cents;
-  }, 0);
-
+function lineAmountChecks({ parsed, policy }) {
+  const checks = [];
   // A line's declared amount is the one number the chain below trusts without
   // deriving it, because the chain sums exactly those declared amounts. A line
   // reading "10 x 5.00 = 500.00" leaves every total consistent and overpays by
@@ -192,18 +316,27 @@ export function runBusinessChecks(parsed, master, policy, company) {
 
   const lineRule = "Menge x Einzelpreis - Nachlässe + Zuschläge = Positionsbetrag";
   if (lineIssues.length) {
-    checks.push(failed("line_amounts_consistent", SEVERITY.HIGH, {
-      expected: lineRule, actual: lineIssues.join("; "),
-      reason: "Positionsbeträge folgen nicht aus Menge und Einzelpreis",
-    }));
+    checks.push(
+      failed("line_amounts_consistent", SEVERITY.HIGH, {
+        expected: lineRule,
+        actual: lineIssues.join("; "),
+        reason: "Positionsbeträge folgen nicht aus Menge und Einzelpreis",
+      }),
+    );
   } else {
-    checks.push(passed("line_amounts_consistent", SEVERITY.HIGH, {
-      expected: lineRule,
-      actual: `${parsed.lines.length} ${parsed.lines.length === 1 ? "Position" : "Positionen"} nachgerechnet`,
-      reason: "Positionsbeträge folgen aus Menge und Einzelpreis",
-    }));
+    checks.push(
+      passed("line_amounts_consistent", SEVERITY.HIGH, {
+        expected: lineRule,
+        actual: `${parsed.lines.length} ${parsed.lines.length === 1 ? "Position" : "Positionen"} nachgerechnet`,
+        reason: "Positionsbeträge folgen aus Menge und Einzelpreis",
+      }),
+    );
   }
+  return checks;
+}
 
+function totalsChecks({ parsed, policy, netCents, vatCents, grossCents }) {
+  const checks = [];
   // EN 16931 chains the declared totals from the line amounts to the amount
   // due, and every link is checked. A document can declare a plausible payable
   // amount over lines, discounts or a prepayment that do not produce it, so
@@ -228,28 +361,38 @@ export function runBusinessChecks(parsed, master, policy, company) {
   // individual allowances are both reported as "Nachlässe" when unreadable,
   // which a key can only say once.
   const known = [
-    ["Positionen", lineSum], ["Netto", netCents], ["Steuer", vatCents], ["Zahlbetrag", grossCents],
-    ["Nachlässe", allowanceTotalCents], ["Nachlässe", allowanceSum],
-    ["Zuschläge", chargeTotalCents], ["Zuschläge", chargeSum],
-    ["Anzahlung", prepaidCents], ["Rundung", roundingCents],
+    ["Positionen", lineSum],
+    ["Netto", netCents],
+    ["Steuer", vatCents],
+    ["Zahlbetrag", grossCents],
+    ["Nachlässe", allowanceTotalCents],
+    ["Nachlässe", allowanceSum],
+    ["Zuschläge", chargeTotalCents],
+    ["Zuschläge", chargeSum],
+    ["Anzahlung", prepaidCents],
+    ["Rundung", roundingCents],
   ];
   const unreadable = [...new Set(known.filter(([, v]) => v === null).map(([label]) => label))];
 
   const chain = "Positionen - Nachlässe + Zuschläge = Netto; Netto + Steuer - Anzahlung = Zahlbetrag";
   if (unreadable.length) {
-    checks.push(failed("totals_consistent", SEVERITY.HIGH, {
-      expected: chain,
-      actual: `Beträge nicht lesbar: ${unreadable.join(", ")}`,
-      reason: "Summen sind rechnerisch nicht konsistent",
-    }));
+    checks.push(
+      failed("totals_consistent", SEVERITY.HIGH, {
+        expected: chain,
+        actual: `Beträge nicht lesbar: ${unreadable.join(", ")}`,
+        reason: "Summen sind rechnerisch nicht konsistent",
+      }),
+    );
   } else if (undecided > 0) {
     // The indicator decides whether an amount is added or subtracted.
     // Guessing it would be guessing at the amount due.
-    checks.push(failed("totals_consistent", SEVERITY.HIGH, {
-      expected: chain,
-      actual: `${undecided} Betrag/Beträge ohne Kennzeichen (cbc:ChargeIndicator)`,
-      reason: "Ein Betrag ist weder als Nachlass oder Zuschlag gekennzeichnet; die Summen sind damit nicht nachrechenbar",
-    }));
+    checks.push(
+      failed("totals_consistent", SEVERITY.HIGH, {
+        expected: chain,
+        actual: `${undecided} Betrag/Beträge ohne Kennzeichen (cbc:ChargeIndicator)`,
+        reason: "Ein Betrag ist weder als Nachlass oder Zuschlag gekennzeichnet; die Summen sind damit nicht nachrechenbar",
+      }),
+    );
   } else {
     const grossComputed = netCents + vatCents;
     const inconsistencies = [];
@@ -262,59 +405,172 @@ export function runBusinessChecks(parsed, master, policy, company) {
     link("Positionen = Summe der Positionen", lineSum, lineExtensionCents);
     link("Nachlässe einzeln = Nachlässe gesamt", allowanceSum, allowanceTotalCents);
     link("Zuschläge einzeln = Zuschläge gesamt", chargeSum, chargeTotalCents);
-    link("Positionen - Nachlässe + Zuschläge = Netto",
-      (lineExtensionCents ?? lineSum) - allowanceTotalCents + chargeTotalCents, netCents);
+    link("Positionen - Nachlässe + Zuschläge = Netto", (lineExtensionCents ?? lineSum) - allowanceTotalCents + chargeTotalCents, netCents);
     link("Netto + Steuer = Bruttobetrag", grossComputed, taxInclusiveCents);
-    link("Bruttobetrag - Anzahlung + Rundung = Zahlbetrag",
-      (taxInclusiveCents ?? grossComputed) - prepaidCents + roundingCents, grossCents);
+    link(
+      "Bruttobetrag - Anzahlung + Rundung = Zahlbetrag",
+      (taxInclusiveCents ?? grossComputed) - prepaidCents + roundingCents,
+      grossCents,
+    );
 
     if (inconsistencies.length) {
-      checks.push(failed("totals_consistent", SEVERITY.HIGH, { expected: chain, actual: inconsistencies.join("; "), reason: "Summen sind rechnerisch nicht konsistent" }));
+      checks.push(
+        failed("totals_consistent", SEVERITY.HIGH, {
+          expected: chain,
+          actual: inconsistencies.join("; "),
+          reason: "Summen sind rechnerisch nicht konsistent",
+        }),
+      );
     } else {
       const parts = [`${centsToDecimal(lineSum)} Positionen`];
       if (allowanceTotalCents) parts.push(`- ${centsToDecimal(allowanceTotalCents)} Nachlässe`);
       if (chargeTotalCents) parts.push(`+ ${centsToDecimal(chargeTotalCents)} Zuschläge`);
       parts.push(`+ ${centsToDecimal(vatCents)} Steuer`);
       if (prepaidCents) parts.push(`- ${centsToDecimal(prepaidCents)} Anzahlung`);
-      checks.push(passed("totals_consistent", SEVERITY.HIGH, {
-        expected: chain,
-        actual: `${parts.join(" ")} = ${centsToDecimal(grossCents)} Zahlbetrag`,
-        reason: "Summen sind rechnerisch konsistent",
-      }));
+      checks.push(
+        passed("totals_consistent", SEVERITY.HIGH, {
+          expected: chain,
+          actual: `${parts.join(" ")} = ${centsToDecimal(grossCents)} Zahlbetrag`,
+          reason: "Summen sind rechnerisch konsistent",
+        }),
+      );
     }
   }
+  return checks;
+}
 
-  // What the booking will be built from: the document's breakdown per rate.
-  checks.push(checkTaxBreakdown(parsed, policy));
-
+function currencyChecks({ parsed, policy }) {
+  const checks = [];
   if (policy.allowedCurrencies.includes(parsed.currency)) {
-    checks.push(passed("currency_expected", SEVERITY.MEDIUM, { expected: policy.allowedCurrencies.join(", "), actual: parsed.currency, reason: "Währung erwartet" }));
+    checks.push(
+      passed("currency_expected", SEVERITY.MEDIUM, {
+        expected: policy.allowedCurrencies.join(", "),
+        actual: parsed.currency,
+        reason: "Währung erwartet",
+      }),
+    );
   } else {
-    checks.push(failed("currency_expected", SEVERITY.MEDIUM, { expected: policy.allowedCurrencies.join(", "), actual: parsed.currency ?? "(keine)", reason: "Unerwartete Währung" }));
+    checks.push(
+      failed("currency_expected", SEVERITY.MEDIUM, {
+        expected: policy.allowedCurrencies.join(", "),
+        actual: parsed.currency ?? "(keine)",
+        reason: "Unerwartete Währung",
+      }),
+    );
   }
+  return checks;
+}
 
-  const completeness = { "Fälligkeitsdatum": parsed.dueDate, "IBAN": invoiceIban, "Käuferreferenz": parsed.buyerReference, "USt-IdNr. Lieferant": parsed.supplier.vatId };
-  const missing = Object.entries(completeness).filter(([, v]) => !v).map(([k]) => k);
+function completenessChecks({ parsed }) {
+  const checks = [];
+  const completeness = {
+    Fälligkeitsdatum: parsed.dueDate,
+    IBAN: parsed.payment.iban,
+    Käuferreferenz: parsed.buyerReference,
+    "USt-IdNr. Lieferant": parsed.supplier.vatId,
+  };
+  const missing = Object.entries(completeness)
+    .filter(([, v]) => !v)
+    .map(([k]) => k);
   if (missing.length) {
-    checks.push(failed("required_fields_complete", SEVERITY.MEDIUM, { expected: Object.keys(completeness).join(", "), actual: `fehlt: ${missing.join(", ")}`, reason: `Für die Verarbeitung erwartete Angaben fehlen: ${missing.join(", ")}` }));
+    checks.push(
+      failed("required_fields_complete", SEVERITY.MEDIUM, {
+        expected: Object.keys(completeness).join(", "),
+        actual: `fehlt: ${missing.join(", ")}`,
+        reason: `Für die Verarbeitung erwartete Angaben fehlen: ${missing.join(", ")}`,
+      }),
+    );
   } else {
-    checks.push(passed("required_fields_complete", SEVERITY.MEDIUM, { expected: Object.keys(completeness).join(", "), actual: "vollständig", reason: "Alle erwarteten Angaben vorhanden" }));
+    checks.push(
+      passed("required_fields_complete", SEVERITY.MEDIUM, {
+        expected: Object.keys(completeness).join(", "),
+        actual: "vollständig",
+        reason: "Alle erwarteten Angaben vorhanden",
+      }),
+    );
   }
+  return checks;
+}
 
+function paymentTermsChecks({ parsed, supplier }) {
+  const checks = [];
   if (supplier?.payment_terms_days && parsed.issueDate && parsed.dueDate) {
     const days = Math.round((Date.parse(parsed.dueDate) - Date.parse(parsed.issueDate)) / 86400000);
     if (days === supplier.payment_terms_days) {
-      checks.push(passed("payment_terms_match", SEVERITY.LOW, { expected: `${supplier.payment_terms_days} Tage`, actual: `${days} Tage`, reason: "Zahlungsziel entspricht den Stammdaten" }));
+      checks.push(
+        passed("payment_terms_match", SEVERITY.LOW, {
+          expected: `${supplier.payment_terms_days} Tage`,
+          actual: `${days} Tage`,
+          reason: "Zahlungsziel entspricht den Stammdaten",
+        }),
+      );
     } else {
-      checks.push(warning("payment_terms_match", { expected: `${supplier.payment_terms_days} Tage`, actual: `${days} Tage`, reason: "Zahlungsziel weicht von den Stammdaten ab (Hinweis)" }));
+      checks.push(
+        warning("payment_terms_match", {
+          expected: `${supplier.payment_terms_days} Tage`,
+          actual: `${days} Tage`,
+          reason: "Zahlungsziel weicht von den Stammdaten ab (Hinweis)",
+        }),
+      );
     }
   } else {
     checks.push(skipped("payment_terms_match", { reason: "Zahlungsziel nicht vergleichbar" }));
   }
+  return checks;
+}
 
+function approvalThresholdChecks({ policy, grossCents }) {
+  const checks = [];
   if (grossCents !== null) {
-    checks.push(info("approval_threshold", { expected: `Auto bis ${centsToDecimal(policy.autoApproveLimitCents)} EUR`, actual: `${centsToDecimal(grossCents)} EUR -> ${approvalTierLabel(policy, grossCents)}`, reason: "Freigabestufe laut Richtlinie" }));
+    checks.push(
+      info("approval_threshold", {
+        expected: `Auto bis ${centsToDecimal(policy.autoApproveLimitCents)} EUR`,
+        actual: `${centsToDecimal(grossCents)} EUR -> ${approvalTierLabel(policy, grossCents)}`,
+        reason: "Freigabestufe laut Richtlinie",
+      }),
+    );
   }
+  return checks;
+}
 
-  return { checks, supplierId: supplier?.id ?? null, purchaseOrderId: purchaseOrder?.id ?? null, grossCents };
+/**
+ * "Does this invoice make sense for our company?" Pure function over the
+ * parsed invoice and already-loaded master data:
+ *   master = { supplier, bankAccounts, purchaseOrder, existingSameNumber }
+ */
+export function runBusinessChecks(parsed, master, policy, company) {
+  const { supplier, matchedBy = null, bankAccounts = [], purchaseOrder, existingSameNumber = [] } = master;
+  const ctx = {
+    parsed,
+    master,
+    policy,
+    company,
+    supplier,
+    matchedBy,
+    bankAccounts,
+    purchaseOrder,
+    existingSameNumber,
+    isCreditNote: parsed.documentType === "CREDIT_NOTE",
+    netCents: toCents(parsed.totals.taxExclusive),
+    vatCents: toCents(parsed.totals.taxAmount),
+    grossCents: toCents(parsed.totals.payable),
+  };
+  const checks = [
+    ...supplierChecks(ctx),
+    ...buyerChecks(ctx),
+    ...ibanChecks(ctx),
+    ...duplicateChecks(ctx),
+    ...creditNoteChecks(ctx),
+    ...poReferenceChecks(ctx),
+    ...purchaseOrderChecks(ctx),
+    ...lineAmountChecks(ctx),
+    ...totalsChecks(ctx),
+    // What the booking will be built from: the document's breakdown per rate.
+    checkTaxBreakdown(parsed, policy),
+    ...currencyChecks(ctx),
+    ...completenessChecks(ctx),
+    ...paymentTermsChecks(ctx),
+    ...approvalThresholdChecks(ctx),
+  ];
+  return { checks, supplierId: supplier?.id ?? null, purchaseOrderId: purchaseOrder?.id ?? null, grossCents: ctx.grossCents };
 }

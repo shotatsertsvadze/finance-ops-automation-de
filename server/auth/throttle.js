@@ -18,7 +18,9 @@ export async function admitAttempt(pool, ip, email) {
   const window = `${limits.windowMinutes} minutes`;
   await pool.query("delete from finops.login_failures where failed_at < now() - $1::interval", [window]);
   await pool.query("insert into finops.login_failures (ip, email) values ($1, $2)", [ip, email]);
-  const { rows: [counts] } = await pool.query(
+  const {
+    rows: [counts],
+  } = await pool.query(
     `select count(*) filter (where email = $2)::int as account, count(*)::int as address
      from finops.login_failures where ip = $1 and failed_at >= now() - $3::interval`,
     [ip, email, window],

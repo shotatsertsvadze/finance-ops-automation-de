@@ -1,15 +1,22 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
-  approveBankChange, cancelBankChange, getBankChange, rejectBankChange, revalidateBankChange, verifyBankChange,
+  approveBankChange,
+  cancelBankChange,
+  getBankChange,
+  rejectBankChange,
+  revalidateBankChange,
+  verifyBankChange,
 } from "../../lib/api.js";
 import { groupIban } from "../../lib/format.js";
 import { useI18n } from "../../lib/i18n.js";
 import Fact from "../../components/Fact.jsx";
+import Panel from "../../components/Panel.jsx";
 import StateChip from "../../components/StateChip.jsx";
 import ChangeChip from "./ChangeChip.jsx";
 import VerifyForm from "./VerifyForm.jsx";
 import { changeActions, changeSteps } from "./rules.js";
+import Button from "../../components/Button.jsx";
 
 export default function BankChangeDetail({ user, may }) {
   const { t, errorText } = useI18n();
@@ -19,7 +26,10 @@ export default function BankChangeDetail({ user, may }) {
   const [message, setMessage] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  const load = () => getBankChange(id).then(setChange).catch((e) => setLoadError(errorText(e)));
+  const load = () =>
+    getBankChange(id)
+      .then(setChange)
+      .catch((e) => setLoadError(errorText(e)));
   useEffect(() => {
     load();
   }, [id]);
@@ -33,7 +43,8 @@ export default function BankChangeDetail({ user, may }) {
       const next = await fn();
       setChange(next);
       const r = next.revalidation;
-      if (r) setMessage({ ok: r.failed.length === 0, text: t("revalidationSummary", r.revalidated.length, r.waiting.length, r.failed.length) });
+      if (r)
+        setMessage({ ok: r.failed.length === 0, text: t("revalidationSummary", r.revalidated.length, r.waiting.length, r.failed.length) });
     } catch (e) {
       setMessage({ ok: false, text: errorText(e) });
       load();
@@ -48,11 +59,15 @@ export default function BankChangeDetail({ user, may }) {
 
   return (
     <>
-      <Link to="/bankverbindungen" className="back">{t("backToBankChanges")}</Link>
-      <div className="page-head" style={{ marginTop: 8 }}>
+      <Link to="/bankverbindungen" className="back">
+        {t("backToBankChanges")}
+      </Link>
+      <div className="page-head mt-8">
         <div>
           <h1 className="mono">{change.change_no}</h1>
-          <p>{change.supplier_name} · {change.supplier_no}</p>
+          <p>
+            {change.supplier_name} · {change.supplier_no}
+          </p>
         </div>
         <ChangeChip state={change.state} />
       </div>
@@ -62,12 +77,24 @@ export default function BankChangeDetail({ user, may }) {
           <ProposalPanel change={change} />
         </div>
         <div className="detail-stack">
-          {message && <div className={`toast${message.ok ? "" : " is-error"}`} role="status">{message.text}</div>}
-          <VerificationPanel change={change} busy={busy} canVerify={actions.includes("verify")}
-                             onVerify={(body) => run(() => verifyBankChange(id, body))} />
+          {message && (
+            <div className={`toast${message.ok ? "" : " is-error"}`} role="status">
+              {message.text}
+            </div>
+          )}
+          <VerificationPanel
+            change={change}
+            busy={busy}
+            canVerify={actions.includes("verify")}
+            onVerify={(body) => run(() => verifyBankChange(id, body))}
+          />
           <DecisionPanel change={change} actions={actions} busy={busy} run={run} />
-          <AffectedPanel change={change} busy={busy} canRetry={actions.includes("revalidate")}
-                         onRetry={() => run(() => revalidateBankChange(id))} />
+          <AffectedPanel
+            change={change}
+            busy={busy}
+            canRetry={actions.includes("revalidate")}
+            onRetry={() => run(() => revalidateBankChange(id))}
+          />
           <HistoryPanel events={change.events} />
         </div>
       </div>
@@ -93,7 +120,11 @@ function ChangeProgress({ change }) {
                 {t(STEP_NAME[step.key])}
                 <span className="change-step-status"> · {t(STEP_STATUS[step.tone] ?? (ended ? "stepNotReached" : "stepOpen"))}</span>
               </div>
-              {step.actor && <div className="change-step-meta">{step.actor} · {formatDateTime(step.at)}</div>}
+              {step.actor && (
+                <div className="change-step-meta">
+                  {step.actor} · {formatDateTime(step.at)}
+                </div>
+              )}
             </div>
           </li>
         ))}
@@ -103,34 +134,42 @@ function ChangeProgress({ change }) {
   );
 }
 
-function Panel({ title, children }) {
-  return (
-    <section className="panel">
-      <div className="panel-head"><span className="label">{title}</span></div>
-      <div className="panel-body">{children}</div>
-    </section>
-  );
-}
-
 function ProposalPanel({ change }) {
   const { t, formatDateTime } = useI18n();
   const shared = change.shared_with_now.map((s) => `${s.supplier_no} ${s.legal_name}`).join(", ");
   return (
     <Panel title={t("panelProposal")}>
-      {shared && <p className="warning-note" role="alert">{t("sharedIbanWarning", shared)}</p>}
+      {shared && (
+        <p className="warning-note" role="alert">
+          {t("sharedIbanWarning", shared)}
+        </p>
+      )}
       <div className="facts">
         <Fact label={t("fieldProposedIban")} value={groupIban(change.proposed_iban)} mono />
-        <Fact label={t("fieldTrustedAccounts")} mono value={change.supplier_accounts.filter((a) => a.status === "ACTIVE")
-          .map((a) => <div key={a.iban}>{groupIban(a.iban)}</div>)} />
+        <Fact
+          label={t("fieldTrustedAccounts")}
+          mono
+          value={change.supplier_accounts
+            .filter((a) => a.status === "ACTIVE")
+            .map((a) => (
+              <div key={a.iban}>{groupIban(a.iban)}</div>
+            ))}
+        />
         <Fact label={t("reason")} value={change.reason} />
         {change.source_invoice_id && (
-          <Fact label={t("fieldSourceInvoice")}
-                value={<Link to={`/rechnung/${change.source_invoice_id}`} className="mono">{change.source_invoice_number}</Link>} />
+          <Fact
+            label={t("fieldSourceInvoice")}
+            value={
+              <Link to={`/rechnung/${change.source_invoice_id}`} className="mono">
+                {change.source_invoice_number}
+              </Link>
+            }
+          />
         )}
         <Fact label={t("fieldProposedBy")} value={`${change.proposed_by_name} · ${formatDateTime(change.proposed_at)}`} />
         <Fact label={t("fieldPolicy")} value={t("policyPersons", change.required_distinct_actors)} />
       </div>
-      <p className="hint" style={{ marginBottom: 0 }}>{t("addNotReplace")}</p>
+      <p className="hint mb-0">{t("addNotReplace")}</p>
     </Panel>
   );
 }
@@ -154,7 +193,7 @@ function VerificationPanel({ change, busy, canVerify, onVerify }) {
       ) : canVerify ? (
         <VerifyForm change={change} busy={busy} onSubmit={onVerify} />
       ) : (
-        <p className="hint" style={{ margin: 0 }}>{t("notVerifiedYet")}</p>
+        <p className="hint m-0">{t("notVerifiedYet")}</p>
       )}
     </Panel>
   );
@@ -177,7 +216,11 @@ function DecisionPanel({ change, actions, busy, run }) {
     );
   }
   if (deciding.length === 0) {
-    return <Panel title={t("panelChangeDecision")}><p className="hint" style={{ margin: 0 }}>{t("nextStepOther")}</p></Panel>;
+    return (
+      <Panel title={t("panelChangeDecision")}>
+        <p className="hint m-0">{t("nextStepOther")}</p>
+      </Panel>
+    );
   }
   const id = change.id;
   const buttons = {
@@ -189,7 +232,13 @@ function DecisionPanel({ change, actions, busy, run }) {
     <Panel title={t("panelChangeDecision")}>
       <label className="action-comment">
         <span className="label">{t("reason")}</span>
-        <textarea rows={2} maxLength={1000} value={comment} onChange={(e) => setComment(e.target.value)} placeholder={t("reasonPlaceholder")} />
+        <textarea
+          rows={2}
+          maxLength={1000}
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder={t("reasonPlaceholder")}
+        />
       </label>
       {deciding.includes("approve") && change.shared_with_now.length > 0 && (
         <label className="action-check">
@@ -200,7 +249,11 @@ function DecisionPanel({ change, actions, busy, run }) {
       <div className="action-row">
         {deciding.map((key) => {
           const [label, className, call] = buttons[key];
-          return <button key={key} className={className} disabled={busy} onClick={() => run(call)}>{label}</button>;
+          return (
+            <button key={key} className={className} disabled={busy} onClick={() => run(call)}>
+              {label}
+            </button>
+          );
         })}
       </div>
     </Panel>
@@ -209,11 +262,15 @@ function DecisionPanel({ change, actions, busy, run }) {
 
 function AffectedPanel({ change, busy, canRetry, onRetry }) {
   const { t } = useI18n();
-  const invoiceLink = (id, number) => <Link to={`/rechnung/${id}`} className="mono">{number ?? id}</Link>;
+  const invoiceLink = (id, number) => (
+    <Link to={`/rechnung/${id}`} className="mono">
+      {number ?? id}
+    </Link>
+  );
   const none = change.revalidations.length === 0 && change.pending_invoices.length === 0;
   return (
     <Panel title={t("panelAffectedInvoices")}>
-      {none && <p className="hint" style={{ margin: 0 }}>{t("noAffectedInvoices")}</p>}
+      {none && <p className="hint m-0">{t("noAffectedInvoices")}</p>}
       <ul className="plain-list">
         {change.revalidations.map((r) => (
           <li key={r.invoice_id}>
@@ -228,7 +285,11 @@ function AffectedPanel({ change, busy, canRetry, onRetry }) {
           </li>
         ))}
       </ul>
-      {canRetry && <button className="btn btn-ghost" disabled={busy} onClick={onRetry}>{t("revalidateInvoices")}</button>}
+      {canRetry && (
+        <Button variant="ghost" disabled={busy} onClick={onRetry}>
+          {t("revalidateInvoices")}
+        </Button>
+      )}
     </Panel>
   );
 }
@@ -241,7 +302,10 @@ function HistoryPanel({ events }) {
         {events.map((e) => (
           <li key={e.id}>
             <strong>{changeAction(e.action)}</strong>
-            <span className="hint"> · {e.actor_name ?? t("actorSystem")} · {formatDateTime(e.occurred_at)}</span>
+            <span className="hint">
+              {" "}
+              · {e.actor_name ?? t("actorSystem")} · {formatDateTime(e.occurred_at)}
+            </span>
             {e.reason && <div className="hint">{e.reason}</div>}
           </li>
         ))}

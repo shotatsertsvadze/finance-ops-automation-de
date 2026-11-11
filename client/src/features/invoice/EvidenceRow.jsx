@@ -35,7 +35,6 @@ export default function EvidenceRow({ result }) {
             <dd>{markable ? <Marked expected={result.expected} actual={result.actual} /> : (term(result.actual) ?? "—")}</dd>
           </dl>
         )}
-
       </div>
     </div>
   );
@@ -52,7 +51,13 @@ function chunk(items) {
 }
 
 function Grouped({ value }) {
-  return <span>{chunk([...(value ?? "").trim()]).map((g) => g.join("")).join(" ")}</span>;
+  return (
+    <span>
+      {chunk([...(value ?? "").trim()])
+        .map((g) => g.join(""))
+        .join(" ")}
+    </span>
+  );
 }
 
 function Marked({ expected, actual }) {

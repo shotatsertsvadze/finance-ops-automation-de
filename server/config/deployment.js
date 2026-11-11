@@ -9,7 +9,11 @@ async function demoPasswordAccounts(pool) {
 }
 
 const EVIDENCE_TABLES = [
-  "audit_events", "bank_change_events", "bank_change_verifications", "bank_change_revalidations", "official_validations",
+  "audit_events",
+  "bank_change_events",
+  "bank_change_verifications",
+  "bank_change_revalidations",
+  "official_validations",
 ];
 
 /** Every privilege that would let the app rewrite history, as [privilege, table]. */
@@ -23,7 +27,9 @@ const HISTORY_PRIVILEGES = [
   // Not evidence, but the record of what left the system (ADR-080).
   ...["UPDATE", "DELETE", "TRUNCATE"].map((privilege) => [privilege, "ai_explanations"]),
   // Inquiry drafts and approved inquiries, written once (ADR-084).
-  ...["ai_supplier_inquiries", "supplier_inquiries"].flatMap((table) => ["UPDATE", "DELETE", "TRUNCATE"].map((privilege) => [privilege, table])),
+  ...["ai_supplier_inquiries", "supplier_inquiries"].flatMap((table) =>
+    ["UPDATE", "DELETE", "TRUNCATE"].map((privilege) => [privilege, table]),
+  ),
 ];
 
 /**
@@ -34,7 +40,9 @@ const HISTORY_PRIVILEGES = [
 async function trailWriters(pool) {
   const found = [];
   for (const [privilege, table] of HISTORY_PRIVILEGES) {
-    const { rows: [row] } = await pool.query("select has_table_privilege($1, $2) as allowed", [`finops.${table}`, privilege]);
+    const {
+      rows: [row],
+    } = await pool.query("select has_table_privilege($1, $2) as allowed", [`finops.${table}`, privilege]);
     if (row.allowed) found.push(`${privilege.toLowerCase()} ${table}`);
   }
   return found;
@@ -61,7 +69,9 @@ export async function deploymentProblems({ pool, env, clientDir }) {
   }
   const trail = await trailWriters(pool);
   if (trail.length) {
-    problems.push(`Die Datenbankrolle kann den Prüfpfad ändern (${trail.join(", ")}); als eigene Rolle verbinden, eingerichtet mit npm run db:grant`);
+    problems.push(
+      `Die Datenbankrolle kann den Prüfpfad ändern (${trail.join(", ")}); als eigene Rolle verbinden, eingerichtet mit npm run db:grant`,
+    );
   }
   if (env.DEMO_MODE !== "true") {
     const accounts = await demoPasswordAccounts(pool);

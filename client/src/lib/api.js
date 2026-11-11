@@ -1,6 +1,11 @@
 /** Reads the CSRF cookie the server set at login and echoes it in a header. */
 function csrfToken() {
-  return document.cookie.split("; ").find((c) => c.startsWith("finops_csrf="))?.split("=")[1] ?? "";
+  return (
+    document.cookie
+      .split("; ")
+      .find((c) => c.startsWith("finops_csrf="))
+      ?.split("=")[1] ?? ""
+  );
 }
 
 let signedOut = () => {};
@@ -47,8 +52,6 @@ export async function listInvoices(state, offset = 0) {
 }
 export const countInvoices = () => request("/invoices/counts");
 export const getInvoice = (id) => request(`/invoices/${id}`);
-export const getUsers = () => request("/users");
-export const getMeta = () => request("/meta/states");
 
 // The server takes the actor from the session cookie, so nothing here states
 // who is acting.
@@ -60,14 +63,11 @@ export const login = (email, password) =>
 export const logout = () => actorPost("/auth/logout");
 export const getMe = () => request("/auth/me");
 
-export const decideReview = (id, action, comment) =>
-  actorPost(`/invoices/${id}/review/${action}`, { comment });
+export const decideReview = (id, action, comment) => actorPost(`/invoices/${id}/review/${action}`, { comment });
 
-export const reportInfoReceived = (id, comment) =>
-  actorPost(`/invoices/${id}/info-received`, { comment });
+export const reportInfoReceived = (id, comment) => actorPost(`/invoices/${id}/info-received`, { comment });
 
-export const decideStep = (id, stepNo, action, comment) =>
-  actorPost(`/invoices/${id}/approvals/${stepNo}/${action}`, { comment });
+export const decideStep = (id, stepNo, action, comment) => actorPost(`/invoices/${id}/approvals/${stepNo}/${action}`, { comment });
 
 export const reprocessInvoice = (id) => actorPost(`/invoices/${id}/reprocess`);
 
@@ -87,8 +87,7 @@ export const confirmPayment = (id) => actorPost(`/invoices/${id}/payment/confirm
 export const cancelInvoice = (id, comment) => actorPost(`/invoices/${id}/cancel`, { comment });
 export const failPayment = (id, comment) => actorPost(`/invoices/${id}/payment/fail`, { comment });
 export const retryPayment = (id) => actorPost(`/invoices/${id}/payment/retry`);
-export const resolveReconciliation = (id, comment) =>
-  actorPost(`/invoices/${id}/reconciliation/resolve`, { comment });
+export const resolveReconciliation = (id, comment) => actorPost(`/invoices/${id}/reconciliation/resolve`, { comment });
 
 // A new trusted supplier bank account, in three people's steps (ADR-077).
 export const listBankChanges = () => request("/bank-changes");

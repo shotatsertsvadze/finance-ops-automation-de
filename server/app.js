@@ -20,7 +20,9 @@ import { log } from "./log.js";
  */
 function corsOptions() {
   const allowed = (process.env.CORS_ORIGINS ?? "")
-    .split(",").map((o) => o.trim()).filter(Boolean);
+    .split(",")
+    .map((o) => o.trim())
+    .filter(Boolean);
   return {
     origin: allowed.length === 0 ? false : allowed,
     credentials: true,
@@ -70,7 +72,11 @@ function commentGuard(req, res, next) {
   const comment = req.body?.comment;
   if (comment === undefined || comment === null) return next();
   if (typeof comment !== "string" || comment.length > MAX_COMMENT) {
-    return res.status(400).json({ error: `Begründung muss Text mit höchstens ${MAX_COMMENT} Zeichen sein`, code: "COMMENT_INVALID", details: { max: MAX_COMMENT } });
+    return res.status(400).json({
+      error: `Begründung muss Text mit höchstens ${MAX_COMMENT} Zeichen sein`,
+      code: "COMMENT_INVALID",
+      details: { max: MAX_COMMENT },
+    });
   }
   next();
 }
@@ -92,7 +98,7 @@ function serveClient(app, clientDir) {
  * Express app without listen(), so tests can mount it on any port.
  * `clientDir` is the built client (`dist/`); in development Vite serves it.
  */
-export function createApp(deps, { clientDir } = {}) {
+export function createApp(deps, { clientDir } = /** @type {{ clientDir?: string }} */ ({})) {
   const app = express();
   app.disable("x-powered-by");
   // req.ip is the client, not the reverse proxy in front: X-Forwarded-For is
@@ -123,10 +129,15 @@ export function createApp(deps, { clientDir } = {}) {
   app.use("/api/dashboard", dashboardRouter(deps));
   if (clientDir) serveClient(app, clientDir);
 
+  // Express recognises an error handler by its four parameters.
+  // eslint-disable-next-line no-unused-vars
   app.use((error, req, res, next) => {
-    if (error.type === "entity.parse.failed") return res.status(400).json({ error: "Anfrage ist kein gültiges JSON", code: "INVALID_JSON", details: null });
-    if (error.type === "entity.too.large") return res.status(413).json({ error: "Anfrage ist zu groß", code: "BODY_TOO_LARGE", details: null });
-    if (error.status) return res.status(error.status).json({ error: error.message, code: error.code ?? null, details: error.details ?? null });
+    if (error.type === "entity.parse.failed")
+      return res.status(400).json({ error: "Anfrage ist kein gültiges JSON", code: "INVALID_JSON", details: null });
+    if (error.type === "entity.too.large")
+      return res.status(413).json({ error: "Anfrage ist zu groß", code: "BODY_TOO_LARGE", details: null });
+    if (error.status)
+      return res.status(error.status).json({ error: error.message, code: error.code ?? null, details: error.details ?? null });
     if (error.name === "MulterError") return res.status(400).json({ error: error.message, code: "UPLOAD_REJECTED" });
     // The cause stays in the log; the caller gets the id to quote.
     log("error", "internal error", { request_id: req.id, error: error.message, stack: error.stack });

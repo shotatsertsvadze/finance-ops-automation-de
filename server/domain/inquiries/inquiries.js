@@ -18,7 +18,9 @@ const LIMITS = { subject: 200, body: 4000 };
 
 /** The invoice's state, its latest validation run and the checks that failed in it. */
 async function latestRun(db, invoiceId) {
-  const { rows: [invoice] } = await db.query("select state from finops.invoices where id = $1", [invoiceId]);
+  const {
+    rows: [invoice],
+  } = await db.query("select state from finops.invoices where id = $1", [invoiceId]);
   if (!invoice) return null;
   const { rows } = await db.query(
     `select run_no, check_code from finops.validation_results
@@ -26,7 +28,9 @@ async function latestRun(db, invoiceId) {
      order by phase, id`,
     [invoiceId],
   );
-  const { rows: [last] } = await db.query("select max(run_no) as run_no from finops.validation_results where invoice_id = $1", [invoiceId]);
+  const {
+    rows: [last],
+  } = await db.query("select max(run_no) as run_no from finops.validation_results where invoice_id = $1", [invoiceId]);
   return { state: invoice.state, runNo: last.run_no, failed: rows.map((row) => row.check_code) };
 }
 
@@ -81,7 +85,11 @@ function approvableText(subject, body) {
     throw new RuleError(422, "INQUIRY_PLACEHOLDER_OPEN", "Die Rückfrage enthält noch Platzhalter, die nicht ersetzt sind");
   }
   if (BANK_DETAILS.test(all)) {
-    throw new RuleError(422, "INQUIRY_BANK_DETAILS", "Eine Lieferantenrückfrage nennt keine Bankdaten; Bankverbindungen werden per Rückruf geprüft");
+    throw new RuleError(
+      422,
+      "INQUIRY_BANK_DETAILS",
+      "Eine Lieferantenrückfrage nennt keine Bankdaten; Bankverbindungen werden per Rückruf geprüft",
+    );
   }
   return text;
 }
@@ -91,25 +99,34 @@ export async function approveInquiry(deps, invoiceId, { source, aiInquiryId = nu
   if (!["AI", "TEMPLATE"].includes(source)) throw new RuleError(400, "INQUIRY_SOURCE_UNKNOWN", "Quelle der Rückfrage: AI oder TEMPLATE");
   const text = approvableText(subject, body);
   return withTransaction(deps.pool, async (client) => {
-    const { rows: [locked] } = await client.query("select id from finops.invoices where id = $1 for update", [invoiceId]);
+    const {
+      rows: [locked],
+    } = await client.query("select id from finops.invoices where id = $1 for update", [invoiceId]);
     if (!locked) throw new NotFoundError("INVOICE_NOT_FOUND", "Rechnung nicht gefunden");
     const run = await latestRun(client, invoiceId);
     const scope = scopeOf(run);
     if (!scope.eligible) throw inquiryRefusal(scope.code);
     if (source === "AI") {
-      const { rows: [draft] } = await client.query(
+      const {
+        rows: [draft],
+      } = await client.query(
         "select id from finops.ai_supplier_inquiries where id = $1 and invoice_id = $2 and run_no = $3 and status = 'ACCEPTED'",
         [aiInquiryId, invoiceId, run.runNo],
       );
       if (!draft) throw new RuleError(409, "INQUIRY_DRAFT_UNKNOWN", "Kein angenommener KI-Entwurf zu diesem Prüflauf");
     }
-    const { rows: [row] } = await client.query(
+    const {
+      rows: [row],
+    } = await client.query(
       `insert into finops.supplier_inquiries (invoice_id, run_no, source, ai_inquiry_id, subject, body, approved_by)
        values ($1, $2, $3, $4, $5, $6, $7) returning id, run_no, source, ai_inquiry_id, subject, body, approved_at`,
       [invoiceId, run.runNo, source, source === "AI" ? aiInquiryId : null, text.subject, text.body, actor.id],
     );
     await recordEvent(client, {
-      invoiceId, actor, action: "supplier_inquiry_approved", reason: text.subject,
+      invoiceId,
+      actor,
+      action: "supplier_inquiry_approved",
+      reason: text.subject,
       evidence: { supplier_inquiry_id: row.id, source, ai_inquiry_id: row.ai_inquiry_id },
     });
     return row;
@@ -122,11 +139,16 @@ export async function approveInquiry(deps, invoiceId, { source, aiInquiryId = nu
  * audit event names the inquiry.
  */
 export async function markInquirySent(deps, invoiceId, inquiryId, actor) {
-  const { rows: [inquiry] } = await deps.pool.query(
-    "select id, run_no, source, subject from finops.supplier_inquiries where id = $1 and invoice_id = $2", [inquiryId, invoiceId],
-  );
+  const {
+    rows: [inquiry],
+  } = await deps.pool.query("select id, run_no, source, subject from finops.supplier_inquiries where id = $1 and invoice_id = $2", [
+    inquiryId,
+    invoiceId,
+  ]);
   if (!inquiry) throw new NotFoundError("INQUIRY_NOT_FOUND", "Rückfrage nicht gefunden");
-  const { rows: [sent] } = await deps.pool.query(
+  const {
+    rows: [sent],
+  } = await deps.pool.query(
     "select 1 from finops.audit_events where invoice_id = $1 and action = 'information_requested' and evidence->>'supplier_inquiry_id' = $2",
     [invoiceId, inquiry.id],
   );
@@ -136,7 +158,9 @@ export async function markInquirySent(deps, invoiceId, inquiryId, actor) {
     throw new RuleError(409, "INQUIRY_OUTDATED", "Die Rechnung wurde seit der Freigabe neu geprüft; bitte die Rückfrage neu freigeben");
   }
   await decideReview(deps, {
-    invoiceId, action: "request-info", actor,
+    invoiceId,
+    action: "request-info",
+    actor,
     comment: `Lieferantenrückfrage von Hand versendet: ${inquiry.subject}`,
     evidence: { supplier_inquiry_id: inquiry.id, source: inquiry.source, sent_by_hand: true },
   });

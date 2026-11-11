@@ -33,7 +33,9 @@ const get = (id) => clients.clerk.get(`/api/invoices/${id}`).then((r) => r.json(
 const poCheck = (invoice) => invoice.validation.business.find((c) => c.check_code === "po_amount_within_tolerance");
 
 async function activeCommitmentCents() {
-  const { rows: [row] } = await deps.pool.query(
+  const {
+    rows: [row],
+  } = await deps.pool.query(
     `select coalesce(sum(c.amount), 0)::text as total
      from finops.po_commitments c
      join finops.purchase_orders p on p.id = c.purchase_order_id
@@ -181,5 +183,5 @@ test("the invoice detail reports available capacity, not the opening balance", a
   assert.equal(Number(detail.po_available_amount), 180.67);
 
   const firstDetail = await get(first.id);
-  assert.equal(Number(firstDetail.po_available_amount), 400.00, "its own hold is not subtracted from itself");
+  assert.equal(Number(firstDetail.po_available_amount), 400.0, "its own hold is not subtracted from itself");
 });

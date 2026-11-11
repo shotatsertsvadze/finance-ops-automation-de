@@ -26,10 +26,12 @@ before(async () => {
 });
 after(() => server.close());
 
-const answer = (status, body = "<report/>") => (req, res) => {
-  res.writeHead(status, { "Content-Type": "application/xml" });
-  res.end(body);
-};
+const answer =
+  (status, body = "<report/>") =>
+  (req, res) => {
+    res.writeHead(status, { "Content-Type": "application/xml" });
+    res.end(body);
+  };
 const client = (timeoutMs = 2000) => createKositClient({ url, timeoutMs });
 
 test("the original bytes are posted as XML, named after the document", async () => {
@@ -41,7 +43,13 @@ test("the original bytes are posted as XML, named after the document", async () 
   assert.ok(last.body.equals(bytes), "byte for byte");
 });
 
-for (const [status, outcome] of [[200, "ACCEPTED"], [406, "REJECTED"], [422, "UNPROCESSABLE"], [500, "ERROR"], [400, "ERROR"]]) {
+for (const [status, outcome] of [
+  [200, "ACCEPTED"],
+  [406, "REJECTED"],
+  [422, "UNPROCESSABLE"],
+  [500, "ERROR"],
+  [400, "ERROR"],
+]) {
   test(`HTTP ${status} is ${outcome}, with the body kept as the report`, async () => {
     reply = answer(status, `<r s="${status}"/>`);
     const result = await client().validate(Buffer.from("<x/>"), "d");

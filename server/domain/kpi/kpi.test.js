@@ -150,7 +150,8 @@ test("the savings estimate is derived from the stated assumptions and the real v
   const clean = k.volume.processed - k.exceptions.count; // 1
   const expected =
     (clean * (a.manual_minutes_clean - a.system_minutes_clean) +
-      k.exceptions.count * (a.manual_minutes_exception - a.system_minutes_exception)) / 60;
+      k.exceptions.count * (a.manual_minutes_exception - a.system_minutes_exception)) /
+    60;
 
   assert.equal(k.economics.hours_saved, Math.round(expected * 10) / 10);
   assert.equal(k.economics.cost_saved_eur, Math.round(expected * a.hourly_cost_eur));
@@ -186,14 +187,25 @@ test("with no customer baseline and no pilot, neither is presented as measured",
     assert.equal(provenance.sources[type].period, null, type);
   }
   const cited = Object.values(provenance.figures).flat();
-  assert.deepEqual(cited.filter((type) => !provenance.sources[type].available), [], "no figure rests on a source that does not exist");
+  assert.deepEqual(
+    cited.filter((type) => !provenance.sources[type].available),
+    [],
+    "no figure rests on a source that does not exist",
+  );
 });
 
 test("every figure the dashboard is sent names its source", async () => {
   const { generated_at, provenance, economics, ...blocks } = await kpis();
   const figures = [...Object.keys(blocks), ...Object.keys(economics).map((key) => `economics.${key}`)];
-  assert.deepEqual(figures.filter((figure) => !provenance.figures[figure]), []);
-  assert.deepEqual(Object.keys(provenance.figures).filter((figure) => !figures.includes(figure)), [], "no stale entries");
+  assert.deepEqual(
+    figures.filter((figure) => !provenance.figures[figure]),
+    [],
+  );
+  assert.deepEqual(
+    Object.keys(provenance.figures).filter((figure) => !figures.includes(figure)),
+    [],
+    "no stale entries",
+  );
 });
 
 test("the API serves the same figures", async () => {
@@ -248,14 +260,20 @@ test("a review visit that follows a returned question does not produce a negativ
   // hour ago and is still open.
   await deps.pool.query(
     `update finops.audit_events set occurred_at = now() - interval '2 hours'
-     where invoice_id = $1 and to_state = 'READY_FOR_APPROVAL'`, [invoice.id]);
+     where invoice_id = $1 and to_state = 'READY_FOR_APPROVAL'`,
+    [invoice.id],
+  );
   await deps.pool.query(
     `update finops.audit_events set occurred_at = now() - interval '1 hour'
-     where invoice_id = $1 and to_state = 'REVIEW_REQUIRED'`, [invoice.id]);
+     where invoice_id = $1 and to_state = 'REVIEW_REQUIRED'`,
+    [invoice.id],
+  );
 
   const { cycle } = await kpis();
-  assert.ok(cycle.median_review_hours === null || cycle.median_review_hours >= 0,
-    `a duration cannot be negative, got ${cycle.median_review_hours}`);
+  assert.ok(
+    cycle.median_review_hours === null || cycle.median_review_hours >= 0,
+    `a duration cannot be negative, got ${cycle.median_review_hours}`,
+  );
 });
 
 test("a review visit still open contributes no duration", async () => {
@@ -270,12 +288,13 @@ test("a finished review visit is measured from its own entry", async () => {
   const invoice = await upload(fixture("B_iban_changed_2499.xml"), "B_iban_changed_2499.xml");
   await deps.pool.query(
     `update finops.audit_events set occurred_at = now() - interval '3 hours'
-     where invoice_id = $1 and to_state = 'REVIEW_REQUIRED'`, [invoice.id]);
+     where invoice_id = $1 and to_state = 'REVIEW_REQUIRED'`,
+    [invoice.id],
+  );
   await post(`/api/invoices/${invoice.id}/review/accept`, clients.clerk, { comment: "IBAN bestätigt" });
 
   const { cycle } = await kpis();
-  assert.ok(cycle.median_review_hours >= 2.9 && cycle.median_review_hours <= 3.1,
-    `about three hours, got ${cycle.median_review_hours}`);
+  assert.ok(cycle.median_review_hours >= 2.9 && cycle.median_review_hours <= 3.1, `about three hours, got ${cycle.median_review_hours}`);
 });
 
 test("an invoice that has been paid is not overdue, even with an unclear reconciliation", async () => {

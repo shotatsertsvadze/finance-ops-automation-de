@@ -13,7 +13,10 @@ export default function BankChangesView({ may }) {
   const mayRead = may("bank-change:read");
 
   useEffect(() => {
-    if (mayRead) listBankChanges().then(setRows).catch((e) => setError(errorText(e)));
+    if (mayRead)
+      listBankChanges()
+        .then(setRows)
+        .catch((e) => setError(errorText(e)));
   }, [mayRead]);
 
   return (
@@ -28,7 +31,9 @@ export default function BankChangesView({ may }) {
       {error && <p className="empty error">{error}</p>}
       {mayRead && rows && (
         <div className="panel">
-          {rows.length === 0 ? <p className="empty">{t("bankChangesEmpty")}</p> : (
+          {rows.length === 0 ? (
+            <p className="empty">{t("bankChangesEmpty")}</p>
+          ) : (
             <div className="ledger-scroll">
               <table className="ledger">
                 <thead>
@@ -43,14 +48,20 @@ export default function BankChangesView({ may }) {
                 <tbody>
                   {rows.map((c) => (
                     <tr key={c.id}>
-                      <td><Link to={`/bankverbindungen/${c.id}`} className="mono">{c.change_no}</Link></td>
+                      <td>
+                        <Link to={`/bankverbindungen/${c.id}`} className="mono">
+                          {c.change_no}
+                        </Link>
+                      </td>
                       <td>
                         {c.supplier_name}
                         <div className="supplier-sub mono">{c.supplier_no}</div>
                       </td>
-                      <td className="mono" style={{ fontSize: 12 }}>{groupIban(c.proposed_iban)}</td>
-                      <td><ChangeChip state={c.state} /></td>
-                      <td style={{ fontSize: 12 }}>
+                      <td className="mono text-sm">{groupIban(c.proposed_iban)}</td>
+                      <td>
+                        <ChangeChip state={c.state} />
+                      </td>
+                      <td className="text-sm">
                         {c.proposed_by_name}
                         <div className="supplier-sub mono">{formatDateTime(c.proposed_at)}</div>
                       </td>

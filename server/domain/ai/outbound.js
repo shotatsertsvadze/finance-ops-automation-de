@@ -13,7 +13,7 @@
  * Only the FAILED and WARNING forms of a check are sent, and the entries
  * describe those.
  */
-export const SEND = true;
+const SEND = true;
 export const WITHHELD = "(Wert aus dem Dokument, nicht übermittelt)";
 
 const IBAN = /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/;
@@ -23,13 +23,23 @@ const maskedIban = (value) => {
   const compact = value.replace(/\s/g, "").toUpperCase();
   return IBAN.test(compact) ? `${compact.slice(0, 4)} **** ${compact.slice(-4)}` : WITHHELD;
 };
-const maskedIbans = (value) => value.split(",").map((v) => v.trim()).filter(Boolean).map(maskedIban).join(", ");
+const maskedIbans = (value) =>
+  value
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean)
+    .map(maskedIban)
+    .join(", ");
 
 const ALL = { expected: SEND, actual: SEND, reason: SEND };
 
 export const OUTBOUND = {
   // Technical. Parser errors and most found values repeat the document.
-  xml_well_formed: { expected: SEND, actual: "Dokument nicht wohlgeformt oder nicht zulässig", reason: "Dokument nicht wohlgeformt oder nicht zulässig" },
+  xml_well_formed: {
+    expected: SEND,
+    actual: "Dokument nicht wohlgeformt oder nicht zulässig",
+    reason: "Dokument nicht wohlgeformt oder nicht zulässig",
+  },
   format_recognised: { expected: SEND, actual: "kein UBL-Rechnungsdokument", reason: "Dokument nicht als UBL-Rechnung erkannt" },
   xrechnung_profile_declared: { expected: SEND, reason: SEND },
   required_fields_present: ALL, // field labels only
@@ -38,7 +48,8 @@ export const OUTBOUND = {
   invoice_type_code: { expected: SEND, reason: SEND },
   // The verdict and its rule codes; the validator's message quotes the document.
   official_validation: {
-    expected: SEND, actual: SEND,
+    expected: SEND,
+    actual: SEND,
     reason: "Der KoSIT-Validator hat das Dokument nicht angenommen oder keine verwertbare Antwort gegeben",
   },
 

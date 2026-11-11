@@ -5,7 +5,7 @@
  */
 export const STATUS = { PASSED: "PASSED", FAILED: "FAILED", WARNING: "WARNING", SKIPPED: "SKIPPED", INFO: "INFO" };
 export const SEVERITY = { LOW: "LOW", MEDIUM: "MEDIUM", HIGH: "HIGH", INFO: "INFO" };
-export const ACTION = { NONE: "NONE", HUMAN_REVIEW: "HUMAN_REVIEW", APPROVAL: "APPROVAL" };
+const ACTION = { NONE: "NONE", HUMAN_REVIEW: "HUMAN_REVIEW", APPROVAL: "APPROVAL" };
 
 function result(check, status, severity, recommendedAction, { expected = null, actual = null, reason }) {
   return {
@@ -25,5 +25,5 @@ export const warning = (check, fields) => result(check, STATUS.WARNING, SEVERITY
 export const skipped = (check, fields) => result(check, STATUS.SKIPPED, SEVERITY.INFO, ACTION.NONE, fields);
 export const info = (check, fields, action = ACTION.NONE) => result(check, STATUS.INFO, SEVERITY.INFO, action, fields);
 
-export const isFailed = (c) => c.status === STATUS.FAILED;
+const isFailed = (c) => c.status === STATUS.FAILED;
 export const failedWith = (checks, severities) => checks.filter((c) => isFailed(c) && severities.includes(c.severity));

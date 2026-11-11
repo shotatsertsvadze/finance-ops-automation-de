@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useI18n } from "../../lib/i18n.js";
 import LanguageSwitch from "../../components/LanguageSwitch.jsx";
+import Button from "../../components/Button.jsx";
 
 const DEMO_ACCOUNTS = [
   { email: "anna.berger@nordwerk.example", role: "AP_CLERK" },
@@ -41,21 +42,33 @@ export default function LoginView({ onLogin, expired }) {
         <form onSubmit={submit}>
           <label className="login-field">
             <span className="label">{t("email")}</span>
-            <input type="email" value={email} autoComplete="username" required
-                   onChange={(e) => setEmail(e.target.value)} />
+            <input type="email" value={email} autoComplete="username" required onChange={(e) => setEmail(e.target.value)} />
           </label>
           <label className="login-field">
             <span className="label">{t("password")}</span>
-            <input type="password" value={password} autoComplete="current-password" required
-                   onChange={(e) => setPassword(e.target.value)} />
+            <input
+              type="password"
+              value={password}
+              autoComplete="current-password"
+              required
+              onChange={(e) => setPassword(e.target.value)}
+            />
           </label>
 
-          {expired && !error && <div className="toast" role="status">{t("sessionExpired")}</div>}
-          {error && <div className="toast is-error" role="alert">{error}</div>}
+          {expired && !error && (
+            <div className="toast" role="status">
+              {t("sessionExpired")}
+            </div>
+          )}
+          {error && (
+            <div className="toast is-error" role="alert">
+              {error}
+            </div>
+          )}
 
-          <button className="btn login-submit" type="submit" disabled={busy}>
+          <Button className="login-submit" type="submit" disabled={busy}>
             {busy ? t("checking") : t("login")}
-          </button>
+          </Button>
         </form>
 
         <div className="login-demo">

@@ -23,8 +23,14 @@ beforeEach(async () => {
 
 function insertChange(fields = {}) {
   const row = {
-    supplier_id: S1, proposed_iban: NEW_IBAN, trusted_ibans: ["DE89370400440532013000"], reason: "Neue Bankverbindung",
-    proposal_sha256: "a".repeat(64), required_distinct_actors: 3, proposed_by: USERS.clerk, ...fields,
+    supplier_id: S1,
+    proposed_iban: NEW_IBAN,
+    trusted_ibans: ["DE89370400440532013000"],
+    reason: "Neue Bankverbindung",
+    proposal_sha256: "a".repeat(64),
+    required_distinct_actors: 3,
+    proposed_by: USERS.clerk,
+    ...fields,
   };
   const columns = Object.keys(row);
   return deps.pool.query(
@@ -46,8 +52,12 @@ test("the proposer cannot be recorded as verifier", async () => {
 test("an approval by the verifier is refused under the three-person policy", async () => {
   await assert.rejects(
     insertChange({
-      state: "APPROVED", verified_by: USERS.finance, verified_at: new Date(),
-      decided_by: USERS.finance, decided_at: new Date(), bank_account_id: await anyAccount(S1),
+      state: "APPROVED",
+      verified_by: USERS.finance,
+      verified_at: new Date(),
+      decided_by: USERS.finance,
+      decided_at: new Date(),
+      bank_account_id: await anyAccount(S1),
     }),
     /bank_change_state_fields/,
   );
@@ -56,8 +66,12 @@ test("an approval by the verifier is refused under the three-person policy", asy
 test("an approval by the proposer is refused", async () => {
   await assert.rejects(
     insertChange({
-      state: "APPROVED", verified_by: USERS.finance, verified_at: new Date(),
-      decided_by: USERS.clerk, decided_at: new Date(), bank_account_id: await anyAccount(S1),
+      state: "APPROVED",
+      verified_by: USERS.finance,
+      verified_at: new Date(),
+      decided_by: USERS.clerk,
+      decided_at: new Date(),
+      bank_account_id: await anyAccount(S1),
     }),
     /bank_change_state_fields/,
   );
@@ -66,10 +80,7 @@ test("an approval by the proposer is refused", async () => {
 test("an approval without verification, or without the account it added, is refused", async () => {
   const approved = { state: "APPROVED", decided_by: USERS.finance2, decided_at: new Date() };
   await assert.rejects(insertChange({ ...approved, bank_account_id: await anyAccount(S1) }), /bank_change_state_fields/);
-  await assert.rejects(
-    insertChange({ ...approved, verified_by: USERS.finance, verified_at: new Date() }),
-    /bank_change_state_fields/,
-  );
+  await assert.rejects(insertChange({ ...approved, verified_by: USERS.finance, verified_at: new Date() }), /bank_change_state_fields/);
 });
 
 test("a rejection needs a reason and someone other than the proposer", async () => {
@@ -86,7 +97,9 @@ test("a supplier has at most one open change", async () => {
 });
 
 test("a decided change no longer blocks a new proposal", async () => {
-  const { rows: [first] } = await insertChange();
+  const {
+    rows: [first],
+  } = await insertChange();
   await deps.pool.query(
     "update finops.bank_account_changes set state = 'CANCELLED', decided_by = proposed_by, decided_at = now(), decision_reason = 'Tippfehler' where id = $1",
     [first.id],

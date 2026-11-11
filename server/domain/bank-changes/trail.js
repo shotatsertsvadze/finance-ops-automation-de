@@ -2,13 +2,17 @@ import { NotFoundError, TransitionError } from "../errors.js";
 import { canMoveChange } from "./rules.js";
 
 export async function lockChange(client, changeId) {
-  const { rows: [change] } = await client.query("select * from finops.bank_account_changes where id = $1 for update", [changeId]);
+  const {
+    rows: [change],
+  } = await client.query("select * from finops.bank_account_changes where id = $1 for update", [changeId]);
   if (!change) throw new NotFoundError("CHANGE_NOT_FOUND", "Änderung der Bankverbindung nicht gefunden");
   return change;
 }
 
 export const stateConflict = (change) =>
-  new TransitionError("CHANGE_STATE_CONFLICT", `${change.change_no} ist im Status ${change.state}; diese Aktion ist nicht mehr möglich`, { state: change.state });
+  new TransitionError("CHANGE_STATE_CONFLICT", `${change.change_no} ist im Status ${change.state}; diese Aktion ist nicht mehr möglich`, {
+    state: change.state,
+  });
 
 /**
  * The only way a change moves, the counterpart of transition() for invoices
@@ -18,7 +22,9 @@ export const stateConflict = (change) =>
 export async function moveChange(client, change, { to, actor, action, reason = null, evidence = {}, set = {} }) {
   if (!canMoveChange(change.state, to)) throw stateConflict(change);
   const columns = Object.keys(set);
-  const { rows: [moved] } = await client.query(
+  const {
+    rows: [moved],
+  } = await client.query(
     `update finops.bank_account_changes set state = $2${columns.map((c, i) => `, ${c} = $${i + 3}`).join("")}
      where id = $1 returning *`,
     [change.id, to, ...Object.values(set)],

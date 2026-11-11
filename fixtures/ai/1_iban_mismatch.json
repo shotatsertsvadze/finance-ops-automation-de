@@ -45,39 +45,22 @@
       "payment_terms_match"
     ],
     "not_checked": [],
-    "allowed_next_steps": [
-      "verify_bank_account",
-      "request_info",
-      "reject"
-    ]
+    "allowed_next_steps": ["verify_bank_account", "request_info", "reject"]
   },
   "good": [
     {
       "summary": "Die IBAN auf der Rechnung gehört nicht zu den hinterlegten Bankverbindungen des Lieferanten.",
       "explanation": "Die Rechnung nennt das Konto DE02 **** 1065, hinterlegt ist DE02 **** 2051. Eine abweichende Bankverbindung ist ein typisches Betrugsmuster. Summen, Bestellung und die offizielle Validierung sind bestanden; offen ist allein die Bankverbindung.",
-      "failed_checks": [
-        "supplier_iban_match"
-      ],
-      "cited_checks": [
-        "supplier_iban_match",
-        "totals_consistent",
-        "po_amount_within_tolerance",
-        "official_validation"
-      ],
+      "failed_checks": ["supplier_iban_match"],
+      "cited_checks": ["supplier_iban_match", "totals_consistent", "po_amount_within_tolerance", "official_validation"],
       "next_step": "verify_bank_account",
       "language": "de"
     },
     {
       "summary": "The invoice names a bank account that is not one of the supplier's trusted accounts.",
       "explanation": "It asks for payment to DE02 **** 1065, while the account on file is DE02 **** 2051. A changed bank account is a common fraud pattern. Totals, the purchase order and the official validation passed; only the bank account is in question.",
-      "failed_checks": [
-        "supplier_iban_match"
-      ],
-      "cited_checks": [
-        "supplier_iban_match",
-        "totals_consistent",
-        "official_validation"
-      ],
+      "failed_checks": ["supplier_iban_match"],
+      "cited_checks": ["supplier_iban_match", "totals_consistent", "official_validation"],
       "next_step": "verify_bank_account",
       "language": "en"
     }
@@ -89,12 +72,8 @@
       "output": {
         "summary": "Die IBAN weicht ab.",
         "explanation": "Die Rechnung nennt DE02300209000106531065 statt der hinterlegten Bankverbindung.",
-        "failed_checks": [
-          "supplier_iban_match"
-        ],
-        "cited_checks": [
-          "supplier_iban_match"
-        ],
+        "failed_checks": ["supplier_iban_match"],
+        "cited_checks": ["supplier_iban_match"],
         "next_step": null,
         "language": "de"
       }
@@ -105,12 +84,8 @@
       "output": {
         "summary": "Die IBAN weicht ab.",
         "explanation": "Rufen Sie den Lieferanten unter +49 30 1234567 an und lassen Sie sich die IBAN bestätigen.",
-        "failed_checks": [
-          "supplier_iban_match"
-        ],
-        "cited_checks": [
-          "supplier_iban_match"
-        ],
+        "failed_checks": ["supplier_iban_match"],
+        "cited_checks": ["supplier_iban_match"],
         "next_step": "verify_bank_account",
         "language": "de"
       }
@@ -122,9 +97,7 @@
         "summary": "Die Rechnung ist rechnerisch korrekt.",
         "explanation": "Summen und Bestellung sind bestanden.",
         "failed_checks": [],
-        "cited_checks": [
-          "totals_consistent"
-        ],
+        "cited_checks": ["totals_consistent"],
         "next_step": null,
         "language": "de"
       }
@@ -135,12 +108,8 @@
       "output": {
         "summary": "Die Summen stimmen nicht.",
         "explanation": "Die Summen der Rechnung sind nicht konsistent.",
-        "failed_checks": [
-          "totals_consistent"
-        ],
-        "cited_checks": [
-          "totals_consistent"
-        ],
+        "failed_checks": ["totals_consistent"],
+        "cited_checks": ["totals_consistent"],
         "next_step": null,
         "language": "de"
       }
@@ -151,12 +120,8 @@
       "output": {
         "summary": "Die IBAN weicht ab.",
         "explanation": "Die Rechnung kann freigegeben werden, sobald der Lieferant die neue Bankverbindung per E-Mail bestätigt.",
-        "failed_checks": [
-          "supplier_iban_match"
-        ],
-        "cited_checks": [
-          "supplier_iban_match"
-        ],
+        "failed_checks": ["supplier_iban_match"],
+        "cited_checks": ["supplier_iban_match"],
         "next_step": null,
         "language": "de"
       }
@@ -167,12 +132,8 @@
       "output": {
         "summary": "Die IBAN weicht ab.",
         "explanation": "Die Bankverbindung weicht von der hinterlegten ab.",
-        "failed_checks": [
-          "supplier_iban_match"
-        ],
-        "cited_checks": [
-          "supplier_iban_match"
-        ],
+        "failed_checks": ["supplier_iban_match"],
+        "cited_checks": ["supplier_iban_match"],
         "next_step": "accept",
         "language": "de"
       }
@@ -183,13 +144,8 @@
       "output": {
         "summary": "Die IBAN weicht ab.",
         "explanation": "Die Bankverbindung weicht von der hinterlegten ab.",
-        "failed_checks": [
-          "supplier_iban_match"
-        ],
-        "cited_checks": [
-          "supplier_iban_match",
-          "iban_blacklist"
-        ],
+        "failed_checks": ["supplier_iban_match"],
+        "cited_checks": ["supplier_iban_match", "iban_blacklist"],
         "next_step": null,
         "language": "de"
       }
@@ -200,12 +156,8 @@
       "output": {
         "summary": "The IBAN differs.",
         "explanation": "The bank account differs from the one on file.",
-        "failed_checks": [
-          "supplier_iban_match"
-        ],
-        "cited_checks": [
-          "supplier_iban_match"
-        ],
+        "failed_checks": ["supplier_iban_match"],
+        "cited_checks": ["supplier_iban_match"],
         "next_step": null,
         "language": "en"
       }
@@ -216,12 +168,8 @@
       "output": {
         "summary": "Die IBAN weicht ab.",
         "explanation": "Die Bankverbindung weicht ab.",
-        "failed_checks": [
-          "supplier_iban_match"
-        ],
-        "cited_checks": [
-          "supplier_iban_match"
-        ],
+        "failed_checks": ["supplier_iban_match"],
+        "cited_checks": ["supplier_iban_match"],
         "next_step": null,
         "language": "de",
         "confidence": 0.97

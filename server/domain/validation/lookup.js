@@ -8,7 +8,9 @@ export async function loadMasterData(client, parsed, { excludeInvoiceId = null }
   let supplier = null;
   let matchedBy = null;
   if (parsed.supplier.vatId) {
-    ({ rows: [supplier = null] } = await client.query("select * from finops.suppliers where upper(vat_id) = upper($1)", [parsed.supplier.vatId]));
+    ({
+      rows: [supplier = null],
+    } = await client.query("select * from finops.suppliers where upper(vat_id) = upper($1)", [parsed.supplier.vatId]));
     if (supplier) matchedBy = "VAT_ID";
     // A tax id that matches nothing is a contradiction, not a missing field:
     // falling back to the name would quietly accept the mismatch.
@@ -29,26 +31,29 @@ export async function loadMasterData(client, parsed, { excludeInvoiceId = null }
   // Carry the order's supplier number: the evidence a clerk reads should name
   // the supplier, not print an internal identifier.
   const purchaseOrder = parsed.poReference
-    ? (await client.query(
-        `select p.*, s.supplier_no as supplier_supplier_no, s.legal_name as supplier_legal_name
+    ? ((
+        await client.query(
+          `select p.*, s.supplier_no as supplier_supplier_no, s.legal_name as supplier_legal_name
          from finops.purchase_orders p
          left join finops.suppliers s on s.id = p.supplier_id
          where p.po_number = $1`,
-        [parsed.poReference],
-      )).rows[0] ?? null
+          [parsed.poReference],
+        )
+      ).rows[0] ?? null)
     : null;
-  const existingSameNumber = supplier && parsed.invoiceNumber
-    ? (await client.query(
-        `select id, state from finops.invoices
+  const existingSameNumber =
+    supplier && parsed.invoiceNumber
+      ? (
+          await client.query(
+            `select id, state from finops.invoices
          where supplier_id = $1 and invoice_number = $2 and state <> all($4::finops.invoice_state[]) and id <> $3`,
-        [supplier.id, parsed.invoiceNumber, excludeInvoiceId ?? "00000000-0000-0000-0000-000000000000", DISCARDED_STATES],
-      )).rows
-    : [];
+            [supplier.id, parsed.invoiceNumber, excludeInvoiceId ?? "00000000-0000-0000-0000-000000000000", DISCARDED_STATES],
+          )
+        ).rows
+      : [];
   // Locks the order row, so two invoices arriving together cannot both read
   // the same availability and both commit.
-  const poAvailableCents = purchaseOrder
-    ? await availableCents(client, purchaseOrder.id, excludeInvoiceId)
-    : null;
+  const poAvailableCents = purchaseOrder ? await availableCents(client, purchaseOrder.id, excludeInvoiceId) : null;
 
   return { supplier, matchedBy, bankAccounts, purchaseOrder, poAvailableCents, existingSameNumber };
 }

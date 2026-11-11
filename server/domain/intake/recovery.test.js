@@ -27,15 +27,24 @@ const upload = (xml, name, withDeps = deps) =>
 /** Deps whose storage cannot be read back, as if the disk had gone away. */
 const brokenStorage = () => ({
   ...deps,
-  storage: { ...deps.storage, read: async () => { throw new Error("storage nicht erreichbar"); } },
+  storage: {
+    ...deps.storage,
+    read: async () => {
+      throw new Error("storage nicht erreichbar");
+    },
+  },
 });
 
 const stateOf = async (id) => {
-  const { rows: [row] } = await deps.pool.query("select state from finops.invoices where id = $1", [id]);
+  const {
+    rows: [row],
+  } = await deps.pool.query("select state from finops.invoices where id = $1", [id]);
   return row?.state ?? null;
 };
 const countFor = async (hash) => {
-  const { rows: [row] } = await deps.pool.query("select count(*)::int as n from finops.invoices where file_sha256 = $1", [hash]);
+  const {
+    rows: [row],
+  } = await deps.pool.query("select count(*)::int as n from finops.invoices where file_sha256 = $1", [hash]);
   return row.n;
 };
 
@@ -63,7 +72,9 @@ test("an intake whose processing fails leaves the receipt on the record", async 
 test("sending the same file again resumes it instead of calling it a duplicate", async () => {
   const xml = freshXml();
   await assert.rejects(() => upload(xml, "stranded.xml", brokenStorage()));
-  const { rows: [stranded] } = await deps.pool.query("select id, file_sha256 from finops.invoices");
+  const {
+    rows: [stranded],
+  } = await deps.pool.query("select id, file_sha256 from finops.invoices");
 
   const again = await upload(xml, "stranded.xml");
   assert.equal(again.id, stranded.id, "the same invoice continues, rather than a second row appearing");
@@ -79,12 +90,14 @@ test("the resumed invoice keeps its original intake facts", async () => {
   // not be rewritten to the later moment.
   const xml = freshXml();
   await assert.rejects(() => upload(xml, "first-name.xml", brokenStorage()));
-  const { rows: [before_] } = await deps.pool.query("select id, received_at, original_filename, source_channel from finops.invoices");
+  const {
+    rows: [before_],
+  } = await deps.pool.query("select id, received_at, original_filename, source_channel from finops.invoices");
 
   await upload(xml, "second-name.xml");
-  const { rows: [after_] } = await deps.pool.query(
-    "select received_at, original_filename, source_channel from finops.invoices where id = $1", [before_.id],
-  );
+  const {
+    rows: [after_],
+  } = await deps.pool.query("select received_at, original_filename, source_channel from finops.invoices where id = $1", [before_.id]);
   assert.deepEqual(after_, {
     received_at: before_.received_at,
     original_filename: before_.original_filename,
@@ -95,12 +108,14 @@ test("the resumed invoice keeps its original intake facts", async () => {
 test("the resumption is on the audit trail, not silent", async () => {
   const xml = freshXml();
   await assert.rejects(() => upload(xml, "stranded.xml", brokenStorage()));
-  const { rows: [stranded] } = await deps.pool.query("select id from finops.invoices");
+  const {
+    rows: [stranded],
+  } = await deps.pool.query("select id from finops.invoices");
 
   await upload(xml, "stranded.xml");
-  const { rows } = await deps.pool.query(
-    "select action from finops.audit_events where invoice_id = $1 order by occurred_at, id", [stranded.id],
-  );
+  const { rows } = await deps.pool.query("select action from finops.audit_events where invoice_id = $1 order by occurred_at, id", [
+    stranded.id,
+  ]);
   const actions = rows.map((r) => r.action);
   assert.ok(actions.includes("intake_resumed"), `the second arrival is recorded: ${actions.join(", ")}`);
 });
@@ -122,7 +137,10 @@ test("receiveInvoice alone reports that it resumed rather than received", async 
   await assert.rejects(() => upload(xml, "stranded.xml", brokenStorage()));
 
   const received = await receiveInvoice(deps, {
-    buffer: Buffer.from(xml, "utf8"), originalFilename: "stranded.xml", sourceChannel: "EMAIL", actor: SYSTEM,
+    buffer: Buffer.from(xml, "utf8"),
+    originalFilename: "stranded.xml",
+    sourceChannel: "EMAIL",
+    actor: SYSTEM,
   });
   assert.equal(received.resumed, true);
   assert.equal(received.state, "RECEIVED");

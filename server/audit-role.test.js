@@ -6,6 +6,7 @@
 import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { createApp } from "./app.js";
 import { createPool } from "./db.js";
 import { loginAs, resetBankChanges, testDeps } from "./test-support/db.js";
@@ -67,11 +68,19 @@ test("the app role runs the whole bank-account change loop, revalidation include
     const xml = readFileSync(new URL("../fixtures/xrechnung/H_small_iban_changed_380.xml", import.meta.url));
     const invoice = await (await clerk.upload(xml, "H.xml")).json();
     const iban = "DE75512108001245126199";
-    const change = await (await clerk.post("/api/bank-changes", {
-      supplier_id: invoice.supplier_id, iban, source_invoice_id: invoice.id, comment: "Neue Bankverbindung",
-    })).json();
+    const change = await (
+      await clerk.post("/api/bank-changes", {
+        supplier_id: invoice.supplier_id,
+        iban,
+        source_invoice_id: invoice.id,
+        comment: "Neue Bankverbindung",
+      })
+    ).json();
     const verify = await finance.post(`/api/bank-changes/${change.id}/verify`, {
-      outcome: "CONFIRMED", contacted_role: "Buchhaltung", called_at: new Date().toISOString(), iban_read_back: iban,
+      outcome: "CONFIRMED",
+      contacted_role: "Buchhaltung",
+      called_at: new Date().toISOString(),
+      iban_read_back: iban,
     });
     assert.equal(verify.status, 200);
     const approve = await finance2.post(`/api/bank-changes/${change.id}/approve`, {});
@@ -81,9 +90,14 @@ test("the app role runs the whole bank-account change loop, revalidation include
     const [done] = (await approve.json()).revalidation.revalidated;
     assert.equal(done.to_run_no, 2);
     const { rows } = await deps.pool.query(
-      "select check_code, status from finops.validation_results where invoice_id = $1 and run_no = 2 and status = 'FAILED'", [invoice.id],
+      "select check_code, status from finops.validation_results where invoice_id = $1 and run_no = 2 and status = 'FAILED'",
+      [invoice.id],
     );
-    assert.deepEqual(rows.map((r) => r.check_code), ["po_amount_within_tolerance"], "the IBAN passes; the order G used is still short");
+    assert.deepEqual(
+      rows.map((r) => r.check_code),
+      ["po_amount_within_tolerance"],
+      "the IBAN passes; the order G used is still short",
+    );
   } finally {
     server.close();
   }
@@ -142,12 +156,19 @@ test("the app role drafts, approves and sends a supplier inquiry, but cannot rew
   const draft = {
     subject: "Rückfrage zu Ihrer Rechnung {{rechnungsnummer}}",
     body: "Sehr geehrte Damen und Herren,\n\nbitte erläutern Sie die Differenz zur Bestellung {{bestellnummer}}.\n\nMit freundlichen Grüßen",
-    cited_checks: ["po_amount_within_tolerance"], requests: ["betrag_klaeren"], language: "de",
+    cited_checks: ["po_amount_within_tolerance"],
+    requests: ["betrag_klaeren"],
+    language: "de",
   };
   const asApp = { ...deps, pool: app, ai: aiEnabled(fakeExplainer(replies.output(draft))) };
   const clerk = human("00000000-0000-0000-0000-000000000001");
   const shown = await requestInquiryDraft(asApp, id, clerk);
-  const approved = await approveInquiry(asApp, id, { source: "AI", aiInquiryId: shown.id, subject: shown.subject, body: shown.body }, clerk);
+  const approved = await approveInquiry(
+    asApp,
+    id,
+    { source: "AI", aiInquiryId: shown.id, subject: shown.subject, body: shown.body },
+    clerk,
+  );
   await markInquirySent(asApp, id, approved.id, clerk);
   assert.equal((await inquiryOverview(asApp, id)).inquiries[0].status, "SENT");
   for (const sql of [
@@ -171,9 +192,12 @@ test("but may record a change's decision, which is all the workflow updates", as
 
 test("a production start refuses a connection that could change the trail", async () => {
   const env = { NODE_ENV: "production", DEMO_MODE: "true", KOSIT_URL: "http://127.0.0.1:8081" };
-  const dist = new URL("../client", import.meta.url).pathname;
+  const dist = fileURLToPath(new URL("../client", import.meta.url));
   const asOwner = await deploymentProblems({ pool: deps.pool, env, clientDir: dist });
-  assert.ok(asOwner.some((p) => /Prüfpfad/.test(p)), asOwner.join("; "));
+  assert.ok(
+    asOwner.some((p) => /Prüfpfad/.test(p)),
+    asOwner.join("; "),
+  );
   const asApp = await deploymentProblems({ pool: app, env, clientDir: dist });
   assert.deepEqual(asApp, []);
 });

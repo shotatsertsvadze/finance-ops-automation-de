@@ -20,9 +20,7 @@ export function accountingRouter(deps) {
       }
       const csv = await exportAccountingCsv(deps, profile);
       const filename = profile === "spreadsheet" ? "buchungssaetze-tabellenkalkulation.csv" : "buchungssaetze.csv";
-      res.type("text/csv; charset=utf-8")
-        .set("Content-Disposition", `attachment; filename="${filename}"`)
-        .send(csv);
+      res.type("text/csv; charset=utf-8").set("Content-Disposition", `attachment; filename="${filename}"`).send(csv);
     } catch (error) {
       next(error);
     }

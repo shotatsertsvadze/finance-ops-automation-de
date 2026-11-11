@@ -15,24 +15,25 @@ const requireComment = (comment) => {
 };
 
 async function lockInvoice(client, invoiceId) {
-  const { rows: [invoice] } = await client.query("select * from finops.invoices where id = $1 for update", [invoiceId]);
+  const {
+    rows: [invoice],
+  } = await client.query("select * from finops.invoices where id = $1 for update", [invoiceId]);
   if (!invoice) throw new NotFoundError("INVOICE_NOT_FOUND", "Rechnung nicht gefunden");
   return invoice;
 }
 
 /** The person who submitted the invoice, from its intake event; null for a system channel. */
 async function submittedBy(client, invoiceId) {
-  const { rows: [row] } = await client.query(
-    "select actor_id from finops.audit_events where invoice_id = $1 and action = 'received' limit 1", [invoiceId],
-  );
+  const {
+    rows: [row],
+  } = await client.query("select actor_id from finops.audit_events where invoice_id = $1 and action = 'received' limit 1", [invoiceId]);
   return row?.actor_id ?? null;
 }
 
 const cancelAllSteps = (client, invoiceId) =>
-  client.query(
-    "update finops.approval_steps set status = 'CANCELLED' where invoice_id = $1 and status in ('PENDING', 'APPROVED')",
-    [invoiceId],
-  );
+  client.query("update finops.approval_steps set status = 'CANCELLED' where invoice_id = $1 and status in ('PENDING', 'APPROVED')", [
+    invoiceId,
+  ]);
 
 /**
  * A reviewer's decision on an invoice sitting in REVIEW_REQUIRED.
@@ -49,10 +50,15 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
 
     if (action === "info-received") {
       if (invoice.state !== "INFO_REQUESTED") {
-        throw new TransitionError("NOT_AWAITING_INFORMATION", `Rechnung im Status ${invoice.state} wartet nicht auf eine Rückmeldung`, { state: invoice.state });
+        throw new TransitionError("NOT_AWAITING_INFORMATION", `Rechnung im Status ${invoice.state} wartet nicht auf eine Rückmeldung`, {
+          state: invoice.state,
+        });
       }
       await transition(client, {
-        invoiceId, to: "REVIEW_REQUIRED", actor, action: "info_received",
+        invoiceId,
+        to: "REVIEW_REQUIRED",
+        actor,
+        action: "info_received",
         reason: (comment ?? "").trim() || null,
         reviewReason: invoice.review_reason,
       });
@@ -70,7 +76,9 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
     }
 
     if (invoice.state !== "REVIEW_REQUIRED") {
-      throw new TransitionError("NOT_IN_REVIEW", `Rechnung im Status ${invoice.state} steht nicht in der Sichtprüfung`, { state: invoice.state });
+      throw new TransitionError("NOT_IN_REVIEW", `Rechnung im Status ${invoice.state} steht nicht in der Sichtprüfung`, {
+        state: invoice.state,
+      });
     }
 
     if (action === "accept") {
@@ -78,14 +86,19 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
       // evidence must be eligible before anyone can sign for it.
       const blockers = payableBlockers(invoice, await latestFailedChecks(client, invoiceId));
       if (blockers.length) {
-        throw new RuleError(422, "NOT_PAYABLE_ELIGIBLE", "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben", { blockers });
+        throw new RuleError(422, "NOT_PAYABLE_ELIGIBLE", "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben", {
+          blockers,
+        });
       }
       const steps = stepsAfterReview(policy, toCents(invoice.gross_amount));
       await cancelAllSteps(client, invoiceId);
       await startRound(client, invoiceId, steps);
       await client.query("update finops.invoices set review_accepted_by = $2 where id = $1", [invoiceId, actor.id]);
       await transition(client, {
-        invoiceId, to: "READY_FOR_APPROVAL", actor, action: "review_accepted",
+        invoiceId,
+        to: "READY_FOR_APPROVAL",
+        actor,
+        action: "review_accepted",
         reason: (comment ?? "").trim() || null,
         evidence: { cleared_reason: invoice.review_reason, required_steps: steps },
       });
@@ -105,8 +118,13 @@ export async function decideReview({ pool, policy }, { invoiceId, action, actor,
       await client.query("update finops.invoices set review_accepted_by = null where id = $1", [invoiceId]);
       // A supplier inquiry sent by hand names itself here (ADR-084).
       await transition(client, {
-        invoiceId, to: "INFO_REQUESTED", actor, action: "information_requested",
-        reason, evidence, reviewReason: invoice.review_reason,
+        invoiceId,
+        to: "INFO_REQUESTED",
+        actor,
+        action: "information_requested",
+        reason,
+        evidence,
+        reviewReason: invoice.review_reason,
       });
       return;
     }
@@ -132,7 +150,165 @@ async function requestInfoInApproval(client, invoiceId, { actor, comment }) {
   await cancelAllSteps(client, invoiceId);
   await client.query("update finops.invoices set review_accepted_by = null where id = $1", [invoiceId]);
   await transition(client, {
-    invoiceId, to: "INFO_REQUESTED", actor, action: "information_requested", reason,
+    invoiceId,
+    to: "INFO_REQUESTED",
+    actor,
+    action: "information_requested",
+    reason,
+  });
+}
+
+async function loadOpenStep(client, { invoiceId, stepNo, user }) {
+  const invoice = await lockInvoice(client, invoiceId);
+  if (invoice.state !== "READY_FOR_APPROVAL") {
+    throw new TransitionError("CANNOT_BE_APPROVED", `Rechnung im Status ${invoice.state} kann nicht freigegeben werden`, {
+      state: invoice.state,
+    });
+  }
+
+  const { rows: steps } = await client.query(
+    `select * from finops.approval_steps where invoice_id = $1 and round = ${CURRENT_ROUND} order by step_no for update`,
+    [invoiceId],
+  );
+  const step = steps.find((s) => s.step_no === stepNo);
+  if (!step) throw new NotFoundError("APPROVAL_STEP_NOT_FOUND", `Freigabeschritt ${stepNo} existiert nicht`, { step_no: stepNo });
+  if (step.status !== "PENDING") {
+    throw new RuleError(409, "STEP_ALREADY_DECIDED", `Freigabeschritt ${stepNo} wurde bereits entschieden (${step.status})`, {
+      step_no: stepNo,
+      step_status: step.status,
+    });
+  }
+
+  const firstPending = steps.find((s) => s.status === "PENDING");
+  if (firstPending.step_no !== stepNo) {
+    throw new RuleError(409, "STEP_OUT_OF_ORDER", `Freigabeschritt ${firstPending.step_no} ist zuerst an der Reihe`, {
+      step_no: firstPending.step_no,
+    });
+  }
+
+  if (user.role !== step.required_role) {
+    throw new RuleError(403, "WRONG_ROLE_FOR_STEP", `Dieser Schritt verlangt die Rolle ${step.required_role}, nicht ${user.role}`, {
+      required_role: step.required_role,
+      role: user.role,
+    });
+  }
+
+  return { invoice, steps, step };
+}
+
+async function assertSegregation(client, { invoice, steps, invoiceId, stepNo, actor }) {
+  if (steps.some((s) => s.actor_id === actor.id && s.step_no !== stepNo)) {
+    throw new RuleError(409, "SAME_PERSON_TWO_STEPS", "Dieselbe Person darf nicht zwei Freigabeschritte derselben Rechnung entscheiden");
+  }
+  if (invoice.review_accepted_by === actor.id) {
+    throw new RuleError(
+      409,
+      "REVIEWER_CANNOT_APPROVE",
+      "Wer die Rechnung aus der Sichtprüfung freigegeben hat, darf sie nicht auch fachlich freigeben",
+    );
+  }
+  if ((await submittedBy(client, invoiceId)) === actor.id) {
+    throw new RuleError(409, "UPLOADER_CANNOT_APPROVE", "Wer die Rechnung eingereicht hat, darf sie nicht auch freigeben");
+  }
+}
+
+// Checked again at the last gate: master data or a re-validation may have
+// changed since the release from review. Returns a result only when the
+// invoice went back to review instead of being signed.
+async function approvalGate(client, { invoice, invoiceId, steps, binding, policy, company, actor }) {
+  const blockers = payableBlockers(invoice, await latestFailedChecks(client, invoiceId));
+  if (blockers.length) {
+    throw new RuleError(422, "NOT_PAYABLE_ELIGIBLE", "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben", {
+      blockers,
+    });
+  }
+  // A signature is given for one version of one document. If the invoice
+  // no longer matches what an earlier step signed, the remaining steps
+  // cannot inherit that signature.
+  const drift = bindingDrift(
+    binding,
+    steps.filter((s) => s.status === "APPROVED"),
+  );
+  if (drift.length) {
+    throw new RuleError(
+      409,
+      "CHANGED_SINCE_PREVIOUS_APPROVAL",
+      "Rechnung hat sich seit der vorherigen Freigabe geändert und muss neu geprüft werden",
+      { drift },
+    );
+  }
+
+  // Master data may have moved while the invoice waited. A fact that has
+  // changed for the worse belongs in front of a reviewer, not behind a
+  // signature, so the invoice goes back to review rather than the approver
+  // being told to try again. Committed, then reported as a refusal: the
+  // signature did not happen, and the invoice did move.
+  const recheck = await newBusinessFailures(client, invoice, policy, company);
+  if (recheck?.fresh.length) {
+    const lead = recheck.fresh[0];
+    const reviewReason = lead.check.toUpperCase();
+    await recordRecheck(client, invoiceId, recheck.checks);
+    await cancelAllSteps(client, invoiceId);
+    await client.query("update finops.invoices set review_accepted_by = null where id = $1", [invoiceId]);
+    await transition(client, {
+      invoiceId,
+      to: "REVIEW_REQUIRED",
+      actor,
+      action: "routed_to_review_at_approval",
+      reason: `Bei der Freigabe neu aufgetreten: ${lead.reason}`,
+      reviewReason,
+      evidence: { new_failures: recheck.fresh.map((c) => ({ check: c.check, reason: c.reason })) },
+    });
+    return {
+      outcome: "ROUTED_TO_REVIEW",
+      reviewReason,
+      reasons: recheck.fresh.map((c) => `${c.check}: ${c.reason}`),
+    };
+  }
+}
+
+async function recordDecision(client, { steps, step, binding, action, actor, comment, invoiceId, stepNo }) {
+  const decided = action === "approve" ? "APPROVED" : "REJECTED";
+  const reason = action === "reject" ? requireComment(comment) : (comment ?? "").trim() || null;
+  await client.query(
+    `update finops.approval_steps
+       set status = $2, actor_id = $3, decided_at = now(), comment = $4,
+           document_sha256 = $5, validation_run_no = $6, decided_gross = $7
+     where id = $1`,
+    [step.id, decided, actor.id, reason, binding.document_sha256, binding.validation_run_no, binding.decided_gross],
+  );
+
+  if (action === "reject") {
+    await client.query("update finops.approval_steps set status = 'CANCELLED' where invoice_id = $1 and status = 'PENDING'", [invoiceId]);
+    await transition(client, {
+      invoiceId,
+      to: "REJECTED",
+      actor,
+      action: "approval_rejected",
+      reason,
+      evidence: { step_no: stepNo, role: step.required_role },
+    });
+    return;
+  }
+
+  const stillPending = steps.some((s) => s.status === "PENDING" && s.step_no !== stepNo);
+  if (stillPending) {
+    await recordEvent(client, {
+      invoiceId,
+      actor,
+      action: "approval_step_approved",
+      reason,
+      evidence: { step_no: stepNo, role: step.required_role },
+    });
+    return;
+  }
+  await transition(client, {
+    invoiceId,
+    to: "APPROVED",
+    actor,
+    action: "approved",
+    reason,
+    evidence: { step_no: stepNo, role: step.required_role },
   });
 }
 
@@ -143,116 +319,13 @@ async function requestInfoInApproval(client, invoiceId, { actor, comment }) {
  */
 export async function decideApprovalStep({ pool, policy, company }, { invoiceId, stepNo, action, actor, user, comment }) {
   return withTransaction(pool, async (client) => {
-    const invoice = await lockInvoice(client, invoiceId);
-    if (invoice.state !== "READY_FOR_APPROVAL") {
-      throw new TransitionError("CANNOT_BE_APPROVED", `Rechnung im Status ${invoice.state} kann nicht freigegeben werden`, { state: invoice.state });
-    }
-
-    const { rows: steps } = await client.query(
-      `select * from finops.approval_steps where invoice_id = $1 and round = ${CURRENT_ROUND} order by step_no for update`,
-      [invoiceId],
-    );
-    const step = steps.find((s) => s.step_no === stepNo);
-    if (!step) throw new NotFoundError("APPROVAL_STEP_NOT_FOUND", `Freigabeschritt ${stepNo} existiert nicht`, { step_no: stepNo });
-    if (step.status !== "PENDING") {
-      throw new RuleError(409, "STEP_ALREADY_DECIDED", `Freigabeschritt ${stepNo} wurde bereits entschieden (${step.status})`, { step_no: stepNo, step_status: step.status });
-    }
-
-    const firstPending = steps.find((s) => s.status === "PENDING");
-    if (firstPending.step_no !== stepNo) {
-      throw new RuleError(409, "STEP_OUT_OF_ORDER", `Freigabeschritt ${firstPending.step_no} ist zuerst an der Reihe`, { step_no: firstPending.step_no });
-    }
-
-    if (user.role !== step.required_role) {
-      throw new RuleError(403, "WRONG_ROLE_FOR_STEP", `Dieser Schritt verlangt die Rolle ${step.required_role}, nicht ${user.role}`, { required_role: step.required_role, role: user.role });
-    }
-
-    if (steps.some((s) => s.actor_id === actor.id && s.step_no !== stepNo)) {
-      throw new RuleError(409, "SAME_PERSON_TWO_STEPS", "Dieselbe Person darf nicht zwei Freigabeschritte derselben Rechnung entscheiden");
-    }
-    if (invoice.review_accepted_by === actor.id) {
-      throw new RuleError(409, "REVIEWER_CANNOT_APPROVE", "Wer die Rechnung aus der Sichtprüfung freigegeben hat, darf sie nicht auch fachlich freigeben");
-    }
-    if (await submittedBy(client, invoiceId) === actor.id) {
-      throw new RuleError(409, "UPLOADER_CANNOT_APPROVE", "Wer die Rechnung eingereicht hat, darf sie nicht auch freigeben");
-    }
-
-    // Checked again at the last gate: master data or a re-validation may have
-    // changed since the release from review.
+    const { invoice, steps, step } = await loadOpenStep(client, { invoiceId, stepNo, user });
+    await assertSegregation(client, { invoice, steps, invoiceId, stepNo, actor });
     const binding = bindingOf(invoice, await latestRunNo(client, invoiceId));
     if (action === "approve") {
-      const blockers = payableBlockers(invoice, await latestFailedChecks(client, invoiceId));
-      if (blockers.length) {
-        throw new RuleError(422, "NOT_PAYABLE_ELIGIBLE", "Rechnung ist nicht freigabefähig: fehlende oder unlesbare Pflichtangaben", { blockers });
-      }
-      // A signature is given for one version of one document. If the invoice
-      // no longer matches what an earlier step signed, the remaining steps
-      // cannot inherit that signature.
-      const drift = bindingDrift(binding, steps.filter((s) => s.status === "APPROVED"));
-      if (drift.length) {
-        throw new RuleError(409, "CHANGED_SINCE_PREVIOUS_APPROVAL", "Rechnung hat sich seit der vorherigen Freigabe geändert und muss neu geprüft werden", { drift });
-      }
-
-      // Master data may have moved while the invoice waited. A fact that has
-      // changed for the worse belongs in front of a reviewer, not behind a
-      // signature, so the invoice goes back to review rather than the approver
-      // being told to try again. Committed, then reported as a refusal: the
-      // signature did not happen, and the invoice did move.
-      const recheck = await newBusinessFailures(client, invoice, policy, company);
-      if (recheck?.fresh.length) {
-        const lead = recheck.fresh[0];
-        const reviewReason = lead.check.toUpperCase();
-        await recordRecheck(client, invoiceId, recheck.checks);
-        await cancelAllSteps(client, invoiceId);
-        await client.query("update finops.invoices set review_accepted_by = null where id = $1", [invoiceId]);
-        await transition(client, {
-          invoiceId, to: "REVIEW_REQUIRED", actor, action: "routed_to_review_at_approval",
-          reason: `Bei der Freigabe neu aufgetreten: ${lead.reason}`,
-          reviewReason,
-          evidence: { new_failures: recheck.fresh.map((c) => ({ check: c.check, reason: c.reason })) },
-        });
-        return {
-          outcome: "ROUTED_TO_REVIEW",
-          reviewReason,
-          reasons: recheck.fresh.map((c) => `${c.check}: ${c.reason}`),
-        };
-      }
+      const routed = await approvalGate(client, { invoice, invoiceId, steps, binding, policy, company, actor });
+      if (routed) return routed;
     }
-
-    const decided = action === "approve" ? "APPROVED" : "REJECTED";
-    const reason = action === "reject" ? requireComment(comment) : (comment ?? "").trim() || null;
-    await client.query(
-      `update finops.approval_steps
-         set status = $2, actor_id = $3, decided_at = now(), comment = $4,
-             document_sha256 = $5, validation_run_no = $6, decided_gross = $7
-       where id = $1`,
-      [step.id, decided, actor.id, reason,
-        binding.document_sha256, binding.validation_run_no, binding.decided_gross],
-    );
-
-    if (action === "reject") {
-      await client.query(
-        "update finops.approval_steps set status = 'CANCELLED' where invoice_id = $1 and status = 'PENDING'",
-        [invoiceId],
-      );
-      await transition(client, {
-        invoiceId, to: "REJECTED", actor, action: "approval_rejected", reason,
-        evidence: { step_no: stepNo, role: step.required_role },
-      });
-      return;
-    }
-
-    const stillPending = steps.some((s) => s.status === "PENDING" && s.step_no !== stepNo);
-    if (stillPending) {
-      await recordEvent(client, {
-        invoiceId, actor, action: "approval_step_approved", reason,
-        evidence: { step_no: stepNo, role: step.required_role },
-      });
-      return;
-    }
-    await transition(client, {
-      invoiceId, to: "APPROVED", actor, action: "approved", reason,
-      evidence: { step_no: stepNo, role: step.required_role },
-    });
+    return recordDecision(client, { steps, step, binding, action, actor, comment, invoiceId, stepNo });
   });
 }

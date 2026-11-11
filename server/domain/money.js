@@ -24,7 +24,7 @@ function decimal(value) {
 /** num/den as an integer, rounding a half away from zero. */
 function divideRounding(num, den) {
   if (den === 0n) return null;
-  const negative = (num < 0n) !== (den < 0n);
+  const negative = num < 0n !== den < 0n;
   const n = num < 0n ? -num : num;
   const d = den < 0n ? -den : den;
   const magnitude = (2n * n + d) / (2n * d);
@@ -60,5 +60,7 @@ export function centsToDecimal(cents) {
 
 export function formatEur(cents) {
   if (cents === null || cents === undefined) return "-";
-  return `${centsToDecimal(cents).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")} EUR`;
+  return `${centsToDecimal(cents)
+    .replace(".", ",")
+    .replace(/\B(?=(\d{3})+(?!\d))/g, ".")} EUR`;
 }

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { importBankStatement, listBankTransactions, runReconciliation } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
 import { TX_TONE, chip } from "../../lib/tones.js";
+import Button from "../../components/Button.jsx";
 
 /**
  * Bank side of the process: what came in, what it was matched to, and why a
@@ -18,7 +19,12 @@ export default function PaymentsView({ may, onChanged }) {
   // The effect must return a cleanup function or nothing; returning the
   // promise makes React try to call it as one.
   const mayRead = may("bank:read");
-  const load = () => (mayRead ? listBankTransactions().then(setRows).catch(() => {}) : Promise.resolve());
+  const load = () =>
+    mayRead
+      ? listBankTransactions()
+          .then(setRows)
+          .catch(() => {})
+      : Promise.resolve();
   useEffect(() => {
     load();
   }, []);
@@ -74,32 +80,38 @@ export default function PaymentsView({ may, onChanged }) {
         </div>
         <div className="panel-body">
           {message && (
-            <div className={`toast${message.ok ? "" : " is-error"}`} role="status">{message.text}</div>
+            <div className={`toast${message.ok ? "" : " is-error"}`} role="status">
+              {message.text}
+            </div>
           )}
-          {!may("bank:import") && (
-            <p className="action-prompt">{t("financeOnly")}</p>
-          )}
+          {!may("bank:import") && <p className="action-prompt">{t("financeOnly")}</p>}
           <div className="action-row">
-            <button
-              className="btn btn-ghost"
+            <Button
+              variant="ghost"
               disabled={busy || !may("bank:import")}
               onClick={() => act((r) => t("importResult", r.imported, r.received), importDemoStatement)}
             >
               {t("importDemoStatement")}
-            </button>
-            <button
-              className="btn"
+            </Button>
+            <Button
               disabled={busy || !may("reconciliation:run")}
-              onClick={() => act((r) => t("reconcileResult", r.matched, r.exceptions, r.unmatched), () => runReconciliation())}
+              onClick={() =>
+                act(
+                  (r) => t("reconcileResult", r.matched, r.exceptions, r.unmatched),
+                  () => runReconciliation(),
+                )
+              }
             >
               {t("runReconciliation")}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
 
-      <div className="panel" style={{ marginTop: 18 }}>
-        <div className="panel-head"><span className="label">{t("transactions")}</span></div>
+      <div className="panel mt-18">
+        <div className="panel-head">
+          <span className="label">{t("transactions")}</span>
+        </div>
         {rows.length === 0 ? (
           <p className="empty">{t("noStatement")}</p>
         ) : (
@@ -122,7 +134,7 @@ export default function PaymentsView({ may, onChanged }) {
                       <div className="supplier-sub">{tx.counterparty_name ?? "—"}</div>
                     </td>
                     <td>
-                      <span style={{ fontSize: 12 }}>{tx.reference ?? "—"}</span>
+                      <span className="text-sm">{tx.reference ?? "—"}</span>
                       {tx.invoice_number && (
                         <div className="supplier-sub mono">
                           <Link to={`/rechnung/${tx.matched_invoice_id}`}>{tx.invoice_number}</Link>
@@ -132,12 +144,12 @@ export default function PaymentsView({ may, onChanged }) {
                     <td>
                       <span className={chip(TX_TONE[tx.status])}>{statusLabel[tx.status]}</span>
                       {tx.match_reason && (
-                        <div style={{ marginTop: 4 }}>
+                        <div className="mt-4">
                           <span className="blocker">{matchReason(tx.match_reason)}</span>
                         </div>
                       )}
                     </td>
-                    <td className="mono" style={{ fontSize: 12 }}>{formatDate(tx.value_date)}</td>
+                    <td className="mono text-sm">{formatDate(tx.value_date)}</td>
                     <td className="num">{formatMoney(tx.amount)}</td>
                   </tr>
                 ))}

@@ -31,7 +31,10 @@ for (const name of Object.keys(SCENARIOS)) {
   }
 }
 
-const { input: IBAN_INPUT, good: [GOOD] } = scenarioFixture("1_iban_mismatch");
+const {
+  input: IBAN_INPUT,
+  good: [GOOD],
+} = scenarioFixture("1_iban_mismatch");
 const verify = (changes) => verifyExplanation(IBAN_INPUT, { ...GOOD, ...changes });
 
 test("anything that is not an object with exactly the agreed fields is refused", () => {
@@ -42,8 +45,13 @@ test("anything that is not an object with exactly the agreed fields is refused",
 
 test("empty, overlong or wrongly typed fields are refused", () => {
   for (const changes of [
-    { summary: "" }, { summary: "x".repeat(201) }, { explanation: " " }, { explanation: "x".repeat(701) },
-    { failed_checks: "supplier_iban_match" }, { cited_checks: [1] }, { cited_checks: ["supplier_iban_match", "supplier_iban_match"] },
+    { summary: "" },
+    { summary: "x".repeat(201) },
+    { explanation: " " },
+    { explanation: "x".repeat(701) },
+    { failed_checks: "supplier_iban_match" },
+    { cited_checks: [1] },
+    { cited_checks: ["supplier_iban_match", "supplier_iban_match"] },
     { next_step: 3 },
   ]) {
     assert.ok(rules(verify(changes)).includes("SCHEMA"), JSON.stringify(changes));
@@ -51,13 +59,23 @@ test("empty, overlong or wrongly typed fields are refused", () => {
 });
 
 test("a date, number or identifier the evidence does not contain is refused, in any notation", () => {
-  for (const text of ["Fällig am 2026-10-01.", "Fällig am 01.10.2026.", "Es geht um 2.499,00 EUR.", "Es geht um 2,499.00 EUR.", "Lieferant S-1002.", "Konto DE44 **** 1065."]) {
+  for (const text of [
+    "Fällig am 2026-10-01.",
+    "Fällig am 01.10.2026.",
+    "Es geht um 2.499,00 EUR.",
+    "Es geht um 2,499.00 EUR.",
+    "Lieferant S-1002.",
+    "Konto DE44 **** 1065.",
+  ]) {
     assert.ok(rules(verify({ explanation: text })).includes("UNGROUNDED"), text);
   }
 });
 
 test("a figure from the evidence may be written the German or the English way", () => {
-  const { input, good: [german] } = scenarioFixture("2_po_overrun");
+  const {
+    input,
+    good: [german],
+  } = scenarioFixture("2_po_overrun");
   for (const amount of ["8500.00", "8.500,00", "8,500.00", "8500"]) {
     const result = verifyExplanation(input, { ...german, explanation: `Nettobetrag ${amount} EUR.` });
     assert.deepEqual(result.reasons, [], amount);
@@ -71,16 +89,28 @@ test("no contact route of any kind", () => {
 });
 
 test("decision language is refused in either language, whatever the requested one", () => {
-  for (const text of ["Die Rechnung ist unbedenklich.", "The invoice can be approved.", "It is safe to pay.", "Bitte die Rechnung freigeben."]) {
+  for (const text of [
+    "Die Rechnung ist unbedenklich.",
+    "The invoice can be approved.",
+    "It is safe to pay.",
+    "Bitte die Rechnung freigeben.",
+  ]) {
     assert.ok(rules(verify({ explanation: text })).includes("DECISION"), text);
   }
 });
 
 test("a negated release, approval or payment is a statement of the block, not a decision", () => {
   for (const text of [
-    "Die Rechnung kann nicht freigegeben werden.", "Die Rechnung darf nicht bezahlt werden.", "Sie sollte keinesfalls überwiesen werden.",
-    "Bitte die Rechnung nicht freigeben.", "The invoice cannot be approved.", "The invoice can not be approved.",
-    "It should not be paid.", "It must never be released.", "Do not release the invoice.", "Don't pay it.",
+    "Die Rechnung kann nicht freigegeben werden.",
+    "Die Rechnung darf nicht bezahlt werden.",
+    "Sie sollte keinesfalls überwiesen werden.",
+    "Bitte die Rechnung nicht freigeben.",
+    "The invoice cannot be approved.",
+    "The invoice can not be approved.",
+    "It should not be paid.",
+    "It must never be released.",
+    "Do not release the invoice.",
+    "Don't pay it.",
   ]) {
     assert.deepEqual(verify({ explanation: text }).reasons, [], text);
   }
@@ -88,10 +118,19 @@ test("a negated release, approval or payment is a statement of the block, not a 
 
 test("a positive release, approval or payment is still refused, even after an unrelated negation", () => {
   for (const text of [
-    "Die Rechnung kann freigegeben werden.", "Die Rechnung kann bezahlt werden.", "Sie darf überwiesen werden.", "Bitte die Rechnung freigeben.",
-    "The invoice can be approved.", "It can be released.", "It can be paid.", "Release the invoice.", "Pay it.",
-    "Die IBAN stimmt nicht; die Rechnung kann freigegeben werden.", "Die Bestellung ist nicht betroffen, die Rechnung kann bezahlt werden.",
-    "The IBAN is not trusted, but the invoice can be paid.", "Nothing is missing and it can be approved.",
+    "Die Rechnung kann freigegeben werden.",
+    "Die Rechnung kann bezahlt werden.",
+    "Sie darf überwiesen werden.",
+    "Bitte die Rechnung freigeben.",
+    "The invoice can be approved.",
+    "It can be released.",
+    "It can be paid.",
+    "Release the invoice.",
+    "Pay it.",
+    "Die IBAN stimmt nicht; die Rechnung kann freigegeben werden.",
+    "Die Bestellung ist nicht betroffen, die Rechnung kann bezahlt werden.",
+    "The IBAN is not trusted, but the invoice can be paid.",
+    "Nothing is missing and it can be approved.",
   ]) {
     assert.ok(rules(verify({ explanation: text })).includes("DECISION"), text);
   }

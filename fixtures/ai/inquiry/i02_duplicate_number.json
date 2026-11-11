@@ -30,18 +30,8 @@
       "duplicate_invoice_number": "doppel_bestaetigen",
       "po_amount_within_tolerance": "betrag_klaeren"
     },
-    "allowed_requests": [
-      "doppel_bestaetigen",
-      "betrag_klaeren"
-    ],
-    "placeholders": [
-      "rechnungsnummer",
-      "rechnungsdatum",
-      "bruttobetrag",
-      "bestellnummer",
-      "lieferant",
-      "unser_unternehmen"
-    ]
+    "allowed_requests": ["doppel_bestaetigen", "betrag_klaeren"],
+    "placeholders": ["rechnungsnummer", "rechnungsdatum", "bruttobetrag", "bestellnummer", "lieferant", "unser_unternehmen"]
   },
   "placeholder_values": {
     "rechnungsnummer": "INV-2026-00421",

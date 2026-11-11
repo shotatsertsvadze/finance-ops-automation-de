@@ -9,7 +9,7 @@ import { REQUESTS, inquiryScope } from "../inquiries/requests.js";
  * the invoice has values for. Never a value itself. What this returns is
  * stored as sent.
  */
-export const INQUIRY_INPUT_SCHEMA = "finops.ai-inquiry-input/1";
+const INQUIRY_INPUT_SCHEMA = "finops.ai-inquiry-input/1";
 
 /** The draft's input, or why there is none. */
 export function buildInquiryInput(evidence, placeholders) {

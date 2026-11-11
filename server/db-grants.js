@@ -1,8 +1,15 @@
 const IDENTIFIER = /^[a-z_][a-z0-9_]{0,62}$/;
 
 /** The columns of a bank-account change the workflow moves; the proposal itself is fixed. */
-export const CHANGE_DECISION_COLUMNS = [
-  "state", "verified_by", "verified_at", "decided_by", "decided_at", "decision_reason", "bank_account_id", "revalidated_at",
+const CHANGE_DECISION_COLUMNS = [
+  "state",
+  "verified_by",
+  "verified_at",
+  "decided_by",
+  "decided_at",
+  "decision_reason",
+  "bank_account_id",
+  "revalidated_at",
 ];
 
 /**

@@ -21,17 +21,8 @@
     "request_for_check": {
       "po_amount_within_tolerance": "betrag_klaeren"
     },
-    "allowed_requests": [
-      "betrag_klaeren"
-    ],
-    "placeholders": [
-      "rechnungsnummer",
-      "rechnungsdatum",
-      "bruttobetrag",
-      "bestellnummer",
-      "lieferant",
-      "unser_unternehmen"
-    ]
+    "allowed_requests": ["betrag_klaeren"],
+    "placeholders": ["rechnungsnummer", "rechnungsdatum", "bruttobetrag", "bestellnummer", "lieferant", "unser_unternehmen"]
   },
   "placeholder_values": {
     "rechnungsnummer": "SIT-2026-0918",

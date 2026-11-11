@@ -25,12 +25,10 @@ export function changeActions(change, user, may) {
  * for that IBAN is linked instead: proposing again would be refused.
  */
 export function invoiceBankEntry(invoice, may) {
-  const ibanFailed = (invoice.validation?.business ?? [])
-    .some((r) => r.check_code === "supplier_iban_match" && r.status === "FAILED");
+  const ibanFailed = (invoice.validation?.business ?? []).some((r) => r.check_code === "supplier_iban_match" && r.status === "FAILED");
   const show = ibanFailed && Boolean(invoice.supplier_id);
   const pending = (invoice.bank_changes ?? []).some((c) => [...OPEN, "APPROVED"].includes(c.state));
-  const canPropose = show && !pending && may("bank-change:propose")
-    && ["REVIEW_REQUIRED", "INFO_REQUESTED"].includes(invoice.state);
+  const canPropose = show && !pending && may("bank-change:propose") && ["REVIEW_REQUIRED", "INFO_REQUESTED"].includes(invoice.state);
   return { show, canPropose };
 }
 
@@ -47,9 +45,12 @@ export function changeSteps(change) {
   const callback = verification
     ? { tone: denied ? "failed" : "done", actor: change.verified_by_name ?? null, at: change.verified_at ?? null }
     : open(!ended);
-  const approval = change.state === "APPROVED" ? { tone: "done", actor: change.decided_by_name, at: change.decided_at }
-    : change.state === "REJECTED" && !denied ? { tone: "failed", actor: change.decided_by_name, at: change.decided_at }
-    : open(change.state === "VERIFIED");
+  const approval =
+    change.state === "APPROVED"
+      ? { tone: "done", actor: change.decided_by_name, at: change.decided_at }
+      : change.state === "REJECTED" && !denied
+        ? { tone: "failed", actor: change.decided_by_name, at: change.decided_at }
+        : open(change.state === "VERIFIED");
   return [
     { key: "proposal", tone: "done", actor: change.proposed_by_name, at: change.proposed_at },
     { key: "callback", ...callback },

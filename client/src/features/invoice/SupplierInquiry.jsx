@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { approveSupplierInquiry, getSupplierInquiry, markSupplierInquirySent, requestSupplierInquiryDraft } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
+import Button from "../../components/Button.jsx";
 
 /**
  * A supplier inquiry (ADR-084): a draft from the model or the fixed template,
@@ -18,7 +19,9 @@ export default function SupplierInquiry({ invoiceId, runNo, state, may, onChange
   useEffect(() => {
     setDraft(null);
     setError(null);
-    getSupplierInquiry(invoiceId).then(setData).catch(() => setData(null));
+    getSupplierInquiry(invoiceId)
+      .then(setData)
+      .catch(() => setData(null));
   }, [invoiceId, runNo, state]);
 
   if (!data?.enabled) return null;
@@ -38,16 +41,19 @@ export default function SupplierInquiry({ invoiceId, runNo, state, may, onChange
     }
   };
   const fromTemplate = () => setDraft({ source: "TEMPLATE", ...data.template });
-  const fromAi = () => run(async () => {
-    const result = await requestSupplierInquiryDraft(invoiceId);
-    if (result.status === "ACCEPTED") return setDraft({ source: "AI", ai_inquiry_id: result.id, subject: result.subject, body: result.body });
-    fromTemplate();
-    setError(t("inquiryAiUnavailable"));
-  });
-  const approve = () => run(async () => {
-    setData(await approveSupplierInquiry(invoiceId, draft));
-    setDraft(null);
-  });
+  const fromAi = () =>
+    run(async () => {
+      const result = await requestSupplierInquiryDraft(invoiceId);
+      if (result.status === "ACCEPTED")
+        return setDraft({ source: "AI", ai_inquiry_id: result.id, subject: result.subject, body: result.body });
+      fromTemplate();
+      setError(t("inquiryAiUnavailable"));
+    });
+  const approve = () =>
+    run(async () => {
+      setData(await approveSupplierInquiry(invoiceId, draft));
+      setDraft(null);
+    });
   const markSent = (inquiry) => {
     if (!window.confirm(t("inquirySentConfirm"))) return;
     run(async () => {
@@ -69,8 +75,12 @@ export default function SupplierInquiry({ invoiceId, runNo, state, may, onChange
         {data.eligible && canAct && !draft && (
           <div className="inquiry-start">
             <p className="hint">{t("inquiryIntro")}</p>
-            <button className="btn" onClick={fromAi} disabled={busy}>{busy ? t("inquiryDrafting") : t("inquiryFromAi")}</button>
-            <button className="btn btn-ghost" onClick={fromTemplate} disabled={busy}>{t("inquiryFromTemplate")}</button>
+            <Button onClick={fromAi} disabled={busy}>
+              {busy ? t("inquiryDrafting") : t("inquiryFromAi")}
+            </Button>
+            <Button variant="ghost" onClick={fromTemplate} disabled={busy}>
+              {t("inquiryFromTemplate")}
+            </Button>
           </div>
         )}
 
@@ -86,8 +96,12 @@ export default function SupplierInquiry({ invoiceId, runNo, state, may, onChange
               <textarea rows={12} value={draft.body} onChange={edit("body")} />
             </label>
             <div className="inquiry-actions">
-              <button className="btn" onClick={approve} disabled={busy}>{t("inquiryApprove")}</button>
-              <button className="btn btn-ghost" onClick={() => setDraft(null)} disabled={busy}>{t("inquiryDiscard")}</button>
+              <Button onClick={approve} disabled={busy}>
+                {t("inquiryApprove")}
+              </Button>
+              <Button variant="ghost" onClick={() => setDraft(null)} disabled={busy}>
+                {t("inquiryDiscard")}
+              </Button>
             </div>
           </div>
         )}
@@ -102,17 +116,20 @@ export default function SupplierInquiry({ invoiceId, runNo, state, may, onChange
                     {inquiry.status === "SENT"
                       ? t("inquirySentBy", inquiry.sent_by_name, formatDateTime(inquiry.sent_at))
                       : t("inquiryApprovedBy", inquiry.approved_by_name, formatDateTime(inquiry.approved_at))}
-                    {" · "}{inquiry.source === "AI" ? t("inquirySourceAiShort") : t("inquirySourceTemplate")}
+                    {" · "}
+                    {inquiry.source === "AI" ? t("inquirySourceAiShort") : t("inquirySourceTemplate")}
                   </span>
                 </div>
                 <p className="inquiry-subject">{inquiry.subject}</p>
                 <p className="inquiry-text">{inquiry.body}</p>
                 <div className="inquiry-actions">
-                  <button className="btn btn-ghost" onClick={() => navigator.clipboard?.writeText(`${inquiry.subject}\n\n${inquiry.body}`)}>
+                  <Button variant="ghost" onClick={() => navigator.clipboard?.writeText(`${inquiry.subject}\n\n${inquiry.body}`)}>
                     {t("inquiryCopy")}
-                  </button>
+                  </Button>
                   {inquiry.status === "APPROVED" && canAct && data.eligible && (
-                    <button className="btn" onClick={() => markSent(inquiry)} disabled={busy}>{t("inquiryMarkSent")}</button>
+                    <Button onClick={() => markSent(inquiry)} disabled={busy}>
+                      {t("inquiryMarkSent")}
+                    </Button>
                   )}
                 </div>
                 {inquiry.status === "APPROVED" && <p className="hint">{t("inquiryNotSentHere")}</p>}

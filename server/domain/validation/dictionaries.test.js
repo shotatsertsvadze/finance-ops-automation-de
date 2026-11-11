@@ -42,9 +42,7 @@ test("the English check dictionary has no entries for checks that do not exist",
  */
 function leadingChecks() {
   const text = businessCheckSources();
-  return [...new Set(
-    [...text.matchAll(/\bfailed\("([a-z_]+)", SEVERITY\.(?:HIGH|MEDIUM)/g)].map(([, code]) => code.toUpperCase()),
-  )].sort();
+  return [...new Set([...text.matchAll(/\bfailed\("([a-z_]+)", SEVERITY\.(?:HIGH|MEDIUM)/g)].map(([, code]) => code.toUpperCase()))].sort();
 }
 
 test("every check that can stop an invoice has a review reason in both languages", () => {
@@ -73,9 +71,14 @@ test("every role has a label in both languages", () => {
 
 test("every audit action the server writes has a label in both languages", () => {
   const files = [
-    "../workflow/transitions.js", "../intake/intake.js", "../approvals/approvals.js",
-    "../accounting/accounting.js", "../accounting/credit-notes.js", "../accounting/netting.js",
-    "../payments/payments.js", "../reconciliation/reconciliation.js",
+    "../workflow/transitions.js",
+    "../intake/intake.js",
+    "../approvals/approvals.js",
+    "../accounting/accounting.js",
+    "../accounting/credit-notes.js",
+    "../accounting/netting.js",
+    "../payments/payments.js",
+    "../reconciliation/reconciliation.js",
   ];
   const actions = new Set();
   for (const path of files) {
@@ -95,15 +98,31 @@ test("every bank-account change state and event has a label in both languages", 
   }
   assert.ok(events.size >= 6, "the scan found the change events");
   for (const [lang, dict] of Object.entries(DICTIONARIES)) {
-    assert.deepEqual(CHANGE_STATES.filter((s) => !dict.changeState?.[s]), [], `${lang} is missing change states`);
-    assert.deepEqual([...events].filter((a) => !dict.changeAction?.[a]), [], `${lang} is missing change events`);
+    assert.deepEqual(
+      CHANGE_STATES.filter((s) => !dict.changeState?.[s]),
+      [],
+      `${lang} is missing change states`,
+    );
+    assert.deepEqual(
+      [...events].filter((a) => !dict.changeAction?.[a]),
+      [],
+      `${lang} is missing change events`,
+    );
   }
 });
 
 test("every source a dashboard figure can name has a label and an explanation in both languages", () => {
   for (const [lang, dict] of Object.entries(DICTIONARIES)) {
-    assert.deepEqual(SOURCE_TYPES.filter((type) => !dict.source?.[type]), [], `${lang} is missing source labels`);
-    assert.deepEqual(SOURCE_TYPES.filter((type) => !dict.sourceExplanation?.[type]), [], `${lang} is missing source explanations`);
+    assert.deepEqual(
+      SOURCE_TYPES.filter((type) => !dict.source?.[type]),
+      [],
+      `${lang} is missing source labels`,
+    );
+    assert.deepEqual(
+      SOURCE_TYPES.filter((type) => !dict.sourceExplanation?.[type]),
+      [],
+      `${lang} is missing source explanations`,
+    );
     assert.ok(dict.ui.sourceNotMeasured, `${lang} says when nothing is measured`);
   }
   assert.equal(DICTIONARIES.de.ui.sourceNotMeasured, "Nicht gemessen");
@@ -111,7 +130,12 @@ test("every source a dashboard figure can name has a label and an explanation in
 });
 
 test("every next step an AI explanation may suggest is labelled as the button it names, in both languages", () => {
-  const button = { verify_bank_account: "proposeBankAccount", request_info: "requestInfo", confirm_duplicate: "confirmDuplicate", reject: "reject" };
+  const button = {
+    verify_bank_account: "proposeBankAccount",
+    request_info: "requestInfo",
+    confirm_duplicate: "confirmDuplicate",
+    reject: "reject",
+  };
   assert.deepEqual(Object.keys(button).sort(), [...NEXT_STEPS].sort());
   for (const [lang, dict] of Object.entries(DICTIONARIES)) {
     for (const step of NEXT_STEPS) assert.equal(dict.aiStep?.[step], dict.ui[button[step]], `${lang} ${step}`);
@@ -135,11 +159,20 @@ function enumValues(type) {
 }
 
 test("every check status, severity, approval-step status and payment status has a label in both languages", () => {
-  for (const [group, type] of [["checkStatus", "check_status"], ["severity", "check_severity"], ["stepStatus", "approval_step_status"], ["paymentStatus", "payment_status"]]) {
+  for (const [group, type] of [
+    ["checkStatus", "check_status"],
+    ["severity", "check_severity"],
+    ["stepStatus", "approval_step_status"],
+    ["paymentStatus", "payment_status"],
+  ]) {
     const values = enumValues(type);
     assert.ok(values.length >= 3, type);
     for (const [lang, dict] of Object.entries(DICTIONARIES)) {
-      assert.deepEqual(values.filter((v) => !dict[group]?.[v]), [], `${lang} ${group}`);
+      assert.deepEqual(
+        values.filter((v) => !dict[group]?.[v]),
+        [],
+        `${lang} ${group}`,
+      );
     }
   }
 });
@@ -152,7 +185,10 @@ test("the intake channels the system writes have a label in both languages", () 
 test("codes inside a stored audit reason or evidence text are named in the reader's language", () => {
   const { de, en } = DICTIONARIES;
   assert.equal(translateTerms(de, "Eingang über EMAIL"), "Eingang über E-Mail");
-  assert.equal(translateTerms(de, "Freigabe durch MANAGER + FINANCE laut Betragsstufe"), "Freigabe durch Kostenstellenleitung + Finanzen laut Betragsstufe");
+  assert.equal(
+    translateTerms(de, "Freigabe durch MANAGER + FINANCE laut Betragsstufe"),
+    "Freigabe durch Kostenstellenleitung + Finanzen laut Betragsstufe",
+  );
   assert.equal(translateTerms(de, "2499.00 EUR -> MANAGER+FINANCE"), "2499.00 EUR -> Kostenstellenleitung+Finanzen");
   assert.equal(translateTerms(en, "Eingang über UPLOAD"), "Received via Upload");
   assert.equal(translateTerms(en, "Freigabe durch MANAGER laut Betragsstufe"), "Approval by Cost centre manager per amount tier");
@@ -160,7 +196,25 @@ test("codes inside a stored audit reason or evidence text are named in the reade
 });
 
 test("the two dictionaries carry the same keys", () => {
-  for (const group of ["ui", "state", "reviewReason", "action", "matchReason", "role", "error", "changeState", "changeAction", "source", "sourceExplanation", "aiStep", "checkStatus", "severity", "stepStatus", "paymentStatus", "channel"]) {
+  for (const group of [
+    "ui",
+    "state",
+    "reviewReason",
+    "action",
+    "matchReason",
+    "role",
+    "error",
+    "changeState",
+    "changeAction",
+    "source",
+    "sourceExplanation",
+    "aiStep",
+    "checkStatus",
+    "severity",
+    "stepStatus",
+    "paymentStatus",
+    "channel",
+  ]) {
     const de = Object.keys(DICTIONARIES.de[group]).sort();
     const en = Object.keys(DICTIONARIES.en[group]).sort();
     assert.deepEqual(en, de, `the ${group} groups differ`);
@@ -175,7 +229,8 @@ test("the two dictionaries carry the same keys", () => {
  * does not prove the text is English. Words spelled the same in both languages,
  * such as "Status", are deliberately absent: they would only fire falsely.
  */
-const GERMAN_WORDS = /\b(Rechnung\w*|Freigabe\w*|Lieferant\w*|Betrag\w*|Zahlung\w*|Bestellung\w*|Buchung\w*|Prüf\w*|nicht|kein\w*|und|oder|wurde|bereits|erforderlich)\b/i;
+const GERMAN_WORDS =
+  /\b(Rechnung\w*|Freigabe\w*|Lieferant\w*|Betrag\w*|Zahlung\w*|Bestellung\w*|Buchung\w*|Prüf\w*|nicht|kein\w*|und|oder|wurde|bereits|erforderlich)\b/i;
 
 test("the English dictionary carries no German characters or obvious German words", () => {
   // Parameterised entries are functions, so they are called with a probe
@@ -212,7 +267,10 @@ test("a check with no English entry still shows the server's sentence", () => {
 });
 
 test("German connecting words inside expected and actual are translated", () => {
-  const actual = translateTerms(DICTIONARIES.en, "<= 190.67 EUR (verfügbar 180.67 + Toleranz 2 %, davon 319.33 EUR durch andere Rechnungen gebunden)");
+  const actual = translateTerms(
+    DICTIONARIES.en,
+    "<= 190.67 EUR (verfügbar 180.67 + Toleranz 2 %, davon 319.33 EUR durch andere Rechnungen gebunden)",
+  );
   assert.ok(!/[äöüßÄÖÜ]/.test(actual), `still German: ${actual}`);
   assert.match(actual, /available 180\.67/);
   assert.match(actual, /committed by other invoices/);
@@ -239,8 +297,10 @@ test("the totals chain reads in English, link by link", () => {
   for (const text of evidence) {
     const english = translateTerms(DICTIONARIES.en, text);
     assert.ok(!/[äöüßÄÖÜ]/.test(english), `still German: ${english}`);
-    assert.ok(!/\b(Positionen?|Nachl|Zuschl|Netto|Steuer|Anzahlung|Rundung|Zahlbetrag|Betr|Menge|Einzelpreis|nachgerechnet)/.test(english),
-      `untranslated term: ${english}`);
+    assert.ok(
+      !/\b(Positionen?|Nachl|Zuschl|Netto|Steuer|Anzahlung|Rundung|Zahlbetrag|Betr|Menge|Einzelpreis|nachgerechnet)/.test(english),
+      `untranslated term: ${english}`,
+    );
   }
 });
 
@@ -336,14 +396,18 @@ test("every refusal is thrown with a code", () => {
   // A refusal without one falls back to German, which is the defect this
   // closes, so the absence has to fail rather than degrade quietly.
   for (const path of serverModules()) {
-    for (const [line] of source(path).matchAll(/throw new (?:RuleError|TransitionError|NotFoundError)\([^\n]*/g)) {
-      assert.match(line, /"[A-Z_]{3,}"/, `refusal without a code in ${path}: ${line.trim()}`);
+    for (const [line] of source(path).matchAll(/throw new (?:RuleError|TransitionError|NotFoundError)\(\s*(?:\d+,\s*)?[^\n]*/g)) {
+      assert.match(line, /\(\s*(?:\d+,\s*)?"[A-Z_]{3,}"/, `refusal without a code in ${path}: ${line.trim()}`);
     }
   }
 });
 
 test("a refusal reads in both languages, naming states and roles as the screen does", () => {
-  const refusal = { code: "NOT_IN_REVIEW", message: "Rechnung im Status APPROVED steht nicht in der Sichtprüfung", details: { state: "APPROVED" } };
+  const refusal = {
+    code: "NOT_IN_REVIEW",
+    message: "Rechnung im Status APPROVED steht nicht in der Sichtprüfung",
+    details: { state: "APPROVED" },
+  };
   assert.equal(errorText(DICTIONARIES.en, refusal), "An invoice in state Approved is not in manual review");
   assert.equal(errorText(DICTIONARIES.de, refusal), "Rechnung im Status Freigegeben steht nicht in der Sichtprüfung");
 

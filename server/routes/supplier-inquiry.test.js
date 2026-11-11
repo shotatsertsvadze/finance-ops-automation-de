@@ -51,7 +51,9 @@ test("a reviewer drafts, approves and marks sent; the view follows each step", a
   assert.deepEqual([start.enabled, start.eligible, start.ai.status, start.inquiries], [true, true, "NONE", []]);
   const draft = await (await clients.clerk.post(path("/draft"), {})).json();
   assert.equal(draft.status, "ACCEPTED");
-  const approved = await (await clients.clerk.post(path("/approve"), { source: "AI", ai_inquiry_id: draft.id, subject: draft.subject, body: draft.body })).json();
+  const approved = await (
+    await clients.clerk.post(path("/approve"), { source: "AI", ai_inquiry_id: draft.id, subject: draft.subject, body: draft.body })
+  ).json();
   assert.equal(approved.inquiries[0].status, "APPROVED");
   const sent = await (await clients.finance.post(path(`/${approved.inquiries[0].id}/sent`), {})).json();
   assert.deepEqual([sent.state, sent.inquiries[0].status], ["INFO_REQUESTED", "SENT"]);

@@ -26,10 +26,20 @@ after(() => deps.pool.end());
 beforeEach(() => resetBankChanges(deps.pool));
 
 const propose = (overrides = {}) =>
-  proposeChange(deps, { supplierId: S1, iban: NEW_IBAN, reason: "Neue Bankverbindung laut Lieferantenschreiben", actor: clerk, ...overrides });
+  proposeChange(deps, {
+    supplierId: S1,
+    iban: NEW_IBAN,
+    reason: "Neue Bankverbindung laut Lieferantenschreiben",
+    actor: clerk,
+    ...overrides,
+  });
 
 const confirmation = (overrides = {}) => ({
-  outcome: "CONFIRMED", contactedRole: "Buchhaltung", calledAt: new Date().toISOString(), ibanReadBack: NEW_IBAN, ...overrides,
+  outcome: "CONFIRMED",
+  contactedRole: "Buchhaltung",
+  calledAt: new Date().toISOString(),
+  ibanReadBack: NEW_IBAN,
+  ...overrides,
 });
 
 async function verified(overrides = {}) {
@@ -39,10 +49,20 @@ async function verified(overrides = {}) {
 }
 
 const accounts = async (supplierId = S1) =>
-  (await deps.pool.query("select iban, status, trusted_by_change_id from finops.supplier_bank_accounts where supplier_id = $1 order by iban", [supplierId])).rows;
+  (
+    await deps.pool.query(
+      "select iban, status, trusted_by_change_id from finops.supplier_bank_accounts where supplier_id = $1 order by iban",
+      [supplierId],
+    )
+  ).rows;
 
 const events = async (changeId) =>
-  (await deps.pool.query("select action, actor_id, from_state, to_state, evidence from finops.bank_change_events where change_id = $1 order by id", [changeId])).rows;
+  (
+    await deps.pool.query(
+      "select action, actor_id, from_state, to_state, evidence from finops.bank_change_events where change_id = $1 order by id",
+      [changeId],
+    )
+  ).rows;
 
 const refusal = (code) => (error) => {
   assert.equal(error.code, code, error.message);
@@ -59,7 +79,10 @@ test("a proposal snapshots the trusted accounts, the policy and a hash, and reco
   assert.deepEqual(change.trusted_ibans, [S1_IBAN]);
   assert.equal(change.required_distinct_actors, 3);
   assert.match(change.proposal_sha256, /^[0-9a-f]{64}$/);
-  assert.deepEqual((await events(change.id)).map((e) => [e.action, e.actor_id, e.to_state]), [["proposed", USERS.clerk, "PROPOSED"]]);
+  assert.deepEqual(
+    (await events(change.id)).map((e) => [e.action, e.actor_id, e.to_state]),
+    [["proposed", USERS.clerk, "PROPOSED"]],
+  );
   assert.deepEqual(await accounts(), [{ iban: S1_IBAN, status: "ACTIVE", trusted_by_change_id: null }], "nothing is trusted yet");
 });
 
@@ -95,10 +118,7 @@ test("a different account while one is open is refused, naming the open one", as
 });
 
 test("concurrent proposals for one supplier leave exactly one open change", async () => {
-  const results = await Promise.allSettled([
-    propose(),
-    propose({ iban: "DE02300209000106531065", actor: finance }),
-  ]);
+  const results = await Promise.allSettled([propose(), propose({ iban: "DE02300209000106531065", actor: finance })]);
   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
   assert.equal(results.find((r) => r.status === "rejected").reason.code, "CHANGE_ALREADY_OPEN");
   const { rows } = await deps.pool.query("select count(*)::int as n from finops.bank_account_changes where supplier_id = $1", [S1]);
@@ -109,11 +129,16 @@ test("an IBAN trusted for another supplier is proposed with a warning, not refus
   // Factoring and group treasury are legitimate reasons; a fraudster reusing
   // an account is not. The approver has to see it and say so (ADR-077).
   const { change } = await proposeChange(deps, { supplierId: S2, iban: S1_IBAN, reason: "Factoring", actor: clerk });
-  assert.deepEqual(change.shared_with.map((s) => s.supplier_no), ["S-1001"]);
+  assert.deepEqual(
+    change.shared_with.map((s) => s.supplier_no),
+    ["S-1001"],
+  );
 });
 
 test("a source invoice must be this supplier's and carry this IBAN", async () => {
-  const { rows: [invoice] } = await deps.pool.query(
+  const {
+    rows: [invoice],
+  } = await deps.pool.query(
     `insert into finops.invoices (state, source_channel, original_filename, file_sha256, file_path, file_size_bytes, supplier_id, supplier_iban_raw)
      values ('REVIEW_REQUIRED', 'UPLOAD', 'x.xml', repeat('c', 64), 'x', 1, $1, $2) returning id`,
     [S1, NEW_IBAN],
@@ -143,10 +168,16 @@ test("the proposer cannot verify their own proposal", async () => {
 test("a confirmed call-back records the number on file, never one the caller supplies", async () => {
   const { change } = await propose();
   const result = await verifyChange(deps, {
-    changeId: change.id, actor: finance, ...confirmation(), contactNumber: "+49 170 0000000", contact_number: "+49 170 0000000",
+    changeId: change.id,
+    actor: finance,
+    ...confirmation(),
+    contactNumber: "+49 170 0000000",
+    contact_number: "+49 170 0000000",
   });
   assert.equal(result.change.state, "VERIFIED");
-  const { rows: [v] } = await deps.pool.query("select * from finops.bank_change_verifications where change_id = $1", [change.id]);
+  const {
+    rows: [v],
+  } = await deps.pool.query("select * from finops.bank_change_verifications where change_id = $1", [change.id]);
   assert.equal(v.contact_number, "+49 30 23125 101");
   assert.equal(v.method, "CALLBACK_KNOWN_NUMBER");
   assert.equal(v.proposal_sha256, change.proposal_sha256);
@@ -163,7 +194,11 @@ test("confirming needs the IBAN the supplier read back, and it must match", asyn
     verifyChange(deps, { changeId: change.id, actor: finance, ...confirmation({ ibanReadBack: "" }) }),
     refusal("IBAN_READ_BACK_MISMATCH"),
   );
-  const ok = await verifyChange(deps, { changeId: change.id, actor: finance, ...confirmation({ ibanReadBack: "de75 5121 0800 1245 1261 99" }) });
+  const ok = await verifyChange(deps, {
+    changeId: change.id,
+    actor: finance,
+    ...confirmation({ ibanReadBack: "de75 5121 0800 1245 1261 99" }),
+  });
   assert.equal(ok.change.state, "VERIFIED");
 });
 
@@ -206,12 +241,19 @@ test("a supplier with no number on file cannot be verified", async () => {
 test("a denied call-back rejects the change and trusts nothing", async () => {
   const { change } = await propose();
   const result = await verifyChange(deps, {
-    changeId: change.id, actor: finance, outcome: "DENIED", contactedRole: "Buchhaltung", calledAt: new Date().toISOString(),
+    changeId: change.id,
+    actor: finance,
+    outcome: "DENIED",
+    contactedRole: "Buchhaltung",
+    calledAt: new Date().toISOString(),
     note: "Lieferant kennt die Kontoänderung nicht",
   });
   assert.equal(result.change.state, "REJECTED");
   assert.equal(result.change.decided_by, USERS.finance);
-  assert.deepEqual((await accounts()).map((a) => a.iban), [S1_IBAN]);
+  assert.deepEqual(
+    (await accounts()).map((a) => a.iban),
+    [S1_IBAN],
+  );
 });
 
 test("verifying twice by the same person changes nothing; by another is refused", async () => {
@@ -219,7 +261,9 @@ test("verifying twice by the same person changes nothing; by another is refused"
   const replay = await verifyChange(deps, { changeId: change.id, actor: finance, ...confirmation() });
   assert.equal(replay.replayed, true);
   await assert.rejects(verifyChange(deps, { changeId: change.id, actor: cfo, ...confirmation() }), refusal("CHANGE_STATE_CONFLICT"));
-  const { rows } = await deps.pool.query("select count(*)::int as n from finops.bank_change_verifications where change_id = $1", [change.id]);
+  const { rows } = await deps.pool.query("select count(*)::int as n from finops.bank_change_verifications where change_id = $1", [
+    change.id,
+  ]);
   assert.equal(rows[0].n, 1);
 });
 
@@ -245,13 +289,22 @@ test("a third person's approval adds the account as trusted and names the change
   const result = await approveChange(deps, { changeId: change.id, actor: finance2, comment: "Rückruf dokumentiert" });
   assert.equal(result.change.state, "APPROVED");
   assert.equal(result.change.decided_by, USERS.finance2);
-  assert.deepEqual(await accounts(), [
-    { iban: NEW_IBAN, status: "ACTIVE", trusted_by_change_id: change.id },
-    { iban: S1_IBAN, status: "ACTIVE", trusted_by_change_id: null },
-  ], "added, not replaced: the old account stays trusted");
-  assert.deepEqual((await events(change.id)).map((e) => [e.action, e.to_state]), [
-    ["proposed", "PROPOSED"], ["verified", "VERIFIED"], ["approved", "APPROVED"],
-  ]);
+  assert.deepEqual(
+    await accounts(),
+    [
+      { iban: NEW_IBAN, status: "ACTIVE", trusted_by_change_id: change.id },
+      { iban: S1_IBAN, status: "ACTIVE", trusted_by_change_id: null },
+    ],
+    "added, not replaced: the old account stays trusted",
+  );
+  assert.deepEqual(
+    (await events(change.id)).map((e) => [e.action, e.to_state]),
+    [
+      ["proposed", "PROPOSED"],
+      ["verified", "VERIFIED"],
+      ["approved", "APPROVED"],
+    ],
+  );
 });
 
 test("approving twice by the same person changes nothing; by another is refused", async () => {
@@ -311,7 +364,10 @@ test("an IBAN shared with another supplier is approved only when the approver sa
   const result = await approveChange(deps, { changeId: change.id, actor: finance2, acknowledgeSharedIban: true });
   assert.equal(result.change.state, "APPROVED");
   const approved = (await events(change.id)).find((e) => e.action === "approved");
-  assert.deepEqual(approved.evidence.shared_with.map((s) => s.supplier_no), ["S-1001"]);
+  assert.deepEqual(
+    approved.evidence.shared_with.map((s) => s.supplier_no),
+    ["S-1001"],
+  );
   assert.equal(approved.evidence.shared_iban_acknowledged, true);
 });
 
@@ -324,7 +380,10 @@ test("a rejected change never writes master data", async () => {
   const result = await rejectChange(deps, { changeId: change.id, actor: finance2, comment: "Schreiben wirkt gefälscht" });
   assert.equal(result.change.state, "REJECTED");
   await assert.rejects(approveChange(deps, { changeId: change.id, actor: cfo }), refusal("CHANGE_STATE_CONFLICT"));
-  assert.deepEqual((await accounts()).map((a) => a.iban), [S1_IBAN]);
+  assert.deepEqual(
+    (await accounts()).map((a) => a.iban),
+    [S1_IBAN],
+  );
 });
 
 test("only the proposer cancels, and a cancelled change never writes master data", async () => {
@@ -333,7 +392,10 @@ test("only the proposer cancels, and a cancelled change never writes master data
   const result = await cancelChange(deps, { changeId: change.id, actor: clerk, comment: "Tippfehler im Vorschlag" });
   assert.equal(result.change.state, "CANCELLED");
   await assert.rejects(approveChange(deps, { changeId: change.id, actor: finance2 }), refusal("CHANGE_STATE_CONFLICT"));
-  assert.deepEqual((await accounts()).map((a) => a.iban), [S1_IBAN]);
+  assert.deepEqual(
+    (await accounts()).map((a) => a.iban),
+    [S1_IBAN],
+  );
   const again = await propose();
   assert.equal(again.created, true, "a cancelled change no longer blocks a corrected proposal");
 });

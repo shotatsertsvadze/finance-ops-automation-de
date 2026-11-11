@@ -9,7 +9,7 @@ import { toCents } from "../money.js";
  * carried. An invoice whose amount, identity or structure could not be read is
  * not eligible for approval at any number of signatures.
  */
-export const NON_OVERRIDABLE_CHECKS = [
+const NON_OVERRIDABLE_CHECKS = [
   "xml_well_formed",
   "format_recognised",
   "required_fields_present",

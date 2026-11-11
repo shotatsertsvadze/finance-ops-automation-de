@@ -37,9 +37,13 @@ const withProvider = (reply, options) => {
   deps.ai = aiEnabled(fake);
   return fake;
 };
-const attempts = async (id) => (await deps.pool.query(
-  "select status, language, model, run_no, rejection_reasons, error, input, requested_by from finops.ai_explanations where invoice_id = $1 order by created_at", [id],
-)).rows;
+const attempts = async (id) =>
+  (
+    await deps.pool.query(
+      "select status, language, model, run_no, rejection_reasons, error, input, requested_by from finops.ai_explanations where invoice_id = $1 order by created_at",
+      [id],
+    )
+  ).rows;
 
 /** Everything authoritative about an invoice, to compare before and after. */
 async function authoritative(id) {
@@ -74,8 +78,10 @@ test("a grounded answer is accepted, labelled as AI, stored with its model and l
   const view = await requestExplanation(deps, id, "de", REVIEWER);
   assert.equal(view.status, "ACCEPTED");
   assert.equal(view.ai_generated, true);
-  assert.deepEqual([view.summary, view.next_step, view.provider, view.model, view.language, view.run_no],
-    [GERMAN.summary, "verify_bank_account", "anthropic", "claude-sonnet-5-5", "de", 1]);
+  assert.deepEqual(
+    [view.summary, view.next_step, view.provider, view.model, view.language, view.run_no],
+    [GERMAN.summary, "verify_bank_account", "anthropic", "claude-sonnet-5-5", "de", 1],
+  );
   assert.deepEqual(view.cited_checks, GERMAN.cited_checks);
 
   assert.deepEqual((await requestExplanation(deps, id, "de", REVIEWER)).summary, GERMAN.summary);
@@ -97,8 +103,14 @@ test("each language is its own explanation, and a different model never reuses a
   assert.equal((await currentExplanation(deps, id, "de")).explanation, null, "the other model's answer is not this model's");
   assert.equal((await requestExplanation(deps, id, "de", REVIEWER)).model, "claude-sonnet-5");
   assert.equal(other.calls.length, 1);
-  assert.deepEqual((await attempts(id)).map((a) => [a.language, a.model]),
-    [["de", "claude-sonnet-5-5"], ["en", "claude-sonnet-5-5"], ["de", "claude-sonnet-5"]]);
+  assert.deepEqual(
+    (await attempts(id)).map((a) => [a.language, a.model]),
+    [
+      ["de", "claude-sonnet-5-5"],
+      ["en", "claude-sonnet-5-5"],
+      ["de", "claude-sonnet-5"],
+    ],
+  );
 });
 
 for (const [what, reply, status, rule] of [
@@ -116,7 +128,11 @@ for (const [what, reply, status, rule] of [
     assert.deepEqual(await authoritative(id), before);
     const [row] = await attempts(id);
     assert.equal(row.status, status);
-    if (rule) assert.ok(row.rejection_reasons.some((r) => r.rule === rule), JSON.stringify(row.rejection_reasons));
+    if (rule)
+      assert.ok(
+        row.rejection_reasons.some((r) => r.rule === rule),
+        JSON.stringify(row.rejection_reasons),
+      );
     else assert.ok(row.error);
     const current = await currentExplanation(deps, id, "de");
     assert.deepEqual([current.explanation, current.status], [null, "UNAVAILABLE"]);
@@ -128,7 +144,10 @@ test("enabled without a key: the attempt fails and says so, and nothing else cha
   const before = await authoritative(id);
   deps.ai = aiEnabled(null);
   assert.deepEqual(await requestExplanation(deps, id, "de", REVIEWER), { status: "UNAVAILABLE", ai_generated: true });
-  assert.deepEqual((await attempts(id)).map((a) => [a.status, a.error]), [["FAILED", "Kein API-Schlüssel konfiguriert"]]);
+  assert.deepEqual(
+    (await attempts(id)).map((a) => [a.status, a.error]),
+    [["FAILED", "Kein API-Schlüssel konfiguriert"]],
+  );
   assert.deepEqual(await authoritative(id), before);
 });
 
@@ -160,7 +179,11 @@ test("an explanation belongs to its validation run: after a new run the old one 
   assert.deepEqual([current.eligible, current.explanation], [true, null]);
   assert.equal((await requestExplanation(deps, id, "de", REVIEWER)).run_no, 2);
   assert.equal(fake.calls.length, 2);
-  assert.deepEqual((await attempts(id)).map((a) => a.run_no), [1, 2], "run 1's explanation is kept, not replaced");
+  assert.deepEqual(
+    (await attempts(id)).map((a) => a.run_no),
+    [1, 2],
+    "run 1's explanation is kept, not replaced",
+  );
 });
 
 test("two requests at once store one accepted explanation", async () => {
@@ -170,7 +193,10 @@ test("two requests at once store one accepted explanation", async () => {
     return replies.output(GERMAN)();
   });
   const views = await Promise.all([requestExplanation(deps, id, "de", REVIEWER), requestExplanation(deps, id, "de", REVIEWER)]);
-  assert.deepEqual(views.map((v) => v.status), ["ACCEPTED", "ACCEPTED"]);
+  assert.deepEqual(
+    views.map((v) => v.status),
+    ["ACCEPTED", "ACCEPTED"],
+  );
   assert.equal((await attempts(id)).filter((a) => a.status === "ACCEPTED").length, 1);
 });
 
@@ -191,7 +217,17 @@ test("only the minimised evidence leaves the system, exactly as recorded", async
   const sent = `${request.system}\n${request.message}`;
   assert.deepEqual(input, IBAN.input);
   assert.deepEqual((await attempts(id))[0].input, input, "the record is what was sent");
-  for (const secret of [/DE02120300000000202051/, /DE02300209000106531065/, /Havel Logistik/, /Nordwerk/, /B_iban_changed/, /\.xml/, /storage/, /@/, /S-10\d\d/]) {
+  for (const secret of [
+    /DE02120300000000202051/,
+    /DE02300209000106531065/,
+    /Havel Logistik/,
+    /Nordwerk/,
+    /B_iban_changed/,
+    /\.xml/,
+    /storage/,
+    /@/,
+    /S-10\d\d/,
+  ]) {
     assert.doesNotMatch(sent, secret);
   }
   assert.doesNotMatch(sent, /\b[A-Z]{2}\d{2}[A-Z0-9]{12,30}\b/, "no full IBAN of any kind");
@@ -202,18 +238,26 @@ test("no supplier's number, name or VAT id leaves the system, even when a check 
   const identities = suppliers.flatMap((s) => [s.supplier_no, s.legal_name, s.vat_id]).filter(Boolean);
   for (const [what, change, failed] of [
     ["an order of another supplier", (xml) => xml.replace("PO-2026-0201", "PO-2026-0303"), "po_supplier_match"],
-    ["an unknown supplier", (xml) => xml.replace("DE234567890", "DE777777777").replaceAll("Havel Logistik GmbH", "Ein Einzelunternehmer"), "supplier_known"],
+    [
+      "an unknown supplier",
+      (xml) => xml.replace("DE234567890", "DE777777777").replaceAll("Havel Logistik GmbH", "Ein Einzelunternehmer"),
+      "supplier_known",
+    ],
   ]) {
     const id = await uploadChanged("B_iban_changed_2499.xml", change);
     const fake = withProvider(replies.timeout);
     await requestExplanation(deps, id, "de", REVIEWER);
     const input = sentInput(fake.calls[0]);
-    assert.ok(input.failed.some((c) => c.check === failed), `${what}: ${failed} is explained`);
-    const sent = `${fake.calls[0].system}\n${fake.calls[0].message}`;
-    for (const identity of [...identities, "DE777777777", "Ein Einzelunternehmer"]) assert.ok(!sent.includes(identity), `${what}: ${identity}`);
-    const { rows: [kept] } = await deps.pool.query(
-      "select actual from finops.validation_results where invoice_id = $1 and check_code = $2", [id, failed],
+    assert.ok(
+      input.failed.some((c) => c.check === failed),
+      `${what}: ${failed} is explained`,
     );
+    const sent = `${fake.calls[0].system}\n${fake.calls[0].message}`;
+    for (const identity of [...identities, "DE777777777", "Ein Einzelunternehmer"])
+      assert.ok(!sent.includes(identity), `${what}: ${identity}`);
+    const {
+      rows: [kept],
+    } = await deps.pool.query("select actual from finops.validation_results where invoice_id = $1 and check_code = $2", [id, failed]);
     assert.match(kept.actual, /S-10\d\d|DE777777777/, `${what}: the evidence itself still names the supplier`);
   }
 });
@@ -231,7 +275,10 @@ const planted = {
   "the currency": ["<cbc:DocumentCurrencyCode>EUR<", `<cbc:DocumentCurrencyCode>${PLANTED}<`],
   "the IBAN field": ["<cbc:ID>DE89370400440532013000<", `<cbc:ID>${PLANTED}<`],
   "a tax rate": ["<cbc:Percent>19<", `<cbc:Percent>${PLANTED}<`],
-  "a line id": ['<cbc:ID>1</cbc:ID>\n    <cbc:InvoicedQuantity unitCode="XBX">20<', `<cbc:ID>${PLANTED}</cbc:ID>\n    <cbc:InvoicedQuantity unitCode="XBX">21<`],
+  "a line id": [
+    '<cbc:ID>1</cbc:ID>\n    <cbc:InvoicedQuantity unitCode="XBX">20<',
+    `<cbc:ID>${PLANTED}</cbc:ID>\n    <cbc:InvoicedQuantity unitCode="XBX">21<`,
+  ],
 };
 
 async function uploadWith(xml, officialValidator = standInValidator()) {
@@ -244,7 +291,10 @@ async function assertNotSent(what, id) {
   await requestExplanation(deps, id, "de", REVIEWER);
   assert.equal(fake.calls.length, 1, `${what}: the provider was asked`);
   assert.doesNotMatch(`${fake.calls[0].system}\n${fake.calls[0].message}`, LEAKED, what);
-  const { rows } = await deps.pool.query("select 1 from finops.validation_results where invoice_id = $1 and concat(actual, reason) ~* 'qxmarker'", [id]);
+  const { rows } = await deps.pool.query(
+    "select 1 from finops.validation_results where invoice_id = $1 and concat(actual, reason) ~* 'qxmarker'",
+    [id],
+  );
   assert.ok(rows.length > 0, `${what}: the evidence kept here still shows it`);
 }
 
@@ -277,9 +327,11 @@ test("the KoSIT validator's own message, which quotes the document, stays out of
   const official = sentInput(fake.calls[0]).failed.find((c) => c.check === "official_validation");
   assert.match(official.actual, /cvc-datatype-valid\.1\.2\.1/, "the rule codes are sent");
   assert.doesNotMatch(fake.calls[0].message, LEAKED);
-  const { rows: [kept] } = await deps.pool.query(
-    "select reason from finops.validation_results where invoice_id = $1 and check_code = 'official_validation'", [id],
-  );
+  const {
+    rows: [kept],
+  } = await deps.pool.query("select reason from finops.validation_results where invoice_id = $1 and check_code = 'official_validation'", [
+    id,
+  ]);
   assert.match(kept.reason, /Qxmarker/, "the full message stays in the evidence");
 });
 
@@ -293,7 +345,8 @@ test("no workflow, routing, approval, master-data or payment code imports the AI
       const rel = path.relative(root, full);
       if ([...allowed].some((a) => rel === a || rel.startsWith(`${a}/`))) continue;
       if (statSync(full).isDirectory()) walk(full);
-      else if (full.endsWith(".js") && !full.endsWith(".test.js") && /from "[^"]*(\/ai\/|ai-explainer)/.test(readFileSync(full, "utf8"))) offenders.push(rel);
+      else if (full.endsWith(".js") && !full.endsWith(".test.js") && /from "[^"]*(\/ai\/|ai-explainer)/.test(readFileSync(full, "utf8")))
+        offenders.push(rel);
     }
   };
   walk(root);

@@ -53,18 +53,31 @@ test("a credit note that names no invoice is still read", () => {
 });
 
 test("a CreditNote root in the wrong namespace is not one", () => {
-  const xml = buildInvoiceXml({ number: "GS-2", netCents: 20000, creditNote: true })
-    .replace("urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2", "urn:example:not-ubl");
+  const xml = buildInvoiceXml({ number: "GS-2", netCents: 20000, creditNote: true }).replace(
+    "urn:oasis:names:specification:ubl:schema:xsd:CreditNote-2",
+    "urn:example:not-ubl",
+  );
   assert.throws(() => parseInvoiceXml(xml), /UNSUPPORTED_FORMAT|Namensraum/);
 });
 
 test("a credit note passes technical validation without the odd-type warning", () => {
-  const result = runTechnicalValidation(Buffer.from(buildInvoiceXml({
-    number: "GS-3", netCents: 20000, creditNote: true, credits: "RE-1",
-  }), "utf8"));
+  const result = runTechnicalValidation(
+    Buffer.from(
+      buildInvoiceXml({
+        number: "GS-3",
+        netCents: 20000,
+        creditNote: true,
+        credits: "RE-1",
+      }),
+      "utf8",
+    ),
+  );
   assert.equal(result.passed, true, JSON.stringify(result.checks.filter((c) => c.status === "FAILED")));
-  assert.equal(result.checks.find((c) => c.check === "invoice_type_code"), undefined,
-    "381 is a document we now understand, not an anomaly to flag");
+  assert.equal(
+    result.checks.find((c) => c.check === "invoice_type_code"),
+    undefined,
+    "381 is a document we now understand, not an anomaly to flag",
+  );
 });
 
 const fixture = (name) => readFileSync(new URL(`../../../fixtures/xrechnung/${name}`, import.meta.url), "utf8");
@@ -78,7 +91,10 @@ test("a CreditNote's due date is read from PaymentMeans/PaymentDueDate, where UB
 test("an Invoice's due date is still only its own DueDate", () => {
   const xml = fixture("A_clean_1240.xml")
     .replace("<cbc:DueDate>2026-10-10</cbc:DueDate>", "")
-    .replace("<cbc:PaymentMeansCode>58</cbc:PaymentMeansCode>", "<cbc:PaymentMeansCode>58</cbc:PaymentMeansCode><cbc:PaymentDueDate>2026-10-10</cbc:PaymentDueDate>");
+    .replace(
+      "<cbc:PaymentMeansCode>58</cbc:PaymentMeansCode>",
+      "<cbc:PaymentMeansCode>58</cbc:PaymentMeansCode><cbc:PaymentDueDate>2026-10-10</cbc:PaymentDueDate>",
+    );
   assert.equal(parseInvoiceXml(fixture("A_clean_1240.xml")).dueDate, "2026-10-10");
   assert.equal(parseInvoiceXml(xml).dueDate, null);
 });

@@ -32,28 +32,33 @@ export function buildInvoiceXml({
   reducedNetCents = 0,
   reducedPercent = 7,
 }) {
-  const total = (charge) => allowances.filter((a) => Boolean(a.charge) === charge)
-    .reduce((sum, a) => sum + a.amountCents, 0);
+  const total = (charge) => allowances.filter((a) => Boolean(a.charge) === charge).reduce((sum, a) => sum + a.amountCents, 0);
   const allowanceTotal = total(false);
   const chargeTotal = total(true);
   const standardNet = netCents - allowanceTotal + chargeTotal;
   const standardVat = Math.round(standardNet * 0.19);
-  const reducedVat = Math.round(reducedNetCents * reducedPercent / 100);
+  const reducedVat = Math.round((reducedNetCents * reducedPercent) / 100);
   const net = standardNet + reducedNetCents;
   const vat = standardVat + reducedVat;
   const gross = net + vat;
-  const reducedSubtotal = reducedNetCents ? `<cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${money(reducedNetCents)}</cbc:TaxableAmount>
+  const reducedSubtotal = reducedNetCents
+    ? `<cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${money(reducedNetCents)}</cbc:TaxableAmount>
       <cbc:TaxAmount currencyID="EUR">${money(reducedVat)}</cbc:TaxAmount>
       <cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>${reducedPercent}</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
-    </cac:TaxSubtotal>` : "";
+    </cac:TaxSubtotal>`
+    : "";
   const payable = gross - prepaidCents + roundingCents;
-  const allowanceCharges = allowances.map((a) => `<cac:AllowanceCharge>
+  const allowanceCharges = allowances
+    .map(
+      (a) => `<cac:AllowanceCharge>
     <cbc:ChargeIndicator>${a.charge ? "true" : "false"}</cbc:ChargeIndicator>
     ${a.reasonCode ? `<cbc:AllowanceChargeReasonCode>${a.reasonCode}</cbc:AllowanceChargeReasonCode>` : ""}
     ${a.reason ? `<cbc:AllowanceChargeReason>${a.reason}</cbc:AllowanceChargeReason>` : ""}
     <cbc:Amount currencyID="EUR">${money(a.amountCents)}</cbc:Amount>
     <cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>19</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
-  </cac:AllowanceCharge>`).join("\n  ");
+  </cac:AllowanceCharge>`,
+    )
+    .join("\n  ");
   const optional = (tag, cents) => (cents ? `<cbc:${tag} currencyID="EUR">${money(cents)}</cbc:${tag}>` : "");
   const root = creditNote ? "CreditNote" : "Invoice";
   const rootNs = creditNote
@@ -122,13 +127,17 @@ export function buildInvoiceXml({
     <cac:Item><cbc:Name>Leistung laut Bestellung ${po}</cbc:Name></cac:Item>
     <cac:Price><cbc:PriceAmount currencyID="EUR">${money(netCents)}</cbc:PriceAmount></cac:Price>
   </cac:${lineTag}>
-  ${reducedNetCents ? `<cac:${lineTag}>
+  ${
+    reducedNetCents
+      ? `<cac:${lineTag}>
     <cbc:ID>2</cbc:ID>
     <cbc:${quantityTag} unitCode="C62">1</cbc:${quantityTag}>
     <cbc:LineExtensionAmount currencyID="EUR">${money(reducedNetCents)}</cbc:LineExtensionAmount>
     <cac:Item><cbc:Name>Verpflegung</cbc:Name></cac:Item>
     <cac:Price><cbc:PriceAmount currencyID="EUR">${money(reducedNetCents)}</cbc:PriceAmount></cac:Price>
-  </cac:${lineTag}>` : ""}
+  </cac:${lineTag}>`
+      : ""
+  }
 </ubl:${root}>
 `;
 }

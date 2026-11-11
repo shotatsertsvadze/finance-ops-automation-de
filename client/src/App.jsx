@@ -26,8 +26,10 @@ export default function App() {
           REVIEW_REQUIRED: of("REVIEW_REQUIRED"),
           READY_FOR_APPROVAL: of("READY_FOR_APPROVAL"),
           APPROVED: of("APPROVED"),
-          openMoney: ["APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILIATION_EXCEPTION"]
-            .reduce((sum, state) => sum + of(state), 0),
+          openMoney: ["APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILIATION_EXCEPTION"].reduce(
+            (sum, state) => sum + of(state),
+            0,
+          ),
         });
       })
       .catch(() => {});
@@ -79,7 +81,9 @@ export default function App() {
           <div className="session">
             <div className="session-name">{user.name}</div>
             <div className="session-role">{role(user.role)}</div>
-            <button type="button" className="link-button" onClick={logout}>{t("signOut")}</button>
+            <button type="button" className="link-button" onClick={logout}>
+              {t("signOut")}
+            </button>
           </div>
           <p>{t("demoDisclaimer")}</p>
         </div>

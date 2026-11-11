@@ -61,10 +61,9 @@ async function previousStatuses(client, invoiceId) {
  * copying them states a fact rather than guessing one.
  */
 export async function recordRecheck(client, invoiceId, checks) {
-  const { rows: [{ run_no: runNo }] } = await client.query(
-    "select coalesce(max(run_no), 0) + 1 as run_no from finops.validation_results where invoice_id = $1",
-    [invoiceId],
-  );
+  const {
+    rows: [{ run_no: runNo }],
+  } = await client.query("select coalesce(max(run_no), 0) + 1 as run_no from finops.validation_results where invoice_id = $1", [invoiceId]);
 
   await client.query(
     `insert into finops.validation_results

@@ -50,7 +50,9 @@ test("broken XML fails as not well-formed", () => {
 });
 
 test("CII syntax is reported as unsupported format, not as an error", () => {
-  const xml = Buffer.from(`<?xml version="1.0"?><rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"><rsm:ExchangedDocument/></rsm:CrossIndustryInvoice>`);
+  const xml = Buffer.from(
+    `<?xml version="1.0"?><rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100"><rsm:ExchangedDocument/></rsm:CrossIndustryInvoice>`,
+  );
   const r = runTechnicalValidation(xml);
   assert.equal(r.passed, false);
   assert.equal(r.checks[0].check, "format_recognised");
@@ -58,7 +60,9 @@ test("CII syntax is reported as unsupported format, not as an error", () => {
 });
 
 test("missing XRechnung customization id is a MEDIUM failure", () => {
-  const xml = fixture("A_clean_1240.xml").toString().replace(/<cbc:CustomizationID>.*<\/cbc:CustomizationID>/, "<cbc:CustomizationID>urn:cen.eu:en16931:2017</cbc:CustomizationID>");
+  const xml = fixture("A_clean_1240.xml")
+    .toString()
+    .replace(/<cbc:CustomizationID>.*<\/cbc:CustomizationID>/, "<cbc:CustomizationID>urn:cen.eu:en16931:2017</cbc:CustomizationID>");
   const r = runTechnicalValidation(Buffer.from(xml));
   assert.equal(r.passed, false);
   const c = r.checks.find((c) => c.check === "xrechnung_profile_declared");
@@ -75,13 +79,14 @@ test("missing XRechnung customization id is a MEDIUM failure", () => {
  */
 const UBL_NS = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
 
-const rootedIn = (namespace, prefix = "ubl") => Buffer.from(
-  `<?xml version="1.0" encoding="UTF-8"?>
+const rootedIn = (namespace, prefix = "ubl") =>
+  Buffer.from(
+    `<?xml version="1.0" encoding="UTF-8"?>
    <${prefix}:Invoice xmlns:${prefix}="${namespace}"
         xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
      <cbc:ID>NS-1</cbc:ID>
    </${prefix}:Invoice>`,
-);
+  );
 
 test("a document rooted in another namespace is not read as an XRechnung", () => {
   const result = runTechnicalValidation(rootedIn("urn:example:not-ubl:Invoice-2"));

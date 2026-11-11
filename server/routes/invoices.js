@@ -33,9 +33,7 @@ const upload = multer({
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-export function invoicesRouter(deps) {
-  const router = Router();
-
+function registerIntakeRoutes(router, deps) {
   // An id that cannot be a UUID names no invoice. Checked here rather than
   // left to Postgres, whose refused cast would surface as a 500.
   router.param("id", (req, res, next, id) => {
@@ -59,8 +57,15 @@ export function invoicesRouter(deps) {
   router.post("/", requirePermission("invoice:upload"), upload.single("file"), async (req, res, next) => {
     try {
       if (!req.file) return res.status(400).json({ error: "Feld 'file' fehlt", code: "FILE_FIELD_MISSING" });
-      const sourceChannel = String(req.body?.source_channel || "UPLOAD").toUpperCase().slice(0, 32);
-      const { id } = await handleUpload(deps, { buffer: req.file.buffer, originalFilename: req.file.originalname, sourceChannel, actor: req.actor });
+      const sourceChannel = String(req.body?.source_channel || "UPLOAD")
+        .toUpperCase()
+        .slice(0, 32);
+      const { id } = await handleUpload(deps, {
+        buffer: req.file.buffer,
+        originalFilename: req.file.originalname,
+        sourceChannel,
+        actor: req.actor,
+      });
       res.status(201).json(await getInvoiceDetail(deps.pool, id));
     } catch (error) {
       next(error);
@@ -90,7 +95,9 @@ export function invoicesRouter(deps) {
       next(error);
     }
   });
+}
 
+function registerDocumentRoutes(router, deps) {
   router.get("/:id", async (req, res, next) => {
     try {
       const invoice = await getInvoiceDetail(deps.pool, req.params.id);
@@ -110,7 +117,9 @@ export function invoicesRouter(deps) {
    */
   router.get("/:id/file", async (req, res, next) => {
     try {
-      const { rows: [row] } = await deps.pool.query("select file_path, original_filename from finops.invoices where id = $1", [req.params.id]);
+      const {
+        rows: [row],
+      } = await deps.pool.query("select file_path, original_filename from finops.invoices where id = $1", [req.params.id]);
       if (!row) return res.status(404).json({ error: "Rechnung nicht gefunden", code: "INVOICE_NOT_FOUND" });
       const filename = row.original_filename.replace(/["\\\r\n]/g, "");
       res
@@ -123,7 +132,9 @@ export function invoicesRouter(deps) {
       next(error);
     }
   });
+}
 
+function registerAiRoutes(router, deps) {
   // An AI explanation of why the invoice stopped: a suggestion beside the
   // evidence, never part of it (ADR-080). The invoice detail does not carry it.
   router.get("/:id/ai-explanation", async (req, res, next) => {
@@ -190,7 +201,9 @@ export function invoicesRouter(deps) {
       next(error);
     }
   });
+}
 
+function registerDecisionRoutes(router, deps) {
   router.post("/:id/reprocess", requirePermission("invoice:reprocess"), async (req, res, next) => {
     try {
       await processInvoice(deps, req.params.id, req.actor);
@@ -225,11 +238,17 @@ export function invoicesRouter(deps) {
   router.post("/:id/approvals/:stepNo/:action", requirePermission("approval:decide"), async (req, res, next) => {
     try {
       const { action } = req.params;
-      if (!["approve", "reject"].includes(action)) return res.status(400).json({ error: "Unbekannte Entscheidung", code: "UNKNOWN_DECISION" });
+      if (!["approve", "reject"].includes(action))
+        return res.status(400).json({ error: "Unbekannte Entscheidung", code: "UNKNOWN_DECISION" });
       const stepNo = Number(req.params.stepNo);
       if (!Number.isInteger(stepNo) || stepNo < 1) return res.status(400).json({ error: "Ungültiger Schritt", code: "INVALID_STEP" });
       const result = await decideApprovalStep(deps, {
-        invoiceId: req.params.id, stepNo, action, actor: req.actor, user: req.user, comment: req.body?.comment,
+        invoiceId: req.params.id,
+        stepNo,
+        action,
+        actor: req.actor,
+        user: req.user,
+        comment: req.body?.comment,
       });
       const detail = await getInvoiceDetail(deps.pool, req.params.id);
       // The signature did not happen and the invoice moved: a refusal that
@@ -247,7 +266,9 @@ export function invoicesRouter(deps) {
       next(error);
     }
   });
+}
 
+function registerMoneyRoutes(router, deps) {
   router.post("/:id/accounting-record", requirePermission("accounting:handoff"), async (req, res, next) => {
     try {
       await createAccountingRecord(deps, { invoiceId: req.params.id, actor: req.actor });
@@ -332,6 +353,14 @@ export function invoicesRouter(deps) {
       next(error);
     }
   });
+}
 
+export function invoicesRouter(deps) {
+  const router = Router();
+  registerIntakeRoutes(router, deps);
+  registerDocumentRoutes(router, deps);
+  registerAiRoutes(router, deps);
+  registerDecisionRoutes(router, deps);
+  registerMoneyRoutes(router, deps);
   return router;
 }

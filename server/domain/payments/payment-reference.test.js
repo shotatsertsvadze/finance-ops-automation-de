@@ -56,8 +56,12 @@ test("a supplier's invoice number cannot push the reference outside SEPA", async
 test("a bank line is matched by the payment's own id, not by the supplier's number", async () => {
   const invoice = await paid("REF-3");
   const line = (externalId, reference) => ({
-    external_id: externalId, value_date: "2026-09-20", amount: `-${invoice.gross_amount}`, currency: "EUR",
-    counterparty_iban: "DE89370400440532013000", reference,
+    external_id: externalId,
+    value_date: "2026-09-20",
+    amount: `-${invoice.gross_amount}`,
+    currency: "EUR",
+    counterparty_iban: "DE89370400440532013000",
+    reference,
   });
 
   await clients.finance.post("/api/bank/import", { transactions: [line("TX-NUMBER-ONLY", "Rechnung REF-3")] });

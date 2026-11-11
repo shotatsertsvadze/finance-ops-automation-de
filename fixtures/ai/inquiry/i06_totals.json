@@ -21,17 +21,8 @@
     "request_for_check": {
       "totals_consistent": "korrigierte_rechnung"
     },
-    "allowed_requests": [
-      "korrigierte_rechnung"
-    ],
-    "placeholders": [
-      "rechnungsnummer",
-      "rechnungsdatum",
-      "bruttobetrag",
-      "bestellnummer",
-      "lieferant",
-      "unser_unternehmen"
-    ]
+    "allowed_requests": ["korrigierte_rechnung"],
+    "placeholders": ["rechnungsnummer", "rechnungsdatum", "bruttobetrag", "bestellnummer", "lieferant", "unser_unternehmen"]
   },
   "placeholder_values": {
     "rechnungsnummer": "INV-2026-00421",

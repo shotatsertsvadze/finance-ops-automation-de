@@ -66,7 +66,7 @@ const CII_NS_PREFIX = "urn:un:unece:uncefact:data:standard:CrossIndustryInvoice"
  * an element called `Invoice` in somebody else's namespace is not an
  * XRechnung, and one in no namespace says nothing at all.
  */
-export function rootNamespace(xmlText) {
+function rootNamespace(xmlText) {
   const head = xmlText.replace(/<\?[\s\S]*?\?>/g, "").replace(/<!--[\s\S]*?-->/g, "");
   const root = head.match(/<\s*([^\s/>!?]+)((?:[^>"']|"[^"]*"|'[^']*')*)>/);
   if (!root) return null;
@@ -74,15 +74,16 @@ export function rootNamespace(xmlText) {
   const [, qualifiedName, attributes = ""] = root;
   const prefix = qualifiedName.includes(":") ? qualifiedName.split(":")[0] : "";
 
-  for (const [, declared, doubleQuoted, singleQuoted] of
-    attributes.matchAll(/xmlns(?::([A-Za-z_][\w.-]*))?\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+  for (const [, declared, doubleQuoted, singleQuoted] of attributes.matchAll(
+    /xmlns(?::([A-Za-z_][\w.-]*))?\s*=\s*(?:"([^"]*)"|'([^']*)')/g,
+  )) {
     if ((declared ?? "") === prefix) return doubleQuoted ?? singleQuoted ?? null;
   }
   return null;
 }
 
 /** The format a document declares itself to be, by namespace and root element. */
-export function detectFormat(doc, namespace) {
+function detectFormat(doc, namespace) {
   if (doc.Invoice && namespace === UBL_INVOICE_NS) return "XRECHNUNG_UBL";
   if (doc.CreditNote && namespace === UBL_CREDITNOTE_NS) return "XRECHNUNG_UBL";
   if (doc.CrossIndustryInvoice && (namespace ?? "").startsWith(CII_NS_PREFIX)) return "CII";
@@ -98,9 +99,7 @@ export function parseInvoiceXml(xmlText) {
   if (format !== "XRECHNUNG_UBL") {
     throw new InvoiceParseError(
       "UNSUPPORTED_FORMAT",
-      format === "CII"
-        ? "UN/CEFACT CII wird noch nicht unterstützt"
-        : `Kein UBL-Invoice-Dokument (Namensraum: ${namespace ?? "keiner"})`,
+      format === "CII" ? "UN/CEFACT CII wird noch nicht unterstützt" : `Kein UBL-Invoice-Dokument (Namensraum: ${namespace ?? "keiner"})`,
     );
   }
   // One structure for both: a UBL credit note is the same document under

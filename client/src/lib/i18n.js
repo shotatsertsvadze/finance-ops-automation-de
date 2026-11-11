@@ -37,7 +37,11 @@ export function LanguageProvider({ children }) {
     const money = new Intl.NumberFormat(dict.locale, { style: "currency", currency: "EUR" });
     const date = new Intl.DateTimeFormat(dict.locale, { day: "2-digit", month: "2-digit", year: "numeric" });
     const dateTime = new Intl.DateTimeFormat(dict.locale, {
-      day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit",
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
 
     return {
@@ -47,7 +51,7 @@ export function LanguageProvider({ children }) {
       /** A chrome string. Entries that take parameters are functions. */
       t: (key, ...args) => {
         const entry = dict.ui[key];
-        return typeof entry === "function" ? entry(...args) : entry ?? key;
+        return typeof entry === "function" ? entry(...args) : (entry ?? key);
       },
       state: (code) => dict.state[code] ?? code,
       action: (code) => dict.action[code] ?? code,

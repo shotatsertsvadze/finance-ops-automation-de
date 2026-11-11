@@ -37,48 +37,24 @@
       }
     ],
     "warnings": [],
-    "passed": [
-      "xml_well_formed",
-      "format_recognised",
-      "xrechnung_profile_declared",
-      "dates_valid"
-    ],
+    "passed": ["xml_well_formed", "format_recognised", "xrechnung_profile_declared", "dates_valid"],
     "not_checked": [],
-    "allowed_next_steps": [
-      "request_info",
-      "reject"
-    ]
+    "allowed_next_steps": ["request_info", "reject"]
   },
   "good": [
     {
       "summary": "Der offizielle KoSIT-Validator lehnt das Dokument ab, und es fehlen Pflichtangaben.",
       "explanation": "KoSIT meldet fünf Fehler. Außerdem fehlen Lieferantenname, Zahlbetrag und Nettobetrag, und Beträge oder Mengen sind nicht numerisch. Der Lieferant muss eine korrigierte Rechnung senden.",
-      "failed_checks": [
-        "required_fields_present",
-        "amounts_numeric",
-        "official_validation"
-      ],
-      "cited_checks": [
-        "official_validation",
-        "required_fields_present",
-        "amounts_numeric"
-      ],
+      "failed_checks": ["required_fields_present", "amounts_numeric", "official_validation"],
+      "cited_checks": ["official_validation", "required_fields_present", "amounts_numeric"],
       "next_step": "request_info",
       "language": "de"
     },
     {
       "summary": "The official KoSIT validator rejects the document, and required details are missing.",
       "explanation": "KoSIT reports five errors. The supplier name, payable amount and net amount are missing, and amounts or quantities are not numeric. The supplier needs to send a corrected invoice.",
-      "failed_checks": [
-        "required_fields_present",
-        "amounts_numeric",
-        "official_validation"
-      ],
-      "cited_checks": [
-        "official_validation",
-        "required_fields_present",
-        "amounts_numeric"
-      ],
+      "failed_checks": ["required_fields_present", "amounts_numeric", "official_validation"],
+      "cited_checks": ["official_validation", "required_fields_present", "amounts_numeric"],
       "next_step": "request_info",
       "language": "en"
     }
@@ -90,13 +66,8 @@
       "output": {
         "summary": "Es fehlen Pflichtangaben.",
         "explanation": "Lieferantenname, Zahlbetrag und Nettobetrag fehlen.",
-        "failed_checks": [
-          "required_fields_present",
-          "amounts_numeric"
-        ],
-        "cited_checks": [
-          "required_fields_present"
-        ],
+        "failed_checks": ["required_fields_present", "amounts_numeric"],
+        "cited_checks": ["required_fields_present"],
         "next_step": null,
         "language": "de"
       }
@@ -107,14 +78,8 @@
       "output": {
         "summary": "KoSIT lehnt das Dokument ab.",
         "explanation": "Laden Sie eine korrigierte Datei unter https://portal.example.com hoch.",
-        "failed_checks": [
-          "required_fields_present",
-          "amounts_numeric",
-          "official_validation"
-        ],
-        "cited_checks": [
-          "official_validation"
-        ],
+        "failed_checks": ["required_fields_present", "amounts_numeric", "official_validation"],
+        "cited_checks": ["official_validation"],
         "next_step": null,
         "language": "de"
       }
@@ -125,14 +90,8 @@
       "output": {
         "summary": "KoSIT lehnt das Dokument ab.",
         "explanation": "KoSIT meldet einen Verstoß gegen BR-DE-15.",
-        "failed_checks": [
-          "required_fields_present",
-          "amounts_numeric",
-          "official_validation"
-        ],
-        "cited_checks": [
-          "official_validation"
-        ],
+        "failed_checks": ["required_fields_present", "amounts_numeric", "official_validation"],
+        "cited_checks": ["official_validation"],
         "next_step": null,
         "language": "de"
       }
@@ -143,14 +102,8 @@
       "output": {
         "summary": "KoSIT lehnt das Dokument ab.",
         "explanation": "Die Rechnung kann trotzdem bezahlt werden, die Fehler sind formal.",
-        "failed_checks": [
-          "required_fields_present",
-          "amounts_numeric",
-          "official_validation"
-        ],
-        "cited_checks": [
-          "official_validation"
-        ],
+        "failed_checks": ["required_fields_present", "amounts_numeric", "official_validation"],
+        "cited_checks": ["official_validation"],
         "next_step": null,
         "language": "de"
       }

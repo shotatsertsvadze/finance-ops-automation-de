@@ -21,17 +21,8 @@
     "request_for_check": {
       "po_exists": "bestellnummer_pruefen"
     },
-    "allowed_requests": [
-      "bestellnummer_pruefen"
-    ],
-    "placeholders": [
-      "rechnungsnummer",
-      "rechnungsdatum",
-      "bruttobetrag",
-      "bestellnummer",
-      "lieferant",
-      "unser_unternehmen"
-    ]
+    "allowed_requests": ["bestellnummer_pruefen"],
+    "placeholders": ["rechnungsnummer", "rechnungsdatum", "bruttobetrag", "bestellnummer", "lieferant", "unser_unternehmen"]
   },
   "placeholder_values": {
     "rechnungsnummer": "INV-2026-00421",

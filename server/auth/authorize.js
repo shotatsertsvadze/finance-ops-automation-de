@@ -55,5 +55,7 @@ export function requirePermission(permission) {
 
 /** What this role may do, so the UI can hide what the server would refuse. */
 export function permissionsFor(role) {
-  return Object.entries(PERMISSIONS).filter(([, roles]) => roles.includes(role)).map(([name]) => name);
+  return Object.entries(PERMISSIONS)
+    .filter(([, roles]) => roles.includes(role))
+    .map(([name]) => name);
 }

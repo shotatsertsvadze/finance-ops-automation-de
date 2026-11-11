@@ -21,7 +21,9 @@ export async function listChanges(pool) {
 }
 
 export async function changeDetail(pool, id) {
-  const { rows: [change] } = await pool.query(`select ${CHANGE_COLUMNS} ${CHANGE_JOINS} where c.id = $1`, [id]);
+  const {
+    rows: [change],
+  } = await pool.query(`select ${CHANGE_COLUMNS} ${CHANGE_JOINS} where c.id = $1`, [id]);
   if (!change) return null;
   const [accounts, verification, events, revalidations, pending, sharedNow] = await Promise.all([
     pool.query(
@@ -30,15 +32,18 @@ export async function changeDetail(pool, id) {
     ),
     pool.query(
       `select v.*, u.name as verified_by_name from finops.bank_change_verifications v
-       join finops.users u on u.id = v.verified_by where v.change_id = $1`, [id],
+       join finops.users u on u.id = v.verified_by where v.change_id = $1`,
+      [id],
     ),
     pool.query(
       `select e.*, u.name as actor_name from finops.bank_change_events e left join finops.users u on u.id = e.actor_id
-       where e.change_id = $1 order by e.id`, [id],
+       where e.change_id = $1 order by e.id`,
+      [id],
     ),
     pool.query(
       `select r.*, i.invoice_number, i.state as invoice_state from finops.bank_change_revalidations r
-       join finops.invoices i on i.id = r.invoice_id where r.change_id = $1 order by r.revalidated_at, i.invoice_number`, [id],
+       join finops.invoices i on i.id = r.invoice_id where r.change_id = $1 order by r.revalidated_at, i.invoice_number`,
+      [id],
     ),
     pendingInvoices(pool, change),
     sharedWith(pool, change.supplier_id, change.proposed_iban),

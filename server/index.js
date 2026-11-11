@@ -41,8 +41,9 @@ if (problems.length) {
   await deps.pool.end();
   process.exitCode = 1;
 } else {
-  const server = createApp(deps, { clientDir: hasClient ? clientDir : undefined })
-    .listen(port, host, () => log("info", `finops api listening on http://${host}:${port}`, { production }));
+  const server = createApp(deps, { clientDir: hasClient ? clientDir : undefined }).listen(port, host, () =>
+    log("info", `finops api listening on http://${host}:${port}`, { production }),
+  );
   server.requestTimeout = 30_000;
   for (const signal of ["SIGTERM", "SIGINT"]) process.once(signal, () => shutDown(server, signal));
 }

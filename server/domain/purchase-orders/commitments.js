@@ -19,12 +19,15 @@ const HOLDS_CAPACITY = new Set(HOLDS_CAPACITY_STATES);
  * with `lock: false`.
  */
 export async function availableCents(client, purchaseOrderId, excludeInvoiceId = null, { lock = true } = {}) {
-  const { rows: [order] } = await client.query(
-    `select remaining_amount from finops.purchase_orders where id = $1 ${lock ? "for update" : ""}`,
-    [purchaseOrderId],
-  );
+  const {
+    rows: [order],
+  } = await client.query(`select remaining_amount from finops.purchase_orders where id = $1 ${lock ? "for update" : ""}`, [
+    purchaseOrderId,
+  ]);
   if (!order) return null;
-  const { rows: [held] } = await client.query(
+  const {
+    rows: [held],
+  } = await client.query(
     `select coalesce(sum(amount), 0)::text as total from finops.po_commitments
      where purchase_order_id = $1 and status = 'ACTIVE' and invoice_id is distinct from $2`,
     [purchaseOrderId, excludeInvoiceId],
@@ -38,10 +41,9 @@ export async function availableCents(client, purchaseOrderId, excludeInvoiceId =
  * together or not at all.
  */
 export async function syncCommitment(client, invoiceId, toState) {
-  const { rows: [invoice] } = await client.query(
-    "select purchase_order_id, net_amount, document_type from finops.invoices where id = $1",
-    [invoiceId],
-  );
+  const {
+    rows: [invoice],
+  } = await client.query("select purchase_order_id, net_amount, document_type from finops.invoices where id = $1", [invoiceId]);
   if (!invoice?.purchase_order_id) return;
 
   if (!HOLDS_CAPACITY.has(toState)) {
@@ -61,10 +63,11 @@ export async function syncCommitment(client, invoiceId, toState) {
     [invoiceId, invoice.purchase_order_id, amount],
   );
   if (rowCount === 0) {
-    await client.query(
-      "insert into finops.po_commitments (purchase_order_id, invoice_id, amount) values ($1, $2, $3)",
-      [invoice.purchase_order_id, invoiceId, amount],
-    );
+    await client.query("insert into finops.po_commitments (purchase_order_id, invoice_id, amount) values ($1, $2, $3)", [
+      invoice.purchase_order_id,
+      invoiceId,
+      amount,
+    ]);
   }
 }
 

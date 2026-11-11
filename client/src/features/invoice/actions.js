@@ -15,8 +15,8 @@ const bookingNo = (invoice) => invoice.accounting_record?.document_no ?? "";
 
 // Offered until money is on its way: fraud found after the signature needs a
 // way out that is not the payment (ADR-054).
-const duplicateSuspected = (invoice) => (invoice.validation?.business ?? [])
-  .some((r) => r.check_code === "duplicate_invoice_number" && r.status === "FAILED");
+const duplicateSuspected = (invoice) =>
+  (invoice.validation?.business ?? []).some((r) => r.check_code === "duplicate_invoice_number" && r.status === "FAILED");
 
 const cancel = () => action("cancel", "invoice:cancel", { tone: "high", needsComment: true });
 
@@ -32,7 +32,8 @@ export function availableActions(invoice) {
       // so it is not offered, and the prompt says why (ADR-071).
       const releasable = (invoice.payable_blockers ?? []).length === 0;
       return {
-        prompt: prompt(releasable ? "hintReviewStopped" : "hintNotReleasable"), step,
+        prompt: prompt(releasable ? "hintReviewStopped" : "hintNotReleasable"),
+        step,
         actions: [
           ...(releasable ? [action("accept", "review:decide", { tone: "ok" })] : []),
           action("request-info", "review:decide", { needsComment: true }),
@@ -50,7 +51,8 @@ export function availableActions(invoice) {
       // would be a button that always fails.
       if (!step) return { prompt: prompt("hintReadyForApproval"), step, actions: [] };
       return {
-        prompt: prompt("stepOf", step.step_no, (invoice.approval_steps ?? []).length, step.required_role), step,
+        prompt: prompt("stepOf", step.step_no, (invoice.approval_steps ?? []).length, step.required_role),
+        step,
         actions: [
           action("approve", "approval:decide", { tone: "ok" }),
           action("step-reject", "approval:decide", { tone: "high", needsComment: true }),
@@ -60,7 +62,8 @@ export function availableActions(invoice) {
 
     case "APPROVED":
       return {
-        prompt: prompt("hintApproved"), step,
+        prompt: prompt("hintApproved"),
+        step,
         actions: [action("accounting", "accounting:handoff", { tone: "ok" }), cancel()],
       };
 
@@ -69,7 +72,8 @@ export function availableActions(invoice) {
 
     case "PAYMENT_PENDING":
       return {
-        prompt: prompt("hintPaymentPending"), step,
+        prompt: prompt("hintPaymentPending"),
+        step,
         actions: [
           action("confirm", "payment:confirm", { tone: "ok" }),
           // The bank rejected or returned it, or confirmed a recall (ADR-055).
@@ -79,19 +83,22 @@ export function availableActions(invoice) {
 
     case "PAYMENT_FAILED":
       return {
-        prompt: prompt("hintPaymentFailed"), step,
+        prompt: prompt("hintPaymentFailed"),
+        step,
         actions: [action("retry", "payment:instruct", { tone: "ok" }), cancel()],
       };
 
     case "RECONCILIATION_EXCEPTION":
       return {
-        prompt: prompt("hintReconciliationException"), step,
+        prompt: prompt("hintReconciliationException"),
+        step,
         actions: [action("resolve", "reconciliation:resolve", { tone: "ok", needsComment: true })],
       };
 
     case "INFO_REQUESTED":
       return {
-        prompt: prompt("hintInfoRequested"), step,
+        prompt: prompt("hintInfoRequested"),
+        step,
         actions: [
           action("info-received", "review:decide", { tone: "ok" }),
           action("reject", "review:decide", { tone: "high", needsComment: true }),
@@ -109,7 +116,8 @@ function bookedActions(invoice, step) {
   // to send money in the direction the document reverses.
   if (invoice.document_type === "CREDIT_NOTE") {
     return {
-      prompt: prompt("hintCreditNoteReady", bookingNo(invoice)), step,
+      prompt: prompt("hintCreditNoteReady", bookingNo(invoice)),
+      step,
       actions: [action("credit", "payment:instruct", { tone: "ok" }), cancel()],
     };
   }
@@ -121,13 +129,15 @@ function bookedActions(invoice, step) {
   // settle nothing against nothing.
   if (gross > 0 && credit >= gross) {
     return {
-      prompt: prompt("hintFullyCredited", bookingNo(invoice)), step,
+      prompt: prompt("hintFullyCredited", bookingNo(invoice)),
+      step,
       actions: [action("settle", "payment:instruct", { tone: "ok" }), cancel()],
     };
   }
   return {
     // Stated before the click: the amount that will actually leave the bank.
-    prompt: prompt(credit > 0 ? "hintNetted" : "hintAccountingReady", bookingNo(invoice)), step,
+    prompt: prompt(credit > 0 ? "hintNetted" : "hintAccountingReady", bookingNo(invoice)),
+    step,
     actions: [action("pay", "payment:instruct", { tone: "ok" }), cancel()],
   };
 }
@@ -140,14 +150,26 @@ function bookedActions(invoice, step) {
 export function primaryAction(invoice, offered, { bankProposalOffered = false } = {}) {
   // Proposing the bank account is then the way on, and its button is filled.
   if (bankProposalOffered) return null;
-  const key = offered.find((a) => a.tone === "ok")?.key
-    ?? (invoice.state === "REVIEW_REQUIRED"
-      ? (invoice.review_reason === "DUPLICATE_INVOICE_NUMBER" ? "confirm-duplicate" : "request-info")
+  const key =
+    offered.find((a) => a.tone === "ok")?.key ??
+    (invoice.state === "REVIEW_REQUIRED"
+      ? invoice.review_reason === "DUPLICATE_INVOICE_NUMBER"
+        ? "confirm-duplicate"
+        : "request-info"
       : null);
   return offered.some((a) => a.key === key) ? key : null;
 }
 
-const INVOICE_PATH = ["RECEIVED", "VALIDATING", "READY_FOR_APPROVAL", "APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED"];
+const INVOICE_PATH = [
+  "RECEIVED",
+  "VALIDATING",
+  "READY_FOR_APPROVAL",
+  "APPROVED",
+  "ACCOUNTING_READY",
+  "PAYMENT_PENDING",
+  "PAID",
+  "RECONCILED",
+];
 // A credit note shares the path up to the booking and then ends. Showing it
 // the invoice path would promise a payment that is never coming.
 const CREDIT_NOTE_PATH = ["RECEIVED", "VALIDATING", "READY_FOR_APPROVAL", "APPROVED", "ACCOUNTING_READY", "CREDITED"];

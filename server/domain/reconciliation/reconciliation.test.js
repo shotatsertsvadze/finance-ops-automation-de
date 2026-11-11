@@ -51,9 +51,9 @@ const importTx = (tx) =>
 const run = () => clients.finance.post("/api/reconciliation/run", {}).then((r) => r.json());
 
 const txRow = async (externalId) => {
-  const { rows: [row] } = await deps.pool.query(
-    "select * from finops.bank_transactions where external_id = $1", [externalId],
-  );
+  const {
+    rows: [row],
+  } = await deps.pool.query("select * from finops.bank_transactions where external_id = $1", [externalId]);
   return row;
 };
 
@@ -153,7 +153,9 @@ test("a transaction that stops matching loses its invoice link", async () => {
 test("a payment in the wrong currency does not reconcile the invoice", async () => {
   const invoice = await paidInvoice(10000);
   await importTx({
-    external_id: "TX-USD", amount: `-${invoice.gross}`, currency: "USD",
+    external_id: "TX-USD",
+    amount: `-${invoice.gross}`,
+    currency: "USD",
     reference: `Rechnung ${invoice.ref}`,
   });
 
@@ -165,8 +167,10 @@ test("a payment in the wrong currency does not reconcile the invoice", async () 
 test("a payment to another supplier's account does not reconcile the invoice", async () => {
   const invoice = await paidInvoice(10000);
   await importTx({
-    external_id: "TX-OTHER-IBAN", amount: `-${invoice.gross}`,
-    counterparty_iban: "DE02120300000000202051", reference: `Rechnung ${invoice.ref}`,
+    external_id: "TX-OTHER-IBAN",
+    amount: `-${invoice.gross}`,
+    counterparty_iban: "DE02120300000000202051",
+    reference: `Rechnung ${invoice.ref}`,
   });
 
   await run();
@@ -188,16 +192,20 @@ test("the bank line is compared with what was instructed, not with the invoice",
   // read. Moving the invoice out from under its instruction separates them:
   // the bank acted on the instruction, so that is what must be reconciled.
   const invoice = await paidInvoice(10000);
-  await deps.pool.query(
-    "update finops.invoices set supplier_iban_raw = $2, gross_amount = $3 where id = $1",
-    [invoice.id, "DE02120300000000202051", "999.99"],
-  );
+  await deps.pool.query("update finops.invoices set supplier_iban_raw = $2, gross_amount = $3 where id = $1", [
+    invoice.id,
+    "DE02120300000000202051",
+    "999.99",
+  ]);
 
   await importTx({ external_id: "TX-INSTRUCTED", amount: `-${invoice.gross}`, reference: `Rechnung ${invoice.ref}` });
   await run();
 
-  assert.equal((await get(invoice.id)).state, "RECONCILED",
-    "matching the instruction still succeeds although the invoice row now disagrees");
+  assert.equal(
+    (await get(invoice.id)).state,
+    "RECONCILED",
+    "matching the instruction still succeeds although the invoice row now disagrees",
+  );
   assert.equal((await txRow("TX-INSTRUCTED")).status, "MATCHED");
 });
 

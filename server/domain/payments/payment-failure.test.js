@@ -39,9 +39,13 @@ async function pending() {
   return invoice;
 }
 
-const instructions = async (id) => (await deps.pool.query(
-  "select amount, status, idempotency_key from finops.payment_instructions where invoice_id = $1 order by created_at", [id],
-)).rows;
+const instructions = async (id) =>
+  (
+    await deps.pool.query(
+      "select amount, status, idempotency_key from finops.payment_instructions where invoice_id = $1 order by created_at",
+      [id],
+    )
+  ).rows;
 
 test("a payment the bank did not carry out is recorded as failed, with a reason", async () => {
   const invoice = await pending();
@@ -51,7 +55,10 @@ test("a payment the bank did not carry out is recorded as failed, with a reason"
   assert.equal(after.state, "PAYMENT_FAILED");
   assert.equal(after.audit_events.at(-1).action, "payment_failed");
   assert.equal(after.audit_events.at(-1).reason, "Rücklastschrift: Konto erloschen");
-  assert.deepEqual((await instructions(invoice.id)).map((i) => i.status), ["FAILED"]);
+  assert.deepEqual(
+    (await instructions(invoice.id)).map((i) => i.status),
+    ["FAILED"],
+  );
 });
 
 test("reporting a failure needs a reason, and a payment that is not pending cannot fail", async () => {
@@ -75,7 +82,10 @@ test("a failed payment is instructed again from the booking, as a new attempt", 
   assert.equal((await post(`/api/invoices/${invoice.id}/payment`)).status, 200);
   assert.equal((await post(`/api/invoices/${invoice.id}/payment/confirm`, { provider_ref: "MOCK-2" })).status, 200);
   const rows = await instructions(invoice.id);
-  assert.deepEqual(rows.map((i) => i.status), ["FAILED", "EXECUTED"]);
+  assert.deepEqual(
+    rows.map((i) => i.status),
+    ["FAILED", "EXECUTED"],
+  );
   assert.notEqual(rows[0].idempotency_key, rows[1].idempotency_key, "each attempt has its own key");
   const after = await get(invoice.id);
   assert.equal(after.state, "PAID");
@@ -83,9 +93,9 @@ test("a failed payment is instructed again from the booking, as a new attempt", 
 });
 
 test("credits applied to a failed payment are released, and apply again to the next attempt", async () => {
-  const note = await (await clients.clerk.upload(
-    buildInvoiceXml({ number: "GS-FAIL-1", netCents: 10000, creditNote: true, credits: "INV-X" }), "gs.xml",
-  )).json();
+  const note = await (
+    await clients.clerk.upload(buildInvoiceXml({ number: "GS-FAIL-1", netCents: 10000, creditNote: true, credits: "INV-X" }), "gs.xml")
+  ).json();
   await post(`/api/invoices/${note.id}/accounting-record`);
   await post(`/api/invoices/${note.id}/credit`);
 
@@ -111,10 +121,12 @@ test("a failed payment can be stopped instead, reversing its booking", async () 
 test("two live instructions for one invoice are impossible", async () => {
   const invoice = await pending();
   await assert.rejects(
-    () => deps.pool.query(
-      `insert into finops.payment_instructions (invoice_id, idempotency_key, amount, currency, creditor_iban, creditor_name, reference)
-       values ($1, 'pay:second', 1, 'EUR', 'X', 'X', 'X')`, [invoice.id],
-    ),
+    () =>
+      deps.pool.query(
+        `insert into finops.payment_instructions (invoice_id, idempotency_key, amount, currency, creditor_iban, creditor_name, reference)
+       values ($1, 'pay:second', 1, 'EUR', 'X', 'X', 'X')`,
+        [invoice.id],
+      ),
     /payment_instructions_one_live_per_invoice|duplicate key/,
   );
 });

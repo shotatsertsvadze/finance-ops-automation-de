@@ -28,7 +28,8 @@ function schemaProblems(output) {
   if (missing.length) return problems;
   for (const field of ["subject", "body"]) {
     const value = output[field];
-    if (typeof value !== "string" || !value.trim() || value.length > INQUIRY_LIMITS[field]) problems.push(`${field}: empty, too long or not text`);
+    if (typeof value !== "string" || !value.trim() || value.length > INQUIRY_LIMITS[field])
+      problems.push(`${field}: empty, too long or not text`);
   }
   for (const field of ["cited_checks", "requests"]) {
     const list = output[field];
@@ -49,8 +50,10 @@ export function verifyInquiry(input, output) {
   if (output.language !== "de") refuse("LANGUAGE", output.language);
 
   const failed = input.failed.map((check) => check.check);
-  if (!sameSet(output.cited_checks, failed)) refuse("FAILED_CHECKS", `angegeben ${output.cited_checks.join(", ") || "keine"}, fehlgeschlagen ${failed.join(", ")}`);
-  if (!sameSet(output.requests, input.allowed_requests)) refuse("REQUESTS", `angegeben ${output.requests.join(", ") || "keine"}, erlaubt ${input.allowed_requests.join(", ")}`);
+  if (!sameSet(output.cited_checks, failed))
+    refuse("FAILED_CHECKS", `angegeben ${output.cited_checks.join(", ") || "keine"}, fehlgeschlagen ${failed.join(", ")}`);
+  if (!sameSet(output.requests, input.allowed_requests))
+    refuse("REQUESTS", `angegeben ${output.requests.join(", ") || "keine"}, erlaubt ${input.allowed_requests.join(", ")}`);
 
   const text = `${output.subject}\n${output.body}`;
   const used = [...text.matchAll(PLACEHOLDER)].map((match) => match[1]);

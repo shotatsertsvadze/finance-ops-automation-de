@@ -1,11 +1,23 @@
 import { useState } from "react";
 import {
-  cancelInvoice, confirmPayment, createAccountingRecord, decideReview, decideStep, failPayment, retryPayment,
-  instructPayment, bookCredit, settleByCredit, reportInfoReceived, reprocessInvoice, resolveReconciliation,
+  cancelInvoice,
+  confirmPayment,
+  createAccountingRecord,
+  decideReview,
+  decideStep,
+  failPayment,
+  retryPayment,
+  instructPayment,
+  bookCredit,
+  settleByCredit,
+  reportInfoReceived,
+  reprocessInvoice,
+  resolveReconciliation,
 } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
 import { availableActions, primaryAction } from "./actions.js";
 import { invoiceBankEntry } from "../bank-changes/rules.js";
+import Panel from "../../components/Panel.jsx";
 
 /**
  * What this person can do with this invoice right now, and what the system
@@ -61,19 +73,31 @@ export default function ActionPanel({ invoice, may, onDone }) {
     retry: () => retryPayment(id),
   };
   const LABELS = {
-    accept: "releaseFromReview", "request-info": "requestInfo", "confirm-duplicate": "confirmDuplicate",
-    reject: "reject", reprocess: "reprocess", approve: "approve", "step-reject": "reject",
-    accounting: "createBookingRecord", credit: "bookCredit", settle: "settleByCredit",
-    pay: "instructPayment", confirm: "confirmPayment", resolve: "closeReconciliation",
-    "info-received": "infoReceived", cancel: "cancelInvoice", fail: "failPayment", retry: "retryPayment",
+    accept: "releaseFromReview",
+    "request-info": "requestInfo",
+    "confirm-duplicate": "confirmDuplicate",
+    reject: "reject",
+    reprocess: "reprocess",
+    approve: "approve",
+    "step-reject": "reject",
+    accounting: "createBookingRecord",
+    credit: "bookCredit",
+    settle: "settleByCredit",
+    pay: "instructPayment",
+    confirm: "confirmPayment",
+    resolve: "closeReconciliation",
+    "info-received": "infoReceived",
+    cancel: "cancelInvoice",
+    fail: "failPayment",
+    retry: "retryPayment",
   };
 
   const actions = available.map((a) => ({ ...a, label: t(LABELS[a.key]), run: handlers[a.key] }));
   // The step prompt names a role, which has its own dictionary.
   const prompt = promptSpec
-    ? (promptSpec.key === "stepOf"
+    ? promptSpec.key === "stepOf"
       ? t("stepOf", promptSpec.args[0], promptSpec.args[1], role(promptSpec.args[2]))
-      : t(promptSpec.key, ...promptSpec.args))
+      : t(promptSpec.key, ...promptSpec.args)
     : null;
 
   // Hide what this role may not do. The server refuses it regardless; this
@@ -81,17 +105,18 @@ export default function ActionPanel({ invoice, may, onDone }) {
   const permitted = actions.filter((action) => !action.needs || may(action.needs));
   if (permitted.length === 0) {
     return prompt ? (
-      <section className="panel">
-        <div className="panel-head"><span className="label">{t("status")}</span></div>
-        <div className="panel-body">
-          {/* The refusal that moved the invoice here is shown in this branch
+      <Panel title={t("status")}>
+        {/* The refusal that moved the invoice here is shown in this branch
               too, otherwise a click that fails and relocates the invoice
               leaves no trace of why. */}
-          {error && <div className="toast is-error" role="alert">{error}</div>}
-          <p className="action-prompt" style={{ marginBottom: 0 }}>{prompt}</p>
-          <p className="hint" style={{ marginBottom: 0 }}>{t("otherRoleResponsible")}</p>
-        </div>
-      </section>
+        {error && (
+          <div className="toast is-error" role="alert">
+            {error}
+          </div>
+        )}
+        <p className="action-prompt mb-0">{prompt}</p>
+        <p className="hint mb-0">{t("otherRoleResponsible")}</p>
+      </Panel>
     ) : null;
   }
 
@@ -99,39 +124,37 @@ export default function ActionPanel({ invoice, may, onDone }) {
   const primary = primaryAction(invoice, permitted, { bankProposalOffered: invoiceBankEntry(invoice, may).canPropose });
 
   return (
-    <section className="panel">
-      <div className="panel-head">
-        <span className="label">{t("yourDecision")}</span>
-        
-      </div>
-      <div className="panel-body">
-        <p className="action-prompt">{prompt}</p>
-        {error && <div className="toast is-error" role="alert">{error}</div>}
-        {needsComment && (
-          <label className="action-comment">
-            <span className="label">{t("reason")}</span>
-            <textarea
-              rows={2}
-              maxLength={1000}
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder={t("reasonPlaceholder")}
-            />
-          </label>
-        )}
-        <div className="action-row">
-          {permitted.map((action) => (
-            <button
-              key={action.key}
-              className={`btn ${action.key === primary ? "" : action.tone === "high" ? "btn-danger" : "btn-ghost"}`}
-              disabled={busy}
-              onClick={() => run(action.run)}
-            >
-              {action.label}
-            </button>
-          ))}
+    <Panel title={t("yourDecision")}>
+      <p className="action-prompt">{prompt}</p>
+      {error && (
+        <div className="toast is-error" role="alert">
+          {error}
         </div>
+      )}
+      {needsComment && (
+        <label className="action-comment">
+          <span className="label">{t("reason")}</span>
+          <textarea
+            rows={2}
+            maxLength={1000}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder={t("reasonPlaceholder")}
+          />
+        </label>
+      )}
+      <div className="action-row">
+        {permitted.map((action) => (
+          <button
+            key={action.key}
+            className={`btn ${action.key === primary ? "" : action.tone === "high" ? "btn-danger" : "btn-ghost"}`}
+            disabled={busy}
+            onClick={() => run(action.run)}
+          >
+            {action.label}
+          </button>
+        ))}
       </div>
-    </section>
+    </Panel>
   );
 }

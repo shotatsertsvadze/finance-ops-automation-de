@@ -52,38 +52,22 @@
       "payment_terms_match"
     ],
     "not_checked": [],
-    "allowed_next_steps": [
-      "confirm_duplicate",
-      "request_info",
-      "reject"
-    ]
+    "allowed_next_steps": ["confirm_duplicate", "request_info", "reject"]
   },
   "good": [
     {
       "summary": "Die Rechnungsnummer ist bei diesem Lieferanten bereits erfasst, und die Bestellung ist ausgeschöpft.",
       "explanation": "Eine Rechnung desselben Lieferanten mit dieser Nummer liegt bereits vor. Zusätzlich übersteigt der Nettobetrag von 1.042,02 EUR die noch verfügbaren 457,98 EUR der Bestellung samt 2 % Toleranz, weil die erste Rechnung sie gebunden hat.",
-      "failed_checks": [
-        "duplicate_invoice_number",
-        "po_amount_within_tolerance"
-      ],
-      "cited_checks": [
-        "duplicate_invoice_number",
-        "po_amount_within_tolerance"
-      ],
+      "failed_checks": ["duplicate_invoice_number", "po_amount_within_tolerance"],
+      "cited_checks": ["duplicate_invoice_number", "po_amount_within_tolerance"],
       "next_step": "confirm_duplicate",
       "language": "de"
     },
     {
       "summary": "The invoice number is already on record for this supplier, and the order is used up.",
       "explanation": "An invoice from the same supplier with this number is already on record. The net amount of 1,042.02 EUR also exceeds the 457.98 EUR left on the order plus the 2 % tolerance, because the first invoice has claimed it.",
-      "failed_checks": [
-        "duplicate_invoice_number",
-        "po_amount_within_tolerance"
-      ],
-      "cited_checks": [
-        "duplicate_invoice_number",
-        "po_amount_within_tolerance"
-      ],
+      "failed_checks": ["duplicate_invoice_number", "po_amount_within_tolerance"],
+      "cited_checks": ["duplicate_invoice_number", "po_amount_within_tolerance"],
       "next_step": "confirm_duplicate",
       "language": "en"
     }
@@ -95,13 +79,8 @@
       "output": {
         "summary": "Die Rechnungsnummer ist doppelt.",
         "explanation": "INV-2026-00421 wurde am 12.09.2026 erfasst; die Bestellung ist ausgeschöpft.",
-        "failed_checks": [
-          "duplicate_invoice_number",
-          "po_amount_within_tolerance"
-        ],
-        "cited_checks": [
-          "duplicate_invoice_number"
-        ],
+        "failed_checks": ["duplicate_invoice_number", "po_amount_within_tolerance"],
+        "cited_checks": ["duplicate_invoice_number"],
         "next_step": null,
         "language": "de"
       }
@@ -112,13 +91,8 @@
       "output": {
         "summary": "Die Rechnungsnummer ist doppelt.",
         "explanation": "INV-2026-00421 wurde bereits bezahlt; die Bestellung ist ausgeschöpft.",
-        "failed_checks": [
-          "duplicate_invoice_number",
-          "po_amount_within_tolerance"
-        ],
-        "cited_checks": [
-          "duplicate_invoice_number"
-        ],
+        "failed_checks": ["duplicate_invoice_number", "po_amount_within_tolerance"],
+        "cited_checks": ["duplicate_invoice_number"],
         "next_step": "confirm_duplicate",
         "language": "de"
       }
@@ -129,12 +103,8 @@
       "output": {
         "summary": "Die Rechnungsnummer ist doppelt.",
         "explanation": "INV-2026-00421 ist bereits erfasst.",
-        "failed_checks": [
-          "duplicate_invoice_number"
-        ],
-        "cited_checks": [
-          "duplicate_invoice_number"
-        ],
+        "failed_checks": ["duplicate_invoice_number"],
+        "cited_checks": ["duplicate_invoice_number"],
         "next_step": "confirm_duplicate",
         "language": "de"
       }

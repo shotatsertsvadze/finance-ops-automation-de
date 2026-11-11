@@ -74,7 +74,8 @@ export async function openCreditsFor(client, supplierId, currency = "EUR", exclu
   let locked = null;
   if (lock) {
     const { rows } = await client.query(
-      `select i.id ${CREDITS_OF_SUPPLIER} order by i.issue_date, i.invoice_number for update of i`, params,
+      `select i.id ${CREDITS_OF_SUPPLIER} order by i.issue_date, i.invoice_number for update of i`,
+      params,
     );
     locked = rows.map((row) => row.id);
   }
@@ -99,10 +100,11 @@ export async function openCreditsFor(client, supplierId, currency = "EUR", exclu
  */
 export async function applyCredits(client, invoiceId, applications) {
   for (const application of applications) {
-    await client.query(
-      "insert into finops.credit_applications (credit_note_id, invoice_id, amount) values ($1, $2, $3)",
-      [application.creditNoteId, invoiceId, centsToDecimal(application.amountCents)],
-    );
+    await client.query("insert into finops.credit_applications (credit_note_id, invoice_id, amount) values ($1, $2, $3)", [
+      application.creditNoteId,
+      invoiceId,
+      centsToDecimal(application.amountCents),
+    ]);
   }
 }
 
@@ -127,7 +129,9 @@ export async function settleByCredit({ pool }, { invoiceId, actor }) {
       throw new RuleError(422, "CREDIT_NOTE_NOT_PAYABLE", "Eine Gutschrift wird nicht bezahlt: sie mindert die Verbindlichkeit");
     }
     if (invoice.state !== "ACCOUNTING_READY") {
-      throw new TransitionError("NOT_READY_FOR_PAYMENT", `Rechnung im Status ${invoice.state} kann nicht zur Zahlung gegeben werden`, { state: invoice.state });
+      throw new TransitionError("NOT_READY_FOR_PAYMENT", `Rechnung im Status ${invoice.state} kann nicht zur Zahlung gegeben werden`, {
+        state: invoice.state,
+      });
     }
 
     const credits = await openCreditsFor(client, invoice.supplier_id, invoice.currency ?? "EUR", invoiceId);
@@ -138,14 +142,20 @@ export async function settleByCredit({ pool }, { invoiceId, actor }) {
     // Anything left over is money that has to be sent, so this is not the
     // action for it. Refusing here keeps the two endings apart.
     if (plan.payableCents > 0) {
-      throw new RuleError(409, "NOT_FULLY_CREDITED",
-        `Die offenen Gutschriften decken die Rechnung nicht vollständig; ${centsToDecimal(plan.payableCents)} bleiben anzuweisen`);
+      throw new RuleError(
+        409,
+        "NOT_FULLY_CREDITED",
+        `Die offenen Gutschriften decken die Rechnung nicht vollständig; ${centsToDecimal(plan.payableCents)} bleiben anzuweisen`,
+      );
     }
 
     await applyCredits(client, invoiceId, plan.applications);
     const applied = plan.applications.reduce((sum, a) => sum + a.amountCents, 0);
     await transition(client, {
-      invoiceId, to: "SETTLED_BY_CREDIT", actor, action: "settled_by_credit",
+      invoiceId,
+      to: "SETTLED_BY_CREDIT",
+      actor,
+      action: "settled_by_credit",
       reason: `Rechnung ${invoice.gross_amount} ${invoice.currency ?? "EUR"} vollständig durch Gutschriften ausgeglichen, keine Zahlung`,
       evidence: {
         gross_amount: invoice.gross_amount,

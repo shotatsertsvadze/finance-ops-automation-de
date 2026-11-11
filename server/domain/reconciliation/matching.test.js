@@ -116,9 +116,7 @@ test("a payment in another currency is not the same amount", () => {
 });
 
 test("a payment to a different account does not settle the invoice", () => {
-  const result = matchTransaction(
-    tx("Rechnung INV-2026-00421", "-1240.00", { counterparty_iban: "DE02120300000000202051" }), OPEN,
-  );
+  const result = matchTransaction(tx("Rechnung INV-2026-00421", "-1240.00", { counterparty_iban: "DE02120300000000202051" }), OPEN);
   assert.equal(result.outcome, "EXCEPTION");
   assert.equal(result.reason, "COUNTERPARTY_MISMATCH");
 });
@@ -130,9 +128,7 @@ test("an account that cannot be verified is an exception, not a pass", () => {
 });
 
 test("spacing in an IBAN does not make two identical accounts differ", () => {
-  const result = matchTransaction(
-    tx("Rechnung INV-2026-00421", "-1240.00", { counterparty_iban: "DE89 3704 0044 0532 0130 00" }), OPEN,
-  );
+  const result = matchTransaction(tx("Rechnung INV-2026-00421", "-1240.00", { counterparty_iban: "DE89 3704 0044 0532 0130 00" }), OPEN);
   assert.equal(result.outcome, "MATCHED");
 });
 

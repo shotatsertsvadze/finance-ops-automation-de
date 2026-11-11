@@ -123,7 +123,15 @@ test("R02: duplicate protection survives a reconciliation exception", async () =
     assert.equal(r.status, 200, step);
   }
   await post("/api/bank/import", clients.finance, {
-    transactions: [{ external_id: "TX-R02", value_date: "2026-09-22", amount: "-350.00", currency: "EUR", reference: `Teilzahlung zu ${(await get(first.id)).payment.reference}` }],
+    transactions: [
+      {
+        external_id: "TX-R02",
+        value_date: "2026-09-22",
+        amount: "-350.00",
+        currency: "EUR",
+        reference: `Teilzahlung zu ${(await get(first.id)).payment.reference}`,
+      },
+    ],
   });
   await post("/api/reconciliation/run", clients.finance, {});
   assert.equal((await get(first.id)).state, "RECONCILIATION_EXCEPTION");
@@ -174,15 +182,25 @@ test("R03: line totals that contradict the net amount are caught", async () => {
   // comparing the line sum to the tax-exclusive amount catches it.
   const xml = fixture("G_clean_380.xml")
     .replace("<cbc:ID>INV-2026-00433</cbc:ID>", "<cbc:ID>INV-R03-A</cbc:ID>")
-    .replace('<cbc:TaxExclusiveAmount currencyID="EUR">319.33</cbc:TaxExclusiveAmount>', '<cbc:TaxExclusiveAmount currencyID="EUR">100.00</cbc:TaxExclusiveAmount>')
+    .replace(
+      '<cbc:TaxExclusiveAmount currencyID="EUR">319.33</cbc:TaxExclusiveAmount>',
+      '<cbc:TaxExclusiveAmount currencyID="EUR">100.00</cbc:TaxExclusiveAmount>',
+    )
     .replace('<cbc:TaxAmount currencyID="EUR">60.67</cbc:TaxAmount>', '<cbc:TaxAmount currencyID="EUR">19.00</cbc:TaxAmount>')
-    .replace('<cbc:TaxInclusiveAmount currencyID="EUR">380.00</cbc:TaxInclusiveAmount>', '<cbc:TaxInclusiveAmount currencyID="EUR">119.00</cbc:TaxInclusiveAmount>')
-    .replace('<cbc:PayableAmount currencyID="EUR">380.00</cbc:PayableAmount>', '<cbc:PayableAmount currencyID="EUR">119.00</cbc:PayableAmount>');
+    .replace(
+      '<cbc:TaxInclusiveAmount currencyID="EUR">380.00</cbc:TaxInclusiveAmount>',
+      '<cbc:TaxInclusiveAmount currencyID="EUR">119.00</cbc:TaxInclusiveAmount>',
+    )
+    .replace(
+      '<cbc:PayableAmount currencyID="EUR">380.00</cbc:PayableAmount>',
+      '<cbc:PayableAmount currencyID="EUR">119.00</cbc:PayableAmount>',
+    );
   const res = await upload(xml, "r03a.xml");
 
   assert.notEqual(res.body.state, "APPROVED");
   const failed = [...res.body.validation.technical, ...res.body.validation.business]
-    .filter((c) => c.status === "FAILED").map((c) => c.check_code);
+    .filter((c) => c.status === "FAILED")
+    .map((c) => c.check_code);
   assert.ok(failed.includes("totals_consistent"), `expected totals_consistent to fail, got ${failed}`);
 });
 
@@ -224,7 +242,7 @@ test("R04: a VAT id that matches no supplier is not quietly resolved by name", a
 
 test("R09: invalid policy configuration is rejected instead of silently weakening approvals", () => {
   assert.throws(() => loadPolicy({ POLICY_TIER_1_LIMIT: "bad" }), /POLICY_TIER_1_LIMIT/);
-  assert.throws(() => loadPolicy({ POLICY_AUTO_APPROVE_LIMIT: "" , POLICY_TIER_2_LIMIT: "not-a-number" }), /POLICY_TIER_2_LIMIT/);
+  assert.throws(() => loadPolicy({ POLICY_AUTO_APPROVE_LIMIT: "", POLICY_TIER_2_LIMIT: "not-a-number" }), /POLICY_TIER_2_LIMIT/);
 });
 
 test("R09: thresholds that are out of order are rejected", () => {

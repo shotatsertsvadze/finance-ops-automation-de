@@ -1,8 +1,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  AWAITING_RECONCILIATION_STATES, DISCARDED_STATES, HOLDS_CAPACITY_STATES, OUTSTANDING_STATES,
-  PAYABLE_STATES, PHASE, PHASES, STATES, TERMINAL_STATES, TRANSITIONS, canTransition,
+  AWAITING_RECONCILIATION_STATES,
+  DISCARDED_STATES,
+  HOLDS_CAPACITY_STATES,
+  OUTSTANDING_STATES,
+  PAYABLE_STATES,
+  PHASE,
+  PHASES,
+  STATES,
+  TERMINAL_STATES,
+  TRANSITIONS,
+  canTransition,
 } from "./states.js";
 
 // Every list of states is derived from one phase per state, so a state added
@@ -68,7 +77,17 @@ test("every non-initial state is reachable", () => {
 test("nothing leaves a payable state except forward in the money path or reconciliation", () => {
   // CREDITED is on the list because a credit note shares the states up to the
   // accounting handoff and then leaves the money path instead of being paid.
-  const allowed = new Set(["ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILED", "RECONCILIATION_EXCEPTION", "CREDITED", "SETTLED_BY_CREDIT", "CANCELLED", "PAYMENT_FAILED"]);
+  const allowed = new Set([
+    "ACCOUNTING_READY",
+    "PAYMENT_PENDING",
+    "PAID",
+    "RECONCILED",
+    "RECONCILIATION_EXCEPTION",
+    "CREDITED",
+    "SETTLED_BY_CREDIT",
+    "CANCELLED",
+    "PAYMENT_FAILED",
+  ]);
   for (const s of PAYABLE_STATES) for (const to of TRANSITIONS[s]) assert.ok(allowed.has(to), `${s} -> ${to}`);
 });
 

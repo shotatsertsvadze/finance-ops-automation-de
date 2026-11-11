@@ -36,12 +36,39 @@ const USERS = {
 };
 
 const SUPPLIERS = {
-  S1: { no: "S-1001", name: "Berliner Bürobedarf GmbH", vat: "DE123456789", iban: "DE89370400440532013000", bic: "COBADEFFXXX",
-    email: "rechnung@berliner-buerobedarf.example", street: "Chausseestraße 45", city: "Berlin", zip: "10115" },
-  S2: { no: "S-1002", name: "Havel Logistik GmbH", vat: "DE234567890", iban: "DE02120300000000202051", bic: "BYLADEM1001",
-    email: "billing@havel-logistik.example", street: "Hafenweg 3", city: "Potsdam", zip: "14467" },
-  S3: { no: "S-1003", name: "Spree IT-Systeme AG", vat: "DE345678901", iban: "DE02500105170137075030", bic: "INGDDEFFXXX",
-    email: "invoice@spree-it.example", street: "Friedrichstraße 200", city: "Berlin", zip: "10117" },
+  S1: {
+    no: "S-1001",
+    name: "Berliner Bürobedarf GmbH",
+    vat: "DE123456789",
+    iban: "DE89370400440532013000",
+    bic: "COBADEFFXXX",
+    email: "rechnung@berliner-buerobedarf.example",
+    street: "Chausseestraße 45",
+    city: "Berlin",
+    zip: "10115",
+  },
+  S2: {
+    no: "S-1002",
+    name: "Havel Logistik GmbH",
+    vat: "DE234567890",
+    iban: "DE02120300000000202051",
+    bic: "BYLADEM1001",
+    email: "billing@havel-logistik.example",
+    street: "Hafenweg 3",
+    city: "Potsdam",
+    zip: "14467",
+  },
+  S3: {
+    no: "S-1003",
+    name: "Spree IT-Systeme AG",
+    vat: "DE345678901",
+    iban: "DE02500105170137075030",
+    bic: "INGDDEFFXXX",
+    email: "invoice@spree-it.example",
+    street: "Friedrichstraße 200",
+    city: "Berlin",
+    zip: "10117",
+  },
 };
 
 // The seeded orders are a small, readable master-data example. A month of
@@ -128,13 +155,17 @@ function invoiceXml({ number, issueDate, dueDate, supplier, iban, netCents, po, 
     </cac:PayeeFinancialAccount>
   </cac:PaymentMeans>
   <cac:PaymentTerms><cbc:Note>Zahlbar innerhalb von 30 Tagen ohne Abzug</cbc:Note></cac:PaymentTerms>
-  ${discountCents ? `<cac:AllowanceCharge>
+  ${
+    discountCents
+      ? `<cac:AllowanceCharge>
     <cbc:ChargeIndicator>false</cbc:ChargeIndicator>
     <cbc:AllowanceChargeReasonCode>95</cbc:AllowanceChargeReasonCode>
     <cbc:AllowanceChargeReason>Skonto laut Rahmenvereinbarung</cbc:AllowanceChargeReason>
     <cbc:Amount currencyID="EUR">${money(discountCents)}</cbc:Amount>
     <cac:TaxCategory><cbc:ID>S</cbc:ID><cbc:Percent>19</cbc:Percent><cac:TaxScheme><cbc:ID>VAT</cbc:ID></cac:TaxScheme></cac:TaxCategory>
-  </cac:AllowanceCharge>` : ""}
+  </cac:AllowanceCharge>`
+      : ""
+  }
   <cac:TaxTotal><cbc:TaxAmount currencyID="EUR">${money(vat)}</cbc:TaxAmount>
     <cac:TaxSubtotal><cbc:TaxableAmount currencyID="EUR">${money(net)}</cbc:TaxableAmount>
       <cbc:TaxAmount currencyID="EUR">${money(vat)}</cbc:TaxAmount>
@@ -198,12 +229,16 @@ export async function generateDemoData(deps, { count = 70, seed = 42, statementF
     if (roll > 0.94) scenario = "iban";
     else if (roll > 0.88) scenario = "po_overrun";
     else if (roll > 0.84) scenario = "malformed";
-    else if (roll > 0.60) scenario = "approval";
+    else if (roll > 0.6) scenario = "approval";
 
-    const netCents = scenario === "auto" ? 8000 + Math.floor(random() * 32000)
-      : scenario === "approval" ? 60000 + Math.floor(random() * 400000)
-      : scenario === "po_overrun" ? 120000
-      : 50000 + Math.floor(random() * 150000);
+    const netCents =
+      scenario === "auto"
+        ? 8000 + Math.floor(random() * 32000)
+        : scenario === "approval"
+          ? 60000 + Math.floor(random() * 400000)
+          : scenario === "po_overrun"
+            ? 120000
+            : 50000 + Math.floor(random() * 150000);
 
     // A supplier who over-charged sends a credit note. It runs the same checks
     // and is booked rather than paid.
@@ -211,22 +246,29 @@ export async function generateDemoData(deps, { count = 70, seed = 42, statementF
 
     // A discount is ordinary commercial practice, not an exception: these
     // should pass every check and flow through like any other invoice.
-    const discountCents = scenario === "auto" || scenario === "approval"
-      ? (random() > 0.8 ? Math.round(netCents * 0.03) : 0)
-      : 0;
+    const discountCents = scenario === "auto" || scenario === "approval" ? (random() > 0.8 ? Math.round(netCents * 0.03) : 0) : 0;
 
     const number = `DEMO-2026-${pad(1000 + i)}`;
     const issueDate = iso(new Date(receivedAt.getTime() - 86400000));
     const dueDate = iso(new Date(receivedAt.getTime() + 30 * 86400000));
-    const xml = scenario === "malformed"
-      ? invoiceXml({ number, issueDate, dueDate, supplier, iban: supplier.iban, netCents, po: order })
-          .replace(/<cbc:TaxExclusiveAmount[^<]*<\/cbc:TaxExclusiveAmount>/, '<cbc:TaxExclusiveAmount currencyID="EUR">nicht-lesbar</cbc:TaxExclusiveAmount>')
-      : invoiceXml({
-          number, issueDate, dueDate, supplier,
-          iban: scenario === "iban" ? WRONG_IBAN : supplier.iban,
-          netCents, discountCents, po: scenario === "po_overrun" ? SMALL_ORDER : order,
-          creditNote: isCreditNote, credits: isCreditNote ? `DEMO-2026-${pad(1000 + Math.max(0, i - 3))}` : null,
-        });
+    const xml =
+      scenario === "malformed"
+        ? invoiceXml({ number, issueDate, dueDate, supplier, iban: supplier.iban, netCents, po: order }).replace(
+            /<cbc:TaxExclusiveAmount[^<]*<\/cbc:TaxExclusiveAmount>/,
+            '<cbc:TaxExclusiveAmount currencyID="EUR">nicht-lesbar</cbc:TaxExclusiveAmount>',
+          )
+        : invoiceXml({
+            number,
+            issueDate,
+            dueDate,
+            supplier,
+            iban: scenario === "iban" ? WRONG_IBAN : supplier.iban,
+            netCents,
+            discountCents,
+            po: scenario === "po_overrun" ? SMALL_ORDER : order,
+            creditNote: isCreditNote,
+            credits: isCreditNote ? `DEMO-2026-${pad(1000 + Math.max(0, i - 3))}` : null,
+          });
 
     const received = await handleUpload(deps, {
       buffer: Buffer.from(xml, "utf8"),
@@ -240,7 +282,9 @@ export async function generateDemoData(deps, { count = 70, seed = 42, statementF
 
   // Advance a realistic share of the population through the human steps.
   for (const { id, scenario } of created) {
-    const { rows: [invoice] } = await deps.pool.query("select state from finops.invoices where id = $1", [id]);
+    const {
+      rows: [invoice],
+    } = await deps.pool.query("select state from finops.invoices where id = $1", [id]);
     if (!invoice) continue;
 
     if (invoice.state === "REVIEW_REQUIRED") {
@@ -250,7 +294,12 @@ export async function generateDemoData(deps, { count = 70, seed = 42, statementF
       if (cleared && scenario === "iban") {
         // A changed IBAN cannot be accepted, only verified into master data
         // (ADR-052). The realistic next step is the call-back.
-        await decideReview(deps, { invoiceId: id, action: "request-info", actor: human(USERS.clerk), comment: "Rückruf beim Lieferanten zur Bankverbindung" });
+        await decideReview(deps, {
+          invoiceId: id,
+          action: "request-info",
+          actor: human(USERS.clerk),
+          comment: "Rückruf beim Lieferanten zur Bankverbindung",
+        });
         continue;
       } else if (cleared && scenario !== "malformed") {
         await decideReview(deps, { invoiceId: id, action: "accept", actor: human(USERS.clerk), comment: "Mit Lieferant geklärt" });
@@ -259,25 +308,36 @@ export async function generateDemoData(deps, { count = 70, seed = 42, statementF
       }
     }
 
-    const { rows: [afterReview] } = await deps.pool.query("select state from finops.invoices where id = $1", [id]);
+    const {
+      rows: [afterReview],
+    } = await deps.pool.query("select state from finops.invoices where id = $1", [id]);
     if (afterReview.state === "READY_FOR_APPROVAL" && random() > 0.2) {
       const { rows: steps } = await deps.pool.query(
-        "select step_no, required_role from finops.approval_steps where invoice_id = $1 and status = 'PENDING' order by step_no", [id],
+        "select step_no, required_role from finops.approval_steps where invoice_id = $1 and status = 'PENDING' order by step_no",
+        [id],
       );
       // Mira signs, Jonas pays: a signer may not pay (ADR-056).
       const approver = { MANAGER: USERS.manager2, FINANCE: USERS.finance2, CFO: USERS.cfo };
       for (const step of steps) {
         await decideApprovalStep(deps, {
-          invoiceId: id, stepNo: step.step_no, action: "approve",
-          actor: human(approver[step.required_role]), user: { role: step.required_role }, comment: null,
+          invoiceId: id,
+          stepNo: step.step_no,
+          action: "approve",
+          actor: human(approver[step.required_role]),
+          user: { role: step.required_role },
+          comment: null,
         });
       }
     }
 
-    const { rows: [afterApproval] } = await deps.pool.query("select state from finops.invoices where id = $1", [id]);
+    const {
+      rows: [afterApproval],
+    } = await deps.pool.query("select state from finops.invoices where id = $1", [id]);
     if (afterApproval.state === "APPROVED") {
       summary.approved += 1;
-      const { rows: [doc] } = await deps.pool.query("select document_type from finops.invoices where id = $1", [id]);
+      const {
+        rows: [doc],
+      } = await deps.pool.query("select document_type from finops.invoices where id = $1", [id]);
       // A credit note always runs to the end. Leaving it to the same dice as
       // an invoice would mostly show one stranded before the booking, which is
       // not what the path looks like.
@@ -290,7 +350,9 @@ export async function generateDemoData(deps, { count = 70, seed = 42, statementF
         if (random() > 0.2) {
           // The supplier's open credits may cover this invoice entirely, in
           // which case there is nothing to send and it is settled instead.
-          const { rows: [state] } = await deps.pool.query(
+          const {
+            rows: [state],
+          } = await deps.pool.query(
             `select (i.gross_amount <= coalesce((
                select sum(c.gross_amount - coalesce((
                  select sum(a.amount) from finops.credit_applications a where a.credit_note_id = c.id
@@ -298,7 +360,8 @@ export async function generateDemoData(deps, { count = 70, seed = 42, statementF
                from finops.invoices c
                where c.supplier_id = i.supplier_id and c.document_type = 'CREDIT_NOTE' and c.state = 'CREDITED'
              ), 0)) as covered
-             from finops.invoices i where i.id = $1`, [id],
+             from finops.invoices i where i.id = $1`,
+            [id],
           );
           if (state.covered) {
             await settleByCredit(deps, { invoiceId: id, actor: human(USERS.finance) });
@@ -312,7 +375,9 @@ export async function generateDemoData(deps, { count = 70, seed = 42, statementF
     }
   }
 
-  const { rows: [netting] } = await deps.pool.query(
+  const {
+    rows: [netting],
+  } = await deps.pool.query(
     "select count(distinct invoice_id)::int as invoices, coalesce(sum(amount), 0)::text as total from finops.credit_applications",
   );
   summary.netted = netting.invoices;
@@ -322,27 +387,51 @@ export async function generateDemoData(deps, { count = 70, seed = 42, statementF
   Object.assign(summary, await settlePayments(deps, random, statementFile));
   // Counted from the audit trail: straight-through approvals happen inside the
   // upload, where the loop above does not see them.
-  const { rows: [straight] } = await deps.pool.query(
-    "select count(distinct invoice_id)::int as n from finops.audit_events where action = 'auto_approved'",
-  );
+  const {
+    rows: [straight],
+  } = await deps.pool.query("select count(distinct invoice_id)::int as n from finops.audit_events where action = 'auto_approved'");
   summary.auto = straight.n;
   return summary;
 }
 
 /** The four transactions that belong to the hand-written fixtures A and G. */
 const FIXTURE_TRANSACTIONS = [
-  { external_id: "TX-2026-09-0001", value_date: "2026-09-20", amount: "-1240.00", currency: "EUR",
-    counterparty_name: "Berliner Buerobedarf GmbH", counterparty_iban: "DE89370400440532013000",
-    reference: "Rechnung INV-2026-00421 Nordwerk GmbH Kd-Nr 4471" },
-  { external_id: "TX-2026-09-0002", value_date: "2026-09-21", amount: "-380.00", currency: "EUR",
-    counterparty_name: "Berliner Buerobedarf GmbH", counterparty_iban: "DE89370400440532013000",
-    reference: "Sammelzahlung September ohne Einzelbeleg" },
-  { external_id: "TX-2026-09-0003", value_date: "2026-09-22", amount: "-350.00", currency: "EUR",
-    counterparty_name: "Berliner Buerobedarf GmbH", counterparty_iban: "DE89370400440532013000",
-    reference: "Teilzahlung zu INV-2026-00433" },
-  { external_id: "TX-2026-09-0004", value_date: "2026-09-23", amount: "-980.00", currency: "EUR",
-    counterparty_name: "Unbekannter Absender", counterparty_iban: "DE02300209000106531065",
-    reference: "Gutschrift ohne Zuordnung" },
+  {
+    external_id: "TX-2026-09-0001",
+    value_date: "2026-09-20",
+    amount: "-1240.00",
+    currency: "EUR",
+    counterparty_name: "Berliner Buerobedarf GmbH",
+    counterparty_iban: "DE89370400440532013000",
+    reference: "Rechnung INV-2026-00421 Nordwerk GmbH Kd-Nr 4471",
+  },
+  {
+    external_id: "TX-2026-09-0002",
+    value_date: "2026-09-21",
+    amount: "-380.00",
+    currency: "EUR",
+    counterparty_name: "Berliner Buerobedarf GmbH",
+    counterparty_iban: "DE89370400440532013000",
+    reference: "Sammelzahlung September ohne Einzelbeleg",
+  },
+  {
+    external_id: "TX-2026-09-0003",
+    value_date: "2026-09-22",
+    amount: "-350.00",
+    currency: "EUR",
+    counterparty_name: "Berliner Buerobedarf GmbH",
+    counterparty_iban: "DE89370400440532013000",
+    reference: "Teilzahlung zu INV-2026-00433",
+  },
+  {
+    external_id: "TX-2026-09-0004",
+    value_date: "2026-09-23",
+    amount: "-980.00",
+    currency: "EUR",
+    counterparty_name: "Unbekannter Absender",
+    counterparty_iban: "DE02300209000106531065",
+    reference: "Gutschrift ohne Zuordnung",
+  },
 ];
 
 /**
@@ -392,7 +481,12 @@ async function settlePayments(deps, random, statementFile) {
     }
     if (index % 29 === 11) {
       // Paid to an account that is not the one on the instruction.
-      transactions.push({ ...base, amount: `-${payment.amount}`, counterparty_iban: "DE02300209000106531065", counterparty_name: "Abweichendes Konto" });
+      transactions.push({
+        ...base,
+        amount: `-${payment.amount}`,
+        counterparty_iban: "DE02300209000106531065",
+        counterparty_name: "Abweichendes Konto",
+      });
       return;
     }
     if (index % 31 === 13) {
@@ -428,30 +522,31 @@ async function settlePayments(deps, random, statementFile) {
  */
 async function backdate(pool, created, random) {
   for (const { id, receivedAt } of created) {
-    const { rows: events } = await pool.query(
-      "select id, action from finops.audit_events where invoice_id = $1 order by occurred_at, id", [id],
-    );
+    const { rows: events } = await pool.query("select id, action from finops.audit_events where invoice_id = $1 order by occurred_at, id", [
+      id,
+    ]);
     if (events.length === 0) continue;
 
     let cursor = new Date(receivedAt);
     for (const event of events) {
       // Machine steps follow within seconds; human steps take hours or days.
-      const gapMinutes = {
-        received: 0,
-        processing_started: 0.2,
-        reprocessing_started: 0.2,
-        routed_to_review: 0.1,
-        routed_to_approval: 0.1,
-        auto_approved: 0.1,
-        technical_validation_failed: 0.1,
-        duplicate_file_detected: 0.1,
-        review_accepted: 60 * (4 + random() * 40),
-        approval_step_approved: 60 * (6 + random() * 48),
-        approved: 60 * (6 + random() * 48),
-        accounting_record_created: 60 * (2 + random() * 20),
-        payment_instructed: 60 * (12 + random() * 36),
-        payment_confirmed: 60 * (12 + random() * 24),
-      }[event.action] ?? 30;
+      const gapMinutes =
+        {
+          received: 0,
+          processing_started: 0.2,
+          reprocessing_started: 0.2,
+          routed_to_review: 0.1,
+          routed_to_approval: 0.1,
+          auto_approved: 0.1,
+          technical_validation_failed: 0.1,
+          duplicate_file_detected: 0.1,
+          review_accepted: 60 * (4 + random() * 40),
+          approval_step_approved: 60 * (6 + random() * 48),
+          approved: 60 * (6 + random() * 48),
+          accounting_record_created: 60 * (2 + random() * 20),
+          payment_instructed: 60 * (12 + random() * 36),
+          payment_confirmed: 60 * (12 + random() * 24),
+        }[event.action] ?? 30;
       cursor = new Date(cursor.getTime() + gapMinutes * 60000);
       await pool.query("update finops.audit_events set occurred_at = $2 where id = $1", [event.id, cursor]);
     }

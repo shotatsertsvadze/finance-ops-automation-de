@@ -40,7 +40,10 @@ test("production refuses accounts that still have the published demo password", 
 
 test("an account with its own password is no longer named", async () => {
   const { hash, salt } = hashPassword("ein-eigenes-langes-passwort");
-  await deps.pool.query("update finops.users set password_hash = $1, password_salt = $2 where email = 'admin@nordwerk.example'", [hash, salt]);
+  await deps.pool.query("update finops.users set password_hash = $1, password_salt = $2 where email = 'admin@nordwerk.example'", [
+    hash,
+    salt,
+  ]);
   const [problem] = await problems(PRODUCTION);
   assert.doesNotMatch(problem, /admin@nordwerk\.example/);
   assert.match(problem, /jonas\.weber@nordwerk\.example/);

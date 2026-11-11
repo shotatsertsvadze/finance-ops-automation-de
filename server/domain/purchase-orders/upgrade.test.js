@@ -36,7 +36,7 @@ const on = (database) => {
 const ADMIN_URL = process.env.UPGRADE_TEST_ADMIN_URL ?? on("postgres");
 const TARGET_URL = on(NAME);
 
-const PO = "PO-2026-0102";            // opens with 500,00
+const PO = "PO-2026-0102"; // opens with 500,00
 const SUPPLIER = "10000000-0000-0000-0000-000000000001";
 const PO_ID = "20000000-0000-0000-0000-000000000102";
 
@@ -45,7 +45,8 @@ let pool;
 /** Applies the migrations in (from, to], in filename order. */
 async function apply(client, to, from = "0000") {
   const files = (await readdir(MIGRATIONS))
-    .filter((f) => f.endsWith(".sql")).sort()
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
     .filter((f) => f > from && f <= to);
   for (const file of files) await client.query(await readFile(path.join(MIGRATIONS, file), "utf8"));
   return files;
@@ -53,7 +54,10 @@ async function apply(client, to, from = "0000") {
 
 before(async () => {
   // This test drops a database, so it must not be pointed at either real one.
-  for (const [name, value] of [["DATABASE_URL", process.env.DATABASE_URL], ["TEST_DATABASE_URL", process.env.TEST_DATABASE_URL]]) {
+  for (const [name, value] of [
+    ["DATABASE_URL", process.env.DATABASE_URL],
+    ["TEST_DATABASE_URL", process.env.TEST_DATABASE_URL],
+  ]) {
     if (value && value.endsWith(`/${NAME}`)) throw new Error(`${name} darf nicht auf ${NAME} zeigen: dieser Test löscht die Datenbank`);
   }
   const admin = new pg.Pool({ connectionString: ADMIN_URL });
@@ -104,20 +108,28 @@ test("invoices that already held capacity before the upgrade are recorded", asyn
   await apply(pool, "0099_zzz.sql", "0005_auth.sql");
 
   const held = await activeCommitments();
-  assert.deepEqual(held.map((r) => r.invoice_number), ["OLD-APPROVED", "OLD-PAID"],
-    "only invoices in capacity-holding states claim the order");
+  assert.deepEqual(
+    held.map((r) => r.invoice_number),
+    ["OLD-APPROVED", "OLD-PAID"],
+    "only invoices in capacity-holding states claim the order",
+  );
   assert.equal(held.find((r) => r.invoice_number === "OLD-APPROVED").amount, "319.33");
 });
 
 test("the order reports the capacity those old invoices leave free", async () => {
-  const { rows: [order] } = await pool.query("select remaining_amount from finops.purchase_orders where po_number = $1", [PO]);
+  const {
+    rows: [order],
+  } = await pool.query("select remaining_amount from finops.purchase_orders where po_number = $1", [PO]);
   const held = await activeCommitments();
   const committed = held.reduce((sum, row) => sum + Number(row.amount), 0);
 
   assert.equal(Number(order.remaining_amount), 500);
   assert.equal(committed, 419.33, "319,33 + 100,00 already claimed");
-  assert.equal(Number((Number(order.remaining_amount) - committed).toFixed(2)), 80.67,
-    "not the full opening balance, which is what the defect reported");
+  assert.equal(
+    Number((Number(order.remaining_amount) - committed).toFixed(2)),
+    80.67,
+    "not the full opening balance, which is what the defect reported",
+  );
 });
 
 test("an invoice settled by credit before 0013 gets its released claim back", async () => {

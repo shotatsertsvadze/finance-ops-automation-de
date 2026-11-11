@@ -21,7 +21,10 @@ export function fakeExplainer(answer, { model = DEFAULT_MODEL } = {}) {
 
 /** The deps.ai an enabled app has; `explainer` null is enabled without a key. */
 export const aiEnabled = (explainer) => ({
-  enabled: true, provider: AI_PROVIDER, model: explainer?.model ?? DEFAULT_MODEL, explainer,
+  enabled: true,
+  provider: AI_PROVIDER,
+  model: explainer?.model ?? DEFAULT_MODEL,
+  explainer,
 });
 
 export const AI_OFF = { enabled: false, provider: AI_PROVIDER, model: DEFAULT_MODEL, explainer: null };

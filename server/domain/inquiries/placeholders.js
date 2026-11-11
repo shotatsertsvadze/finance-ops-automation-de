@@ -15,7 +15,9 @@ function amount(gross, currency) {
 }
 
 export async function placeholderValues(pool, company, invoiceId) {
-  const { rows: [row] } = await pool.query(
+  const {
+    rows: [row],
+  } = await pool.query(
     `select i.invoice_number, i.issue_date, i.gross_amount, i.currency, i.po_reference_raw, s.legal_name
      from finops.invoices i left join finops.suppliers s on s.id = i.supplier_id where i.id = $1`,
     [invoiceId],

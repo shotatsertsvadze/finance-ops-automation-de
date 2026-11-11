@@ -40,7 +40,7 @@ test("the invoice list is read one page at a time, with the full count", async (
   let asked;
   globalThis.fetch = async (url) => {
     asked = url;
-    return new Response("[{\"id\":\"a\"}]", { status: 200, headers: { "X-Total-Count": "120" } });
+    return new Response('[{"id":"a"}]', { status: 200, headers: { "X-Total-Count": "120" } });
   };
   const page = await listInvoices("REVIEW_REQUIRED", 50);
   assert.equal(asked, "/api/invoices?offset=50&state=REVIEW_REQUIRED");

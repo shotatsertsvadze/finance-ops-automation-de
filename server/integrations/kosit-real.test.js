@@ -55,7 +55,12 @@ const FIXTURES = {
 test("the pinned validator accepts every fixture meant to be valid and rejects F", { skip }, async () => {
   for (const name of Object.keys(FIXTURES)) {
     const buffer = fixture(name);
-    const { check, record } = await validateOfficially(validator, { buffer, name: name.replace(".xml", ""), documentSha256: sha(buffer), readable: true });
+    const { check, record } = await validateOfficially(validator, {
+      buffer,
+      name: name.replace(".xml", ""),
+      documentSha256: sha(buffer),
+      readable: true,
+    });
     const expected = name.startsWith("F_") ? "REJECTED" : "ACCEPTED";
     assert.equal(record.verdict, expected, `${name}: ${record.error ?? check.reason}`);
     assert.equal(record.validator_version, KOSIT_PINS.validator.engine);
@@ -93,16 +98,30 @@ test("the demo month: 65 acceptable, exactly the 5 malformed ones not, and every
   );
   assert.deepEqual(orders, [], "every generated document names a real order");
   assert.equal(verdicts.filter((v) => v.verdict === "ACCEPTED").length, 65);
-  assert.deepEqual(verdicts.filter((v) => v.verdict === "REJECTED").map((v) => v.invoice_number),
-    ["DEMO-2026-01002", "DEMO-2026-01026", "DEMO-2026-01037", "DEMO-2026-01048", "DEMO-2026-01053"]);
+  assert.deepEqual(
+    verdicts.filter((v) => v.verdict === "REJECTED").map((v) => v.invoice_number),
+    ["DEMO-2026-01002", "DEMO-2026-01026", "DEMO-2026-01037", "DEMO-2026-01048", "DEMO-2026-01053"],
+  );
 
   // The figures docs/DEMO.md quotes, which were measured without a validator.
   const { rows } = await deps.pool.query("select state, count(*)::int as n from finops.invoices group by state");
   const n = Object.fromEntries(rows.map((r) => [r.state, r.n]));
-  const money = ["APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILIATION_EXCEPTION"].reduce((s, k) => s + (n[k] ?? 0), 0);
+  const money = ["APPROVED", "ACCOUNTING_READY", "PAYMENT_PENDING", "PAID", "RECONCILIATION_EXCEPTION"].reduce(
+    (s, k) => s + (n[k] ?? 0),
+    0,
+  );
   assert.deepEqual([n.REVIEW_REQUIRED, n.READY_FOR_APPROVAL, n.APPROVED, money, n.RECONCILED], [6, 3, 11, 24, 30]);
   assert.deepEqual(summary, {
-    created: 70, auto: 42, approved: 58, exceptions: 11, paid: 36, reconciled: 30, credited: 4, netted: 4,
-    netted_amount: "823.09", statement_lines: 38, bank_exceptions: 4,
+    created: 70,
+    auto: 42,
+    approved: 58,
+    exceptions: 11,
+    paid: 36,
+    reconciled: 30,
+    credited: 4,
+    netted: 4,
+    netted_amount: "823.09",
+    statement_lines: 38,
+    bank_exceptions: 4,
   });
 });

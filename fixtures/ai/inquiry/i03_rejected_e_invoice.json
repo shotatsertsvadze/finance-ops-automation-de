@@ -39,15 +39,8 @@
       "amounts_numeric": "korrigierte_rechnung",
       "official_validation": "korrigierte_e_rechnung"
     },
-    "allowed_requests": [
-      "korrigierte_e_rechnung",
-      "korrigierte_rechnung"
-    ],
-    "placeholders": [
-      "rechnungsnummer",
-      "rechnungsdatum",
-      "unser_unternehmen"
-    ]
+    "allowed_requests": ["korrigierte_e_rechnung", "korrigierte_rechnung"],
+    "placeholders": ["rechnungsnummer", "rechnungsdatum", "unser_unternehmen"]
   },
   "placeholder_values": {
     "rechnungsnummer": "AW-2026-15",

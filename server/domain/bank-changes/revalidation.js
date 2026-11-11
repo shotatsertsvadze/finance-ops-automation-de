@@ -33,12 +33,15 @@ async function failedIbanMatch(client, invoiceId, runNo) {
  */
 async function revalidateOne(deps, change, invoiceId, actor) {
   return withTransaction(deps.pool, async (client) => {
-    const { rows: [invoice] } = await client.query("select state from finops.invoices where id = $1 for update", [invoiceId]);
+    const {
+      rows: [invoice],
+    } = await client.query("select state from finops.invoices where id = $1 for update", [invoiceId]);
     if (invoice.state === "INFO_REQUESTED") return "waiting";
     if (invoice.state !== "REVIEW_REQUIRED") return "skipped";
-    const { rows: linked } = await client.query(
-      "select 1 from finops.bank_change_revalidations where change_id = $1 and invoice_id = $2", [change.id, invoiceId],
-    );
+    const { rows: linked } = await client.query("select 1 from finops.bank_change_revalidations where change_id = $1 and invoice_id = $2", [
+      change.id,
+      invoiceId,
+    ]);
     const fromRun = await latestRunNo(client, invoiceId);
     if (linked.length || !(await failedIbanMatch(client, invoiceId, fromRun))) return "skipped";
 

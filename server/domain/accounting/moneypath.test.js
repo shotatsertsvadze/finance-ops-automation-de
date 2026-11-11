@@ -182,7 +182,9 @@ test("confirming payment marks the invoice paid", async () => {
 
   const after = await get(invoice.id);
   assert.equal(after.state, "PAID");
-  const { rows } = await deps.pool.query("select status, provider_ref from finops.payment_instructions where invoice_id = $1", [invoice.id]);
+  const { rows } = await deps.pool.query("select status, provider_ref from finops.payment_instructions where invoice_id = $1", [
+    invoice.id,
+  ]);
   assert.equal(rows[0].status, "EXECUTED");
   assert.equal(rows[0].provider_ref, "MOCK-77");
 });
@@ -380,8 +382,11 @@ test("the export names its consumer, and refuses one it does not know", async ()
 
   const sheet = await clients.finance.get("/api/accounting/export?profile=spreadsheet");
   assert.equal(sheet.status, 200);
-  assert.match(sheet.headers.get("content-disposition") ?? "", /tabellenkalkulation/,
-    "the two files are told apart by name, so nobody imports the wrong one");
+  assert.match(
+    sheet.headers.get("content-disposition") ?? "",
+    /tabellenkalkulation/,
+    "the two files are told apart by name, so nobody imports the wrong one",
+  );
 
   const wrong = await clients.finance.get("/api/accounting/export?profile=etwas");
   assert.equal(wrong.status, 400);

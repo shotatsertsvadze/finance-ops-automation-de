@@ -38,9 +38,10 @@ if (major < 11) fail(`Java ${major} unter "${java}" ist zu alt: der Validator br
 
 const port = url.port || "8081";
 console.log(`KoSIT ${KOSIT_PINS.validator.version} mit ${KOSIT_PINS.configuration.version} auf http://${LOOPBACK}:${port} (Java ${major})`);
-const daemon = spawn(java, [
-  "-jar", artifactPath(KOSIT_PINS.validator), "-s", SCENARIOS, "-r", CONFIGURATION_DIR,
-  "-D", "-H", LOOPBACK, "-P", port, "-G",
-], { stdio: "inherit" });
+const daemon = spawn(
+  java,
+  ["-jar", artifactPath(KOSIT_PINS.validator), "-s", SCENARIOS, "-r", CONFIGURATION_DIR, "-D", "-H", LOOPBACK, "-P", port, "-G"],
+  { stdio: "inherit" },
+);
 daemon.on("exit", (code, signal) => process.exit(code ?? (signal ? 0 : 1)));
-for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => daemon.kill(signal));
+for (const signal of /** @type {NodeJS.Signals[]} */ (["SIGINT", "SIGTERM"])) process.on(signal, () => daemon.kill(signal));

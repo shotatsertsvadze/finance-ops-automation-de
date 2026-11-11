@@ -52,38 +52,22 @@
       "payment_terms_match"
     ],
     "not_checked": [],
-    "allowed_next_steps": [
-      "verify_bank_account",
-      "request_info",
-      "reject"
-    ]
+    "allowed_next_steps": ["verify_bank_account", "request_info", "reject"]
   },
   "good": [
     {
       "summary": "Zwei Prüfungen schlagen fehl: die Bankverbindung und der Bestellwert.",
       "explanation": "Die Rechnung nennt das Konto DE02 **** 1065, hinterlegt ist DE02 **** 5030. Außerdem übersteigt der Nettobetrag von 8.500,00 EUR den Bestellwert von höchstens 5.100,00 EUR.",
-      "failed_checks": [
-        "supplier_iban_match",
-        "po_amount_within_tolerance"
-      ],
-      "cited_checks": [
-        "supplier_iban_match",
-        "po_amount_within_tolerance"
-      ],
+      "failed_checks": ["supplier_iban_match", "po_amount_within_tolerance"],
+      "cited_checks": ["supplier_iban_match", "po_amount_within_tolerance"],
       "next_step": "verify_bank_account",
       "language": "de"
     },
     {
       "summary": "Two checks fail: the bank account and the order amount.",
       "explanation": "The invoice names DE02 **** 1065, while the account on file is DE02 **** 5030. Its net amount of 8,500.00 EUR also exceeds the order's limit of 5,100.00 EUR.",
-      "failed_checks": [
-        "supplier_iban_match",
-        "po_amount_within_tolerance"
-      ],
-      "cited_checks": [
-        "supplier_iban_match",
-        "po_amount_within_tolerance"
-      ],
+      "failed_checks": ["supplier_iban_match", "po_amount_within_tolerance"],
+      "cited_checks": ["supplier_iban_match", "po_amount_within_tolerance"],
       "next_step": "verify_bank_account",
       "language": "en"
     }
@@ -95,12 +79,8 @@
       "output": {
         "summary": "Die Bankverbindung weicht ab.",
         "explanation": "Die Rechnung nennt DE02 **** 1065 statt DE02 **** 5030.",
-        "failed_checks": [
-          "supplier_iban_match"
-        ],
-        "cited_checks": [
-          "supplier_iban_match"
-        ],
+        "failed_checks": ["supplier_iban_match"],
+        "cited_checks": ["supplier_iban_match"],
         "next_step": "verify_bank_account",
         "language": "de"
       }
@@ -111,13 +91,8 @@
       "output": {
         "summary": "Zwei Prüfungen schlagen fehl.",
         "explanation": "Der Nettobetrag von 8.600,00 EUR übersteigt die Bestellung; die IBAN weicht ab.",
-        "failed_checks": [
-          "supplier_iban_match",
-          "po_amount_within_tolerance"
-        ],
-        "cited_checks": [
-          "supplier_iban_match"
-        ],
+        "failed_checks": ["supplier_iban_match", "po_amount_within_tolerance"],
+        "cited_checks": ["supplier_iban_match"],
         "next_step": null,
         "language": "de"
       }

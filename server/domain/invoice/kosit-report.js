@@ -15,7 +15,7 @@ const parser = new XMLParser({
   isArray: (name) => ["validationStepResult", "message"].includes(name),
 });
 
-const text = (node) => (node && typeof node === "object" ? node["#text"] ?? null : node ?? null);
+const text = (node) => (node && typeof node === "object" ? (node["#text"] ?? null) : (node ?? null));
 
 /**
  * The report's facts, or null when the text is not a readable report. Line
@@ -34,11 +34,13 @@ export function readReport(xml) {
     engine: text(report.engine?.name),
     scenario: text(matched?.scenario?.name),
     documentSha256: hash ? Buffer.from(hash, "base64").toString("hex") : null,
-    messages: (matched?.validationStepResult ?? []).flatMap((step) => (step.message ?? []).map((m) => ({
-      step: step["@_id"] ?? null,
-      level: m["@_level"] ?? null,
-      code: m["@_code"] ?? null,
-      text: text(m),
-    }))),
+    messages: (matched?.validationStepResult ?? []).flatMap((step) =>
+      (step.message ?? []).map((m) => ({
+        step: step["@_id"] ?? null,
+        level: m["@_level"] ?? null,
+        code: m["@_code"] ?? null,
+        text: text(m),
+      })),
+    ),
   };
 }

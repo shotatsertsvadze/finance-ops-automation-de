@@ -30,24 +30,33 @@ beforeEach(async () => {
   deps.officialValidator = validator;
 });
 
-const upload = async (name) => (await (await clerk.upload(fixture(name), name)).json());
+const upload = async (name) => await (await clerk.upload(fixture(name), name)).json();
 const retry = async () => {
   const res = await clerk.post("/api/invoices/official-validation/retry", {});
   assert.equal(res.status, 200);
   return res.json();
 };
-const runs = async (id) => (await deps.pool.query(
-  "select run_no, outcome from finops.official_validations where invoice_id = $1 order by run_no", [id],
-)).rows.map((r) => [r.run_no, r.outcome]);
+const runs = async (id) =>
+  (await deps.pool.query("select run_no, outcome from finops.official_validations where invoice_id = $1 order by run_no", [id])).rows.map(
+    (r) => [r.run_no, r.outcome],
+  );
 
 test("after an outage the stranded invoices are validated again, each as a new run", async () => {
   const g = await upload("G_clean_380.xml");
   const a = await upload("A_clean_1240.xml");
   validator.answer = ANSWERS.accept;
   const result = await retry();
-  assert.deepEqual(result.retried.map((r) => [r.invoice_id, r.from_run, r.to_run, r.outcome]).sort(),
-    [[g.id, 1, 2, "ACCEPTED"], [a.id, 1, 2, "ACCEPTED"]].sort());
-  assert.deepEqual(await runs(g.id), [[1, "UNAVAILABLE"], [2, "ACCEPTED"]]);
+  assert.deepEqual(
+    result.retried.map((r) => [r.invoice_id, r.from_run, r.to_run, r.outcome]).sort(),
+    [
+      [g.id, 1, 2, "ACCEPTED"],
+      [a.id, 1, 2, "ACCEPTED"],
+    ].sort(),
+  );
+  assert.deepEqual(await runs(g.id), [
+    [1, "UNAVAILABLE"],
+    [2, "ACCEPTED"],
+  ]);
   const after = await (await clerk.get(`/api/invoices/${g.id}`)).json();
   assert.equal(after.state, "READY_FOR_APPROVAL", "it was in review, so a person signs (ADR-020)");
 });
@@ -58,7 +67,10 @@ test("a replayed retry changes nothing", async () => {
   await retry();
   const again = await retry();
   assert.deepEqual(again.retried, []);
-  assert.deepEqual(await runs(g.id), [[1, "UNAVAILABLE"], [2, "ACCEPTED"]]);
+  assert.deepEqual(await runs(g.id), [
+    [1, "UNAVAILABLE"],
+    [2, "ACCEPTED"],
+  ]);
 });
 
 test("while the validator is still down nothing is touched", async () => {
@@ -89,7 +101,10 @@ test("two retries at once validate each invoice once, even one that stays in rev
   validator.answer = ANSWERS.accept;
   const [first, second] = await Promise.all([retry(), retry()]);
   assert.equal(first.retried.length + second.retried.length, 1);
-  assert.deepEqual(await runs(b.id), [[1, "UNAVAILABLE"], [2, "ACCEPTED"]]);
+  assert.deepEqual(await runs(b.id), [
+    [1, "UNAVAILABLE"],
+    [2, "ACCEPTED"],
+  ]);
   const after = await (await clerk.get(`/api/invoices/${b.id}`)).json();
   assert.deepEqual([after.state, after.review_reason], ["REVIEW_REQUIRED", "SUPPLIER_IBAN_MATCH"]);
 });

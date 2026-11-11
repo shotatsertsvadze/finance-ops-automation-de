@@ -53,7 +53,8 @@ test("every response names its request, and a caller's id is kept", async () => 
 test("each request is logged as one JSON line, without its query or body", async () => {
   const lines = await withServer(createApp(deps), async (base) => {
     await fetch(`${base}/api/auth/login`, {
-      method: "POST", headers: { "Content-Type": "application/json", "X-Request-Id": "req-1" },
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Request-Id": "req-1" },
       body: JSON.stringify({ email: "anna.berger@nordwerk.example", password: "geheim-falsch" }),
     });
     await fetch(`${base}/api/invoices?state=APPROVED`, { headers: { "X-Request-Id": "req-2" } });
@@ -69,7 +70,11 @@ test("each request is logged as one JSON line, without its query or body", async
 });
 
 test("an internal error is logged with its request id, which the caller is given", async () => {
-  const broken = { query: async () => { throw new Error("connection terminated unexpectedly"); } };
+  const broken = {
+    query: async () => {
+      throw new Error("connection terminated unexpectedly");
+    },
+  };
   const lines = await withServer(createApp({ pool: broken }), async (base) => {
     const res = await fetch(`${base}/api/invoices`, { headers: { Cookie: "finops_session=abc", "X-Request-Id": "req-500" } });
     assert.equal(res.status, 500);

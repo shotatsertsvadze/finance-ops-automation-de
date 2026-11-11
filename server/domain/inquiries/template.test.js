@@ -7,8 +7,12 @@ import { templateInquiry } from "./template.js";
 
 const ALL = [...PLACEHOLDERS];
 const VALUES = {
-  rechnungsnummer: "RE-2026-4480", rechnungsdatum: "02.09.2026", bruttobetrag: "10.115,00 EUR",
-  bestellnummer: "PO-2026-0205", lieferant: "Spree IT-Systeme AG", unser_unternehmen: "Nordwerk GmbH",
+  rechnungsnummer: "RE-2026-4480",
+  rechnungsdatum: "02.09.2026",
+  bruttobetrag: "10.115,00 EUR",
+  bestellnummer: "PO-2026-0205",
+  lieferant: "Spree IT-Systeme AG",
+  unser_unternehmen: "Nordwerk GmbH",
 };
 const BANK = /IBAN|Bankverbindung|Kontonummer|Konto\b|BIC/i;
 
@@ -27,8 +31,11 @@ test("checks that are ours to sort out give no inquiry", () => {
 });
 
 test("an inquiry covers the checks it can address, each request once", () => {
-  assert.deepEqual(inquiryScope(["totals_consistent", "line_amounts_consistent", "supplier_active"]),
-    { eligible: true, checks: ["totals_consistent", "line_amounts_consistent"], requests: ["korrigierte_rechnung"] });
+  assert.deepEqual(inquiryScope(["totals_consistent", "line_amounts_consistent", "supplier_active"]), {
+    eligible: true,
+    checks: ["totals_consistent", "line_amounts_consistent"],
+    requests: ["korrigierte_rechnung"],
+  });
 });
 
 test("the template for an order overrun names the invoice by placeholder and asks what the check allows", () => {
@@ -55,6 +62,8 @@ test("no template, for any check, mentions bank details", () => {
 });
 
 test("fill leaves an unknown or empty placeholder as written", () => {
-  assert.equal(fill("{{rechnungsnummer}} {{nicht_da}} {{bestellnummer}}", { rechnungsnummer: "X-1", bestellnummer: null }),
-    "X-1 {{nicht_da}} {{bestellnummer}}");
+  assert.equal(
+    fill("{{rechnungsnummer}} {{nicht_da}} {{bestellnummer}}", { rechnungsnummer: "X-1", bestellnummer: null }),
+    "X-1 {{nicht_da}} {{bestellnummer}}",
+  );
 });

@@ -26,8 +26,15 @@ export async function importStatement({ pool }, { statement }) {
            (external_id, value_date, amount, currency, counterparty_name, counterparty_iban, reference)
          values ($1,$2,$3,$4,$5,$6,$7)
          on conflict (external_id) do nothing`,
-        [tx.external_id, tx.value_date, tx.amount, tx.currency ?? "EUR",
-          tx.counterparty_name ?? null, tx.counterparty_iban ?? null, tx.reference ?? null],
+        [
+          tx.external_id,
+          tx.value_date,
+          tx.amount,
+          tx.currency ?? "EUR",
+          tx.counterparty_name ?? null,
+          tx.counterparty_iban ?? null,
+          tx.reference ?? null,
+        ],
       );
       imported += rowCount;
     }
@@ -88,13 +95,19 @@ export async function runReconciliation({ pool }, { actor }) {
           [tx.id, result.invoiceId],
         );
         await transition(client, {
-          invoiceId: result.invoiceId, to: "RECONCILED", actor, action: "reconciled",
+          invoiceId: result.invoiceId,
+          to: "RECONCILED",
+          actor,
+          action: "reconciled",
           reason: `Zahlungseingang ${tx.external_id} zugeordnet`,
           evidence: { external_id: tx.external_id, amount: tx.amount, reference: tx.reference },
         });
         // A reconciled payment leaves the candidate pool immediately, so a
         // second transaction cannot close the same invoice in this run.
-        openPayments.splice(openPayments.findIndex((p) => p.invoice_id === result.invoiceId), 1);
+        openPayments.splice(
+          openPayments.findIndex((p) => p.invoice_id === result.invoiceId),
+          1,
+        );
         summary.matched += 1;
         continue;
       }
@@ -105,11 +118,17 @@ export async function runReconciliation({ pool }, { actor }) {
           [tx.id, result.invoiceId, result.reason],
         );
         if (result.invoiceId) {
-          const { rows: [invoice] } = await client.query("select state from finops.invoices where id = $1", [result.invoiceId]);
+          const {
+            rows: [invoice],
+          } = await client.query("select state from finops.invoices where id = $1", [result.invoiceId]);
           if (invoice?.state === "PAID") {
             await transition(client, {
-              invoiceId: result.invoiceId, to: "RECONCILIATION_EXCEPTION", actor, action: "reconciliation_exception",
-              reason: result.reason, reviewReason: result.reason,
+              invoiceId: result.invoiceId,
+              to: "RECONCILIATION_EXCEPTION",
+              actor,
+              action: "reconciliation_exception",
+              reason: result.reason,
+              reviewReason: result.reason,
               evidence: { external_id: tx.external_id, amount: tx.amount, reference: tx.reference },
             });
           }
@@ -135,10 +154,16 @@ export async function resolveReconciliation({ pool }, { invoiceId, actor, commen
   if (!reason) throw new RuleError(400, "REASON_REQUIRED", "Für den Abschluss ist eine Begründung erforderlich");
 
   return withTransaction(pool, async (client) => {
-    const { rows: [invoice] } = await client.query("select state from finops.invoices where id = $1 for update", [invoiceId]);
+    const {
+      rows: [invoice],
+    } = await client.query("select state from finops.invoices where id = $1 for update", [invoiceId]);
     if (!invoice) throw new NotFoundError("INVOICE_NOT_FOUND", "Rechnung nicht gefunden");
     if (invoice.state !== "RECONCILIATION_EXCEPTION") {
-      throw new TransitionError("NO_OPEN_RECONCILIATION_EXCEPTION", `Rechnung im Status ${invoice.state} hat keine offene Abgleich-Ausnahme`, { state: invoice.state });
+      throw new TransitionError(
+        "NO_OPEN_RECONCILIATION_EXCEPTION",
+        `Rechnung im Status ${invoice.state} hat keine offene Abgleich-Ausnahme`,
+        { state: invoice.state },
+      );
     }
     // Closing the invoice without closing its evidence leaves the transaction
     // free to attach itself to a later invoice, so both move together.
@@ -151,7 +176,11 @@ export async function resolveReconciliation({ pool }, { invoiceId, actor, commen
     );
 
     await transition(client, {
-      invoiceId, to: "RECONCILED", actor, action: "reconciliation_resolved", reason,
+      invoiceId,
+      to: "RECONCILED",
+      actor,
+      action: "reconciliation_resolved",
+      reason,
       evidence: { resolved_transactions: consumed.map((t) => t.external_id) },
     });
   });

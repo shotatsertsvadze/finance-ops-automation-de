@@ -26,7 +26,11 @@ const line = (over) => ({ external_id: `TX-${Math.random()}`, value_date: "2026-
 const importLines = (transactions) => clients.finance.post("/api/bank/import", { transactions });
 
 test("a bank line with a malformed amount or date is refused, naming the line and field", async () => {
-  for (const [bad, field] of [[{ amount: "abc" }, "amount"], [{ value_date: "gestern" }, "value_date"], [{ currency: "euro" }, "currency"]]) {
+  for (const [bad, field] of [
+    [{ amount: "abc" }, "amount"],
+    [{ value_date: "gestern" }, "value_date"],
+    [{ currency: "euro" }, "currency"],
+  ]) {
     const res = await importLines([line(), line(bad)]);
     assert.equal(res.status, 400, field);
     const body = await res.json();

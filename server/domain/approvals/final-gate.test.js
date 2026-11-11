@@ -93,12 +93,13 @@ test("the pending approval steps are cancelled rather than left waiting", async 
   const step = await pendingStep(invoice.id);
   await approve(invoice.id, step.step_no, clients.manager);
 
-  const { rows } = await deps.pool.query(
-    "select status from finops.approval_steps where invoice_id = $1 order by step_no", [invoice.id],
-  );
+  const { rows } = await deps.pool.query("select status from finops.approval_steps where invoice_id = $1 order by step_no", [invoice.id]);
   assert.ok(rows.length > 0, "the invoice had steps");
-  assert.deepEqual([...new Set(rows.map((r) => r.status))], ["CANCELLED"],
-    `every step is cancelled, not merely closed: ${JSON.stringify(rows)}`);
+  assert.deepEqual(
+    [...new Set(rows.map((r) => r.status))],
+    ["CANCELLED"],
+    `every step is cancelled, not merely closed: ${JSON.stringify(rows)}`,
+  );
 });
 
 test("an exception a reviewer already accepted is still approvable", async () => {
@@ -133,9 +134,7 @@ test("a bank account retired while the invoice waited stops the approval", async
   // The IBAN on the document was approved master data when it arrived. Master
   // data moved; the payment would now go to a retired account.
   const invoice = await upload("A_clean_1240.xml");
-  await deps.pool.query(
-    "update finops.supplier_bank_accounts set status = 'RETIRED' where supplier_id = $1", [BUEROBEDARF],
-  );
+  await deps.pool.query("update finops.supplier_bank_accounts set status = 'RETIRED' where supplier_id = $1", [BUEROBEDARF]);
 
   const step = await pendingStep(invoice.id);
   await approve(invoice.id, step.step_no, clients.manager);

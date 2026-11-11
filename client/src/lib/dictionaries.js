@@ -82,7 +82,8 @@ const de = {
     panelIncomingPayment: "Zahlungseingang",
     notCheckedDuplicate: "Diese Rechnung wurde nicht geprüft (Duplikat).",
     hidePassed: "Übrige Prüfungen ausblenden",
-    showPassed: (n, passed) => (passed === n ? `Alle ${n} bestandenen Prüfungen anzeigen` : `Übrige ${n} Prüfungen anzeigen (${passed} bestanden)`),
+    showPassed: (n, passed) =>
+      passed === n ? `Alle ${n} bestandenen Prüfungen anzeigen` : `Übrige ${n} Prüfungen anzeigen (${passed} bestanden)`,
     evidenceAllPassed: (n) => `${n} Prüfungen, keine Beanstandung`,
     evidenceFailed: (failed, total) => `${failed} von ${total} Prüfungen fehlgeschlagen`,
     expected: "Erwartet",
@@ -128,9 +129,12 @@ const de = {
     reprocess: "Erneut prüfen",
     createBookingRecord: "Buchungssatz erzeugen",
     hintAccountingReady: (documentNo) => `Buchungssatz ${documentNo} liegt vor. Zahlung anweisen?`,
-    hintCreditNoteReady: (documentNo) => `Buchungssatz ${documentNo} liegt vor. Eine Gutschrift wird nicht bezahlt: sie mindert die Verbindlichkeit.`,
-    hintNetted: (documentNo) => `Buchungssatz ${documentNo} liegt vor. Offene Gutschriften des Lieferanten werden angerechnet; angewiesen wird nur der Restbetrag.`,
-    hintFullyCredited: (documentNo) => `Buchungssatz ${documentNo} liegt vor. Die offenen Gutschriften decken die Rechnung vollständig: es wird nichts angewiesen.`,
+    hintCreditNoteReady: (documentNo) =>
+      `Buchungssatz ${documentNo} liegt vor. Eine Gutschrift wird nicht bezahlt: sie mindert die Verbindlichkeit.`,
+    hintNetted: (documentNo) =>
+      `Buchungssatz ${documentNo} liegt vor. Offene Gutschriften des Lieferanten werden angerechnet; angewiesen wird nur der Restbetrag.`,
+    hintFullyCredited: (documentNo) =>
+      `Buchungssatz ${documentNo} liegt vor. Die offenen Gutschriften decken die Rechnung vollständig: es wird nichts angewiesen.`,
     instructPayment: "Zahlung anweisen",
     bookCredit: "Gutschrift abschließen",
     settleByCredit: "Mit Gutschrift ausgleichen",
@@ -143,12 +147,15 @@ const de = {
     cancelInvoice: "Stornieren",
 
     hintReviewStopped: "Die automatische Verarbeitung ist gestoppt. Entscheiden Sie auf Basis der Prüfspur.",
-    hintNotReleasable: "Nicht freigabefähig: Eine fehlgeschlagene Prüfung kann keine Sichtprüfung überstimmen (siehe Prüfspur). Rückfrage stellen, ablehnen oder nach Korrektur der Stammdaten erneut prüfen.",
+    hintNotReleasable:
+      "Nicht freigabefähig: Eine fehlgeschlagene Prüfung kann keine Sichtprüfung überstimmen (siehe Prüfspur). Rückfrage stellen, ablehnen oder nach Korrektur der Stammdaten erneut prüfen.",
     hintInfoRequested: "Die Rechnung wartet auf eine Rückmeldung. Sobald sie vorliegt, geht sie zurück in die Sichtprüfung.",
     hintApproved: "Freigegeben. Der Buchungssatz kann an die Buchhaltung übergeben werden.",
     hintPaymentPending: "Zahlung ist angewiesen. Die Bestätigung käme in einem echten System vom Zahlungsdienstleister.",
-    hintPaymentFailed: "Die Bank hat die Zahlung nicht ausgeführt. Erneut anweisen oder stornieren; angerechnete Gutschriften sind wieder offen.",
-    hintReconciliationException: "Der Zahlungsabgleich ist nicht eindeutig. Prüfen Sie den Zahlungseingang und schließen Sie den Fall mit Begründung ab.",
+    hintPaymentFailed:
+      "Die Bank hat die Zahlung nicht ausgeführt. Erneut anweisen oder stornieren; angerechnete Gutschriften sind wieder offen.",
+    hintReconciliationException:
+      "Der Zahlungsabgleich ist nicht eindeutig. Prüfen Sie den Zahlungseingang und schließen Sie den Fall mit Begründung ab.",
     hintReadyForApproval: "Geprüft und freigabebereit. Die Stufe richtet sich nach dem Bruttobetrag.",
     stepOf: (n, total, role) => `Schritt ${n} von ${total}: Freigabe durch ${role}.`,
     waitingFor: (role) => `Wartet auf ${role}`,
@@ -163,7 +170,8 @@ const de = {
     bankFinanceOnly: "Kontoumsätze und Abgleich sind der Finanzbuchhaltung vorbehalten.",
     importStatement: "Kontoauszug importieren",
     runReconciliation: "Abgleich starten",
-    paymentsLead: "Synthetische Kontoumsätze. Ein Umsatz wird nur zugeordnet, wenn der Verwendungszweck eine Rechnung benennt und der Betrag übereinstimmt. Betragsgleichheit allein reicht nie.",
+    paymentsLead:
+      "Synthetische Kontoumsätze. Ein Umsatz wird nur zugeordnet, wenn der Verwendungszweck eine Rechnung benennt und der Betrag übereinstimmt. Betragsgleichheit allein reicht nie.",
     importDemoStatement: "Demo-Kontoauszug importieren",
     transactionsImported: (n) => `${n} Umsätze importiert`,
     importResult: (imported, received) => `${imported} neue Umsätze übernommen (${received} gelesen).`,
@@ -195,7 +203,8 @@ const de = {
     kpiAssumption: "Szenario auf offengelegten Annahmen, keine Messung",
     kpiWrongRecipient: "Falscher Rechnungsempfänger",
     kpiPoOverrun: "Betrag überschreitet die Bestellung",
-    kpiLead: (processed) => `Alle Betriebskennzahlen sind aus den Rechnungen und ihrem Prüfprotokoll berechnet, nicht separat gezählt; das Einsparpotenzial ist modelliert. Grundlage: ${processed} verarbeitete Rechnungen.`,
+    kpiLead: (processed) =>
+      `Alle Betriebskennzahlen sind aus den Rechnungen und ihrem Prüfprotokoll berechnet, nicht separat gezählt; das Einsparpotenzial ist modelliert. Grundlage: ${processed} verarbeitete Rechnungen.`,
     kpiApprovalMedian: "Freigabedauer (Median)",
     kpiWaitingPerson: "Wartet auf eine Person",
     kpiStpNote: (n, total) => `${n} von ${total} ohne menschlichen Eingriff`,
@@ -251,9 +260,12 @@ const de = {
     inquiryCopy: "Text kopieren",
     inquiryMarkSent: "Als von Hand versendet vermerken",
     inquirySentConfirm: "Haben Sie die Rückfrage selbst an den Lieferanten geschickt? Die Rechnung geht danach auf „Rückfrage gestellt“.",
-    inquiryNotSentHere: "Die Anwendung versendet nichts. Den freigegebenen Text bitte selbst an den Lieferanten schicken und danach hier vermerken.",
-    inquiryBankBlocked: "Bei abweichender IBAN gibt es keine Rückfrage per E-Mail: Sie könnte genau beim Absender der Rechnung landen. Die Bankverbindung wird per Rückruf unter der hinterlegten Nummer geprüft.",
-    kpiAssumptionCaption: (n) => `Diese Zahlen folgen aus den Annahmen unten, angewendet auf ${n} Rechnungen dieser Demo. Sie sind kein gemessener Kundennutzen.`,
+    inquiryNotSentHere:
+      "Die Anwendung versendet nichts. Den freigegebenen Text bitte selbst an den Lieferanten schicken und danach hier vermerken.",
+    inquiryBankBlocked:
+      "Bei abweichender IBAN gibt es keine Rückfrage per E-Mail: Sie könnte genau beim Absender der Rechnung landen. Die Bankverbindung wird per Rückruf unter der hinterlegten Nummer geprüft.",
+    kpiAssumptionCaption: (n) =>
+      `Diese Zahlen folgen aus den Annahmen unten, angewendet auf ${n} Rechnungen dieser Demo. Sie sind kein gemessener Kundennutzen.`,
     unitHours: "Std.",
     unitMinutes: "Min.",
     unitDays: "Tage",
@@ -277,7 +289,8 @@ const de = {
     navMasterData: "Stammdaten",
     navBankChanges: "Bankverbindungen",
     bankChangesTitle: "Bankverbindungen",
-    bankChangesLead: "Neue Bankverbindungen von Lieferanten: vorgeschlagen, per Rückruf verifiziert und von einer dritten Person freigegeben. Eine Rechnung ändert keine Stammdaten.",
+    bankChangesLead:
+      "Neue Bankverbindungen von Lieferanten: vorgeschlagen, per Rückruf verifiziert und von einer dritten Person freigegeben. Eine Rechnung ändert keine Stammdaten.",
     bankChangesEmpty: "Keine Änderungen an Bankverbindungen.",
     bankChangesNoAccess: "Bankverbindungen sehen die Kreditorenbuchhaltung, Finanzen, der CFO und die Administration.",
     colChange: "Änderung",
@@ -291,8 +304,10 @@ const de = {
     fieldProposedBy: "Vorgeschlagen von",
     fieldPolicy: "Richtlinie",
     policyPersons: (n) => `${n} verschiedene Personen: Vorschlag, Rückruf, Freigabe`,
-    addNotReplace: "Die neue Bankverbindung wird hinzugefügt, nicht ersetzt: die bisherige bleibt vertrauenswürdig, bis Bankverbindungen stillgelegt werden können (noch nicht umgesetzt).",
-    sharedIbanWarning: (list) => `Achtung: Diese IBAN ist auch bei ${list} hinterlegt. Das kann Factoring oder eine Konzernzahlstelle sein – oder Betrug.`,
+    addNotReplace:
+      "Die neue Bankverbindung wird hinzugefügt, nicht ersetzt: die bisherige bleibt vertrauenswürdig, bis Bankverbindungen stillgelegt werden können (noch nicht umgesetzt).",
+    sharedIbanWarning: (list) =>
+      `Achtung: Diese IBAN ist auch bei ${list} hinterlegt. Das kann Factoring oder eine Konzernzahlstelle sein – oder Betrug.`,
     panelVerification: "Verifizierung durch Rückruf",
     callbackNumberLabel: "Rückrufnummer aus den Stammdaten",
     callbackOnlyThisNumber: "Nur diese Nummer anrufen. Keine Nummer aus der Rechnung, einer E-Mail oder dem Schreiben verwenden.",
@@ -332,7 +347,8 @@ const de = {
     noAffectedInvoices: "Keine Rechnung betroffen.",
     revalidationSummary: (done, waiting, failed) => `${done} erneut geprüft, ${waiting} wartend, ${failed} fehlgeschlagen`,
     panelBankAccount: "Bankverbindung",
-    bankEntryHint: "Die IBAN dieser Rechnung ist beim Lieferanten nicht hinterlegt. Eine Rechnung ändert keine Stammdaten: die IBAN wird vorgeschlagen, per Rückruf unter der hinterlegten Nummer verifiziert und von einer dritten Person freigegeben.",
+    bankEntryHint:
+      "Die IBAN dieser Rechnung ist beim Lieferanten nicht hinterlegt. Eine Rechnung ändert keine Stammdaten: die IBAN wird vorgeschlagen, per Rückruf unter der hinterlegten Nummer verifiziert und von einer dritten Person freigegeben.",
     proposeBankAccount: "Bankverbindung zur Prüfung vorschlagen",
   },
 
@@ -483,7 +499,6 @@ const de = {
     ADMIN: "Administration",
   },
 
-
   /**
    * Refusals from the server, by the code it sends. A parameterised entry is a
    * function; `state` and `role` arrive as codes and are passed in already
@@ -494,7 +509,8 @@ const de = {
     INVOICE_NOT_FOUND: "Rechnung nicht gefunden",
     AI_DISABLED: "KI-Erklärungen sind nicht eingeschaltet.",
     AI_NOT_APPLICABLE: "Erklärt wird nur eine Rechnung in der Sichtprüfung mit fehlgeschlagener Prüfung.",
-    INQUIRY_BANK_DETAILS: "Bei abweichender IBAN gibt es keine Lieferantenrückfrage, und keine Rückfrage nennt Bankdaten. Die Bankverbindung wird per Rückruf geprüft.",
+    INQUIRY_BANK_DETAILS:
+      "Bei abweichender IBAN gibt es keine Lieferantenrückfrage, und keine Rückfrage nennt Bankdaten. Die Bankverbindung wird per Rückruf geprüft.",
     INQUIRY_SUPPLIER_UNKNOWN: "Der Lieferant ist nicht zugeordnet; eine Rückfrage hätte keinen bekannten Empfänger.",
     INQUIRY_NOT_IN_REVIEW: "Eine Lieferantenrückfrage gibt es nur für eine Rechnung in der Sichtprüfung.",
     INQUIRY_NOT_APPLICABLE: "Für die fehlgeschlagenen Prüfungen ist keine Lieferantenrückfrage vorgesehen.",
@@ -522,13 +538,14 @@ const de = {
     VERIFIER_CANNOT_APPROVE: "Wer den Rückruf geführt hat, darf die Bankverbindung nicht auch freigeben",
     ONLY_PROPOSER_CAN_CANCEL: "Nur wer den Vorschlag gemacht hat, kann ihn zurückziehen",
     NO_CALLBACK_NUMBER: "Für den Lieferanten ist keine Rückrufnummer hinterlegt",
-    VERIFICATION_INVALID: ({ field }) => ({
-      outcome: "Ergebnis des Rückrufs fehlt",
-      contacted_role: "Gesprächspartner (Funktion) fehlt oder ist länger als 100 Zeichen",
-      called_at: "Zeitpunkt des Rückrufs fehlt, liegt in der Zukunft oder vor dem Vorschlag",
-      reference: "Referenz darf höchstens 64 Zeichen haben",
-      note: "Notiz darf höchstens 1000 Zeichen haben",
-    })[field] ?? "Angaben zum Rückruf sind ungültig",
+    VERIFICATION_INVALID: ({ field }) =>
+      ({
+        outcome: "Ergebnis des Rückrufs fehlt",
+        contacted_role: "Gesprächspartner (Funktion) fehlt oder ist länger als 100 Zeichen",
+        called_at: "Zeitpunkt des Rückrufs fehlt, liegt in der Zukunft oder vor dem Vorschlag",
+        reference: "Referenz darf höchstens 64 Zeichen haben",
+        note: "Notiz darf höchstens 1000 Zeichen haben",
+      })[field] ?? "Angaben zum Rückruf sind ungültig",
     IBAN_READ_BACK_MISMATCH: "Die vom Lieferanten genannte IBAN stimmt nicht mit dem Vorschlag überein; als nicht bestätigt erfassen",
     EVIDENCE_MISMATCH: "Die Verifizierung passt nicht zu diesem Vorschlag; neu vorschlagen",
     MASTER_DATA_CHANGED: "Die Bankverbindungen des Lieferanten haben sich seit dem Vorschlag geändert; neu vorschlagen",
@@ -581,7 +598,10 @@ const de = {
     PAYMENT_ALREADY_INSTRUCTED: "Für diese Rechnung besteht bereits eine Zahlungsanweisung",
     STATEMENT_WITHOUT_TRANSACTIONS: "Kontoauszug enthält keine Buchungen",
     TRANSACTION_INVALID: ({ errors = [] }) =>
-      `Kontoauszug nicht importiert, ungültig: ${errors.slice(0, 5).map((e) => `Zeile ${e.index + 1} ${e.field}`).join(", ")}${errors.length > 5 ? " …" : ""}`,
+      `Kontoauszug nicht importiert, ungültig: ${errors
+        .slice(0, 5)
+        .map((e) => `Zeile ${e.index + 1} ${e.field}`)
+        .join(", ")}${errors.length > 5 ? " …" : ""}`,
     COMMENT_INVALID: ({ max }) => `Die Begründung muss Text mit höchstens ${max} Zeichen sein`,
     INVALID_JSON: "Anfrage ist kein gültiges JSON",
     BODY_TOO_LARGE: "Anfrage ist zu groß",
@@ -709,8 +729,10 @@ const en = {
     createBookingRecord: "Create booking record",
     hintAccountingReady: (documentNo) => `Booking record ${documentNo} is ready. Instruct payment?`,
     hintCreditNoteReady: (documentNo) => `Booking record ${documentNo} is ready. A credit note is not paid: it reduces what is owed.`,
-    hintNetted: (documentNo) => `Booking record ${documentNo} is ready. The supplier's open credits are applied; only the remainder is sent.`,
-    hintFullyCredited: (documentNo) => `Booking record ${documentNo} is ready. The open credits cover the invoice in full: nothing is sent.`,
+    hintNetted: (documentNo) =>
+      `Booking record ${documentNo} is ready. The supplier's open credits are applied; only the remainder is sent.`,
+    hintFullyCredited: (documentNo) =>
+      `Booking record ${documentNo} is ready. The open credits cover the invoice in full: nothing is sent.`,
     instructPayment: "Instruct payment",
     bookCredit: "Close the credit",
     settleByCredit: "Settle against credits",
@@ -723,7 +745,8 @@ const en = {
     cancelInvoice: "Cancel invoice",
 
     hintReviewStopped: "Automatic processing has stopped. Decide on the basis of the check trail.",
-    hintNotReleasable: "Not releasable: a failed check that no review may override (see the check trail). Ask for information, reject, or check again once master data is corrected.",
+    hintNotReleasable:
+      "Not releasable: a failed check that no review may override (see the check trail). Ask for information, reject, or check again once master data is corrected.",
     hintInfoRequested: "The invoice is waiting for an answer. Once it arrives, the invoice returns to review.",
     hintApproved: "Approved. The booking record can be handed to accounting.",
     hintPaymentPending: "Payment has been instructed. In a real system the confirmation would come from the payment provider.",
@@ -743,7 +766,8 @@ const en = {
     bankFinanceOnly: "Bank transactions and reconciliation are reserved for finance.",
     importStatement: "Import bank statement",
     runReconciliation: "Run reconciliation",
-    paymentsLead: "Synthetic bank transactions. A transaction is matched only when the reference names an invoice and the amount agrees. A matching amount alone is never enough.",
+    paymentsLead:
+      "Synthetic bank transactions. A transaction is matched only when the reference names an invoice and the amount agrees. A matching amount alone is never enough.",
     importDemoStatement: "Import demo bank statement",
     transactionsImported: (n) => `${n} transactions imported`,
     importResult: (imported, received) => `${imported} new transactions taken (${received} read).`,
@@ -775,7 +799,8 @@ const en = {
     kpiAssumption: "Scenario on disclosed assumptions, not a measurement",
     kpiWrongRecipient: "Wrong invoice recipient",
     kpiPoOverrun: "Amount exceeds the purchase order",
-    kpiLead: (processed) => `Every operational figure is computed from the invoices and their check trail, not counted separately; the savings potential is modelled. Basis: ${processed} processed invoices.`,
+    kpiLead: (processed) =>
+      `Every operational figure is computed from the invoices and their check trail, not counted separately; the savings potential is modelled. Basis: ${processed} processed invoices.`,
     kpiApprovalMedian: "Approval time (median)",
     kpiWaitingPerson: "Waiting for a person",
     kpiStpNote: (n, total) => `${n} of ${total} with no human step`,
@@ -831,8 +856,10 @@ const en = {
     inquiryMarkSent: "Record as sent by hand",
     inquirySentConfirm: "Did you send the inquiry to the supplier yourself? The invoice then moves to “Information requested”.",
     inquiryNotSentHere: "The application sends nothing. Send the approved text to the supplier yourself, then record it here.",
-    inquiryBankBlocked: "A changed IBAN gets no inquiry by e-mail: it could reach whoever wrote the invoice. The bank account is verified by call-back on the number on file.",
-    kpiAssumptionCaption: (n) => `These figures follow from the assumptions below, applied to the ${n} invoices in this demo. They are not a measured customer benefit.`,
+    inquiryBankBlocked:
+      "A changed IBAN gets no inquiry by e-mail: it could reach whoever wrote the invoice. The bank account is verified by call-back on the number on file.",
+    kpiAssumptionCaption: (n) =>
+      `These figures follow from the assumptions below, applied to the ${n} invoices in this demo. They are not a measured customer benefit.`,
     unitHours: "h",
     unitMinutes: "min",
     unitDays: "days",
@@ -856,7 +883,8 @@ const en = {
     navMasterData: "Master data",
     navBankChanges: "Bank accounts",
     bankChangesTitle: "Supplier bank accounts",
-    bankChangesLead: "New supplier bank accounts: proposed, verified by call-back and approved by a third person. An invoice never changes master data.",
+    bankChangesLead:
+      "New supplier bank accounts: proposed, verified by call-back and approved by a third person. An invoice never changes master data.",
     bankChangesEmpty: "No bank-account changes.",
     bankChangesNoAccess: "Bank-account changes are visible to accounts payable, finance, the CFO and administration.",
     colChange: "Change",
@@ -870,8 +898,10 @@ const en = {
     fieldProposedBy: "Proposed by",
     fieldPolicy: "Policy",
     policyPersons: (n) => `${n} different people: proposal, call-back, approval`,
-    addNotReplace: "The new account is added, not substituted: the previous one stays trusted until accounts can be retired (not built yet).",
-    sharedIbanWarning: (list) => `Warning: this IBAN is also on file for ${list}. That can be factoring or a group treasury account, or fraud.`,
+    addNotReplace:
+      "The new account is added, not substituted: the previous one stays trusted until accounts can be retired (not built yet).",
+    sharedIbanWarning: (list) =>
+      `Warning: this IBAN is also on file for ${list}. That can be factoring or a group treasury account, or fraud.`,
     panelVerification: "Verification by call-back",
     callbackNumberLabel: "Call-back number on file",
     callbackOnlyThisNumber: "Call only this number. Never use a number from the invoice, an email or the letter.",
@@ -911,7 +941,8 @@ const en = {
     noAffectedInvoices: "No invoice affected.",
     revalidationSummary: (done, waiting, failed) => `${done} revalidated, ${waiting} waiting, ${failed} failed`,
     panelBankAccount: "Bank account",
-    bankEntryHint: "This invoice's IBAN is not on file for the supplier. An invoice never changes master data: the IBAN is proposed, verified by a call-back on the number on file and approved by a third person.",
+    bankEntryHint:
+      "This invoice's IBAN is not on file for the supplier. An invoice never changes master data: the IBAN is proposed, verified by a call-back on the number on file and approved by a third person.",
     proposeBankAccount: "Propose bank account for verification",
   },
 
@@ -1059,12 +1090,12 @@ const en = {
     ADMIN: "Administration",
   },
 
-
   error: {
     INVOICE_NOT_FOUND: "Invoice not found",
     AI_DISABLED: "AI explanations are switched off.",
     AI_NOT_APPLICABLE: "Only an invoice in review with a failed check can be explained.",
-    INQUIRY_BANK_DETAILS: "A changed IBAN gets no supplier inquiry, and no inquiry names bank details. The bank account is verified by call-back.",
+    INQUIRY_BANK_DETAILS:
+      "A changed IBAN gets no supplier inquiry, and no inquiry names bank details. The bank account is verified by call-back.",
     INQUIRY_SUPPLIER_UNKNOWN: "The supplier is not identified; an inquiry would have no known recipient.",
     INQUIRY_NOT_IN_REVIEW: "A supplier inquiry is only offered for an invoice in review.",
     INQUIRY_NOT_APPLICABLE: "No supplier inquiry is provided for the failed checks.",
@@ -1092,13 +1123,14 @@ const en = {
     VERIFIER_CANNOT_APPROVE: "Whoever made the call-back may not also approve the bank account",
     ONLY_PROPOSER_CAN_CANCEL: "Only whoever made the proposal can withdraw it",
     NO_CALLBACK_NUMBER: "No call-back number is on file for the supplier",
-    VERIFICATION_INVALID: ({ field }) => ({
-      outcome: "The call-back outcome is missing",
-      contacted_role: "The person spoken to (role) is missing or longer than 100 characters",
-      called_at: "The call-back time is missing, in the future or before the proposal",
-      reference: "The reference may have at most 64 characters",
-      note: "The note may have at most 1000 characters",
-    })[field] ?? "The call-back details are invalid",
+    VERIFICATION_INVALID: ({ field }) =>
+      ({
+        outcome: "The call-back outcome is missing",
+        contacted_role: "The person spoken to (role) is missing or longer than 100 characters",
+        called_at: "The call-back time is missing, in the future or before the proposal",
+        reference: "The reference may have at most 64 characters",
+        note: "The note may have at most 1000 characters",
+      })[field] ?? "The call-back details are invalid",
     IBAN_READ_BACK_MISMATCH: "The IBAN the supplier stated does not match the proposal; record it as not confirmed",
     EVIDENCE_MISMATCH: "The verification does not match this proposal; propose again",
     MASTER_DATA_CHANGED: "The supplier's bank accounts changed after the proposal; propose again",
@@ -1151,7 +1183,10 @@ const en = {
     PAYMENT_ALREADY_INSTRUCTED: "A payment instruction already exists for this invoice",
     STATEMENT_WITHOUT_TRANSACTIONS: "The bank statement contains no transactions",
     TRANSACTION_INVALID: ({ errors = [] }) =>
-      `Statement not imported, invalid: ${errors.slice(0, 5).map((e) => `line ${e.index + 1} ${e.field}`).join(", ")}${errors.length > 5 ? " …" : ""}`,
+      `Statement not imported, invalid: ${errors
+        .slice(0, 5)
+        .map((e) => `line ${e.index + 1} ${e.field}`)
+        .join(", ")}${errors.length > 5 ? " …" : ""}`,
     COMMENT_INVALID: ({ max }) => `The reason must be text of at most ${max} characters`,
     INVALID_JSON: "The request is not valid JSON",
     BODY_TOO_LARGE: "The request is too large",
@@ -1245,8 +1280,10 @@ const en = {
     [/^Zahlung ([\d.,]+) (\w+) angewiesen$/, "Payment of $1 $2 instructed"],
     [/^Zahlung bestätigt \((.+)\)$/, "Payment confirmed ($1)"],
     [/^Freigabe durch (.+) laut Betragsstufe$/, "Approval by $1 per amount tier"],
-    [/^Bruttobetrag innerhalb der Auto-Grenze \((.+)\), alle Prüfungen bestanden$/,
-      "Gross amount within the auto-approval limit ($1), all checks passed"],
+    [
+      /^Bruttobetrag innerhalb der Auto-Grenze \((.+)\), alle Prüfungen bestanden$/,
+      "Gross amount within the auto-approval limit ($1), all checks passed",
+    ],
     // The calculation chain. Order matters here: these are applied in turn, so
     // a compound must be translated before the word it contains.
     ["Betrag/Beträge ohne Kennzeichen", "amount(s) with no indicator"],

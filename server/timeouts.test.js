@@ -35,10 +35,17 @@ test("SIGTERM stops the server cleanly", async () => {
     env: { ...process.env, DATABASE_URL: process.env.TEST_DATABASE_URL, API_PORT: "4417", NODE_ENV: "development", LOG_LEVEL: "info" },
   });
   let output = "";
-  child.stdout.on("data", (chunk) => { output += chunk; });
+  child.stdout.on("data", (chunk) => {
+    output += chunk;
+  });
   await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error(`did not start: ${output}`)), 10000);
-    child.stdout.on("data", () => { if (output.includes("listening")) { clearTimeout(timer); resolve(); } });
+    child.stdout.on("data", () => {
+      if (output.includes("listening")) {
+        clearTimeout(timer);
+        resolve();
+      }
+    });
   });
   assert.equal((await fetch("http://127.0.0.1:4417/api/health")).status, 200);
 

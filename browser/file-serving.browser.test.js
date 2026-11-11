@@ -41,8 +41,13 @@ const sessionCookies = () =>
   clerk.cookies.split("; ").map((pair) => {
     const index = pair.indexOf("=");
     return {
-      name: pair.slice(0, index), value: pair.slice(index + 1),
-      domain: "127.0.0.1", path: "/", httpOnly: false, secure: false, sameSite: "Strict",
+      name: pair.slice(0, index),
+      value: pair.slice(index + 1),
+      domain: "127.0.0.1",
+      path: "/",
+      httpOnly: false,
+      secure: false,
+      sameSite: "Strict",
     };
   });
 

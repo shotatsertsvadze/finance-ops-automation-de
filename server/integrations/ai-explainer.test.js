@@ -10,8 +10,13 @@ import { DEFAULT_MODEL, aiExplanationsFromEnv, createAnthropicExplainer, outputS
 
 const KEY = "sk-ant-test-0123456789";
 const SCHEMA = {
-  type: "object", additionalProperties: false, required: ["summary"],
-  properties: { summary: { type: "string", maxLength: 200 }, codes: { type: "array", items: { type: "string", enum: ["a"] }, uniqueItems: true } },
+  type: "object",
+  additionalProperties: false,
+  required: ["summary"],
+  properties: {
+    summary: { type: "string", maxLength: 200 },
+    codes: { type: "array", items: { type: "string", enum: ["a"] }, uniqueItems: true },
+  },
 };
 const TOOL = { name: "record_explanation", description: "d", input_schema: SCHEMA };
 const OUTPUT = { summary: "s", explanation: "e", failed_checks: [], cited_checks: [], next_step: null, language: "de" };
@@ -38,10 +43,13 @@ const json = (status, body) => (req, res) => {
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(JSON.stringify(body));
 };
-const jsonAnswer = (output = OUTPUT, extra = {}) => json(200, {
-  content: [{ type: "text", text: JSON.stringify(output) }],
-  stop_reason: "end_turn", usage: { input_tokens: 812, output_tokens: 143 }, ...extra,
-});
+const jsonAnswer = (output = OUTPUT, extra = {}) =>
+  json(200, {
+    content: [{ type: "text", text: JSON.stringify(output) }],
+    stop_reason: "end_turn",
+    usage: { input_tokens: 812, output_tokens: 143 },
+    ...extra,
+  });
 const explainer = (options = {}) => createAnthropicExplainer({ apiKey: KEY, url, timeoutMs: 2000, maxTokens: 800, ...options });
 const ask = (options) => explainer(options).explain({ system: "sys", message: "evidence", tool: TOOL });
 
@@ -63,7 +71,9 @@ test("the pinned model is asked once for structured output, with no tool, no tem
 
 test("the schema loses only the keywords structured output does not accept; the domain checks those itself", () => {
   assert.deepEqual(outputSchema(SCHEMA), {
-    type: "object", additionalProperties: false, required: ["summary"],
+    type: "object",
+    additionalProperties: false,
+    required: ["summary"],
     properties: { summary: { type: "string" }, codes: { type: "array", items: { type: "string", enum: ["a"] } } },
   });
 });
@@ -84,7 +94,12 @@ test("an answer that is not JSON, cut off or refused is a failure", async () => 
   assert.equal((await ask()).error, "Antwort ohne gültiges JSON");
   reply = jsonAnswer(OUTPUT, { stop_reason: "max_tokens" });
   assert.deepEqual([(await ask()).ok, (await ask()).error], [false, "Antwort abgeschnitten (max_tokens)"]);
-  reply = json(200, { content: [{ type: "text", text: "" }], stop_reason: "refusal", stop_details: { category: "general_harms" }, usage: {} });
+  reply = json(200, {
+    content: [{ type: "text", text: "" }],
+    stop_reason: "refusal",
+    stop_details: { category: "general_harms" },
+    usage: {},
+  });
   assert.deepEqual([(await ask()).ok, (await ask()).error], [false, "Anfrage vom Modell abgelehnt (refusal)"]);
 });
 

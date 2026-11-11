@@ -27,11 +27,20 @@ async function stranded(pool) {
  */
 async function retryOne(deps, invoiceId, actor) {
   return withTransaction(deps.pool, async (client) => {
-    const { rows: [invoice] } = await client.query("select state from finops.invoices where id = $1 for update", [invoiceId]);
-    const { rows: [before] } = await client.query(LATEST, [invoiceId]);
+    const {
+      rows: [invoice],
+    } = await client.query("select state from finops.invoices where id = $1 for update", [invoiceId]);
+    const {
+      rows: [before],
+    } = await client.query(LATEST, [invoiceId]);
     if (invoice.state !== "REVIEW_REQUIRED" || !before || before.verdict !== null) return null;
-    const after = await processInTransaction(client, deps, invoiceId, actor, { official_validation_retry: true, previous_run: before.run_no });
-    const { rows: [now] } = await client.query(LATEST, [invoiceId]);
+    const after = await processInTransaction(client, deps, invoiceId, actor, {
+      official_validation_retry: true,
+      previous_run: before.run_no,
+    });
+    const {
+      rows: [now],
+    } = await client.query(LATEST, [invoiceId]);
     return { invoice_id: invoiceId, from_run: before.run_no, to_run: now.run_no, outcome: now.outcome, state: after.state };
   });
 }

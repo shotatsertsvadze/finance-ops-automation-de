@@ -31,15 +31,29 @@ export function decide({ technicalChecks, businessChecks, grossCents, policy, ha
   // just because the master data behind it was corrected (ADR-019).
   if (hadException && requiredSteps.length === 0) {
     return {
-      decision: "APPROVAL", targetState: "READY_FOR_APPROVAL", reviewReason: null,
+      decision: "APPROVAL",
+      targetState: "READY_FOR_APPROVAL",
+      reviewReason: null,
       requiredSteps: [{ step_no: 1, required_role: "MANAGER" }],
       reasons: ["Rechnung war zuvor ein Ausnahmefall: Freigabe durch einen Menschen erforderlich"],
     };
   }
   if (requiredSteps.length === 0) {
-    return { decision: "AUTO_APPROVE", targetState: "APPROVED", reviewReason: null, requiredSteps, reasons: [`Bruttobetrag innerhalb der Auto-Grenze (${policy.autoApproveLimitCents / 100} EUR), alle Prüfungen bestanden`] };
+    return {
+      decision: "AUTO_APPROVE",
+      targetState: "APPROVED",
+      reviewReason: null,
+      requiredSteps,
+      reasons: [`Bruttobetrag innerhalb der Auto-Grenze (${policy.autoApproveLimitCents / 100} EUR), alle Prüfungen bestanden`],
+    };
   }
-  return { decision: "APPROVAL", targetState: "READY_FOR_APPROVAL", reviewReason: null, requiredSteps, reasons: [`Freigabe durch ${requiredSteps.map((s) => s.required_role).join(" + ")} laut Betragsstufe`] };
+  return {
+    decision: "APPROVAL",
+    targetState: "READY_FOR_APPROVAL",
+    reviewReason: null,
+    requiredSteps,
+    reasons: [`Freigabe durch ${requiredSteps.map((s) => s.required_role).join(" + ")} laut Betragsstufe`],
+  };
 }
 
 function review(reviewReason, checks) {

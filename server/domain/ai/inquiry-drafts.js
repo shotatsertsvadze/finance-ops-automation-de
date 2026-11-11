@@ -16,7 +16,18 @@ import { availablePlaceholders, fill, placeholderValues } from "../inquiries/pla
  */
 const KEY = ["invoice_id", "run_no", "input_sha256", "prompt_version", "schema_version", "provider", "model"];
 const KEY_MATCH = KEY.map((column, i) => `${column} = $${i + 1}`).join(" and ");
-const COLUMNS = [...KEY, "input", "status", "output", "rejection_reasons", "error", "duration_ms", "input_tokens", "output_tokens", "requested_by"];
+const COLUMNS = [
+  ...KEY,
+  "input",
+  "status",
+  "output",
+  "rejection_reasons",
+  "error",
+  "duration_ms",
+  "input_tokens",
+  "output_tokens",
+  "requested_by",
+];
 
 async function prepare(deps, invoiceId) {
   const evidence = await loadEvidence(deps.pool, deps.company, invoiceId);
@@ -27,47 +38,78 @@ async function prepare(deps, invoiceId) {
   if (!built.eligible) return { eligible: false, code: built.code };
   const { explainer } = deps.ai;
   const key = {
-    invoice_id: invoiceId, run_no: evidence.runNo, input_sha256: inquiryInputSha256(built.input),
-    prompt_version: INQUIRY_PROMPT_VERSION, schema_version: INQUIRY_SCHEMA_VERSION,
-    provider: explainer?.provider ?? deps.ai.provider, model: explainer?.model ?? deps.ai.model,
+    invoice_id: invoiceId,
+    run_no: evidence.runNo,
+    input_sha256: inquiryInputSha256(built.input),
+    prompt_version: INQUIRY_PROMPT_VERSION,
+    schema_version: INQUIRY_SCHEMA_VERSION,
+    provider: explainer?.provider ?? deps.ai.provider,
+    model: explainer?.model ?? deps.ai.model,
   };
   return { eligible: true, input: built.input, key, values };
 }
 
 async function latest(pool, key) {
-  const { rows: [row] } = await pool.query(
+  const {
+    rows: [row],
+  } = await pool.query(
     `select * from finops.ai_supplier_inquiries where ${KEY_MATCH} order by (status = 'ACCEPTED') desc, created_at desc limit 1`,
     KEY.map((column) => key[column]),
   );
   return row ?? null;
 }
 
-const view = (row, values) => (row.status !== "ACCEPTED" ? { status: "UNAVAILABLE", ai_generated: true } : {
-  status: "ACCEPTED", ai_generated: true, id: row.id,
-  subject: fill(row.output.subject, values), body: fill(row.output.body, values),
-  cited_checks: row.output.cited_checks, requests: row.output.requests,
-  provider: row.provider, model: row.model, run_no: row.run_no, created_at: row.created_at,
-});
+const view = (row, values) =>
+  row.status !== "ACCEPTED"
+    ? { status: "UNAVAILABLE", ai_generated: true }
+    : {
+        status: "ACCEPTED",
+        ai_generated: true,
+        id: row.id,
+        subject: fill(row.output.subject, values),
+        body: fill(row.output.body, values),
+        cited_checks: row.output.cited_checks,
+        requests: row.output.requests,
+        provider: row.provider,
+        model: row.model,
+        run_no: row.run_no,
+        created_at: row.created_at,
+      };
 
 /** The provider's answer, verified; never thrown, whatever the provider does. */
 async function ask(explainer, input) {
   if (!explainer) return { status: "FAILED", error: "Kein API-Schlüssel konfiguriert" };
   const result = await explainer.explain({ system: inquirySystemPrompt(), message: inquiryUserMessage(input), tool: inquiryTool(input) });
-  const measured = { duration_ms: result.durationMs ?? null, input_tokens: result.usage?.input_tokens ?? null, output_tokens: result.usage?.output_tokens ?? null };
+  const measured = {
+    duration_ms: result.durationMs ?? null,
+    input_tokens: result.usage?.input_tokens ?? null,
+    output_tokens: result.usage?.output_tokens ?? null,
+  };
   if (!result.ok) return { ...measured, status: "FAILED", error: String(result.error).slice(0, 200) };
   const { accepted, reasons } = verifyInquiry(input, result.output);
   return { ...measured, status: accepted ? "ACCEPTED" : "REJECTED", output: result.output, rejection_reasons: reasons };
 }
 
 async function record(pool, key, input, attempt, actor) {
-  const { rows: [row] } = await pool.query(
+  const {
+    rows: [row],
+  } = await pool.query(
     `insert into finops.ai_supplier_inquiries (${COLUMNS.join(", ")})
      values (${COLUMNS.map((column, i) => `$${i + 1}`).join(", ")})
      on conflict (${KEY.join(", ")}) where status = 'ACCEPTED' do nothing
      returning *`,
-    [...KEY.map((column) => key[column]), JSON.stringify(input), attempt.status,
-      attempt.output === undefined ? null : JSON.stringify(attempt.output), JSON.stringify(attempt.rejection_reasons ?? []),
-      attempt.error ?? null, attempt.duration_ms ?? null, attempt.input_tokens ?? null, attempt.output_tokens ?? null, actor.id],
+    [
+      ...KEY.map((column) => key[column]),
+      JSON.stringify(input),
+      attempt.status,
+      attempt.output === undefined ? null : JSON.stringify(attempt.output),
+      JSON.stringify(attempt.rejection_reasons ?? []),
+      attempt.error ?? null,
+      attempt.duration_ms ?? null,
+      attempt.input_tokens ?? null,
+      attempt.output_tokens ?? null,
+      actor.id,
+    ],
   );
   return row ?? latest(pool, key);
 }
@@ -79,7 +121,9 @@ export async function currentInquiryDraft(deps, invoiceId) {
   if (!prepared.eligible) return { enabled: true, eligible: false, code: prepared.code, status: "NONE", draft: null };
   const row = await latest(deps.pool, prepared.key);
   return {
-    enabled: true, eligible: true, code: null,
+    enabled: true,
+    eligible: true,
+    code: null,
     status: !row ? "NONE" : row.status === "ACCEPTED" ? "ACCEPTED" : "UNAVAILABLE",
     draft: row?.status === "ACCEPTED" ? view(row, prepared.values) : null,
   };

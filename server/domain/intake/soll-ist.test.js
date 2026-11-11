@@ -17,6 +17,12 @@ test("Soll/Ist: each of the 20 invoices ends in the expected state, with the exp
   const goesThrough = (o) => o.state !== "REVIEW_REQUIRED";
   assert.equal(rows.filter((r) => goesThrough(r.ist)).length, 16);
   // Nothing that should stop went through, and nothing that should go through stopped.
-  assert.deepEqual(rows.filter((r) => goesThrough(r.ist) !== goesThrough(r.soll)), []);
-  assert.deepEqual(rows.filter((r) => r.soll.reason === "SUPPLIER_IBAN_MATCH").map((r) => r.ist.state), ["REVIEW_REQUIRED", "REVIEW_REQUIRED"]);
+  assert.deepEqual(
+    rows.filter((r) => goesThrough(r.ist) !== goesThrough(r.soll)),
+    [],
+  );
+  assert.deepEqual(
+    rows.filter((r) => r.soll.reason === "SUPPLIER_IBAN_MATCH").map((r) => r.ist.state),
+    ["REVIEW_REQUIRED", "REVIEW_REQUIRED"],
+  );
 });

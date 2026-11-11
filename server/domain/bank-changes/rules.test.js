@@ -53,8 +53,12 @@ test("the transition table: open states move on, decided states never move", () 
 });
 
 const proposal = {
-  supplierId: "s1", iban: "DE75512108001245126199", bic: null,
-  trustedIbans: ["DE89370400440532013000"], sourceInvoiceId: null, requiredDistinctActors: 3,
+  supplierId: "s1",
+  iban: "DE75512108001245126199",
+  bic: null,
+  trustedIbans: ["DE89370400440532013000"],
+  sourceInvoiceId: null,
+  requiredDistinctActors: 3,
 };
 
 test("the proposal hash is stable and does not depend on the order master data returned", () => {
@@ -67,8 +71,12 @@ test("the proposal hash is stable and does not depend on the order master data r
 test("every bound field changes the hash", () => {
   const base = proposalHash(proposal);
   for (const [field, value] of Object.entries({
-    supplierId: "s2", iban: "DE02300209000106531065", bic: "COBADEFFXXX",
-    trustedIbans: [], sourceInvoiceId: "i1", requiredDistinctActors: 2,
+    supplierId: "s2",
+    iban: "DE02300209000106531065",
+    bic: "COBADEFFXXX",
+    trustedIbans: [],
+    sourceInvoiceId: "i1",
+    requiredDistinctActors: 2,
   })) {
     assert.notEqual(proposalHash({ ...proposal, [field]: value }), base, field);
   }

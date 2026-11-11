@@ -53,7 +53,9 @@ export async function receiveInvoice({ pool, storage }, { buffer, originalFilena
 
     if (live && UNFINISHED_INTAKE.includes(live.state)) {
       await recordEvent(client, {
-        invoiceId: live.id, actor, action: "intake_resumed",
+        invoiceId: live.id,
+        actor,
+        action: "intake_resumed",
         reason: `Dieselbe Datei erneut übermittelt, Verarbeitung wird fortgesetzt (${sourceChannel})`,
         evidence: { file_sha256: fileSha256, original_filename: originalFilename, stalled_in: live.state },
       });
@@ -65,7 +67,14 @@ export async function receiveInvoice({ pool, storage }, { buffer, originalFilena
     const filePath = await storage.writeOriginal(id, buffer);
     try {
       return await recordReceipt(client, {
-        id, filePath, duplicateOf: live?.id ?? null, buffer, fileSha256, originalFilename, sourceChannel, actor,
+        id,
+        filePath,
+        duplicateOf: live?.id ?? null,
+        buffer,
+        fileSha256,
+        originalFilename,
+        sourceChannel,
+        actor,
       });
     } catch (error) {
       // Nothing committed can refer to the file yet, so it goes with the row.
@@ -91,10 +100,32 @@ async function recordReceipt(client, { id, filePath, duplicateOf, buffer, fileSh
     throw new TransitionError("CONCURRENT_DUPLICATE", "Gleiche Datei wurde gerade parallel verarbeitet, bitte erneut hochladen");
   }
   if (duplicateOf) {
-    await writeEvent(client, { invoiceId: id, actor, action: "duplicate_file_detected", fromState: null, toState: "DUPLICATE", reason: "Identische Datei (SHA-256) bereits vorhanden", evidence: { duplicate_of: duplicateOf, file_sha256: fileSha256 } });
-    await recordEvent(client, { invoiceId: duplicateOf, actor, action: "duplicate_attempt", reason: "Identische Datei erneut hochgeladen", evidence: { duplicate_invoice_id: id } });
+    await writeEvent(client, {
+      invoiceId: id,
+      actor,
+      action: "duplicate_file_detected",
+      fromState: null,
+      toState: "DUPLICATE",
+      reason: "Identische Datei (SHA-256) bereits vorhanden",
+      evidence: { duplicate_of: duplicateOf, file_sha256: fileSha256 },
+    });
+    await recordEvent(client, {
+      invoiceId: duplicateOf,
+      actor,
+      action: "duplicate_attempt",
+      reason: "Identische Datei erneut hochgeladen",
+      evidence: { duplicate_invoice_id: id },
+    });
   } else {
-    await writeEvent(client, { invoiceId: id, actor, action: "received", fromState: null, toState: "RECEIVED", reason: `Eingang über ${sourceChannel}`, evidence: { file_sha256: fileSha256, original_filename: originalFilename, size_bytes: buffer.length } });
+    await writeEvent(client, {
+      invoiceId: id,
+      actor,
+      action: "received",
+      fromState: null,
+      toState: "RECEIVED",
+      reason: `Eingang über ${sourceChannel}`,
+      evidence: { file_sha256: fileSha256, original_filename: originalFilename, size_bytes: buffer.length },
+    });
   }
   return { id, state, duplicateOf, resumed: false };
 }
@@ -113,27 +144,44 @@ export async function processInvoice(deps, invoiceId, actor = SYSTEM) {
  * something about the run commits both or neither. `cause` goes into the
  * start event's evidence: what asked for this run.
  */
-export async function processInTransaction(client, { storage, policy, company, officialValidator = UNCONFIGURED }, invoiceId, actor = SYSTEM, cause = {}) {
-  const { rows: [invoice] } = await client.query("select * from finops.invoices where id = $1 for update", [invoiceId]);
+export async function processInTransaction(
+  client,
+  { storage, policy, company, officialValidator = UNCONFIGURED },
+  invoiceId,
+  actor = SYSTEM,
+  cause = {},
+) {
+  const {
+    rows: [invoice],
+  } = await client.query("select * from finops.invoices where id = $1 for update", [invoiceId]);
   if (!invoice) throw new NotFoundError("INVOICE_NOT_FOUND", `Rechnung ${invoiceId} nicht gefunden`);
   if (!REPROCESSABLE_STATES.includes(invoice.state)) {
-    throw new TransitionError("NOT_REPROCESSABLE", `Rechnung im Status ${invoice.state} kann nicht erneut verarbeitet werden`, { state: invoice.state });
+    throw new TransitionError("NOT_REPROCESSABLE", `Rechnung im Status ${invoice.state} kann nicht erneut verarbeitet werden`, {
+      state: invoice.state,
+    });
   }
   if (invoice.state !== "VALIDATING") {
     await transition(client, {
-      invoiceId, to: "VALIDATING", actor, action: invoice.state === "RECEIVED" ? "processing_started" : "reprocessing_started", evidence: cause,
+      invoiceId,
+      to: "VALIDATING",
+      actor,
+      action: invoice.state === "RECEIVED" ? "processing_started" : "reprocessing_started",
+      evidence: cause,
     });
   }
-  const { rows: [{ run_no: runNo }] } = await client.query(
-    "select coalesce(max(run_no), 0) + 1 as run_no from finops.validation_results where invoice_id = $1", [invoiceId],
-  );
+  const {
+    rows: [{ run_no: runNo }],
+  } = await client.query("select coalesce(max(run_no), 0) + 1 as run_no from finops.validation_results where invoice_id = $1", [invoiceId]);
 
   const buffer = await storage.read(invoice.file_path);
   const technical = runTechnicalValidation(buffer);
   // After the parser, before the business checks: only a document the parser
   // could read is sent, and a FAILED answer is a technical failure (ADR-078).
   const official = await validateOfficially(officialValidator, {
-    buffer, name: invoiceId, documentSha256: invoice.file_sha256, readable: Boolean(technical.parsed),
+    buffer,
+    name: invoiceId,
+    documentSha256: invoice.file_sha256,
+    readable: Boolean(technical.parsed),
   });
   const technicalChecks = [...technical.checks, official.check];
   await saveChecks(client, invoiceId, runNo, "TECHNICAL", technicalChecks);
@@ -144,18 +192,33 @@ export async function processInTransaction(client, { storage, policy, company, o
     const decision = decide({ technicalChecks, businessChecks: [], grossCents: null, policy, hadException: invoice.had_exception });
     await saveDecision(client, invoiceId, runNo, decision, policy);
     await markException(client, invoiceId, decision.targetState);
-    await transition(client, { invoiceId, to: decision.targetState, actor: SYSTEM, action: "technical_validation_failed", reason: decision.reviewReason, reviewReason: decision.reviewReason, evidence: { run_no: runNo, reasons: decision.reasons } });
+    await transition(client, {
+      invoiceId,
+      to: decision.targetState,
+      actor: SYSTEM,
+      action: "technical_validation_failed",
+      reason: decision.reviewReason,
+      reviewReason: decision.reviewReason,
+      evidence: { run_no: runNo, reasons: decision.reasons },
+    });
     return finalState(client, invoiceId);
   }
 
   const master = await loadMasterData(client, technical.parsed, { excludeInvoiceId: invoiceId });
   const business = runBusinessChecks(technical.parsed, master, policy, company);
   await saveChecks(client, invoiceId, runNo, "BUSINESS", business.checks);
-  await client.query("update finops.invoices set supplier_id = $2, purchase_order_id = $3 where id = $1", [invoiceId, business.supplierId, business.purchaseOrderId]);
+  await client.query("update finops.invoices set supplier_id = $2, purchase_order_id = $3 where id = $1", [
+    invoiceId,
+    business.supplierId,
+    business.purchaseOrderId,
+  ]);
 
   const decision = decide({
-    technicalChecks, businessChecks: business.checks,
-    grossCents: business.grossCents, policy, hadException: invoice.had_exception,
+    technicalChecks,
+    businessChecks: business.checks,
+    grossCents: business.grossCents,
+    policy,
+    hadException: invoice.had_exception,
   });
   await saveDecision(client, invoiceId, runNo, decision, policy);
   await client.query("update finops.approval_steps set status = 'CANCELLED' where invoice_id = $1 and status = 'PENDING'", [invoiceId]);
@@ -163,10 +226,19 @@ export async function processInTransaction(client, { storage, policy, company, o
   await markException(client, invoiceId, decision.targetState);
   const action = { REVIEW: "routed_to_review", APPROVAL: "routed_to_approval", AUTO_APPROVE: "auto_approved" }[decision.decision];
   await transition(client, {
-    invoiceId, to: decision.targetState, actor: SYSTEM, action,
+    invoiceId,
+    to: decision.targetState,
+    actor: SYSTEM,
+    action,
     reason: decision.reviewReason ?? decision.reasons[0],
     reviewReason: decision.reviewReason,
-    evidence: { run_no: runNo, decision: decision.decision, reasons: decision.reasons, required_steps: decision.requiredSteps, gross_amount: centsToDecimal(business.grossCents) },
+    evidence: {
+      run_no: runNo,
+      decision: decision.decision,
+      reasons: decision.reasons,
+      required_steps: decision.requiredSteps,
+      gross_amount: centsToDecimal(business.grossCents),
+    },
   });
   return finalState(client, invoiceId);
 }
@@ -206,10 +278,27 @@ async function saveExtractedFields(client, invoiceId, parsed) {
        currency = $12, net_amount = $13, vat_amount = $14, gross_amount = $15, payment_terms_raw = $16, parsed = $17,
        document_type = $18, credits_invoice_raw = $19, updated_at = now()
      where id = $1`,
-    [invoiceId, parsed.format, parsed.invoiceNumber, date(parsed.issueDate), date(parsed.dueDate), parsed.supplier.name,
-      parsed.supplier.vatId, parsed.payment.iban, parsed.buyer.name, parsed.buyerReference, parsed.poReference,
-      parsed.currency, amount(parsed.totals.taxExclusive), amount(parsed.totals.taxAmount), amount(parsed.totals.payable),
-      parsed.payment.terms, JSON.stringify(parsed), parsed.documentType ?? "INVOICE", parsed.creditedInvoice ?? null],
+    [
+      invoiceId,
+      parsed.format,
+      parsed.invoiceNumber,
+      date(parsed.issueDate),
+      date(parsed.dueDate),
+      parsed.supplier.name,
+      parsed.supplier.vatId,
+      parsed.payment.iban,
+      parsed.buyer.name,
+      parsed.buyerReference,
+      parsed.poReference,
+      parsed.currency,
+      amount(parsed.totals.taxExclusive),
+      amount(parsed.totals.taxAmount),
+      amount(parsed.totals.payable),
+      parsed.payment.terms,
+      JSON.stringify(parsed),
+      parsed.documentType ?? "INVOICE",
+      parsed.creditedInvoice ?? null,
+    ],
   );
   await client.query("delete from finops.invoice_lines where invoice_id = $1", [invoiceId]);
   const numeric = (value) => (/^-?\d+(\.\d+)?$/.test(value ?? "") ? value : null);
@@ -226,11 +315,22 @@ async function saveDecision(client, invoiceId, runNo, decision, policy) {
   await client.query(
     `insert into finops.routing_decisions (invoice_id, run_no, decision, target_state, review_reason, required_steps, reasons, policy)
      values ($1, $2, $3, $4, $5, $6, $7, $8)`,
-    [invoiceId, runNo, decision.decision, decision.targetState, decision.reviewReason, JSON.stringify(decision.requiredSteps), JSON.stringify(decision.reasons), JSON.stringify(policy)],
+    [
+      invoiceId,
+      runNo,
+      decision.decision,
+      decision.targetState,
+      decision.reviewReason,
+      JSON.stringify(decision.requiredSteps),
+      JSON.stringify(decision.reasons),
+      JSON.stringify(policy),
+    ],
   );
 }
 
 async function finalState(client, invoiceId) {
-  const { rows: [row] } = await client.query("select id, state, review_reason from finops.invoices where id = $1", [invoiceId]);
+  const {
+    rows: [row],
+  } = await client.query("select id, state, review_reason from finops.invoices where id = $1", [invoiceId]);
   return row;
 }

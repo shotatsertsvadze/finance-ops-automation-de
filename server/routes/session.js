@@ -1,6 +1,4 @@
-import {
-  CSRF_HEADER, SESSION_COOKIE, csrfMatches, parseCookies, resolveSession,
-} from "../auth/sessions.js";
+import { CSRF_HEADER, SESSION_COOKIE, csrfMatches, parseCookies, resolveSession } from "../auth/sessions.js";
 import { human } from "../domain/workflow/transitions.js";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);

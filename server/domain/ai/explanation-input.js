@@ -7,7 +7,7 @@ import { outboundValue } from "./outbound.js";
  * next steps the reviewer could take anyway. No document, no identity, no
  * history. What this returns is stored as sent.
  */
-export const INPUT_SCHEMA = "finops.ai-explanation-input/1";
+const INPUT_SCHEMA = "finops.ai-explanation-input/1";
 export const LANGUAGES = ["de", "en"];
 
 // Steps that never move an invoice on: nothing here accepts, approves or pays.
@@ -27,15 +27,18 @@ const maskIban = (iban) => {
 /** A string safe to send: no full IBAN, name, e-mail or control characters, and short. */
 function clean(text, names) {
   if (text === null || text === undefined) return null;
-  let out = String(text).replace(/\p{Cc}+/gu, " ").replace(IBAN, maskIban).replace(EMAIL, "[E-Mail]");
+  let out = String(text)
+    .replace(/\p{Cc}+/gu, " ")
+    .replace(IBAN, maskIban)
+    .replace(EMAIL, "[E-Mail]");
   for (const name of names) out = out.replaceAll(name, "[Name]");
   out = out.replace(/\s+/g, " ").trim();
   return out.length > MAX_TEXT ? `${out.slice(0, MAX_TEXT - 1)}…` : out;
 }
 
 /** Longest first, so a name that contains another is removed whole. */
-const usableNames = (names) => [...new Set(names.filter((n) => typeof n === "string" && n.trim().length >= 3))]
-  .sort((a, b) => b.length - a.length);
+const usableNames = (names) =>
+  [...new Set(names.filter((n) => typeof n === "string" && n.trim().length >= 3))].sort((a, b) => b.length - a.length);
 
 export function buildExplanationInput({ invoice, runNo, checks, names = [] }, language) {
   const redact = usableNames(names);

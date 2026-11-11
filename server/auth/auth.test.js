@@ -25,7 +25,7 @@ function jar() {
         const idx = pair.indexOf("=");
         const name = pair.slice(0, idx).trim();
         const value = pair.slice(idx + 1).trim();
-        if (value === "" ) cookies.delete(name);
+        if (value === "") cookies.delete(name);
         else cookies.set(name, value);
       }
       return res;
@@ -149,7 +149,11 @@ test("one address guessing across many accounts is stopped", async () => {
   const spray = (i) => call("/api/auth/login", { method: "POST", body: { email: `person${i}@nordwerk.example`, password: "Sommer2026!" } });
   for (let i = 0; i < 20; i += 1) assert.equal((await spray(i)).status, 401);
   assert.equal((await spray(20)).status, 429);
-  const elsewhere = await call("/api/auth/login", { method: "POST", body: { email: CLERK, password: DEMO_PASSWORD }, headers: { "X-Forwarded-For": "198.51.100.4" } });
+  const elsewhere = await call("/api/auth/login", {
+    method: "POST",
+    body: { email: CLERK, password: DEMO_PASSWORD },
+    headers: { "X-Forwarded-For": "198.51.100.4" },
+  });
   assert.equal(elsewhere.status, 200, "other addresses are untouched");
 });
 
@@ -160,7 +164,11 @@ test("someone guessing a password does not lock its owner out", async () => {
   for (let i = 0; i < 6; i += 1) {
     await call("/api/auth/login", { method: "POST", body: { email: MANAGER, password: "falsch" }, headers: from("203.0.113.9") });
   }
-  const owner = await call("/api/auth/login", { method: "POST", body: { email: MANAGER, password: DEMO_PASSWORD }, headers: from("198.51.100.4") });
+  const owner = await call("/api/auth/login", {
+    method: "POST",
+    body: { email: MANAGER, password: DEMO_PASSWORD },
+    headers: from("198.51.100.4"),
+  });
   assert.equal(owner.status, 200, "the owner signs in from their own address");
 });
 
@@ -187,7 +195,9 @@ test("a forged session token is refused", async () => {
 });
 
 test("the old X-Actor-Id header no longer grants an identity", async () => {
-  const { rows: [user] } = await deps.pool.query("select id from finops.users where email = $1", [FINANCE]);
+  const {
+    rows: [user],
+  } = await deps.pool.query("select id from finops.users where email = $1", [FINANCE]);
   const res = await call("/api/invoices", { headers: { "x-actor-id": user.id } });
   assert.equal(res.status, 401, "the trusted header is gone, not merely deprecated");
 });
@@ -244,14 +254,19 @@ test("a manager cannot make review decisions", async () => {
   const form = new FormData();
   form.append("file", new Blob([fixture("B_iban_changed_2499.xml")], { type: "application/xml" }), "B.xml");
   const upload = await fetch(`${base}/api/invoices`, {
-    method: "POST", body: form, headers: { Cookie: clerk.header(), "X-CSRF-Token": clerkCsrf },
+    method: "POST",
+    body: form,
+    headers: { Cookie: clerk.header(), "X-CSRF-Token": clerkCsrf },
   });
   const invoice = await upload.json();
   assert.equal(invoice.state, "REVIEW_REQUIRED");
 
   const { cookies: manager, csrf: managerCsrf } = await login(MANAGER);
   const res = await call(`/api/invoices/${invoice.id}/review/accept`, {
-    method: "POST", cookies: manager, csrf: managerCsrf, body: { comment: "x" },
+    method: "POST",
+    cookies: manager,
+    csrf: managerCsrf,
+    body: { comment: "x" },
   });
   assert.equal(res.status, 403, "review belongs to accounts payable and finance");
 });
@@ -261,7 +276,9 @@ test("a clerk cannot hand an invoice to accounting or instruct a payment", async
   const form = new FormData();
   form.append("file", new Blob([fixture("G_clean_380.xml")], { type: "application/xml" }), "G.xml");
   const upload = await fetch(`${base}/api/invoices`, {
-    method: "POST", body: form, headers: { Cookie: cookies.header(), "X-CSRF-Token": csrf },
+    method: "POST",
+    body: form,
+    headers: { Cookie: cookies.header(), "X-CSRF-Token": csrf },
   });
   const invoice = await upload.json();
   assert.equal(invoice.state, "APPROVED");
@@ -275,7 +292,9 @@ test("finance can do the money path that the clerk cannot", async () => {
   const form = new FormData();
   form.append("file", new Blob([fixture("G_clean_380.xml")], { type: "application/xml" }), "G.xml");
   const upload = await fetch(`${base}/api/invoices`, {
-    method: "POST", body: form, headers: { Cookie: clerk.header(), "X-CSRF-Token": clerkCsrf },
+    method: "POST",
+    body: form,
+    headers: { Cookie: clerk.header(), "X-CSRF-Token": clerkCsrf },
   });
   const invoice = await upload.json();
 
@@ -289,7 +308,8 @@ test("the audit trail records the authenticated user, not a claimed one", async 
   const form = new FormData();
   form.append("file", new Blob([fixture("A_clean_1240.xml")], { type: "application/xml" }), "A.xml");
   const upload = await fetch(`${base}/api/invoices`, {
-    method: "POST", body: form,
+    method: "POST",
+    body: form,
     // A claimed identity in the old header must be ignored entirely.
     headers: { Cookie: cookies.header(), "X-CSRF-Token": csrf, "x-actor-id": "00000000-0000-0000-0000-000000000005" },
   });
@@ -367,7 +387,8 @@ test("a wrong password and an unknown address take comparable time", async () =>
     return { ms: Number(process.hrtime.bigint() - t0) / 1e6, status: res.status };
   };
 
-  const known = [], unknown = [];
+  const known = [],
+    unknown = [];
   for (let i = 0; i < 7; i += 1) {
     const u = await attempt("niemand.gibtesnicht@nordwerk.example");
     const k = await attempt(CLERK);
@@ -390,6 +411,8 @@ test("failures older than the window no longer count", async () => {
 
   const one = await call("/api/auth/login", { method: "POST", body: { email: FINANCE, password: "falsch" } });
   assert.equal(one.status, 401, "the address may try again");
-  const { rows: [left] } = await deps.pool.query("select count(*)::int as n from finops.login_failures");
+  const {
+    rows: [left],
+  } = await deps.pool.query("select count(*)::int as n from finops.login_failures");
   assert.equal(left.n, 1, "the old failures are gone, and one wrong attempt does not throttle again");
 });

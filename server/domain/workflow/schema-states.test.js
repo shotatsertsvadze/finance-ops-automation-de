@@ -9,13 +9,17 @@ import { testDeps } from "../../test-support/db.js";
 import { PAYABLE_STATES } from "./states.js";
 
 let deps;
-before(async () => { deps = await testDeps(); });
-after(async () => { await deps.pool.end(); });
+before(async () => {
+  deps = await testDeps();
+});
+after(async () => {
+  await deps.pool.end();
+});
 
 async function indexStates(name) {
-  const { rows: [row] } = await deps.pool.query(
-    "select indexdef from pg_indexes where schemaname = 'finops' and indexname = $1", [name],
-  );
+  const {
+    rows: [row],
+  } = await deps.pool.query("select indexdef from pg_indexes where schemaname = 'finops' and indexname = $1", [name]);
   // The schema prefix is printed or not depending on the session's search_path.
   return [...row.indexdef.matchAll(/'([A-Z_]+)'::(?:finops\.)?invoice_state/g)].map((m) => m[1]).sort();
 }

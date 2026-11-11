@@ -21,7 +21,12 @@ const sha = (buffer) => createHash("sha256").update(buffer).digest("hex");
 /** A validator that answers with `attempt` and records what it was sent. */
 function standIn(attempt, { required = true } = {}) {
   const calls = [];
-  const client = { async validate(buffer, name) { calls.push({ buffer, name }); return { durationMs: 12, ...attempt }; } };
+  const client = {
+    async validate(buffer, name) {
+      calls.push({ buffer, name });
+      return { durationMs: 12, ...attempt };
+    },
+  };
   return { validator: { client, required }, calls };
 }
 
@@ -40,7 +45,10 @@ test("an accepted report passes, with versions, scenario and the document's hash
   assert.equal(record.configuration_version, KOSIT_PINS.configuration.version);
   assert.equal(record.scenario, "EN16931 XRechnung (UBL Invoice)");
   assert.equal(record.reported_document_sha256, sha(A));
-  assert.deepEqual(record.messages.map((m) => [m.level, m.code]), [["information", "BR-DE-TMP-32"]]);
+  assert.deepEqual(
+    record.messages.map((m) => [m.level, m.code]),
+    [["information", "BR-DE-TMP-32"]],
+  );
   assert.equal(record.report, ACCEPTED, "the raw report is kept as received");
 });
 
@@ -75,11 +83,23 @@ test("a report about another document fails closed", async () => {
 });
 
 test("a report from another validator version fails closed", async () => {
-  await invalid({ outcome: "ACCEPTED", httpStatus: 200, report: ACCEPTED.replace("KoSIT Validator 1.6.3", "KoSIT Validator 1.7.0") }, A, /Validator-Version/);
+  await invalid(
+    { outcome: "ACCEPTED", httpStatus: 200, report: ACCEPTED.replace("KoSIT Validator 1.6.3", "KoSIT Validator 1.7.0") },
+    A,
+    /Validator-Version/,
+  );
 });
 
 test("a report from another rule configuration fails closed", async () => {
-  await invalid({ outcome: "ACCEPTED", httpStatus: 200, report: ACCEPTED.replaceAll("xrechnung-3.0.2-schematron-2.6.0", "xrechnung-3.0.2-schematron-2.7.0") }, A, /Konfiguration/);
+  await invalid(
+    {
+      outcome: "ACCEPTED",
+      httpStatus: 200,
+      report: ACCEPTED.replaceAll("xrechnung-3.0.2-schematron-2.6.0", "xrechnung-3.0.2-schematron-2.7.0"),
+    },
+    A,
+    /Konfiguration/,
+  );
 });
 
 test("an acceptance that names no rule configuration fails closed", async () => {

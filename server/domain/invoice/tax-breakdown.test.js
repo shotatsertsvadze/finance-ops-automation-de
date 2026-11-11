@@ -24,10 +24,13 @@ test("a single-rate invoice states one subtotal", () => {
 
 test("each rate the document states is read, in order", () => {
   const parsed = parseInvoiceXml(fixture("A_clean_1240.xml").replace("</cac:TaxTotal>", reduced));
-  assert.deepEqual(parsed.taxSubtotals.map((s) => [s.category, s.percent, s.taxable, s.amount]), [
-    ["S", "19", "1042.02", "197.98"],
-    ["S", "7", "100.00", "7.00"],
-  ]);
+  assert.deepEqual(
+    parsed.taxSubtotals.map((s) => [s.category, s.percent, s.taxable, s.amount]),
+    [
+      ["S", "19", "1042.02", "197.98"],
+      ["S", "7", "100.00", "7.00"],
+    ],
+  );
 });
 
 test("a document without a breakdown says so, rather than inventing one", () => {

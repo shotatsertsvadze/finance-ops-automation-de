@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAiExplanation, requestAiExplanation } from "../../lib/api.js";
 import { useI18n } from "../../lib/i18n.js";
+import Button from "../../components/Button.jsx";
 
 /**
  * An AI explanation of why the invoice stopped (ADR-080). It sits below the
@@ -16,7 +17,9 @@ export default function AiExplanation({ invoiceId, runNo, state, may }) {
 
   useEffect(() => {
     setError(null);
-    getAiExplanation(invoiceId, lang).then(setData).catch(() => setData(null));
+    getAiExplanation(invoiceId, lang)
+      .then(setData)
+      .catch(() => setData(null));
   }, [invoiceId, lang, runNo, state]);
 
   if (!data?.enabled || !data.eligible) return null;
@@ -50,7 +53,13 @@ export default function AiExplanation({ invoiceId, runNo, state, may }) {
             <p className="ai-text">{explanation.explanation}</p>
             <dl className="ai-meta">
               <dt>{t("aiRefersTo")}</dt>
-              <dd>{explanation.cited_checks.map((code) => <code key={code} className="ev-code">{code}</code>)}</dd>
+              <dd>
+                {explanation.cited_checks.map((code) => (
+                  <code key={code} className="ev-code">
+                    {code}
+                  </code>
+                ))}
+              </dd>
               {explanation.next_step && (
                 <>
                   <dt>{t("aiNextStep")}</dt>
@@ -66,9 +75,9 @@ export default function AiExplanation({ invoiceId, runNo, state, may }) {
           <>
             <p className="hint">{data.status === "UNAVAILABLE" ? t("aiUnavailable") : t("aiNoneYet")}</p>
             {canAsk && (
-              <button className="btn" onClick={generate} disabled={busy}>
+              <Button onClick={generate} disabled={busy}>
                 {busy ? t("aiGenerating") : data.status === "UNAVAILABLE" ? t("aiRetry") : t("aiGenerate")}
-              </button>
+              </Button>
             )}
           </>
         )}

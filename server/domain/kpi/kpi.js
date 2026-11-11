@@ -13,8 +13,13 @@ import { provenance } from "./provenance.js";
 export async function computeKpis({ pool }, env = process.env) {
   const assumptions = loadAssumptions(env);
   const [volume, automation, exceptions, byReason, risk, workload, cycle] = await Promise.all([
-    queryVolume(pool), queryAutomation(pool), queryExceptions(pool), queryExceptionReasons(pool),
-    queryRisk(pool), queryWorkload(pool), queryCycle(pool),
+    queryVolume(pool),
+    queryAutomation(pool),
+    queryExceptions(pool),
+    queryExceptionReasons(pool),
+    queryRisk(pool),
+    queryWorkload(pool),
+    queryCycle(pool),
   ]);
 
   const processed = volume.processed;
@@ -23,7 +28,8 @@ export async function computeKpis({ pool }, env = process.env) {
 
   const hoursSavedRaw =
     (clean * (assumptions.manual_minutes_clean - assumptions.system_minutes_clean) +
-      exceptions.count * (assumptions.manual_minutes_exception - assumptions.system_minutes_exception)) / 60;
+      exceptions.count * (assumptions.manual_minutes_exception - assumptions.system_minutes_exception)) /
+    60;
   const hoursSaved = Math.round(hoursSavedRaw * 10) / 10;
 
   return {
@@ -43,9 +49,10 @@ export async function computeKpis({ pool }, env = process.env) {
       basis_invoices: processed,
       hours_saved: hoursSaved,
       cost_saved_eur: Math.round(hoursSavedRaw * assumptions.hourly_cost_eur),
-      minutes_per_invoice_now: processed === 0 ? 0 : round1(
-        (clean * assumptions.system_minutes_clean + exceptions.count * assumptions.system_minutes_exception) / processed,
-      ),
+      minutes_per_invoice_now:
+        processed === 0
+          ? 0
+          : round1((clean * assumptions.system_minutes_clean + exceptions.count * assumptions.system_minutes_exception) / processed),
     },
     provenance: provenance(),
   };
@@ -56,7 +63,9 @@ const round1 = (n) => Math.round(n * 10) / 10;
 const int = (value) => Number(value ?? 0);
 
 async function queryVolume(pool) {
-  const { rows: [row] } = await pool.query(
+  const {
+    rows: [row],
+  } = await pool.query(
     `select count(*)::int as received,
             count(*) filter (where state <> 'DUPLICATE')::int as processed,
             count(*) filter (where state = 'DUPLICATE')::int as duplicates
@@ -69,7 +78,9 @@ async function queryAutomation(pool) {
   // "Straight through" means the decision to approve was made without a human,
   // which is exactly the auto_approved event. Later human steps such as the
   // accounting handoff do not retroactively make it manual.
-  const { rows: [row] } = await pool.query(
+  const {
+    rows: [row],
+  } = await pool.query(
     `select count(distinct e.invoice_id)::int as n
      from finops.audit_events e where e.action = 'auto_approved'`,
   );
@@ -77,9 +88,9 @@ async function queryAutomation(pool) {
 }
 
 async function queryExceptions(pool) {
-  const { rows: [row] } = await pool.query(
-    "select count(*)::int as n from finops.invoices where had_exception and state <> 'DUPLICATE'",
-  );
+  const {
+    rows: [row],
+  } = await pool.query("select count(*)::int as n from finops.invoices where had_exception and state <> 'DUPLICATE'");
   return { count: int(row.n) };
 }
 
@@ -95,24 +106,36 @@ async function queryExceptionReasons(pool) {
 
 async function queryRisk(pool) {
   const failed = async (checkCode) => {
-    const { rows: [row] } = await pool.query(
+    const {
+      rows: [row],
+    } = await pool.query(
       "select count(distinct invoice_id)::int as n from finops.validation_results where check_code = $1 and status = 'FAILED'",
       [checkCode],
     );
     return int(row.n);
   };
-  const { rows: [dup] } = await pool.query(
-    "select count(*)::int as n from finops.audit_events where action = 'duplicate_file_detected'",
-  );
+  const {
+    rows: [dup],
+  } = await pool.query("select count(*)::int as n from finops.audit_events where action = 'duplicate_file_detected'");
   const [iban, po, duplicateNumber, buyer] = await Promise.all([
-    failed("supplier_iban_match"), failed("po_amount_within_tolerance"),
-    failed("duplicate_invoice_number"), failed("buyer_is_us"),
+    failed("supplier_iban_match"),
+    failed("po_amount_within_tolerance"),
+    failed("duplicate_invoice_number"),
+    failed("buyer_is_us"),
   ]);
-  return { duplicate_attempts: int(dup.n), iban_alerts: iban, po_mismatches: po, duplicate_numbers: duplicateNumber, buyer_mismatches: buyer };
+  return {
+    duplicate_attempts: int(dup.n),
+    iban_alerts: iban,
+    po_mismatches: po,
+    duplicate_numbers: duplicateNumber,
+    buyer_mismatches: buyer,
+  };
 }
 
 async function queryWorkload(pool) {
-  const { rows: [row] } = await pool.query(
+  const {
+    rows: [row],
+  } = await pool.query(
     `select count(*) filter (where state = 'REVIEW_REQUIRED')::int as awaiting_review,
             count(*) filter (where state = 'READY_FOR_APPROVAL')::int as awaiting_approval,
             count(*) filter (where state = 'INFO_REQUESTED')::int as awaiting_information,
@@ -139,7 +162,9 @@ async function queryCycle(pool) {
   // Medians, not averages: one invoice parked over a weekend should not move
   // the headline. Null when nothing has reached the stage, because "no data"
   // and "instant" are different answers.
-  const { rows: [row] } = await pool.query(
+  const {
+    rows: [row],
+  } = await pool.query(
     `with review_visits as (
        -- How long an exception sits in the review queue before someone clears
        -- it. Each entry into review is paired with its own exit: an invoice
