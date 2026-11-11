@@ -57,7 +57,7 @@ The interface is German by default and switches to English.
   same transaction. No route, script or SQL trigger writes it directly, and the
   legal transitions are a declared table rather than scattered conditions.
 - **Checks produce evidence, not verdicts.** Every check returns `check, status,
-  severity, expected, actual, reason, recommended_action`, so a reviewer is shown
+severity, expected, actual, reason, recommended_action`, so a reviewer is shown
   what was expected and what the document actually carried, with the differing
   characters marked for things like a changed IBAN.
 - **Fail closed.** A failed check routes the invoice to review, and data that
@@ -85,7 +85,7 @@ first, by three different people, and the invoice is then checked again
 (ADR-052, ADR-071, ADR-077).
 
 The reasoning behind each decision is in `docs/DECISIONS.md`, every behaviour has
-a row in `docs/TEST_MATRIX.md`, and what the system does *not* do is listed under
+a row in `docs/TEST_MATRIX.md`, and what the system does _not_ do is listed under
 "Known limits" below rather than left to be discovered.
 
 ## Quick start
@@ -196,18 +196,18 @@ The outcomes below are for one fixture on a freshly seeded system (D after A).
 The fixtures share purchase orders, so uploaded together the later ones can
 meet an order the earlier ones already used.
 
-| Fixture | Scenario | Expected |
-|---|---|---|
-| A | clean, 1 240 EUR | waits for one manager approval |
-| B | IBAN differs from supplier master data | review, HIGH |
-| C | invoice 8 500 EUR, PO remaining 5 000 EUR | review, HIGH |
-| D | same number as A, different file | review, duplicate suspicion |
-| E | clean, 30 000 EUR | manager + finance + CFO |
-| F | malformed | review, technical failure |
-| G | clean, 380 EUR | approved automatically |
-| H | IBAN differs, 380 EUR | review, HIGH; a small amount is no reason to skip the check |
-| I | 3 % discount: 450 EUR of lines, 30 EUR off, 499.80 EUR due | approved automatically; without the discount 535.50 EUR would need a manager |
-| J | credit note for 214.20 EUR, crediting RE-2026-4471 | approved, booked as a negative record, closed as credited, never paid |
+| Fixture | Scenario                                                   | Expected                                                                     |
+| ------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| A       | clean, 1 240 EUR                                           | waits for one manager approval                                               |
+| B       | IBAN differs from supplier master data                     | review, HIGH                                                                 |
+| C       | invoice 8 500 EUR, PO remaining 5 000 EUR                  | review, HIGH                                                                 |
+| D       | same number as A, different file                           | review, duplicate suspicion                                                  |
+| E       | clean, 30 000 EUR                                          | manager + finance + CFO                                                      |
+| F       | malformed                                                  | review, technical failure                                                    |
+| G       | clean, 380 EUR                                             | approved automatically                                                       |
+| H       | IBAN differs, 380 EUR                                      | review, HIGH; a small amount is no reason to skip the check                  |
+| I       | 3 % discount: 450 EUR of lines, 30 EUR off, 499.80 EUR due | approved automatically; without the discount 535.50 EUR would need a manager |
+| J       | credit note for 214.20 EUR, crediting RE-2026-4471         | approved, booked as a negative record, closed as credited, never paid        |
 
 ## Documentation
 
@@ -332,14 +332,14 @@ The demo accounts share one password, `nordwerk-demo`, set by `npm run db:seed`
 and overridable with `DEMO_PASSWORD`. These are synthetic accounts in a local
 demo; a production start refuses them (see Setup).
 
-| Account | Role | May |
-|---|---|---|
-| anna.berger@nordwerk.example | Kreditorenbuchhaltung | upload, review decisions |
-| tim.kessler@nordwerk.example | Kostenstellenleitung | upload, approval steps |
-| lea.sommer@nordwerk.example | Kostenstellenleitung | upload, approval steps |
-| jonas.weber@nordwerk.example | Finanzen | review, approval, the money path |
-| mira.hoffmann@nordwerk.example | Finanzen | as above |
-| sabine.vogt@nordwerk.example | CFO | upload, approval steps |
+| Account                        | Role                  | May                              |
+| ------------------------------ | --------------------- | -------------------------------- |
+| anna.berger@nordwerk.example   | Kreditorenbuchhaltung | upload, review decisions         |
+| tim.kessler@nordwerk.example   | Kostenstellenleitung  | upload, approval steps           |
+| lea.sommer@nordwerk.example    | Kostenstellenleitung  | upload, approval steps           |
+| jonas.weber@nordwerk.example   | Finanzen              | review, approval, the money path |
+| mira.hoffmann@nordwerk.example | Finanzen              | as above                         |
+| sabine.vogt@nordwerk.example   | CFO                   | upload, approval steps           |
 
 Passwords are hashed with scrypt and a per-user salt. The session is a random
 token in an HttpOnly, SameSite=Strict cookie; only its hash is stored, so a

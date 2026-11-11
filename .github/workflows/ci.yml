@@ -34,6 +34,9 @@ jobs:
           cache: npm
 
       - run: npm ci
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run typecheck
 
       # A known high or critical vulnerability in any dependency fails the build.
       - run: npm audit --audit-level=high

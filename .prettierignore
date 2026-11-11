@@ -1,0 +1,8 @@
+dist/
+storage/
+vendor/
+demo-video/
+node_modules/
+docs/
+package-lock.json
+Finance-Ops Abschlusspräsentation/

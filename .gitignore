@@ -20,3 +20,18 @@ dist/
 /ai-inquiry-eval-report.json
 /ai-inquiry-eval-blind.md
 /ai-inquiry-eval-key.json
+
+# Presentation media and local course material kept out of git
+/Finance-Ops Abschlusspräsentation/
+/Demo-Anhaenge/
+/Finance Ops Demo-Screenshots*/
+
+# Local tooling state
+/.gg/
+/.gg-checklist.json
+
+# Large deck and video builds; regenerate or keep outside git
+/docs/course/praesentation/*.html
+/docs/course/praesentation/*.mp4
+/docs/course/praesentation/referenz/*.html
+/docs/course/praesentation/referenz/*.mp4
