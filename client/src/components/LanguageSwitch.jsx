@@ -6,10 +6,10 @@ import { LANGUAGES, useI18n } from "../lib/i18n.js";
  * not per account: it changes nothing the server stores.
  */
 export default function LanguageSwitch() {
-  const { lang, setLang } = useI18n();
+  const { lang, setLang, t } = useI18n();
 
   return (
-    <div className="lang-switch" role="group" aria-label="Language">
+    <div className="lang-switch" role="group" aria-label={t("languageSwitch")}>
       {LANGUAGES.map((option) => (
         <button
           key={option.code}
