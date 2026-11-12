@@ -151,7 +151,7 @@ Tests live in `server/domain/workflow/controls.test.js`.
 | # | Defect as found | Behaviour now | Status | Evidence |
 |---|---|---|---|---|
 | C1 (R01) | A malformed invoice could be released from review and approved, becoming payable with a null amount | Release and final approval both refuse, 422, naming the blockers | AUTO | "a technically invalid invoice cannot be released" |
-| C2 (R01) | — | A changed IBAN is still overridable by a reviewer | AUTO | "a business exception such as a changed IBAN stays overridable" |
+| C2 (R01) | — | A business exception such as a PO overrun is still overridable by a reviewer | AUTO | "R01: a business exception such as a PO overrun stays overridable" |
 | C3 (R06) | An exception whose master data was corrected auto-approved with no human | Always at least one approval step; `auto_approved` never fires | AUTO | "an invoice that was ever an exception cannot be auto-approved" |
 | C4 (R06) | — | An invoice that was never an exception still goes straight through | AUTO | same file |
 | C5 (R02) | `RECONCILIATION_EXCEPTION` was outside the payable unique index | Index covers every post-approval state | AUTO | "duplicate protection survives a reconciliation exception" |
